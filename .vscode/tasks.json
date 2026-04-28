@@ -1,0 +1,96 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Opencode: Resume Last Session",
+      "type": "shell",
+      "command": "bash ${workspaceFolder}/.devcontainer/launch_opencode.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "group": "opencode"
+    },
+    {
+      "label": "Opencode: Launch Fresh",
+      "type": "shell",
+      "command": "opencode /workspace",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "group": "opencode"
+    },
+    {
+      "label": "Build Custom Songs",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/beat-saber-ps4-custom-songs/pipeline.py",
+      "options": {
+        "cwd": "${workspaceFolder}/beat-saber-ps4-custom-songs"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "detail": "Run the Beat Saber PS4 custom songs pipeline to generate fPKGs"
+    },
+    {
+      "label": "Build Custom Songs (Clean)",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/beat-saber-ps4-custom-songs/pipeline.py --clean",
+      "options": {
+        "cwd": "${workspaceFolder}/beat-saber-ps4-custom-songs"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "detail": "Clean output and rebuild fPKGs"
+    },
+    {
+      "label": "Build Custom Songs (Python Only)",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/beat-saber-ps4-custom-songs/pipeline.py --python-only",
+      "options": {
+        "cwd": "${workspaceFolder}/beat-saber-ps4-custom-songs"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "detail": "Build only Python fPKGs (not Windows folder)"
+    },
+    {
+      "label": "Build Custom Songs (Windows Only)",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/beat-saber-ps4-custom-songs/pipeline.py --windows-only",
+      "options": {
+        "cwd": "${workspaceFolder}/beat-saber-ps4-custom-songs"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "detail": "Prepare only the Windows build folder"
+    },
+    {
+      "label": "List Songs",
+      "type": "shell",
+      "command": "ls -la ${workspaceFolder}/beat-saber-ps4-custom-songs/songs_repo/ | head -20",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "none",
+      "detail": "List downloaded songs"
+    },
+    {
+      "label": "View Output Files",
+      "type": "shell",
+      "command": "ls -la ${workspaceFolder}/beat-saber-ps4-custom-songs/output/*.pkg",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "none",
+      "detail": "List generated PKG files"
+    }
+  ]
+}

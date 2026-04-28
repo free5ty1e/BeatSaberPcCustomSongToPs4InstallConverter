@@ -1,0 +1,68 @@
+{
+  "songs_dir": "/workspace/temp/DumpedPs4BeatSaber/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData",
+  "catalog": "/workspace/temp/DumpedPs4BeatSaber/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json",
+  "native_dir": "/workspace/temp/DumpedPs4BeatSaber/CUSA12878-patch/Media/StreamingAssets/Native",
+  "modules_dir": "/workspace/temp/DumpedPs4BeatSaber/CUSA12878-patch/Media/StreamingAssets/Modules",
+  "known_songs": [
+    {
+      "key": "28f6",
+      "name": "Crystallized",
+      "mapper": "S\u8fa3\u7684",
+      "bpm": 175
+    },
+    {
+      "key": "100billsremix",
+      "name": "100 Bills Remix",
+      "mapper": "Elliot",
+      "bpm": 175
+    },
+    {
+      "key": "2beloved",
+      "name": "Beloved",
+      "mapper": "Manon",
+      "bpm": 130
+    },
+    {
+      "key": "aboutdamntime",
+      "name": "About Damn Time",
+      "mapper": "Benzel",
+      "bpm": 146
+    },
+    {
+      "key": "abracadabra",
+      "name": "Abracadabra",
+      "mapper": "Sot",
+      "bpm": 140
+    },
+    {
+      "key": "accelerate",
+      "name": "Accelerate",
+      "mapper": "Checkthebpm",
+      "bpm": 175
+    },
+    {
+      "key": "badguy",
+      "name": "Bad Guy",
+      "mapper": "Hex",
+      "bpm": 135
+    },
+    {
+      "key": "believer",
+      "name": "Believer",
+      "mapper": "Routers",
+      "bpm": 120
+    },
+    {
+      "key": "blindinglights",
+      "name": "Blinding Lights",
+      "mapper": "M\u5c55\u4f4d",
+      "bpm": 171
+    },
+    {
+      "key": "crabrave",
+      "name": "Crab Rave",
+      "mapper": "acrispy",
+      "bpm": 128
+    }
+  ]
+}

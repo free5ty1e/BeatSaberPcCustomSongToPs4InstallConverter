@@ -1,0 +1,23 @@
+# AssetRipper Configuration for Beat Saber
+
+## Export Settings
+- [ ] Mesh export: NO
+- [x] Audio export: WAV  
+- [x] Texture export: PNG
+- [ ] Script export: NO (causes errors)
+- [ ] Shader export: NO
+
+## Export Options
+- [x] Dump Fern Flower (for better decompilation)
+- [ ] Export Dependencies
+- [ ] Exportable Properties
+- [ ] Combine Asset Sets
+- [ ] Include Used Assets Only
+
+## Workflow
+1. Open AssetRipper
+2. File > Open Files
+3. Navigate to: BeatmapLevelsData/100bills
+4. Set export settings above
+5. Export to: extracted/100bills/
+6. Analyze structure

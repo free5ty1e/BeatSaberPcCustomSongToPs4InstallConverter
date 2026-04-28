@@ -1,0 +1,25 @@
+{
+    "_songName": "Counting Stars",
+    "_songSubName": "",
+    "_songAuthorName": "Community Mapper",
+    "_levelAuthorName": "Community",
+    "_beatsPerMinute": 132,
+    "_previewStartTime": 15,
+    "_previewDuration": 30,
+    "_songTimeOffset": 0,
+    "_shuffle": 0,
+    "_shufflePeriod": 0.5,
+    "_environmentName": "DefaultEnvironment",
+    "_difficultyBeatmapSets": [
+        {
+            "_beatmapCharacteristicName": "Standard",
+            "_difficultyBeatmaps": [
+                {"_beatmapFilename": "Easy.dat", "_difficulty": "Easy", "_difficultyRank": 1, "_noteJumpMovementSpeed": 10, "_noteJumpStartBeatOffset": 0},
+                {"_beatmapFilename": "Normal.dat", "_difficulty": "Normal", "_difficultyRank": 3, "_noteJumpMovementSpeed": 12, "_noteJumpStartBeatOffset": 0},
+                {"_beatmapFilename": "Hard.dat", "_difficulty": "Hard", "_difficultyRank": 5, "_noteJumpMovementSpeed": 14, "_noteJumpStartBeatOffset": 0},
+                {"_beatmapFilename": "Expert.dat", "_difficulty": "Expert", "_difficultyRank": 7, "_noteJumpMovementSpeed": 16, "_noteJumpStartBeatOffset": 0},
+                {"_beatmapFilename": "ExpertPlus.dat", "_difficulty": "ExpertPlus", "_difficultyRank": 9, "_noteJumpMovementSpeed": 18, "_noteJumpStartBeatOffset": 0}
+            ]
+        }
+    ]
+}
