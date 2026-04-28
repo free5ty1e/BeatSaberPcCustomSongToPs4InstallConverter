@@ -2,14 +2,17 @@
 
 A ready-to-use devcontainer template with [opencode](https://github.com/anomalyco/opencode) pre-installed, plus VS Code tasks to automatically launch or resume your last session.
 
-## What's Inside
+## Project Index
 
-- **DevContainer** — Ubuntu 24.04 with Node.js 22, Python 3, and opencode CLI pre-installed with a workspace-mounted ai_working directory for persistent opencode sessions between rebuilds
-- **VS Code Tasks** — Will auto resume the most recent session automatically on folder open, with another task to start a fresh session
+This workspace contains multiple projects. Each has its own documentation:
 
-## Get Started
+### Beat Saber PS4 Custom Songs
+- **[beat-saber-ps4-custom-songs/README.md](./beat-saber-ps4-custom-songs/README.md)** - Main project documentation
+- **[beat-saber-ps4-custom-songs/PROGRESS.md](./beat-saber-ps4-custom-songs/PROGRESS.md)** - Development progress
 
-### Option 1: Fork on GitHub (recommended)
+### Getting Started
+
+#### Option 1: Fork on GitHub (recommended)
 1. Go to the repository page on GitHub
 2. Click the **Fork** button in the top-right corner
 3. Select your GitHub account as the destination
@@ -19,13 +22,13 @@ A ready-to-use devcontainer template with [opencode](https://github.com/anomalyc
    cd your-repo-name
    ```
 
-### Option 2: Download as ZIP
+#### Option 2: Download as ZIP
 1. Go to the repository page on GitHub
 2. Click the green **Code** button
 3. Select **Download ZIP**
 4. Extract the ZIP to your desired location
 
-### Next Steps
+#### Next Steps
 Once you have a local copy, move on to the [Quick Start](#quick-start) section below to launch the devcontainer and begin developing with an opencode agent.
 
 Fork it, rename it, strip it down or build on top — this is your base project. Modify it to suit your needs and start building.

@@ -11,40 +11,76 @@ Build a PS4 custom songs pipeline that downloads and converts Beat Saber PC song
 
 ## Test Results
 
-### CE-36426-1 Error (v5)
-- **Date**: 2026-04-27
-- **Packages tested**: custom_songs_v5.pkg, custom_unlocker_v2.pkg
-- **Result**: CE-36426-1 error when installing via GoldHEN
-- **Root cause**: Header used wrong field format (64-bit BE vs 32-bit LE)
+### PKG Test History
 
-### v6 Build (Latest)
-- **Date**: 2026-04-27
-- **Status**: Created with correct 32-bit LE fields
-- **Output**: /beat-saber-ps4-custom-songs/output/custom_songs_v6.pkg
+| Version | Method | Status | Error |
+|---------|--------|--------|-------|
+| v1-v4 | Python custom | CE-34707-1 | Various attempts |
+| v5 | Python (64-bit BE) | CE-36426-1 | Wrong endianness |
+| v6 | Python (32-bit LE) | CE-36426-1 | Header structure |
+| **v7** | Template clone | **TEST PENDING** | - |
+| Unlocker v2 | Python | CE-36426-1 | - |
+| **Unlocker v3** | Template clone | **TEST PENDING** | - |
 
-### Working DLC Reference Analysis
-- Uses mixed endianness: most fields at 0x10-0x2c are 32-bit **little-endian**
-- The reference shows: 0x10=0x0b, 0x14=0x0b000600, 0x18=0x802a0000 (all as LE)
+### CE-36426-1 Root Cause
+Reference PKG uses **32-bit LE** fields at 0x10-0x2c (NOT 64-bit BE as initially used).
+Even after fixing endianness, the header still isn't accepted - likely needs:
+- Correct entry table structure
+- Proper digest hashes
+- Specific template cloning approach (v7)
 
-## PKG Header Formats (v6 vs Reference)
+### Orbis-Pub-Gen
+- **Issue**: "File does not exist: param.sfo"
+- **Fix Applied**: Removed duplicate sce_sys folder, regenerated GP4 with 831 files
+- **Status**: Need testing
 
-| Offset | v6 (BE) | Reference (LE as shown) | Notes |
-|--------|---------|-------------------------|-------|
-| 0x10 | 0x00000000 | 0x0000000b | entry table |
-| 0x14 | 0x00000000 | 0x0006000b | entry count |
-| 0x18 | 0x00000200 | 0x00002a80 | body offset |
-| 0x20 | 0x0006ca80 | 0x00000000 | body size |
-| 0x28 | 0x00002000 | 0x00000000 | PFS offset |
+## Working DLC Reference Analysis
+- Magic: 7f434e54 ("7fCNT")
+- Content ID: UP4882-CUSA12878_00-P1S5XXXXXXXXXXXX
+- Title ID: CUSA12878
+- DRM: 0x0f (free), Type: 0x1b (DLC)
 
-## Issues Status
-- [x] v5 CE-36426-1 - FIXED: Header format corrected in v6
-- [ ] Test v6 on PS4 - Pending
-- [ ] Fix orbis-pub-gen param.sfo error - Still needed
+## Current Build Outputs
 
-## Songs Data
-- **Total downloaded**: 94+ songs from BeatSaver API
-- **Location**: /beat-saber-ps4-custom-songs/songs_repo/
+| File | Method | Size |
+|------|--------|------|
+| custom_songs_v6.pkg | Custom header (LE) | 449,152 |
+| custom_songs_v7.pkg | Template clone | 449,152 |
+| custom_unlocker_v3.pkg | Template clone | 20,512 |
+
+## Files Structure
+```
+beat-saber-ps4-custom-songs/
+├── README.md                    ← Project index
+├── PROGRESS.md                 ← This file
+├── pipeline.py                 ← Main wrapper
+├── songs_repo/                 ← 94+ downloaded songs
+├── output/
+│   ├── custom_songs_v6.pkg
+│   ├── custom_songs_v7.pkg
+│   └── custom_unlocker_v3.pkg
+├── windows_build/
+│   ├── Project.gp4            ← Regenerated (831 files)
+│   ├── README.txt             ← CLI/GUI instructions
+│   ├── CUSA12878-app/
+│   │   ├── sce_sys/
+│   │   └── songs/
+│   └── output/
+├── scripts/
+│   ├── build_pkg_v6.py        ← Custom header
+│   ├── build_pkg_v7.py         ← Template clone
+│   └── create_unlocker_v3.py   ← Unlocker
+└── dlc_reference/
+    └── CUSA12878_RIOT-Overkill.pkg  ← Reference template
+```
 
 ## Next Steps
-1. Test custom_songs_v6.pkg on PS4 with GoldHEN
-2. If CE-36426-1 persists, investigate remaining header differences
+1. Test v7 + v3 unlocker on PS4 with GoldHEN
+2. If v7 works, iterate on it
+3. If both fail, debug deeper with reference comparison
+4. Test orbis-pub-gen with cleaned GP4
+
+## References
+- BeatSaver API: https://beatsaver.com/
+- GoldHEN: https://github.com/GoldHEN/GoldHEN/
+- OpenOrbis: https://github.com/OpenOrbis/LibOrbisPkg

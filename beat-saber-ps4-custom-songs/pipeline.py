@@ -10,8 +10,9 @@ Usage:
     python3 pipeline.py --clean             # Clean output first
 
 Output:
-    - output/custom_songs_v6.pkg      (Python-built DLC)
-    - output/custom_unlocker_v3.pkg  (Python-built unlocker)
+    - output/custom_songs_v6.pkg      (Python custom header)
+    - output/custom_songs_v7.pkg      (Template clone from reference)
+    - output/custom_unlocker_v3.pkg  (Unlocker)
     - windows_build/                (Ready for orbis-pub-gen.exe)
 """
 import argparse
@@ -88,8 +89,8 @@ def build_python_pkg(songs_path, output_path, content_id):
     print("BUILDING PYTHON fPKGs")
     print("─" * 40)
     
-    # Run build script
-    print("\n[1/2] Building custom songs DLC...")
+    # Run build script v6 (custom header)
+    print("\n[1/3] Building custom songs DLC (v6 - custom header)...")
     result = subprocess.run([
         "python3", 
         str(WORK_DIR / "scripts/build_pkg_v6.py")
@@ -101,8 +102,21 @@ def build_python_pkg(songs_path, output_path, content_id):
         
     print(result.stdout)
     
+    # Run build script v7 (template clone)
+    print("\n[2/3] Building custom songs DLC (v7 - template clone)...")
+    result = subprocess.run([
+        "python3", 
+        str(WORK_DIR / "scripts/build_pkg_v7.py")
+    ], capture_output=True, text=True)
+    
+    if result.returncode != 0:
+        print(f"ERROR: {result.stderr}")
+        return False
+        
+    print(result.stdout)
+    
     # Run unlocker script
-    print("\n[2/2] Building unlocker...")
+    print("\n[3/3] Building unlocker...")
     result = subprocess.run([
         "python3",
         str(WORK_DIR / "scripts/create_unlocker_v3.py")
@@ -273,7 +287,8 @@ def main():
     
 if success:
         print(f"\nPython fPKGs:")
-        print(f"  - {args.output_path / 'custom_songs_v6.pkg'}")
+        print(f"  - {args.output_path / 'custom_songs_v6.pkg'} (custom header)")
+        print(f"  - {args.output_path / 'custom_songs_v7.pkg'} (template clone)")
         print(f"  - {args.output_path / 'custom_unlocker_v3.pkg'}")
         print(f"\nWindows folder:")
         print(f"  - {DEFAULT_WINDOWS_BUILD / 'Project.gp4'}")

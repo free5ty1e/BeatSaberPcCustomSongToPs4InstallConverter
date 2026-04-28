@@ -1,174 +1,139 @@
-# Beat Saber PS4 Custom Songs - Repository
+# Beat Saber PS4 Custom Songs Pipeline
 
-Build custom song PKGs for Beat Saber on PS4.
+A build system to download Beat Saber PC songs and create installable PS4 fPKG files for GoldHEN jailbroken PlayStation 4.
 
----
+## Project Overview
 
-## Status
-
-| Component | Status |
-|-----------|--------|
-| Song Downloader | ✅ Working - 94 songs downloaded |
-| Beatmap Converter | ✅ Working |
-| PKG Builder (LibOrbisPkg) | ⚠️ Needs configuration |
-
----
+This pipeline:
+1. Downloads songs from BeatSaver API (PC version)
+2. Converts to PS4-compatible format  
+3. Generates installable fPKG packages
 
 ## Quick Start
 
-### 1. Download Songs
+### Prerequisites
+- Docker (for devcontainer)
+- OR Python 3.10+ on host machine
+
+### Build Pipeline
 
 ```bash
 cd /workspace/beat-saber-ps4-custom-songs
-python3 scripts/download_repo.py
+python3 pipeline.py
 ```
 
-Songs go to `songs_repo/` (94 songs)
+### Output Files
+- `output/custom_songs_v*.pkg` - Main DLC package
+- `output/custom_unlocker_v*.pkg` - Unlocker package
 
-### 2. Build PKG
+---
 
+## Documentation Index
+
+### Core Documentation
+- **[PROGRESS.md](./PROGRESS.md)** - Current development progress and test results
+- **[pipeline.py](./pipeline.py)** - Main build orchestrator
+
+### Build Scripts
+- **[scripts/build_pkg_v6.py](./scripts/build_pkg_v6.py)** - Custom header PKG builder
+- **[scripts/build_pkg_v7.py](./scripts/build_pkg_v7.py)** - Template clone PKG builder (reference-based)
+- **[scripts/create_unlocker_v3.py](./scripts/create_unlocker_v3.py)** - Unlocker PKG builder
+
+### AI Memory
+- **[.ai_memory/beat-saber-ps4-custom-songs/conversation_history.md](../.ai_memory/beat-saber-ps4-custom-songs/conversation_history.md)** - Full conversation history
+- **[.ai_memory/beat-saber-ps4-custom-songs/research_findings.md](../.ai_memory/beat-saber-ps4-custom-songs/research_findings.md)** - Technical research
+
+---
+
+## Test Results
+
+| Version | Method | Status | Error |
+|---------|--------|--------|-------|
+| v1-v4 | Python custom | CE-34707-1 | Various |
+| v5 | Python (64-bit BE) | CE-36426-1 | Wrong endianness |
+| v6 | Python (32-bit LE) | CE-36426-1 | Header issue |
+| v7 | Template clone | TEST PENDING | - |
+
+### Known Errors
+- **CE-36426-1**: PKG header format issue - PS4 rejects the package
+- **CE-34707-1**: Different header error in earlier versions  
+- **Orbis-pub-gen "File does not exist"**: GP4 path or duplicate entries issue
+
+---
+
+## Windows Build (Orbis-Pub-Gen)
+
+### File Structure
+```
+windows_build/
+├── Project.gp4              ← GP4 project file
+├── CUSA12878-app/          ← Main app folder
+│   ├── sce_sys/
+│   │   ├── param.sfo
+│   │   └── icon0.png
+│   └── songs/              ← Song folders (by hash)
+│       └── [hash]/
+│           └── ...
+└── output/                 ← PKG output
+```
+
+### GUI Instructions
+1. Open `orbis-pub-gen.exe` or double-click `Project.gp4`
+2. File → Open Project → Select `Project.gp4`
+3. Click "Build PKG" or press F5
+4. Output goes to `./output/` folder
+
+**IMPORTANT**: Run from the `windows_build` folder itself, not a subfolder.
+
+### CLI Instructions
 ```bash
-export PATH="$HOME/.dotnet:$PATH"
-cd /workspace/beat-saber-ps4-custom-songs
-python3 scripts/build_pkg.py songs_test/ --output test_10songs.pkg
+cd C:\path\to\windows_build
+orbis-pub-gen image Project.gp4
 ```
 
----
+### Troubleshooting
 
-## Scripts
+**"File does not exist: param.sfo"**
+- Check GP4 file paths match actual folder structure
+- Ensure you're running from windows_build folder
+- Try CLI for detailed errors
 
-| Script | Purpose |
-|--------|---------|
-| `scripts/download_repo.py` | Download songs from BeatSaver |
-| `scripts/build_pkg.py` | Convert & build PKG (uses LibOrbisPkg) |
-| `scripts/generate_unlocker.py` | Generate game-specific unlocker |
-
----
-
-## Installation on PS4
-
-### Files Needed (2 files):
-
-1. **Unlocker** (game-specific)
-   - `output/UP8802-CUSA12878_00-BSCUSTOMSONGS01-unlock.pkg`
-
-2. **Songs PKG**
-   - `output/test_10songs.pkg`
-
-### Steps:
-
-1. Copy both PKGs to USB root
-2. GoldHEN > Install Package > Install Package Files
-3. Install unlocker FIRST, then songs PKG
-4. Launch Beat Saber > find songs at bottom of list
+**"Duplicate entry" warning**
+- Check Project.gp4 doesn't list same file twice
 
 ---
 
-## Game IDs
+## Key Technical Details
 
-| Region | Game ID |
-|--------|---------|
-| US | CUSA12878 |
-| EU | CUSA12940 |
-| JP | CUSA12942 |
+### Reference PKG Structure
+- **Magic**: `7fCNT` (0x7f434e54)
+- **Content ID**: `UP4882-CUSA12878_00-P1S5XXXXXXXXXXXX`
+- **Title ID**: `CUSA12878`
+- **DRM Type**: 0x0f (free)
+- **Content Type**: 0x1b (DLC)
 
----
+### Header Fields (32-bit LE)
+| Offset | Description |
+|--------|-------------|
+| 0x10 | Entry table offset |
+| 0x14 | Entry count |
+| 0x18 | Body offset |
+| 0x20 | Body size |
+| 0x28 | PFS offset |
 
-## PKG Format
-
-PKG files must follow Sony's format. The current build script uses **LibOrbisPkg** from OpenOrbis:
-- GitHub: https://github.com/OpenOrbis/LibOrbisPkg
-- Built from source: `LibOrbisPkg/LibOrbisPkg.Core.sln`
-
-### Requirements:
-- .NET SDK 8.0
-- LibOrbisPkg PkgTool (already built in this repo)
-
----
-
-## Known Issues
-
-1. **PKG Installation Error (CE-34706-0)**: Our initial custom PKGs used wrong format. Need proper PKG structure.
-
-2. **LibOrbisPkg GP4 paths**: The GP4 project file needs careful path handling (backslash vs forward slash).
-
-3. **Content ID length**: Must be exactly 36 characters.
+### Songs Data
+- **94+ songs** downloaded from BeatSaver API
+- Located in: `songs_repo/` and `windows_build/CUSA12878-app/songs/`
 
 ---
 
-## Pre-built Unlocker
+## References
 
-An unlocker for US version (CUSA12878) is included:
-- `output/UP8802-CUSA12878_00-BSCUSTOMSONGS01-unlock.pkg`
-
----
-
-## Current Songs (10 test songs)
-
-1. VOLUPTE - Tare (BPM 128)
-2. Yes I'm A Mess - AJR (BPM 184)
-3. We All Lift Together (BPM 134)
-4. YONA YONA DANCE - Akiko Wada (BPM 145)
-5. Overdose - Natori (BPM 118)
-6. LIT - Polyphia (BPM 99)
-7. MUSIC STAR - M.G.G. Original (BPM 160)
-8. KING - Ayunda Risu (BPM 166)
-9. Megalovania - Toby Fox (BPM 120)
-10. Mirror - Ado (BPM 114)
-
-All have: Easy + Normal + Hard + Expert + ExpertPlus
+- [BeatSaver API](https://beatsaver.com/) - PC song database
+- [GoldHEN](https://github.com/GoldHEN/GoldHEN/) - PS4 jailbreak
+- [OpenOrbis LibOrbisPkg](https://github.com/OpenOrbis/LibOrbisPkg) - PKG tools
 
 ---
 
-## Song Download Criteria
-
-Downloaded songs must have:
-- ✅ **Easy** difficulty
-- ✅ **Normal** difficulty  
-- ✅ **Hard** difficulty
-
-This ensures user (plays Hard) and friends (play Easy/Normal) can all play.
-
----
-
-## BeatSaver API
-
-**Status:** ✅ Working
-
-```bash
-curl https://api.beatsaver.com/search/text/0
-```
-
-**Download pattern:**
-```
-https://r2cdn.beatsaver.com/{hash}.zip
-```
-
----
-
-## Repository Structure
-
-```
-beat-saber-ps4-custom-songs/
-├── songs_repo/              # Downloaded songs (94)
-├── songs_test/             # 10 test songs
-├── output/
-│   └── *.pkg             # Built PKGs
-├── scripts/
-│   ├── download_repo.py
-│   ├── build_pkg.py
-│   └── generate_unlocker.py
-└── LibOrbisPkg/          # Open-source PKG tools (built)
-```
-
----
-
-## Next Steps
-
-1. Fix PKG format to work with PS4 (CE-34706-0 error)
-2. Test with proper PKG generation
-3. Install on PS4 and verify songs appear
-
----
-
-**Last Updated:** April 2026
+*Project: Beat Saber PS4 Custom Songs Pipeline*  
+*Documentation Last Updated: 2026-04-27*
