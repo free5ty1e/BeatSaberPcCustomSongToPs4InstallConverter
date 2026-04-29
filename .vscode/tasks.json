@@ -13,7 +13,7 @@
       "runOptions": {
         "runOn": "folderOpen"
       },
-      "group": "opencode"
+      "group": "build"
     },
     {
       "label": "Opencode: Launch Fresh",
@@ -24,7 +24,7 @@
         "reveal": "always",
         "panel": "new"
       },
-      "group": "opencode"
+      "group": "build"
     },
     {
       "label": "Build Custom Songs",
@@ -101,7 +101,7 @@
         "reveal": "always",
         "panel": "new"
       },
-      "group": "opencode",
+      "group": "build",
       "detail": "Migrate opencode sessions to current project ID after container rebuild"
     }
   ]

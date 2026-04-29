@@ -13,4 +13,5 @@ fi
 
 echo "Migrating sessions to current project ID..."
 python3 "$(dirname "$0")/migrate_sessions.py"
-echo "Done! Run 'opencode session list' to verify."
+echo "Done! Listing sessions..."
+opencode session list --format table 2>&1 || echo "Run 'opencode session list' to verify your sessions."

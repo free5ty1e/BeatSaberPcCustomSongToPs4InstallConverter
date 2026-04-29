@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     zsh \
     p7zip-full \
+    less \
     # ── Critical dependencies for Onyx & OpenCode (do not remove) ──────────────
     libgl1 \
     libglu1-mesa \
