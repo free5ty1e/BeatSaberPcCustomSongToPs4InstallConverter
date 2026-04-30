@@ -93,6 +93,17 @@
       "detail": "List generated PKG files"
     },
     {
+      "label": "Build Custom Songs (Orbis via Wine)",
+      "type": "shell",
+      "command": "python3 ${workspaceFolder}/beat-saber-ps4-custom-songs/scripts/build_with_orbis.py",
+      "options": {
+        "cwd": "${workspaceFolder}/beat-saber-ps4-custom-songs"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "detail": "Build PKG using orbis-pub-gen.exe via Wine (requires orbis-pub-gen.exe in orbis-pub-gen folder)"
+    },
+    {
       "label": "Opencode: Fix Sessions After Rebuild",
       "type": "shell",
       "command": "bash ${workspaceFolder}/.devcontainer/fix-sessions.sh",

@@ -1,0 +1,6 @@
+#Place at C:\Users\<yourUsername>\
+
+[wsl2]
+memory=12GB
+swap=32GB
+swapFile=C:\\temp\\wsl-swap.vhdx

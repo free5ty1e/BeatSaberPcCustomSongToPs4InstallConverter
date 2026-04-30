@@ -101,7 +101,37 @@ RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/rel
 RUN opencode --version 2>&1 | grep -i "opencode" || echo "⚠️  OpenCode version check failed"
 
 # ── Python packages for Beat Saber PS4 Custom Songs ──────────────────────────
-RUN pip3 install --break-system-packages beautifulsoup4==4.14.3 lxml==6.1.0 requests==2.32.3 pycryptodome==3.23.0
+RUN pip3 install --break-system-packages beautifulsoup4==4.14.3 lxml==6.1.0 requests==2.32.3 pycryptodome==3.23.0 pyautogui==0.9.54 pyscreeze==1.0.1 pygetwindow==0.0.9
+
+# ── PowerShell for Windows automation scripts ───────────────────────────────
+RUN wget -q https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell_7.4.6-1.deb_amd64.deb -O /tmp/powershell.deb \
+    && dpkg -i /tmp/powershell.deb \
+    || apt-get install -f -y \
+    && rm /tmp/powershell.deb
+
+# ── Wine for running Windows executables (orbis-pub-gen) ─────────────────
+RUN dpkg --add-architecture i386 \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends wine wine32 unrar winbind \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Wine Mono (required for orbis-pub-gen.exe .NET) ─────────────────────
+RUN wget -q "https://dl.winehq.org/wine/wine-mono/8.1.0/wine-mono-8.1.0-x86.msi" -O /tmp/wine-mono.msi \
+    && wine msiexec /i /tmp/wine-mono.msi /qn \
+    && rm /tmp/wine-mono.msi
+
+# ── PS4 Fake PKG Tools v7 (orbis-pub-gen.exe) ─────────────────────────
+RUN mkdir -p /workspace/beat-saber-ps4-custom-songs/orbis-pub-gen \
+    && wget -q "https://github.com/CyB1K/PS4-Fake-PKG-Tools-3.87/releases/download/v7/PS4_Fake_PKG_Tools_3.87_V7.rar" -O /tmp/tools.rar \
+    && unrar x /tmp/tools.rar -y /workspace/beat-saber-ps4-custom-songs/orbis-pub-gen/ \
+    && rm /tmp/tools.rar
+
+# ── Wine setup for orbis-pub-gen ─────────────────────────────────────────
+RUN mkdir -p ~/.wine/drive_c/orbis-pub-gen \
+    && cp /workspace/beat-saber-ps4-custom-songs/orbis-pub-gen/*.exe ~/.wine/drive_c/orbis-pub-gen/ \
+    && cp /workspace/beat-saber-ps4-custom-songs/orbis-pub-gen/*.dll ~/.wine/drive_c/orbis-pub-gen/ \
+    && cp /workspace/beat-saber-ps4-custom-songs/orbis-pub-gen/ext/* ~/.wine/drive_c/orbis-pub-gen/ \
+    && cp /workspace/beat-saber-ps4-custom-songs/orbis-pub-gen/ext/sc.exe ~/.wine/drive_c/windows/system32/ps4_sc.exe
 
 # ── Non-root user (vscode convention) ────────────────────────────────────────
 ARG USERNAME=vscode
