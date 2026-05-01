@@ -269,6 +269,7 @@ def main():
     
     # Build what was requested
     success = True
+    song_count = len([d for d in args.songs_path.iterdir() if d.is_dir()])
     
     if not args.windows_only:
         if not build_python_pkg(args.songs_path, args.output_path, args.content_id):
@@ -285,16 +286,16 @@ def main():
         print("PIPELINE FAILED!")
     print("═" * 60)
     
-if success:
-        print(f"\nPython fPKGs:")
-        print(f"  - {args.output_path / 'custom_songs_v6.pkg'} (custom header)")
-        print(f"  - {args.output_path / 'custom_songs_v7.pkg'} (template clone)")
-        print(f"  - {args.output_path / 'custom_unlocker_v3.pkg'}")
-        print(f"\nWindows folder:")
-        print(f"  - {DEFAULT_WINDOWS_BUILD / 'Project.gp4'}")
-        print(f"  - {DEFAULT_WINDOWS_BUILD / 'CUSA12878-app/'}")
+    if success:
+        print(f"\nPython fPKGs (in output/):")
+        print(f"  - custom_songs_v6.pkg ({song_count} songs)")
+        print(f"  - custom_songs_v7.pkg ({song_count} songs)")
+        print(f"  - custom_unlocker_v3.pkg")
+        print(f"\nWindows Build (in windows_build/):")
+        print(f"  - Project.gp4 ({song_count} songs)")
+        print(f"  - CUSA12878-app/")
         print("\n" + "─" * 60)
         print("Done! All outputs generated successfully.")
-
+    
 if __name__ == "__main__":
     sys.exit(main())

@@ -9,6 +9,38 @@ Build a PS4 custom songs pipeline that downloads and converts Beat Saber PC song
 - Keep scripts outside gitignored folders for source control
 - Markdown docs at project root
 
+## BREAKTHROUGH: Orb is Works! (2026-04-30)
+
+**Project_ref.gp4 opens successfully in orbis-pub-gen!**
+
+The key insight: orbis requires EXACT reference format - matching what extracted from working DLC.
+
+### Orb is Format Requirements
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<psproject fmt="gp4" version="1000">
+  <volume>
+    <volume_type>pkg_ps4_ac_data</volume_type>
+    <volume_ts>2024-01-01T00:00:00</volume_ts>
+    <package content_id="UP4882-CUSA12878_00-P1S5XXXXXXXXXXXX" passcode="00000000000000000000000000000000" />
+  </volume>
+  <files img_no="0">
+    <file targ_path="sce_sys/param.sfo" orig_path="sce_sys/param.sfo" />
+    <file targ_path="sce_sys/icon0.png" orig_path="sce_sys/icon0.png" />
+  </files>
+  <rootdir>
+    <dir targ_name="sce_sys" />
+    <dir targ_name="songs" />  <!-- Only needed if songs included -->
+  </rootdir>
+</psproject>
+```
+
+### Build Settings from orbis GUI
+- Build Type: pkg
+- Content ID: UP4882-CUSA12878_00-P1S5XXXXXXXXXXXX
+- Title: Beat Saber
+- Kaufman Option: CHECKED (both checkboxes)
+
 ## Test Results
 
 ### PKG Test History
