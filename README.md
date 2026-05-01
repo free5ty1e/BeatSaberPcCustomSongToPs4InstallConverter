@@ -9,7 +9,7 @@ Pipeline to convert custom Beat Saber PC songs into installable PS4 packages com
 
 ## Status
 
-This is still in pre-alpha stages of development; the pipeline does not yet produce something installable. Current fpkg installs result in PS4 error dialogs.
+This is still in pre-alpha stages of development; the pipeline does not yet produce something playable.
 
 ## Getting Started
 
