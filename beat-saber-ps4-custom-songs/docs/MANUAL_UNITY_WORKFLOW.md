@@ -33,8 +33,8 @@ You need to use **Unity 2022.3 LTS** itself to:
 
 UABEA is a tool for viewing and editing Unity AssetBundles.
 
-1. Download from: https://github.com/DragonBals/UABEA/releases
-2. Download the latest `UABEA-*windows-x64.zip`
+1. Download from: https://github.com/nesrak1/UABEA
+2. Download the latest release from the Releases page
 3. Extract to: `C:\Tools\UABEA\`
 4. Run `UABEA.exe`
 
@@ -44,31 +44,42 @@ UABEA is a tool for viewing and editing Unity AssetBundles.
 
 ## Step 3: Analyze Beat Saber Levels with UABEA
 
-### Extract a Beat Saber Level
-1. Copy `beatsaber` level from the dump:
+### Open the Level File
+1. Run UABEA.exe
+2. Click **File** → **Open** (or press Ctrl+O)
+3. Navigate to the beatmap level file:
    ```
-   Copy from: CUSA12878-patch\Media\StreamingAssets\BeatmapLevelsData\beatsaber
+   CUSA12878-patch\Media\StreamingAssets\BeatmapLevelsData\beatsaber
    ```
-2. Open UABEA
-3. Click **File** → **Open** → Select `beatsaber` file
-4. The file will show the AssetBundle structure
-5. Expand the tree to see:
-   - `BeatmapLevelData` (main level data)
-   - `AudioClip` (song audio)
-   - `Texture2D` (cover image)
-   - `BeatmapData` (notes/obstacles)
+4. Click **Open**
 
-### Export for Analysis
-1. Right-click on the root node
-2. Select **Export all to file...**
-3. Save to: `C:\BeatSaberModding\Extracted\beatsaber_export\`
-4. This creates JSON representations of the assets
+### Understanding the Interface
 
-### Repeat for Multiple Levels
-Extract these levels to understand the format:
-- `beatsaber` - main tutorial level
-- `believer` - popular song
-- `mysongsknow` - has cover art
+**Left Panel (Asset Tree):** Shows all assets inside the bundle:
+- Textures (cover images)
+- AudioClips (music files)
+- MonoBehaviours (game logic)
+- GameObjects
+- Other assets
+
+**Right Panel (Details):**
+- Shows selected asset info
+- Preview for images/audio
+- Export options at the bottom
+
+### What to Look For
+
+1. **Click on each asset** in the left tree and note:
+   - Type (Texture2D, AudioClip, MonoBehaviour, etc.)
+   - Size
+   - Preview (for images/audio)
+
+2. **Look for these key assets:**
+   - `AudioClip` - The song audio
+   - `Texture2D` - Cover art
+   - `MonoBehaviour` or `BeatmapLevelData` - Level metadata
+
+3. **Expand the tree** by clicking the arrows to see all contained assets
 
 ---
 
@@ -82,7 +93,7 @@ Extract these levels to understand the format:
 5. Click **Create Project**
 
 ### Import Beat Saber SDK (Optional but Recommended)
-1. Download Beat Saber IPA from: https://github.com/z说出来/BeatSaber-IPA-Reloaded/releases
+1. Download Beat Saber IPA (BSIPA) from: https://github.com/nike4613/BeatSaber-IPA-Reloaded/releases
 2. This contains reference assemblies for Beat Saber's classes
 3. Or use the extracted DLLs from `globalgamemanagers.assets`
 
@@ -271,14 +282,38 @@ The plugin will intercept `AssetBundle.LoadFromFile` and redirect to custom leve
 
 ---
 
+## Step 4: What to Document
+
+**Take screenshots of each major asset type:**
+
+1. **AudioClip** (if present):
+   - Note the format (WAV, OGG, etc.)
+   - Sample rate, channels
+
+2. **Texture2D** (cover art):
+   - Dimensions
+   - Format
+
+3. **Any MonoBehaviour/BeatmapLevelData**:
+   - Field names
+   - Data types
+   - Example values
+
+**Report back with:**
+1. Screenshot of the full asset tree
+2. Details of each major asset type
+3. What fields are visible in any level data objects
+
+---
+
 ## Questions to Answer After Step 3
 
 When you analyze the levels with UABEA, please report:
 
-1. What class type is the main level data? (`BeatmapLevelData`?)
-2. How is audio stored? (Asset name? Reference?)
-3. What fields are required for each difficulty?
-4. Is there a specific header format?
-5. Are there any embedded resources or external references?
+1. What asset types are in the file? (AudioClip, Texture2D, MonoBehaviour?)
+2. Are there any "BeatmapLevelData" or similar level data objects?
+3. What fields are visible in level data? (song name, BPM, etc.)
+4. Is there embedded audio or just a reference?
+5. Any other interesting structures?
 
-This information will let us automate the custom song creation pipeline.
+This information will let us create the custom song pipeline.

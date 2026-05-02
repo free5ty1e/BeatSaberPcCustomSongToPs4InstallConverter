@@ -1,0 +1,191 @@
+{
+  "levelId": "test_song",
+  "levelName": "Custom Song",
+  "songName": "My Custom Song",
+  "songSubName": "",
+  "songAuthorName": "Artist Name",
+  "levelAuthorName": "Mapper Name",
+  "beatsPerMinute": 120.0,
+  "songTimeOffset": 0.0,
+  "shuffle": 0.0,
+  "shufflePeriod": 0.0,
+  "previewDuration": 30.0,
+  "coverImageFilename": "",
+  "difficultyBeatmaps": [
+    {
+      "difficulty": "Easy",
+      "difficultyRank": 1,
+      "noteJumpMovementSpeed": 10.0,
+      "noteJumpStartBeatTime": 0.0,
+      "beatmapFilename": "Easy.dat",
+      "colorScheme": {
+        "colorA": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "colorB": [
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      },
+      "environmentColourScheme": {
+        "environmentColor0": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "environmentColor1": [
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "difficulty": "Normal",
+      "difficultyRank": 3,
+      "noteJumpMovementSpeed": 10.0,
+      "noteJumpStartBeatTime": 0.0,
+      "beatmapFilename": "Easy.dat",
+      "colorScheme": {
+        "colorA": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "colorB": [
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      },
+      "environmentColourScheme": {
+        "environmentColor0": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "environmentColor1": [
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "difficulty": "Hard",
+      "difficultyRank": 5,
+      "noteJumpMovementSpeed": 10.0,
+      "noteJumpStartBeatTime": 0.0,
+      "beatmapFilename": "Easy.dat",
+      "colorScheme": {
+        "colorA": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "colorB": [
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      },
+      "environmentColourScheme": {
+        "environmentColor0": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "environmentColor1": [
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "difficulty": "Expert",
+      "difficultyRank": 7,
+      "noteJumpMovementSpeed": 10.0,
+      "noteJumpStartBeatTime": 0.0,
+      "beatmapFilename": "Easy.dat",
+      "colorScheme": {
+        "colorA": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "colorB": [
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      },
+      "environmentColourScheme": {
+        "environmentColor0": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "environmentColor1": [
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "difficulty": "ExpertPlus",
+      "difficultyRank": 9,
+      "noteJumpMovementSpeed": 10.0,
+      "noteJumpStartBeatTime": 0.0,
+      "beatmapFilename": "Easy.dat",
+      "colorScheme": {
+        "colorA": [
+          1.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "colorB": [
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      },
+      "environmentColourScheme": {
+        "environmentColor0": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ],
+        "environmentColor1": [
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      }
+    }
+  ]
+}
