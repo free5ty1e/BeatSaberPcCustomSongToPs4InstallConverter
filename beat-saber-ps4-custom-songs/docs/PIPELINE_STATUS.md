@@ -1,161 +1,204 @@
-# Beat Saber PS4 Custom Songs - Pipeline Status
+# Beat Saber PS4 Custom Songs - Complete Plan
 
-## End-to-End Pipeline Overview
+## Current Status
 
-```mermaid
-flowchart TD
-    subgraph DOWNLOAD["1. Download from BeatSaver"]
-        A1[BeatSaver Download] --> A2[BeatSaver ZIP Archive]
-    end
+### The Problem
+- Unity 2022.3 requires a **PAID license** to build PS4 packages
+- $450/year for Unity Pro (or $1500 one-time)
+- This blocks our primary workflow
 
-    subgraph EXTRACT["2. Extract Archive"]
-        A2 --> B1[Extract ZIP]
-        B1 --> B2[BeatSaver Song Folder]
-        B2 --> B3{Valid Song Structure?}
-        B3 -->|Yes| B4[Info.dat / song.dat]
-        B3 -->|No| B5[ERROR: Invalid Format]
-    end
+### Our Options Documented
 
-    subgraph PARSE["3. Parse Song Data"]
-        B4 --> C1[Extract Metadata]
-        C1 --> C2[Song Name, Artist, BPM]
-        C1 --> C3[Difficulty Files]
-        C1 --> C4[Audio File]
-        C2 --> C5[Validated Song Data]
-    end
+| Option | Description | Feasibility | Status |
+|--------|-------------|------------|--------|
+| **Option 1** | Unity Windows build (test only) | Low - doesn't solve PS4 | Paused |
+| **Option 2** | UABEA-only workflow (modify existing levels) | Medium | **Active** - Exploring |
+| **Option 3** | Different Unity version with free PS4 | Low - PS4 always paid | Research |
+| **Option 4** | Godot Engine (FREE!) | Low - see below | Exploring |
 
-    subgraph CONVERT["4. Convert Audio to FSB5"]
-        C4 --> D1{Audio Format}
-        D1 -->|OGG| D2[FSB5 Converter Tool]
-        D1 -->|WAV| D2
-        D1 -->|MP3| D3[Convert to OGG first]
-        D3 --> D2
-        D2 --> D4[FSB5 .resource file]
-    end
+---
 
-    subgraph BUILD["5. Build Level AssetBundle"]
-        D4 --> E1[Create BeatSaberBeatmapLevelData]
-        E1 --> E2[Bundle Audio + Metadata]
-        E2 --> E3[Beat Saber Level AssetBundle]
-    end
+## Option 2: UABEA-Only Workflow
 
-    subgraph PKG["6. Create PS4 PKG"]
-        E3 --> F1[Copy to BeatmapLevelsData]
-        F1 --> F2[Generate Project.gp4]
-        F2 --> F3[Build PKG with PkgToolBox]
-        F3 --> F4[BeatSaber Custom PKG]
-    end
+### What We Know
+- Beat Saber levels are AssetBundles in `BeatmapLevelsData/`
+- Each level contains `BeatSaberBeatmapLevelData` + `AudioClip` (FSB5 format)
+- UABEA can **export** audio as OGG
+- UABEA **cannot import** new audio directly (only works with FSB5 format it exports)
 
-    subgraph INSTALL["7. Install on PS4"]
-        F4 --> G1[Transfer to USB/FTP]
-        G1 --> G2[Install via Debug Settings]
-        G2 --> G3[Launch Beat Saber]
-        G3 --> G4[✓ Custom Song Available!]
-    end
+### Remaining Questions
+1. Can we modify the **level metadata** (song name, BPM, etc.) and save?
+2. Can we copy/replace levels with different names?
+3. What's the minimal change needed to add a "new" song?
 
-    style DOWNLOAD fill:#90EE90
-    style EXTRACT fill:#90EE90
-    style PARSE fill:#90EE90
-    style CONVERT fill:#FFB347
-    style BUILD fill:#FFB347
-    style PKG fill:#FFB347
-    style INSTALL fill:#FFB347
-```
+### UABEA Capabilities to Test
 
-## Step Status Legend
+| Action | Works? | Evidence |
+|--------|--------|---------|
+| Open AssetBundle | ✅ Yes | Verified |
+| Export audio as OGG | ✅ Yes | Verified |
+| Export metadata JSON | ✅ Yes | Verified |
+| Import JSON back | ❓ Not tried | Need test |
+| Modify metadata | ❓ Not tried | Need test |
+| Replace audio | ❓ Not tried | Need test |
 
-```mermaid
-pie title Pipeline Progress
-    "✓ Completed" : 3
-    "🔄 In Progress" : 1
-    "⏳ Pending" : 3
-```
+### Plan for Option 2
 
-## Detailed Step Status
+**Step 1:** Test Metadata Modification
+1. Open `beatsaber` level in UABEA
+2. Modify song name in `BeatSaberBeatmapLevelData`
+3. Save the AssetBundle
+4. Verify it still works
 
-| Step | Status | Description | Evidence |
-|------|--------|-------------|----------|
-| **1. Download from BeatSaver** | ✅ Done | BeatSaver ZIP format confirmed | `songs_repo/` contains 20+ songs |
-| **2. Extract Archive** | ✅ Done | ZIP extraction works | `python zipfile` handles correctly |
-| **3. Parse Song Data** | ⚠️ Partial | Info.dat parsing works, need beatmap converter | `beatsaber_asset_tool.py` has template |
-| **4. Convert Audio to FSB5** | ⚠️ Unity | **Unity 2022.3 project created!** | `unity_project/` ready to test |
-| **5. Build Level AssetBundle** | ⚠️ Unity | Unity project can build AssetBundles | Script ready, needs testing |
-| **6. Create PS4 PKG** | ⚠️ Partial | PKG building works | `PkgToolBox` tested, working |
-| **7. Install on PS4** | ⏳ Pending | Need full pipeline test | GoldHEN + debug settings ready |
+**Step 2:** Test Audio Replacement
+1. Export audio as OGG
+2. Modify the OGG (if possible)
+3. Try importing back (we know this is hard)
+4. Alternative: Replace the .resource file directly
 
-## Key Discoveries
+**Step 3:** Test Level Cloning
+1. Copy `beatsaber` to `mysong`
+2. Modify just the metadata
+3. Build PKG
+4. See if game loads both songs
 
-### Audio Format: FSB5
-- Beat Saber PS4 uses **FSB5** (FMOD Sound Bank 5) for audio
-- NOT raw OGG - audio is wrapped in FSB5 container
-- UABEA can **export** audio as OGG, but import needs FSB5 format
-- .resource file size: 7,269,312 bytes (including 900 byte FSB5 header)
+### Key Files for Option 2
 
-### AssetBundle Structure
-- Each level is a single AssetBundle file (e.g., `beatsaber`)
-- Contains: `BeatSaberBeatmapLevelData` + `AudioClip` + other assets
-- AudioClip points to external .resource file via `archive:/CAB-.../resource` path
-- Levels auto-load from `BeatmapLevelsData/` directory
+| File | Purpose |
+|------|---------|
+| `ps4_dump/.../BeatmapLevelsData/beatsaber` | Original level to copy |
+| `docs/UABEA_opened_beatsaber_*.jpg` | UI screenshots |
 
-### PKG Building
-- `PkgToolBox` successfully creates valid PKGs
-- Previous build: 94 songs, 1.1 GB (working!)
-- PKG installs via GoldHEN debug settings
+---
 
-## Current Blocker
+## Option 4: Godot Engine
 
-### Audio Replacement
-**Problem:** UABEA cannot import external audio directly
+### Why Not Godot?
+- Beat Saber is built in **Unity** - uses Unity-specific AssetBundle format
+- Godot exports to its own format (.pck/.wasm)
+- Even if Godot could create Unity AssetBundles (it can't), the game's C# code expects Unity classes
+- Would require rewriting the entire game logic
 
-**Options:**
-1. Build FSB5 encoder (complex - requires FMOD SDK)
-2. Use Unity 2022.3 to rebuild AssetBundles (requires Unity install)
-3. Direct hex replacement if sizes match (risky)
+### Conclusion: Not Viable
+Godot cannot create Unity AssetBundles. Even if we could, Beat Saber's game code wouldn't understand them.
 
-**Recommendation:** Test Unity + UABEA workflow for AssetBundle creation
+---
 
-## Immediate Next Steps
+## Option 3: Alternative Unity Versions
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant UABEA
-    participant Unity
-    participant PkgToolBox
-    participant PS4
+### Research Results
+From web search:
+- **Unity PS4 support is a compile-time option**, not license-gated in older versions
+- BUT: All modern Unity versions (2020+) require PS4 certification/SDK
+- The **PS4 SDK** is what enables PS4 builds - it's separate from Unity
 
-    User->>UABEA: Open existing level
-    UABEA-->>User: Export audio as OGG
-    User->>Unity: Create new scene with audio
-    Unity-->>Unity: Build AssetBundle
-    User->>UABEA: Open new AssetBundle
-    UABEA-->>User: Verify structure matches
-    User->>PkgToolBox: Create PKG
-    PkgToolBox-->>PS4: Install PKG
-    PS4-->>User: Test in game
-```
+### PS4 Build Requirements
+1. **Unity Editor** with PS4 module installed
+2. **PS4 SDK** from Sony (requires developer account)
+3. **Certificate** for signing PKGs
 
-## File Inventory
+Even if Unity itself is free, you'd still need:
+- Sony Developer Account ($10,000+ for full access)
+- PS4 devkit or hacked retail console
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `song_replacer.py` | Song metadata templates | ✅ Working |
-| `beatsaber_asset_tool.py` | AssetBundle analysis | ✅ Working |
-| `docs/FSB5_FORMAT_DISCOVERY.md` | Audio format documentation | ✅ Done |
-| `docs/SIMPLIFIED_APPROACH.md` | No-plugin approach | ✅ Done |
-| `docs/MANUAL_UNITY_WORKFLOW.md` | UABEA/Unity guide | ✅ Updated |
-| `docs/PIPELINE_STATUS.md` | This document | ✅ Current |
+### Conclusion: Not Viable Without Paid Unity
 
-## Questions to Answer
+---
 
-1. Can Unity 2022.3 create Beat Saber-compatible AssetBundles?
-2. Does UABEA import work for .resource files with FSB5?
-3. Can we test PKG build with existing (unmodified) levels first?
+## Our Best Path Forward: Option 2
 
-## Success Criteria
+### Why Option 2?
+- Uses existing tools (UABEA) - no license needed
+- We already have the full game dump
+- Beat Saber auto-loads ALL levels from `BeatmapLevelsData/`
+- Even minimal changes could work
 
-- [ ] Replace audio in one level (beatsaber → test song)
-- [ ] Build PKG with modified level
-- [ ] Install and verify on PS4
-- [ ] Audio plays correctly in game
-- [ ] Expand to batch processing
+### What We Need to Test
+
+#### Test 2A: Metadata Modification
+1. Open `beatsaber` in UABEA
+2. Change song name from "Beat Saber" to "My Custom Song"
+3. Save
+4. Verify with UABEA it saved
+
+#### Test 2B: Level Cloning
+1. Copy `beatsaber` to new file
+2. Open in UABEA
+3. Change song ID to something new
+4. Save
+5. Add to PKG project
+6. Build and test
+
+#### Test 2C: PKG with Multiple Levels
+1. Take original dump
+2. Add one modified level
+3. Build PKG
+4. Install and verify game loads it
+
+---
+
+## Next Steps (Action Items)
+
+### Immediate Tests to Run
+
+1. **Test 2A - Metadata Modify**
+   - Open `beatsaber` in UABEA
+   - Find `BeatSaberBeatmapLevelData` object
+   - Edit the `_songName` or similar field
+   - Save (File → Save or Ctrl+S)
+   - Report: Did it save? Any errors?
+
+2. **Test 2B - Level Clone**
+   - Copy `beatsaber` file to a new name
+   - Open new copy in UABEA
+   - Change the level ID
+   - Save
+   - Report: Two different levels possible?
+
+3. **Test 2C - Full PKG Test**
+   - Use PkgToolBox on modified dump
+   - Install on PS4
+   - Report: Did game launch? New songs?
+
+---
+
+## Progress Tracking
+
+| Test | Status | Result |
+|------|--------|-------|
+| Test 2A: Metadata Modify | ⏳ NOT STARTED | |
+| Test 2B: Level Clone | ⏳ NOT STARTED | |
+| Test 2C: PKG Test | ⏳ NOT STARTED | |
+
+---
+
+## Documentation
+
+All findings should be recorded in:
+- `docs/PIPELINE_STATUS.md` - Main tracking document
+- `docs/UABEA_WORKFLOW.md` - UABEA-specific guidance
+
+This document will be updated as we test each option.
+
+---
+
+## Questions Answered
+
+| Question | Answer |
+|----------|--------|
+| Can Godot work? | **No** - incompatible format |
+| Can old Unity work? | **No** - PS4 SDK always required |
+| Can we work without paid Unity? | **Yes** - Option 2 (UABEA) |
+
+---
+
+## Final Recommendation
+
+**Proceed with Option 2 (UABEA-only)** - test the metadata modification first, then level cloning.
+
+The game auto-loads levels from `BeatmapLevelsData/`. If we can:
+1. Modify existing level metadata → Easy win
+2. Clone a level with new name → Adds more songs
+3. Build PKG with modified levels → Full solution
+
+Let's start testing! See `docs/COMPLETE_TEST_PROCEDURE.md` for detailed test steps.
