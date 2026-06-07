@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-05-28
-**Current Status:** Plugin Architecture Implemented - Transitioning to SDK Environment
+**Current Status:** SDK Environment Active - Awaiting Toolchain Installation
 
 ## 🎯 The Goal
 Enable the installation and playback of custom songs on a jailbroken PS4 by modifying both the game's global song database and the individual song assets.
@@ -47,28 +47,27 @@ To ensure the experiment is non-destructive:
 ## 🚀 Implementation: "Beat Saber Deluxe" Plugin
 To avoid the risks of permanent file modification and to allow for "Adding" songs in the future, we have implemented a **Plugin-based Redirection System**.
 
-### v1: The "Single-Song Hijack" (Implemented)
+### v1: The "Single-Song Hijack" (Source Ready)
 The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
 
 **Technical Implementation:**
 - **Hook:** `sceFileUtilsOpen` is intercepted using a symbol-lookup hook.
 - **Redirection Table:** A mapping of original game paths to custom file paths.
-- **Logic:** If the game requests `resources.assets` or `startmeup`, the plugin redirects the request to `/data/custom/bs_deluxe/` without the game knowing.
+- **Logic:** If the game requests `resources.assets` or `startmeup`, the plugin redirects the request to `/data/custom/bs_deluxe/`.
 
 **Files Created:**
 - `include/bs_deluxe.h`: Plugin definitions.
 - `src/main.cpp`: Implementation of the `hooked_sceFileUtilsOpen` logic.
-- `build.sh`: Conceptual build script for cross-compiling to `.sprx`.
+- `Makefile`: Build configuration for OpenOrbis cross-compilation.
 
 ### v2: The "Dynamic Expansion" (Future)
 - Implement a memory-patching system to modify the `m_ArraySize` of the song list in real-time.
 - Append new song records to the end of the manifest in memory.
 
 ## 🚩 Current Blockers
-- **SDK Compilation:** The plugin source is ready, but requires a PS4 SDK environment to compile into a binary `.sprx` file.
+- **SDK Installation:** The `/opt/openorbis` directory is currently empty. We need the OpenOrbis SDK files mounted or installed to compile the source into a `.sprx` binary.
 
 ## 📓 Recent Findings & Updates
 - **Sacrifice Selection:** "Start Me Up" selected as the sacrificial song.
 - **FTP Status:** Confirmed read-only access; plugin redirection is the only viable path.
-- **Implementation:** "Beat Saber Deluxe" plugin source code has been drafted.
-- **DevContainer Evolution:** Created a new devcontainer definition (`openorbis.devcontainer.json`) specifically for the OpenOrbis SDK toolchain. This container preserves the opencode environment and workspace persistence.
+- **DevContainer Evolution:** Transitioned to the `openorbis` devcontainer to support C++ cross-compilation.
