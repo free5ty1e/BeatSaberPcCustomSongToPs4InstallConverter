@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-05-28
-**Current Status:** Manifest Structure Cracked - Preparing "Start Me Up" Patch
+**Current Status:** Plugin Architecture Implemented - Transitioning to SDK Environment
 
 ## 🎯 The Goal
 Enable the installation and playback of custom songs on a jailbroken PS4 by modifying both the game's global song database and the individual song assets.
@@ -29,7 +29,6 @@ Through raw binary analysis of the memory dump, we have decoded the exact struct
 ### 1. The ID Table (The "Lookup")
 - **Location:** Around offset `872249`.
 - **Structure:** A packed sequence of null-terminated or length-prefixed internal IDs.
-- **Purpose:** The game reads this list to determine which AssetBundles to look for in the file system.
 
 ### 2. The Metadata Record (The "Identity")
 - **Location:** Around offset `961965` (for $100 Bills).
@@ -39,32 +38,37 @@ Through raw binary analysis of the memory dump, we have decoded the exact struct
 
 ## 🛡️ Safety & Rollback Plan (The "Safety Net")
 To ensure the experiment is non-destructive:
-1. **The Master Backup:** Before any modification, create a full backup of the original `resources.assets` and the target AssetBundle from the PS4.
+1. **The Master Backup:** Create a full backup of the original `resources.assets` and the target AssetBundle.
 2. **Versioned Patches:** Every modified `resources.assets` will be named with a version (e.g., `resources_v1_test.assets`).
 3. **Restore Process:** Delete the modified file and restore the backup.
 
 ---
 
-## 🧪 Implementation Workflow (The "Surgical Strike")
-**Target Sacrifice Song:** "Start Me Up" - The Rolling Stones.
+## 🚀 Implementation: "Beat Saber Deluxe" Plugin
+To avoid the risks of permanent file modification and to allow for "Adding" songs in the future, we have implemented a **Plugin-based Redirection System**.
 
-1. **Search:** Locate "Start Me Up" in `resources.assets` to find its exact ID and Metadata offsets.
-2. **Modify:** Create a patched `resources.assets` by overwriting:
-    - The internal ID in the ID Table.
-    - The Display Name and Artist in the Metadata Record.
-3. **Package:** Provide the patched `resources.assets` and the required naming for the custom AssetBundle.
-4. **Deploy:** Upload via FTP and test.
+### v1: The "Single-Song Hijack" (Implemented)
+The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
 
----
+**Technical Implementation:**
+- **Hook:** `sceFileUtilsOpen` is intercepted using a symbol-lookup hook.
+- **Redirection Table:** A mapping of original game paths to custom file paths.
+- **Logic:** If the game requests `resources.assets` or `startmeup`, the plugin redirects the request to `/data/custom/bs_deluxe/` without the game knowing.
 
-## 📈 Future Goal: The "Expansion" Theory (Adding Songs)
-To add songs rather than replace them, we must transition from "Overwriting" to "Expanding".
-1. **Increment Size:** Find the `m_ArraySize` header and increase it.
-2. **Append Data:** Add the new ID and Metadata record to the end of the arrays.
-3. **Offset Management:** Update pointers to avoid breaking other assets.
+**Files Created:**
+- `include/bs_deluxe.h`: Plugin definitions.
+- `src/main.cpp`: Implementation of the `hooked_sceFileUtilsOpen` logic.
+- `build.sh`: Conceptual build script for cross-compiling to `.sprx`.
+
+### v2: The "Dynamic Expansion" (Future)
+- Implement a memory-patching system to modify the `m_ArraySize` of the song list in real-time.
+- Append new song records to the end of the manifest in memory.
+
+## 🚩 Current Blockers
+- **SDK Compilation:** The plugin source is ready, but requires a PS4 SDK environment to compile into a binary `.sprx` file.
 
 ## 📓 Recent Findings & Updates
-- **Discovery:** Attempted to locate "Sympathy For The Devil" in the memory dump but found it was absent.
-- **Pivot:** User approved switching the sacrificial song to "Start Me Up" from The Rolling Stones pack.
-- **Verification:** Confirmed the existence of the internal ID `StartMeUp` in the `resources.assets` ID table at offset `0x000d4b08` (approx. 864,520).
-- **Challenge:** The user-facing display name "Start Me Up" is not appearing in simple string searches, confirming that metadata is stored in serialized Unity objects or a specific binary format that requires offset-based analysis rather than keyword searching.
+- **Sacrifice Selection:** "Start Me Up" selected as the sacrificial song.
+- **FTP Status:** Confirmed read-only access; plugin redirection is the only viable path.
+- **Implementation:** "Beat Saber Deluxe" plugin source code has been drafted.
+- **DevContainer Evolution:** Created a new devcontainer definition (`openorbis.devcontainer.json`) specifically for the OpenOrbis SDK toolchain. This container preserves the opencode environment and workspace persistence.
