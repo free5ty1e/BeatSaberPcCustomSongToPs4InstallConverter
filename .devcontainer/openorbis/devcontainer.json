@@ -40,6 +40,6 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "bash .devcontainer/setup_devcontainer.sh && bash beat-saber-ps4-custom-songs/scripts/setup_beatsaber_tools.sh",
+  "postCreateCommand": "bash .devcontainer/setup_devcontainer.sh && bash beat-saber-ps4-custom-songs/scripts/setup_beatsaber_tools.sh && sudo bash .devcontainer/openorbis/install_openorbis_complete.sh",
   "remoteUser": "vscode"
 }
