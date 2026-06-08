@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh \
     p7zip-full \
     less \
+    lftp \
     libgl1 \
     libglu1-mesa \
     libx11-6 \
