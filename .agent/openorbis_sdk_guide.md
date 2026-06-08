@@ -1,21 +1,21 @@
 # OpenOrbis SDK Setup Guide
-**Purpose:** Instructions for obtaining and integrating the OpenOrbis SDK into the Beat Saber Deluxe development environment.
+**Purpose:** Comprehensive instructions for obtaining, installing, and utilizing the OpenOrbis SDK within the Beat Saber Deluxe development environment.
 
 ## 📌 Overview
-The OpenOrbis SDK is a free, open-source toolchain used to develop and compile `.sprx` (system plugin) and `.elf` (executable) files for the PlayStation 4. 
+The OpenOrbis SDK is a free, open-source toolchain used to develop and compile `.sprx` (system plugin) and `.elf` (executable) files for the PlayStation 4. It allows developers to create homebrew without the official Sony SDK.
 
-**Repository:** [OpenOrbis-PS4-Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
+**Official Repository:** [OpenOrbis-PS4-Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
 
 ## 📥 Installation Methods
 
-### Method A: Automated Script (Recommended for Linux/DevContainers)
-I have provided a comprehensive script `/workspace/install_openorbis_complete.sh` that handles everything.
+### Method A: Automated Script (Recommended)
+The project includes a script `/workspace/install_openorbis_complete.sh` designed for Linux/DevContainer environments.
 
 **What the script does:**
-1. Installs the required system compiler (`clang`) and linker (`lld`) via `apt`.
-2. Downloads the latest OpenOrbis SDK from GitHub.
-3. Installs the SDK to `/opt/openorbis`.
-4. Configures the necessary environment variables (`OO_PS4_TOOLCHAIN` and `PATH`) in your `~/.zshrc`.
+1. **Dependencies:** Installs `clang` and `lld` (the required LLVM toolchain) via `apt`.
+2. **SDK Retrieval:** Queries the GitHub API for the latest release, identifies the correct Linux archive (e.g., `toolchain-llvm-18.tar.gz`), and downloads it.
+3. **Installation:** Extracts the SDK to `/opt/openorbis`.
+4. **Environment Config:** Appends `OO_PS4_TOOLCHAIN` and the binary path to `~/.zshrc` for persistence.
 
 **To run the script:**
 ```bash
@@ -23,30 +23,34 @@ sudo /workspace/install_openorbis_complete.sh
 source ~/.zshrc
 ```
 
-### Method B: Manual Integration (Host-to-Container Mount)
-If you prefer to manage the SDK on your host machine:
-1. **Download:** Visit the [Releases Page](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases) and download the Linux version.
-2. **Extract:** Extract the archive to a folder on your host (e.g., `/home/user/openorbis`).
-3. **Mount:** Add a bind mount to your `.devcontainer/openorbis.devcontainer.json`:
+### Method B: Manual Host-to-Container Mount
+For users who prefer managing the SDK on their host machine:
+1. **Download:** Get the Linux SDK from the [Releases Page](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain/releases).
+2. **Extract:** Place it in a local folder (e.g., `/home/user/openorbis`).
+3. **Mount:** Update `.devcontainer/openorbis.devcontainer.json` to map the host folder to the container:
    ```json
    "mounts": [
-     "source=/path/to/your/openorbis,target=/opt/openorbis,type=bind,consistency=cached"
+     "source=/home/user/openorbis,target=/opt/openorbis,type=bind,consistency=cached"
    ]
    ```
 
 ## 🛠️ Verification
-After installation, verify the toolchain is functioning by checking the compiler and the SDK path:
-
+To confirm the toolchain is active, run:
 ```bash
-# Check for Clang
+# Check compiler
 clang --version
 
-# Check for OpenOrbis Binaries
+# Check SDK binaries (e.g., readoelf)
 ls $OO_PS4_TOOLCHAIN/bin/linux/readoelf
 ```
 
 ## 🚀 Compilation Workflow
-Once the SDK is installed:
-1. Navigate to the plugin project: `cd /workspace/beat_saber_Luxe`
-2. Run the build command: `make`
-3. The output will be located at `build/beat_saber_deluxe.sprx`.
+The project uses a `Makefile` in `/workspace/beat_saber_deluxe/`.
+
+**Build process:**
+1. Navigate to the project: `cd /workspace/beat_saber_deluxe`
+2. Run the build: `make`
+3. The resulting binary is created at `build/beat_saber_deluxe.sprx`.
+
+**Cross-Compiler Notes:**
+The toolchain uses `clang` with the `-fPIC` and `-shared` flags to create a position-independent library compatible with the PS4's dynamic loading system.

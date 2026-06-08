@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-05-28
-**Current Status:** SDK Environment Active - Awaiting Toolchain Installation
+**Current Status:** Deployment Complete - Awaiting In-Game Verification
 
 ## 🎯 The Goal
 Enable the installation and playback of custom songs on a jailbroken PS4 by modifying both the game's global song database and the individual song assets.
@@ -47,7 +47,7 @@ To ensure the experiment is non-destructive:
 ## 🚀 Implementation: "Beat Saber Deluxe" Plugin
 To avoid the risks of permanent file modification and to allow for "Adding" songs in the future, we have implemented a **Plugin-based Redirection System**.
 
-### v1: The "Single-Song Hijack" (Source Ready)
+### v1: The "Single-Song Hijack" (Implemented)
 The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
 
 **Technical Implementation:**
@@ -59,15 +59,28 @@ The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
 - `include/bs_deluxe.h`: Plugin definitions.
 - `src/main.cpp`: Implementation of the `hooked_sceFileUtilsOpen` logic.
 - `Makefile`: Build configuration for OpenOrbis cross-compilation.
+- `build/beat_saber_deluxe.sprx`: The compiled binary plugin.
 
 ### v2: The "Dynamic Expansion" (Future)
 - Implement a memory-patching system to modify the `m_ArraySize` of the song list in real-time.
 - Append new song records to the end of the manifest in memory.
 
+## 🔬 Current Experiment: "The First Hijack"
+We are testing the redirection system by replacing one official song with a test bundle.
+
+- **Sacrifice Song (X):** "Start Me Up" (The Rolling Stones).
+- **Replacement Bundle (Y):** `CustomSong` (currently a clone of "$100 Bills" for verification).
+- **Expected Display Name (Z):** "Start Me Up" (The manifest was patched to change the ID, but the display string remains the same for this test).
+- **Album/Location (W):** The Rolling Stones DLC Pack.
+
+**Expected Result:**
+When you select "Start Me Up" in the Rolling Stones album, the game will load the `CustomSong` bundle and play "$100 Bills" instead.
+
 ## 🚩 Current Blockers
-- **SDK Installation:** The `/opt/openorbis` directory is currently empty. We need the OpenOrbis SDK files mounted or installed to compile the source into a `.sprx` binary.
+- **In-Game Verification:** Awaiting user feedback on whether the redirected files are loading correctly.
 
 ## 📓 Recent Findings & Updates
 - **Sacrifice Selection:** "Start Me Up" selected as the sacrificial song.
 - **FTP Status:** Confirmed read-only access; plugin redirection is the only viable path.
-- **DevContainer Evolution:** Transitioned to the `openorbis` devcontainer to support C++ cross-compilation.
+- **Tooling:** Developed a custom `.sprx` plugin and an automated OpenOrbis SDK installer.
+- **Deployment:** Plugin and custom data successfully pushed to `/data/GoldHEN/plugins/` and `/data/custom/bs_deluxe/`.
