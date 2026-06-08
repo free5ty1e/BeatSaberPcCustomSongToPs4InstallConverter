@@ -1,7 +1,10 @@
 #ifndef BEAT_SABER_DELUXE_H
 #define BEAT_SABER_DELUXE_H
 
-#include <ps4_sdk.h> // Hypothetical SDK header
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "hooks.h"
 
 // Redirection Map
 typedef struct {
@@ -13,8 +16,8 @@ typedef struct {
 extern PathRedirect g_redirects[];
 extern int g_redirect_count;
 
-// Hook function for sceFileUtilsOpen
-int (*orig_sceFileUtilsOpen)(const char* path, int flags, int mode);
-int hooked_sceFileUtilsOpen(const char* path, int flags, int mode);
+// Hook function for open
+int (*orig_open)(const char* pathname, int flags, mode_t mode);
+int hooked_open(const char* pathname, int flags, mode_t mode);
 
 #endif
