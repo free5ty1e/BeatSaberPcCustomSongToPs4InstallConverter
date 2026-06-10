@@ -65,22 +65,21 @@ The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
 - Implement a memory-patching system to modify the `m_ArraySize` of the song list in real-time.
 - Append new song records to the end of the manifest in memory.
 
-## 🔬 Current Experiment: "The First Hijack"
-We are testing the redirection system by replacing one official song with a test bundle.
+## 🔬 Current Experiment: "The Logging & Fuzzy Match Test"
+We are debugging the redirection failure. The previous version did not successfully hijack the files, so we have shifted to a "Discovery" phase.
 
-- **Sacrifice Song (X):** "Start Me Up" (The Rolling Stones).
-- **Replacement Bundle (Y):** `CustomSong` (currently a clone of "$100 Bills" for verification).
-- **Expected Display Name (Z):** "Start Me Up" (The manifest was patched to change the ID, but the display string remains the same for this test).
-- **Album/Location (W):** The Rolling Stones DLC Pack.
+- **Goal:** Capture the exact file paths the game requests.
+- **Change:** Updated the plugin to hook the general `open` symbol and implement **Fuzzy Path Matching** (using `strstr`).
+- **Observation Method:** Every file request is now logged to `/data/custom/bs_deluxe/plugin.log` with a timestamp.
+- **Success Metric:** The presence of `resources.assets` or `startmeup` in the log file, and a corresponding `REDIRECT` entry.
 
 **Expected Result:**
-When you select "Start Me Up" in the Rolling Stones album, the game will load the `CustomSong` bundle and play "$100 Bills" instead.
+By analyzing `plugin.log` after a game launch, we will see the exact string the game uses (e.g., `/app0/BeatSaber/Media/resources.assets`), allowing us to refine the redirection table.
 
 ## 🚩 Current Blockers
-- **In-Game Verification:** Awaiting user feedback on whether the redirected files are loading correctly.
+- **Log Analysis:** Awaiting the first run of the logging plugin to see the actual request paths.
 
 ## 📓 Recent Findings & Updates
-- **Sacrifice Selection:** "Start Me Up" selected as the sacrificial song.
-- **FTP Status:** Confirmed read-only access; plugin redirection is the only viable path.
-- **Tooling:** Developed a custom `.sprx` plugin and an automated OpenOrbis SDK installer.
-- **Deployment:** Plugin and custom data successfully pushed to `/data/GoldHEN/plugins/` and `/data/custom/bs_deluxe/`.
+- **Plugin Iteration:** Transitioned from strict path matching to fuzzy matching and added comprehensive logging.
+- **Toolchain:** Plugin successfully re-compiled with OpenOrbis SDK and ready for deployment.
+- **Redirection Target:** `/data/custom/bs_deluxe/` remains the primary target for patched assets.
