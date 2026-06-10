@@ -65,21 +65,22 @@ The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
 - Implement a memory-patching system to modify the `m_ArraySize` of the song list in real-time.
 - Append new song records to the end of the manifest in memory.
 
-## 🔬 Current Experiment: "The Logging & Fuzzy Match Test"
-We are debugging the redirection failure. The previous version did not successfully hijack the files, so we have shifted to a "Discovery" phase.
+## 🔬 Current Experiment: "The Heartbeat Test"
+The previous logging plugin failed to create a log file, indicating the plugin is either not loading or crashing immediately (likely due to a memory protection fault during hooking).
 
-- **Goal:** Capture the exact file paths the game requests.
-- **Change:** Updated the plugin to hook the general `open` symbol and implement **Fuzzy Path Matching** (using `strstr`).
-- **Observation Method:** Every file request is now logged to `/data/custom/bs_deluxe/plugin.log` with a timestamp.
-- **Success Metric:** The presence of `resources.assets` or `startmeup` in the log file, and a corresponding `REDIRECT` entry.
+- **Goal:** Confirm the plugin is actually being loaded by GoldHEN.
+- **Implementation:** A minimalist `.sprx` that performs zero hooking and simply attempts to write a "heartbeat" file to `/data/custom/bs_deluxe/heartbeat.txt`.
+- **Success Metric:** Presence of `heartbeat.txt` after a system reboot.
 
-**Expected Result:**
-By analyzing `plugin.log` after a game launch, we will see the exact string the game uses (e.g., `/app0/BeatSaber/Media/resources.assets`), allowing us to refine the redirection table.
+**Next Phase (Post-Heartbeat):**
+1. **Memory Protection:** Implement proper memory permission changes (making target pages writable) before applying hooks.
+2. **Target Refinement:** Shift from hooking `open` to `sceFileUtilsOpen`, which is the specific PS4 system call for file access.
+3. **Log-Driven Discovery:** Re-introduce logging only after the heartbeat and memory protections are verified.
 
 ## 🚩 Current Blockers
-- **Log Analysis:** Awaiting the first run of the logging plugin to see the actual request paths.
+- **Plugin Load Verification:** Awaiting "Heartbeat" test results.
 
 ## 📓 Recent Findings & Updates
-- **Plugin Iteration:** Transitioned from strict path matching to fuzzy matching and added comprehensive logging.
-- **Toolchain:** Plugin successfully re-compiled with OpenOrbis SDK and ready for deployment.
-- **Redirection Target:** `/data/custom/bs_deluxe/` remains the primary target for patched assets.
+- **Crash Hypothesis:** The naive `memcpy` into system function addresses likely triggered a kernel panic/crash because the code segment is read-only.
+- **Strategy Shift:** Prioritizing "Proof of Life" over functionality to isolate the failure point.
+
