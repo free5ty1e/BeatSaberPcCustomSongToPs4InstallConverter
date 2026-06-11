@@ -18,12 +18,21 @@ metadata:
 3. `_init` writes heartbeat.txt and calls `module_start()`
 4. `_fini` calls `module_stop()`
 
+**⚠️ CRITICAL FORMAT FIX (deployed alongside 4f):**
+All prior experiments deployed the WRONG file format. `create-fself` produces two outputs:
+- `--lib=<name>.prx` → **fself wrapper** (starts with SCE magic `4f 15 3d 1d`) ❌ — was being deployed
+- `-out=<name>.oelf` → **signed ELF** (starts with ELF magic `7f 45 4c 46`, e_type=0xfe18) ✅ — GoldHEN expects this
+
+The deployed RB4DX PRX on the PS4 IS a signed ELF (`.oelf`), NOT the fself wrapper. **Fix:** Changed Makefile to `cp obj/beat_saber_deluxe.oelf beat_saber_deluxe.prx`.
+
 **Binary verification:**
 - Entry point: 0x20 (_init at .text+0x20)
 - _init at 0x20 (87 bytes, includes heartbeat + module_start call)
 - _fini at 0x80 (18 bytes, calls module_stop)
 - module_start at 0x140 (clean stub)
 - module_stop at 0x150 (clean stub)
-- PRX: 88576 bytes
+- PRX: 95784 bytes (signed ELF format ✅)
 
-**See also:** [[rb4dx-plugin-architecture-reference]] for the working GoldHEN plugin pattern.
+**See also:**
+- [[rb4dx-plugin-architecture-reference]] for the working GoldHEN plugin pattern
+- [[experiment-4e-direct-module-start]] for prior approach

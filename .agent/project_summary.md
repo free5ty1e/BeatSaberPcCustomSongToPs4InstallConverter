@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** Experiment 4e ❌ FAILED | Experiment 4f (_init entry point) 🔄 DEPLOYED — awaiting test
+**Current Status:** Experiment 4f (_init entry point, .oelf format) 🔄 DEPLOYED — awaiting test | ⚠️ CRITICAL FIX: GoldHEN expects .oelf format (signed ELF), not fself wrapper
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -159,13 +159,18 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - `module_start` at 0x0140 (16 bytes — clean stub) ✓
   - `module_stop` at 0x0150 (16 bytes — clean stub) ✓
   - `.data.sce_module_param` at 0x10000 (24 bytes) ✓
-  - PRX file: 88576 bytes, built and deployed ✓
+  - PRX file: 95784 bytes, built and deployed ✓
+- **⚠️ CRITICAL FORMAT FIX (2026-06-11):** All prior experiments deployed the WRONG file format.
+  - `create-fself` produces TWO outputs:
+    1. `--lib=<name>.prx` → **fself wrapper** (starts with SCE magic `4f 15 3d 1d`) ❌ — was being deployed
+    2. `-out=<name>.oelf` → **signed ELF** (starts with ELF magic `7f 45 4c 46`, e_type=0xfe18) ✅ — GoldHEN expects this
+  - The deployed RB4DX PRX on the PS4 IS a signed ELF (`.oelf`), NOT the fself wrapper
+  - **Fix:** Changed Makefile to `cp obj/beat_saber_deluxe.oelf beat_saber_deluxe.prx`, deploying the signed ELF as the .prx
+  - All prior experiments had correct code but wrong container format
 - **Expected result:** `heartbeat.txt` appears in `/data/custom/bs_deluxe/` after PS4 reboot + GoldHEN + game launch.
-- **If fails:** The issue is not with our entry point but with GoldHEN plugin loading itself. Next steps:
-  1. Force-test the plugin under `[default]` section in plugins.ini instead of `[CUSA12878]`
-  2. Verify CUSA12878 is Beat Saber's actual CUSA ID
-  3. Install GoldHEN SDK and use `crtprx.o` + GoldHEN hook system (matching RB4DX exactly)
-  4. Add klog-based logging (kernel debug log) instead of file writes
+- **If fails (after format fix):** The issue is with GoldHEN plugin loading itself. Next steps:
+  1. Try registering under `[default]` in plugins.ini instead of `[CUSA12878]` to test if scoping is the issue
+  2. Install GoldHEN SDK and use `crtprx.o` + GoldHEN hook system (matching RB4DX exactly)
 
 ### crtlib.o Disassembly Analysis
 **Analyzed:** 2026-06-11
@@ -213,14 +218,15 @@ ret
 
 | Aspect | Beat Saber Deluxe (ours) ❌ | RB4DX (working) ✅ |
 |--------|------------------------------|---------------------|
-| **Entry point** | `-e module_start` → `crtlib.o`'s default (just runs constructors) | `-e _init` → GoldHEN SDK's `crtprx.o` |
-| **Module entry function** | `int plugin_main()` — never called by crtlib.o | `int32_t attr_public module_start(size_t argc, const void *args)` — called by GoldHEN CRT |
-| **Module exit function** | (none) | `int32_t attr_public module_stop(size_t argc, const void *args)` |
-| **CRT** | `crtlib.o` (mini CRT: runs init array, returns 0) | `$(GH_SDK)/build/crtprx.o` (GoldHEN-specific CRT) |
-| **Hook system** | Custom `memcpy` (no mprotect, dangerous) | GoldHEN SDK `HOOK` macros (`HOOK_INIT`, `HOOK`, `HOOK_CONTINUE`) with mprotect |
+| **Entry point** | `-e _init` ✅ (matches RB4DX) | `-e _init` → GoldHEN SDK's `crtprx.o` |
+| **Module entry function** | `int module_start()` in main.cpp ✅ (called from _init) | `int32_t attr_public module_start()` — called by GoldHEN CRT |
+| **Module exit function** | `int module_stop()` in main.cpp ✅ (called from _fini) | `int32_t attr_public module_stop()` |
+| **CRT** | `crt_patch.cpp` (custom, provides .data.sce_module_param, _init/_fini) ⚠️ not GoldHEN SDK | `$(GH_SDK)/build/crtprx.o` (GoldHEN-specific CRT) |
+| **PRX format** | `.oelf` signed ELF (magic `7f 45 4c 46`, e_type=0xfe18) ✅ fixed 2026-06-11 | `.oelf` signed ELF (same format) |
+| **Hook system** | Custom `memcpy` (no mprotect, dangerous) | GoldHEN SDK `HOOK` macros with mprotect |
 | **Visibility** | No export attributes | `attr_public` = `__attribute__((visibility("default")))` |
 | **Libraries** | `-lc -lc++ -lkernel` | `-lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad` |
-| **Logging** | `fprintf` to `/data/custom/bs_deluxe/plugin.log` | `klog()` (kernel debug log) via `final_printf` macro |
+| **Logging** | `fprintf` to `/data/custom/bs_deluxe/heartbeat.txt` | `klog()` (kernel debug log) via `final_printf` macro |
 | **GoldHEN SDK** | Not installed ($GOLDHEN_SDK unset) | Required (`#include <GoldHEN/Common.h>`) |
 
 ### RB4DX `module_start` Pattern
@@ -300,12 +306,15 @@ nm /opt/openorbis/OpenOrbis/PS4Toolchain/lib/crt_dyn.o
 - **Target triple:** `--target=x86_64-pc-freebsd12-elf` (MUST be this, NOT linux-gnu)
 - **Sysroot:** `-isysroot $(OO_PS4_TOOLCHAIN)`
 - **Linker:** `ld.lld` with script `$(TOOLCHAIN)/link.x`
-- **Entry point:** `-e module_start` (CRITICAL - must be set explicitly)
-- **CRT for libraries:** `$(TOOLCHAIN)/lib/crtlib.o`
-  - ⚠️ **KNOWN ISSUE:** `crtlib.o`'s `module_start` only iterates `__init_array` and returns 0
-  - It does NOT call any user-defined function named `plugin_main()`
-  - **Fix:** Either use `__attribute__((constructor))` on init functions, or drop crtlib.o and define module_start directly
-- **Output packaging:** `create-fself --lib=beat_saber_deluxe.prx --paid 0x3800000000000011`
+- **Entry point:** `-e _init` (CRITICAL — matching RB4DX pattern; GoldHEN calls `_init`, not `module_start`)
+- **CRT:** Dropped `$(TOOLCHAIN)/lib/crtlib.o`; custom CRT replacement in `src/crt_patch.cpp`
+- **Output packaging:** `create-fself -out=<oelf> --lib=<fself>.prx --paid 0x3800000000000011`
+  - ⚠️ **FORMAT:** `--lib` produces fself wrapper (SCE magic `4f 15 3d 1d`) — **DO NOT DEPLOY THIS**
+  - The `-out` file (signed ELF, magic `7f 45 4c 46`, e_type=0xfe18) is what GoldHEN expects
+  - **Fix:** Copy `.oelf` as the deployable `.prx` file:
+    ```makefile
+    cp obj/beat_saber_deluxe.oelf beat_saber_deluxe.prx
+    ```
 
 ### RB4DX Build System (GoldHEN SDK approach) — for reference
 - **Toolchain:** OpenOrbis + GoldHEN SDK (`$GOLDHEN_SDK` must be set)
@@ -370,14 +379,13 @@ quit
 EOF
 ```
 
-### Phase 5: Iterate (updated for Experiment 4e)
+### Phase 5: Iterate (updated after PRX format fix)
 Based on results:
 - **heartbeat.txt found ✅:** Plugin loads. Move to Experiment 5 (safe hooking with mprotect).
-- **No heartbeat (even with direct module_start) ❌:** The issue is likely with GoldHEN plugin loading itself, not our code. Next steps:
-  1. Try `-e _init` as entry point instead of `module_start` (RB4DX uses `_init` via GoldHEN SDK's `crtprx.o`)
-  2. Install GoldHEN SDK and use `crtprx.o` + `-e _init` + GoldHEN hook macros (matching RB4DX exactly)
-  3. Verify plugin loading via GoldHEN's klog / notification API instead of file writes
-  4. Check if `[CUSA12878]` scoping in plugins.ini is correct for Beat Saber's actual CUSA
+- **No heartbeat ❌ (even after all fixes):** The code and format are now correct. If the plugin still doesn't produce a heartbeat:
+  1. Try registering under `[default]` in plugins.ini instead of `[CUSA12878]` to rule out CUSA scoping
+  2. Install GoldHEN SDK and use `crtprx.o` + GoldHEN hook system (matching RB4DX exactly)
+  3. Use `klog()` for kernel debug output instead of file writes (visible in GoldHEN logs)
 - **If plugin crashes or causes issues:** Investigate `klog()` output via GoldHEN logging, add proper error handling
 
 ## File Reference
@@ -386,7 +394,7 @@ Based on results:
 - `/workspace/beat_saber_deluxe/src/hooks.cpp` - Hook utilities (`find_symbol`, `install_hook` — naive memcpy, needs mprotect)
 - `/workspace/beat_saber_deluxe/include/bs_deluxe.h` - Plugin definitions
 - `/workspace/beat_saber_deluxe/include/hooks.h` - Hook function declarations
-- `/workspace/beat_saber_deluxe/Makefile` - Build system (no longer links crtlib.o)
+- `/workspace/beat_saber_deluxe/Makefile` - Build system (no crtlib.o, -e _init entry, produces signed ELF .prx)
 - `/workspace/beat_saber_deluxe/beat_saber_deluxe.prx` - Compiled binary
 - `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to PS4)
 - `/workspace/resources_patched.assets` - Modified manifest
@@ -418,6 +426,7 @@ Based on results:
 - [Experiment 4d: Constructor Fix](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4d-constructor-fix.md) — FAILED: constructor didn't fire either
 - [Experiment 4e: Direct module_start](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4e-direct-module-start.md) — Dropped crtlib.o, defined module_start directly. FAILED.
 - [Experiment 4f: _init entry point](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init like RB4DX. DEPLOYED.
+- [PRX Format Discovery] — GoldHEN expects `.oelf` (signed ELF), not fself wrapper. All prior experiments deployed wrong format. FIXED in Makefile.
 
 ## Key Technical Decisions
 1. **Plugin over PKG:** `.prx` plugin via GoldHEN chosen for rapid iteration vs full PKG rebuild
@@ -427,3 +436,4 @@ Based on results:
 5. **CUSA scoping:** Plugin registered under `[CUSA12878]` (Beat Saber) so it only loads for this game
 6. **crtlib.o limitation (discovered 2026-06-11):** OpenOrbis's `crtlib.o` provides a `module_start` that only runs the init array — it does NOT call any user-defined `plugin_main()`. All user init code must be `__attribute__((constructor))` or we must drop crtlib.o and define `module_start` ourselves. Long-term, the RB4DX pattern (GoldHEN SDK's `crtprx.o` + `-e _init` + custom `module_start`) is the correct approach.
 7. **GoldHEN SDK not installed:** Future work may require installing GoldHEN_Plugins_SDK for proper `HOOK` macros with `mprotect` support. Until then, we can implement our own mprotect-based hooking.
+8. **⚠️ PRX format (discovered 2026-06-11):** GoldHEN expects the **signed ELF (`.oelf`)** from `create-fself`, NOT the fself wrapper (`--lib` output). The deployed RB4DX plugin on the PS4 has ELF magic `7f 45 4c 46` with e_type=0xfe18, not SCE fself magic `4f 15 3d 1d`. All experiments 4a-4f deployed the wrong format until this fix. **Makefile updated:** `cp obj/*.oelf $(TARGET)`

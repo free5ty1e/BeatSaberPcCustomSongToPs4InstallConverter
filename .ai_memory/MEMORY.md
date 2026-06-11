@@ -39,3 +39,6 @@
 - [User Preferences](beat-saber-ps4-custom-songs/user_preferences.md) — Difficulty requirements, UI preferences
 - [Conversation History](beat-saber-ps4-custom-songs/conversation_history.md) — Full conversation history from initial pipeline phase
 - [Session Persistence Fix](beat-saber-ps4-custom-songs/session-persistence-fix.md) — Fixed session discoverability: added cz-recent, cz-last, cz-resume commands to setup script
+
+## ⚙️ Operating Rules
+- [Project Summary Update Rule](project-summary-update-rule.md) — **Enforcement:** Always update project_summary.md after every task completion or before reporting to user.
