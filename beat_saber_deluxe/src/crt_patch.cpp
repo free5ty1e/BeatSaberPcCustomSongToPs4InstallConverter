@@ -25,7 +25,7 @@ __attribute__((section(".data.sce_module_param"), used)) = {
     .size = 0x18,
     .pad = 0,
     .magic = 0x000000013c13f4bf,
-    .flags = 0x0000000100000051,
+    .flags = 0x0000000000000051,  // bit 0=valid; create-fself adds bit 24 (PRX)
 };
 
 // --- .data (minimal CRT data) ---

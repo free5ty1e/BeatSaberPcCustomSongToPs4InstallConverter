@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔴 FOURTH root cause found: wrong plugins.ini path! | All prior tests deployed to `/data/GoldHEN/plugins/plugins.ini` but GoldHEN reads `/data/GoldHEN/plugins.ini` (root level) | FIX DEPLOYED — awaiting test
+**Current Status:** 🔴 FIVE root causes found — last: module param flags bit 32 caused mismatch | 0x0000000100000051 → 0x0000000000000051 (create-fself adds PRX bit) | FIX DEPLOYED — awaiting test
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -174,14 +174,15 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Each path gets fopen() with "w" — success/failure recorded with errno
   - First working path gets a full report table of all 14 attempts
   - USB drive connected by user for guaranteed writable target
-- **🔧 ELF STRUCTURE FIXES (2026-06-11):** After path probe showed NO file on any of 14 paths (including USB), confirmed `_init` is never called. Deep ELF comparison with working RB4DX PRX revealed **four root causes**:
-  1. **Wrong container format** (fixed earlier) — deployed fself wrapper instead of signed ELF `.oelf`
-  2. **TLS segment** — Linking against `-lc` (musl) pulled in `__musl_current_locale` via `.tbss`, creating a PT_TLS program header. GoldHEN/PS4 loader likely rejects PRX with TLS. **Fix:** Changed `LIBS` from `-lc -lc++ -lkernel` to `-lSceLibcInternal -lkernel` (matches RB4DX).
-  3. **Duplicate LOAD segment** — Original `link.x` placed `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical RW LOAD segments at the same vaddr (invalid ELF). **Fix:** Copied `link.x` to project, merged data sections into one, updated Makefile to use local `--script link.x`.
-  4. **⚠️ WRONG plugins.ini path** — All prior tests deployed our config to `/data/GoldHEN/plugins/plugins.ini` (subdirectory), but GoldHEN actually reads `/data/GoldHEN/plugins.ini` (root level). The root file had RB4DX entries but no reference to our plugin. GoldHEN never registered `beat_saber_deluxe.prx` to load!
-- **Current state:** 7 program headers (matches RB4DX), no TLS, no duplicate LOAD, signed ELF `.oelf`, `lSceLibcInternal`. plugins.ini NOW deployed to ROOT path with Beat Saber entry.
-- **Expected result:** GoldHEN will now register our plugin and call `_init`. One or more `heartbeat.txt` files appear at writable paths. USB path will contain the full probe report.
-- **If fails (after all 4 fixes):** Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path).
+- **🔧 STRUCTURAL FIXES (2026-06-11):** Deep comparison with working RB4DX PRX revealed **five root causes** preventing _init from being called:
+  1. **Wrong container format** — deployed fself wrapper instead of signed ELF `.oelf`
+  2. **TLS segment** — Linking against `-lc` (musl) pulled in `.tbss.__musl_current_locale`, creating PT_TLS. **Fix:** Changed to `-lSceLibcInternal -lkernel`.
+  3. **Duplicate LOAD segment** — Original `link.x` placed `.data.sce_module_param`, `.data`, `.bss` in separate sections, causing two identical LOAD segments at same vaddr. **Fix:** Merged data sections in local `link.x`.
+  4. **Wrong plugins.ini path** — Deployed to `/data/GoldHEN/plugins/plugins.ini` but GoldHEN reads `/data/GoldHEN/plugins.ini` (root). **Fix:** Deploy to root path.
+  5. **⚠️ Module param flags bit 32** — Our `.flags = 0x0000000100000051` had bit 32 (exports) set; RB4DX has `0x0000000001000051` (bit 32 clear). `create-fself` adds bit 24 (PRX flag). **Fix:** Set `.flags = 0x0000000000000051` (create-fself adds PRX bit).
+- **Current state:** All five fixes applied. PRX has matching module param, 7 PHDRs, no TLS, no duplicate LOAD, signed ELF, correct plugins.ini, correct CUSA.
+- **Expected result:** GoldHEN loads the plugin and calls `_init`. One or more heartbeat files appear.
+- **If fails (after all 5 fixes):** Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros.
 
 ### crtlib.o Disassembly Analysis
 **Analyzed:** 2026-06-11
@@ -442,6 +443,7 @@ Based on results:
 - [Experiment 4f: _init entry point](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init like RB4DX. DEPLOYED.
 - [PRX Format Discovery] — GoldHEN expects `.oelf` (signed ELF), not fself wrapper. All prior experiments deployed wrong format. FIXED in Makefile.
 - [⚠️ plugins.ini Path Discovery](../.ai_memory/beat-saber-ps4-custom-songs/plugins-ini-path-discovery.md) — **CRITICAL:** GoldHEN reads root `/data/GoldHEN/plugins.ini`, not `plugins/`. All prior tests were never registered. FIXED.
+- [Module param flags fix] — Bit 32 (exports) was set in our SceModuleParam flags. RB4DX has it clear. Fixed by setting `.flags = 0x0000000000000051`.
 
 ## Key Technical Decisions
 1. **Plugin over PKG:** `.prx` plugin via GoldHEN chosen for rapid iteration vs full PKG rebuild
@@ -455,3 +457,4 @@ Based on results:
 9. **⚠️ TLS segment (discovered 2026-06-11):** Linking against `-lc` (musl) pulls in `__musl_current_locale` via `.tbss`, creating a PT_TLS program header. The PS4/FreeBSD kernel likely rejects PRX modules with TLS segments. **Fix:** Link against `-lSceLibcInternal` instead of `-lc -lc++`.
 10. **⚠️ Duplicate LOAD PHDR (discovered 2026-06-11):** The toolchain's `link.x` linker script places `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical LOAD segments at the same vaddr. **Fix:** Copied `link.x` to project, merged data/BSS into one output section.
 11. **⚠️ WRONG plugins.ini path (discovered 2026-06-11):** GoldHEN reads `/data/GoldHEN/plugins.ini` (root level), NOT `/data/GoldHEN/plugins/plugins.ini` (subdirectory). All experiments 4b-4f deployed to the wrong path and were never registered. **Fix:** Deploy `plugins.ini` to root path, preserving existing RB4DX entries.
+12. **⚠️ Module param flags (discovered 2026-06-11):** Our SceModuleParam `.flags = 0x0000000100000051` set bit 32 (exports flag), but RB4DX has `0x0000000001000051` (bit 32 clear). The PS4 loader may reject PRX modules that falsely claim exports. `create-fself` adds bit 24 (PRX flag) automatically. **Fix:** Set `.flags = 0x0000000000000051`.
