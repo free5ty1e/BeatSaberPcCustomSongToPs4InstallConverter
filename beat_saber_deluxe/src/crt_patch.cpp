@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <errno.h>
 
 // module_start is defined in main.cpp — we call it from _init
 extern "C" int module_start(size_t argc, const void *args);
@@ -43,13 +44,77 @@ __attribute__((section(".data"), used)) = nullptr;
 // GoldHEN calls _init when loading the plugin (not module_start).
 // _init does PRX initialization then calls module_start for plugin init.
 extern "C" void _init(void) {
-    // Heartbeat: write file to prove _init was called by GoldHEN
-    FILE* f = fopen("/data/custom/bs_deluxe/heartbeat.txt", "w");
-    if (f) {
-        fprintf(f, "Heartbeat: _init called successfully!\n");
-        fclose(f);
+    // ── Path Probe ────────────────────────────────────────────────────────
+    // Try every candidate path on the PS4 to discover where the game process
+    // has write access. Each working path gets a marker file; the first
+    // working path also gets a full summary table of all attempts.
+
+    struct { const char* path; int ok; int e; } results[16];
+    int n = 0, any_ok = 0;
+
+    const char* paths[] = {
+        "/data/custom/bs_deluxe/heartbeat.txt",
+        "/data/heartbeat.txt",
+        "/data/cache0001/heartbeat.txt",
+        "/data/GoldHEN/heartbeat.txt",
+        "/data/PS4Xplorer/heartbeat.txt",
+        "/data/sce_logs/heartbeat.txt",
+        "/tmp/heartbeat.txt",
+        "/user/temp/heartbeat.txt",
+        "/user/data/heartbeat.txt",
+        "/user/savedata/heartbeat.txt",
+        "/user/settings/heartbeat.txt",
+        "/mnt/usb0/heartbeat.txt",
+        "/mnt/usb1/heartbeat.txt",
+        "/mnt/ext0/heartbeat.txt",
+        NULL
+    };
+
+    for (int i = 0; paths[i]; i++) {
+        FILE* f = fopen(paths[i], "w");
+        results[n].path = paths[i];
+        results[n].ok = (f != NULL);
+        if (f) {
+            any_ok = 1;
+            fprintf(f, "WORKING PATH: %s\n"
+                       "init was called by GoldHEN\n"
+                       "Experiment 4f  oelf format\n",
+                       paths[i]);
+            fclose(f);
+        } else {
+            results[n].e = errno;
+        }
+        n++;
     }
-    // Call module_start for proper plugin initialization
+
+    // Write a full report to the first path that succeeded
+    if (any_ok) {
+        for (int i = 0; i < n; i++) {
+            if (results[i].ok) {
+                FILE* f = fopen(results[i].path, "w");
+                if (f) {
+                    fprintf(f, "=== Path Probe Report ===\n"
+                               "Date:    2026-06-11\n"
+                               "Plugin:  Beat Saber Deluxe\n"
+                               "Exp:     4f (_init entry, .oelf)\n"
+                               "\n"
+                               "%-32s %-5s  errno\n"
+                               "-------------------------------- ----- -----\n",
+                               "Path", "OK?");
+                    for (int j = 0; j < n; j++) {
+                        if (results[j].ok)
+                            fprintf(f, "%-32s  YES   --\n", results[j].path);
+                        else
+                            fprintf(f, "%-32s  NO   %d\n", results[j].path, results[j].e);
+                    }
+                    fclose(f);
+                }
+                break;
+            }
+        }
+    }
+    // ── End Path Probe ────────────────────────────────────────────────────
+
     module_start(0, NULL);
 }
 
