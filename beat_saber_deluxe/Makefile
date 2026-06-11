@@ -1,6 +1,6 @@
 TARGET := beat_saber_deluxe.prx
 
-LIBS := -lSceLibcInternal -lkernel
+LIBS := -lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad
 
 TOOLCHAIN := $(OO_PS4_TOOLCHAIN)
 INTDIR := obj

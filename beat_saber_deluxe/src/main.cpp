@@ -5,18 +5,26 @@
 #include <stddef.h>
 #include <string.h>
 #include <orbis/libkernel.h>
+#include <GoldHEN/GoldHEN.h>
+#include <GoldHEN/Syscall.h>
 
-extern "C" int module_start(size_t argc, const void *args) {
+#define attr_public __attribute__((visibility("default")))
+
+extern "C" attr_public int module_start(size_t argc, const void *args) {
     (void)argc;
     (void)args;
 
+    // Call a GoldHEN SDK function to ensure libGoldHEN_Hook is linked in
+    struct proc_info info;
+    memset(&info, 0, sizeof(info));
+    sys_sdk_proc_info(&info);  // gets process info (titleid, name, etc.)
+
     // Heartbeat notification — shows on PS4 screen if plugin loads
-    // This bypasses file system permissions that block fopen/fprintf
     OrbisNotificationRequest req;
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0;  // NotificationRequest
     req.targetId = -1;                            // default target (on-screen)
-    strcpy(req.message, "BS Deluxe: Plugin Loaded via GoldHEN SDK!");
+    strcpy(req.message, "BS Deluxe: SDK Plugin Loaded!");
 
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 
@@ -30,7 +38,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     return 0;
 }
 
-extern "C" int module_stop(size_t argc, const void *args) {
+extern "C" attr_public int module_stop(size_t argc, const void *args) {
     (void)argc;
     (void)args;
     return 0;
