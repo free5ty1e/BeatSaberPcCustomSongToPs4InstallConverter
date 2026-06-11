@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** Experiment 4f (SceLibcInternal, no TLS, 7 PHDRs) 🔄 DEPLOYED — awaiting test | ⚠️ Three root causes identified: wrong format, TLS segment, duplicate LOAD — all fixed
+**Current Status:** 🔴 FOURTH root cause found: wrong plugins.ini path! | All prior tests deployed to `/data/GoldHEN/plugins/plugins.ini` but GoldHEN reads `/data/GoldHEN/plugins.ini` (root level) | FIX DEPLOYED — awaiting test
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -20,7 +20,7 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **FTP Credentials:** anonymous (no password)
 - **Plugin path on PS4:** `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
 - **Custom assets path:** `/data/custom/bs_deluxe/`
-- **GoldHEN plugin config:** `/data/GoldHEN/plugins/plugins.ini`
+- **GoldHEN plugin config:** `/data/GoldHEN/plugins.ini` (⚠️ root level, NOT `plugins/` subdirectory)
 - **Custom assets deployed:**
   - `resources_patched.assets` (modified manifest)
   - `CustomSong` (test AssetBundle, clone of $100 Bills)
@@ -174,13 +174,14 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Each path gets fopen() with "w" — success/failure recorded with errno
   - First working path gets a full report table of all 14 attempts
   - USB drive connected by user for guaranteed writable target
-- **🔧 ELF STRUCTURE FIXES (2026-06-11):** After path probe showed NO file on any of 14 paths (including USB), confirmed `_init` is never called. Deep ELF comparison with working RB4DX PRX revealed **three root causes**:
+- **🔧 ELF STRUCTURE FIXES (2026-06-11):** After path probe showed NO file on any of 14 paths (including USB), confirmed `_init` is never called. Deep ELF comparison with working RB4DX PRX revealed **four root causes**:
   1. **Wrong container format** (fixed earlier) — deployed fself wrapper instead of signed ELF `.oelf`
   2. **TLS segment** — Linking against `-lc` (musl) pulled in `__musl_current_locale` via `.tbss`, creating a PT_TLS program header. GoldHEN/PS4 loader likely rejects PRX with TLS. **Fix:** Changed `LIBS` from `-lc -lc++ -lkernel` to `-lSceLibcInternal -lkernel` (matches RB4DX).
   3. **Duplicate LOAD segment** — Original `link.x` placed `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical RW LOAD segments at the same vaddr (invalid ELF). **Fix:** Copied `link.x` to project, merged data sections into one, updated Makefile to use local `--script link.x`.
-- **Current PRX state:** 7 program headers (matches RB4DX), no TLS, no duplicate LOAD, signed ELF `.oelf` format. Libraries: `-lSceLibcInternal -lkernel`.
-- **Expected result:** `_init` is now called by GoldHEN. One or more `heartbeat.txt` files appear at writable paths on the PS4. USB path will contain the full probe report.
-- **If fails (after all fixes):** Plugin structure now matches RB4DX. Next step: install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path).
+  4. **⚠️ WRONG plugins.ini path** — All prior tests deployed our config to `/data/GoldHEN/plugins/plugins.ini` (subdirectory), but GoldHEN actually reads `/data/GoldHEN/plugins.ini` (root level). The root file had RB4DX entries but no reference to our plugin. GoldHEN never registered `beat_saber_deluxe.prx` to load!
+- **Current state:** 7 program headers (matches RB4DX), no TLS, no duplicate LOAD, signed ELF `.oelf`, `lSceLibcInternal`. plugins.ini NOW deployed to ROOT path with Beat Saber entry.
+- **Expected result:** GoldHEN will now register our plugin and call `_init`. One or more `heartbeat.txt` files appear at writable paths. USB path will contain the full probe report.
+- **If fails (after all 4 fixes):** Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path).
 
 ### crtlib.o Disassembly Analysis
 **Analyzed:** 2026-06-11
@@ -391,11 +392,11 @@ quit
 EOF
 ```
 
-### Phase 5: Iterate (updated after ELF structure fixes)
+### Phase 5: Iterate (updated after plugins.ini path fix)
 Based on results:
 - **heartbeat.txt found ✅ (on any path):** Plugin now loads. We know a writable path. Proceed to hooking.
 - **heartbeat.txt found ✅ (on USB):** Use `/mnt/usb0/` for future diagnostic output.
-- **No heartbeat ❌ (after all 3 fixes):** The ELF structure (no TLS, no duplicate LOAD, .oelf format, SceLibcInternal, 7 PHDRs) now matches the working RB4DX PRX. If GoldHEN still doesn't load it, the remaining path is:
+- **No heartbeat ❌ (after all 4 fixes):** All four root causes fixed. If GoldHEN still doesn't load, remaining options:
   1. Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path)
   2. Use `klog()` for kernel debug output (visible in GoldHEN logs)
 - **If plugin crashes or causes issues:** Investigate `klog()` output via GoldHEN logging, add proper error handling
@@ -409,7 +410,7 @@ Based on results:
 - `/workspace/beat_saber_deluxe/Makefile` - Build system (no crtlib.o, -e _init entry, produces signed ELF .prx, `-lSceLibcInternal`)
 - `/workspace/beat_saber_deluxe/link.x` - Modified linker script (merged data/BSS sections, local copy of toolchain's link.x)
 - `/workspace/beat_saber_deluxe/beat_saber_deluxe.prx` - Compiled binary
-- `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to PS4)
+- `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to `/data/GoldHEN/plugins.ini` — root level, NOT `plugins/` subdirectory)
 - `/workspace/resources_patched.assets` - Modified manifest
 - `/workspace/CustomSong` - Test song AssetBundle
 - `/workspace/.devcontainer/openorbis/` - OpenOrbis SDK installation
@@ -440,6 +441,7 @@ Based on results:
 - [Experiment 4e: Direct module_start](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4e-direct-module-start.md) — Dropped crtlib.o, defined module_start directly. FAILED.
 - [Experiment 4f: _init entry point](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init like RB4DX. DEPLOYED.
 - [PRX Format Discovery] — GoldHEN expects `.oelf` (signed ELF), not fself wrapper. All prior experiments deployed wrong format. FIXED in Makefile.
+- [⚠️ plugins.ini Path Discovery](../.ai_memory/beat-saber-ps4-custom-songs/plugins-ini-path-discovery.md) — **CRITICAL:** GoldHEN reads root `/data/GoldHEN/plugins.ini`, not `plugins/`. All prior tests were never registered. FIXED.
 
 ## Key Technical Decisions
 1. **Plugin over PKG:** `.prx` plugin via GoldHEN chosen for rapid iteration vs full PKG rebuild
@@ -452,3 +454,4 @@ Based on results:
 8. **⚠️ PRX format (discovered 2026-06-11):** GoldHEN expects the **signed ELF (`.oelf`)** from `create-fself`, NOT the fself wrapper (`--lib` output). The deployed RB4DX plugin on the PS4 has ELF magic `7f 45 4c 46` with e_type=0xfe18, not SCE fself magic `4f 15 3d 1d`. All experiments 4a-4f deployed the wrong format until this fix. **Makefile updated:** `cp obj/*.oelf $(TARGET)`
 9. **⚠️ TLS segment (discovered 2026-06-11):** Linking against `-lc` (musl) pulls in `__musl_current_locale` via `.tbss`, creating a PT_TLS program header. The PS4/FreeBSD kernel likely rejects PRX modules with TLS segments. **Fix:** Link against `-lSceLibcInternal` instead of `-lc -lc++`.
 10. **⚠️ Duplicate LOAD PHDR (discovered 2026-06-11):** The toolchain's `link.x` linker script places `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical LOAD segments at the same vaddr. **Fix:** Copied `link.x` to project, merged data/BSS into one output section.
+11. **⚠️ WRONG plugins.ini path (discovered 2026-06-11):** GoldHEN reads `/data/GoldHEN/plugins.ini` (root level), NOT `/data/GoldHEN/plugins/plugins.ini` (subdirectory). All experiments 4b-4f deployed to the wrong path and were never registered. **Fix:** Deploy `plugins.ini` to root path, preserving existing RB4DX entries.

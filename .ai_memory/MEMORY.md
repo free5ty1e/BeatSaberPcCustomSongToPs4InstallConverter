@@ -16,6 +16,7 @@
 - [Experiment 4d: Constructor Fix](beat-saber-ps4-custom-songs/experiment-4d-constructor-fix.md) — Changed plugin_main to __attribute__((constructor)). FAILED.
 - [Experiment 4e: Direct module_start](beat-saber-ps4-custom-songs/experiment-4e-direct-module-start.md) — Dropped crtlib.o, defined module_start directly. FAILED.
 - [Experiment 4f: _init entry point](beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init, fixed THREE root causes: .oelf format, TLS from musl, duplicate LOAD PHDR. Deployed 2026-06-11, awaiting test.
+- [⚠️ plugins.ini Path Discovery](beat-saber-ps4-custom-songs/plugins-ini-path-discovery.md) — **Critical:** GoldHEN reads root `/data/GoldHEN/plugins.ini`, not `plugins/plugins.ini`. All prior tests were never registered.
 
 ### Game & Console Analysis
 - [PS4 File Analysis](beat-saber-ps4-custom-songs/ps4_file_analysis.md) — CUSA IDs, installed file structure, resources.assets analysis
