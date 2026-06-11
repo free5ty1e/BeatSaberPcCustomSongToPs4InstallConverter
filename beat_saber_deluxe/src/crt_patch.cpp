@@ -4,6 +4,11 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
+
+// module_start is defined in main.cpp — we call it from _init
+extern "C" int module_start(size_t argc, const void *args);
+extern "C" int module_stop(size_t argc, const void *args);
 
 // --- .data.sce_module_param (required by create-fself for PRX) ---
 // Content mirrors crtlib.o's _sceProcessParam data.
@@ -34,8 +39,20 @@ __attribute__((section(".data"), used)) = nullptr;
 static void* _sceLibc
 __attribute__((section(".data"), used)) = nullptr;
 
-// --- _init / _fini stubs ---
-// These are called by the dynamic linker on load/unload.
-// We keep them empty since our init/deinit is in module_start/module_stop.
-extern "C" void _init(void) {}
-extern "C" void _fini(void) {}
+// --- _init / _fini ---
+// GoldHEN calls _init when loading the plugin (not module_start).
+// _init does PRX initialization then calls module_start for plugin init.
+extern "C" void _init(void) {
+    // Heartbeat: write file to prove _init was called by GoldHEN
+    FILE* f = fopen("/data/custom/bs_deluxe/heartbeat.txt", "w");
+    if (f) {
+        fprintf(f, "Heartbeat: _init called successfully!\n");
+        fclose(f);
+    }
+    // Call module_start for proper plugin initialization
+    module_start(0, NULL);
+}
+
+extern "C" void _fini(void) {
+    module_stop(0, NULL);
+}

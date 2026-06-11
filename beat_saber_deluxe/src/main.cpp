@@ -6,11 +6,8 @@
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;
     (void)args;
-    FILE* f = fopen("/data/custom/bs_deluxe/heartbeat.txt", "w");
-    if (f) {
-        fprintf(f, "Heartbeat: Plugin Loaded Successfully!\n");
-        fclose(f);
-    }
+    // Heartbeat is written by _init in crt_patch.cpp
+    // module_start is called from _init — do future init here
     return 0;
 }
 
