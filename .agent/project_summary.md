@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** Experiment 4c FAILED (confirmed), Experiment 4d (constructor fix) IN PROGRESS
+**Current Status:** Experiment 4c ❌ FAILED | Experiment 4d (constructor fix) 🔄 DEPLOYED — awaiting test
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -87,23 +87,33 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **Next step if successes:** Build proper hooking plugin with `mprotect` and `sceFileUtilsOpen` (skipped — 4c failed)
 - **Next step if fails:** ⬅️ THIS HAPPENED. Implementing Experiment 4d (constructor fix) — rename `plugin_main` to `__attribute__((constructor))`
 
-### Experiment 4d: Heartbeat (crtlib analysis & constructor fix) [CURRENT]
-- **Status:** 🔄 IN PROGRESS (analysis complete, fix ready to implement)
+### Experiment 4d: Heartbeat (constructor fix) [CURRENT]
+- **Status:** 🔄 DEPLOYED — awaiting test (2026-06-11)
 - **Root cause confirmed:** The heartbeat test (4c) failed exactly as predicted. `crtlib.o`'s `module_start` does NOT call `plugin_main()`.
+- **What we did (2026-06-11):**
+  - Changed `extern "C" int plugin_main()` to `__attribute__((constructor)) void plugin_init()`
+  - Rebuilt and verified: init array size = 8 bytes (1 constructor entry), relocation at 0x8008 points to plugin_init at 0x00c0
+  - Entry point unchanged: `-e module_start` → crtlib.o's module_start at 0x53e0
+  - Deployed `beat_saber_deluxe.prx` (72416 bytes) to PS4
 - **What the analysis found:**
   - Disassembled `/opt/openorbis/OpenOrbis/PS4Toolchain/lib/crtlib.o` and found `module_start` at offset 0x00
   - `module_start` only iterates the `__init_array` (calls `__attribute__((constructor))` functions), then returns 0
   - It NEVER calls any function named `plugin_main()`
   - Our `main.cpp` defines `extern "C" int plugin_main()` which is **never executed**
   - This explains why no heartbeat.txt has ever appeared — the plugin loads (returns 0), but our code never runs
-- **Planned fix:** Change `plugin_main()` to a constructor function:
+- **Fix applied (2026-06-11):** Changed `plugin_main()` to a constructor function:
   ```cpp
   __attribute__((constructor))
   void plugin_init() {
-      // heartbeat code here
+      FILE* f = fopen("/data/custom/bs_deluxe/heartbeat.txt", "w");
+      if (f) {
+          fprintf(f, "Heartbeat: Plugin Loaded Successfully!\n");
+          fclose(f);
+      }
   }
   ```
   This way `crtlib.o`'s `module_start` will call it via the init array iteration.
+  - **Verify:** readelf shows INIT_ARRAY size=8, relocation at 0x8008 → plugin_init at 0x00c0
 - **Alternative approach:** Drop `crtlib.o` entirely, define `module_start`/`module_stop` ourselves following RB4DX pattern (see "RB4DX Plugin Architecture Reference")
 
 ### crtlib.o Disassembly Analysis
@@ -309,12 +319,13 @@ quit
 EOF
 ```
 
-### Phase 5: Iterate
+### Phase 5: Iterate (updated for Experiment 4d)
 Based on results:
-- **heartbeat.txt found:** Plugin loads. Move to Experiment 5 (safe hooking with mprotect)
-- **No heartbeat (even with correct entry point):** Most likely cause: `crtlib.o`'s `module_start` does not call `plugin_main()`. Implement Experiment 4d (constructor fix).
-  - Change `plugin_main()` to `__attribute__((constructor)) void plugin_init()` so it's called via init array
-  - If heartbeat still fails, restructure plugin to drop `crtlib.o` and define `module_start`/`module_stop` directly (following RB4DX pattern)
+- **heartbeat.txt found ✅:** Plugin loads via constructor. Move to Experiment 5 (safe hooking with mprotect).
+- **No heartbeat (even with constructor fix) ❌:** The init array mechanism isn't triggering. Next steps:
+  1. Drop `crtlib.o` from link and define `module_start`/`module_stop` directly (following RB4DX pattern)
+  2. Install GoldHEN SDK and use `crtprx.o` with `-e _init`
+  3. Add klog-based logging instead of file writes for earlier debugging
 - **If plugin crashes or causes issues:** Investigate `klog()` output via GoldHEN logging, add proper error handling
 
 ## File Reference

@@ -13,6 +13,7 @@
 ### Plugin Architecture
 - [crtlib.o module_start analysis](beat-saber-ps4-custom-songs/crtlib-o-module-start-analysis.md) — Root cause: plugin_main() never called by CRT. Fix: use __attribute__((constructor)) or define module_start directly.
 - [RB4DX Plugin Architecture Reference](beat-saber-ps4-custom-songs/rb4dx-plugin-architecture-reference.md) — Working GoldHEN plugin pattern: crtprx.o, -e _init, GoldHEN SDK HOOK macros.
+- [Experiment 4d: Constructor Fix](beat-saber-ps4-custom-songs/experiment-4d-constructor-fix.md) — Changed plugin_main to __attribute__((constructor)), deployed 2026-06-11, awaiting test.
 
 ### Game & Console Analysis
 - [PS4 File Analysis](beat-saber-ps4-custom-songs/ps4_file_analysis.md) — CUSA IDs, installed file structure, resources.assets analysis
