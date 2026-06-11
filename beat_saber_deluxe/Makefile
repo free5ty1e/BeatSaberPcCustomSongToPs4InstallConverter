@@ -32,7 +32,9 @@ endif
 
 $(TARGET): $(OBJS) | $(INTDIR)
 	$(LD) $(INTDIR)/*.o -o $(INTDIR)/beat_saber_deluxe.elf $(LDFLAGS)
-	$(TOOLCHAIN)/bin/$(CDIR)/create-fself -in=$(INTDIR)/beat_saber_deluxe.elf -out=$(INTDIR)/beat_saber_deluxe.oelf --lib=$(TARGET) --paid 0x3800000000000011
+	$(TOOLCHAIN)/bin/$(CDIR)/create-fself -in=$(INTDIR)/beat_saber_deluxe.elf -out=$(INTDIR)/beat_saber_deluxe.oelf --lib=$(INTDIR)/beat_saber_deluxe_fself.prx --paid 0x3800000000000011
+	# GoldHEN expects the signed ELF (.oelf), not the fself wrapper (--lib)
+	cp $(INTDIR)/beat_saber_deluxe.oelf $(TARGET)
 
 $(INTDIR)/%.o: src/%.c
 	$(CC) $(CFLAGS) -o $@ $<
