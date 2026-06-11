@@ -15,7 +15,7 @@
 - [RB4DX Plugin Architecture Reference](beat-saber-ps4-custom-songs/rb4dx-plugin-architecture-reference.md) — Working GoldHEN plugin pattern: crtprx.o, -e _init, GoldHEN SDK HOOK macros.
 - [Experiment 4d: Constructor Fix](beat-saber-ps4-custom-songs/experiment-4d-constructor-fix.md) — Changed plugin_main to __attribute__((constructor)). FAILED.
 - [Experiment 4e: Direct module_start](beat-saber-ps4-custom-songs/experiment-4e-direct-module-start.md) — Dropped crtlib.o, defined module_start directly. FAILED.
-- [Experiment 4f: _init entry point](beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init like RB4DX. Deployed 2026-06-11, awaiting test.
+- [Experiment 4f: _init entry point](beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init, fixed THREE root causes: .oelf format, TLS from musl, duplicate LOAD PHDR. Deployed 2026-06-11, awaiting test.
 
 ### Game & Console Analysis
 - [PS4 File Analysis](beat-saber-ps4-custom-songs/ps4_file_analysis.md) — CUSA IDs, installed file structure, resources.assets analysis

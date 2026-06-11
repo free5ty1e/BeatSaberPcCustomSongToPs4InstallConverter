@@ -1,6 +1,6 @@
 TARGET := beat_saber_deluxe.prx
 
-LIBS := -lc -lc++ -lkernel
+LIBS := -lSceLibcInternal -lkernel
 
 TOOLCHAIN := $(OO_PS4_TOOLCHAIN)
 INTDIR := obj
@@ -11,7 +11,7 @@ OBJS := $(patsubst src/%.c, $(INTDIR)/%.o, $(CFILES)) $(patsubst src/%.cpp, $(IN
 
 CFLAGS := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -I./include
 CXXFLAGS := $(CFLAGS) -isystem $(TOOLCHAIN)/include/c++/v1
-LDFLAGS := -m elf_x86_64 -pie -e _init --script $(TOOLCHAIN)/link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib $(LIBS)
+LDFLAGS := -m elf_x86_64 -pie -e _init --script link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib $(LIBS)
 
 _unused := $(shell mkdir -p $(INTDIR))
 

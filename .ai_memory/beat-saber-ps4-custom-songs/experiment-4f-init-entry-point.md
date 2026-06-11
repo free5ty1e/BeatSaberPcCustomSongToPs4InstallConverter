@@ -32,6 +32,15 @@ The deployed RB4DX PRX on the PS4 IS a signed ELF (`.oelf`), NOT the fself wrapp
 - module_start at 0x140 (clean stub)
 - module_stop at 0x150 (clean stub)
 - PRX: 95784 bytes (signed ELF format ✅)
+- **7 program headers** (matches RB4DX) ✅
+- **No TLS segment** ✅ (switched from `-lc` musl to `-lSceLibcInternal`)
+- **No duplicate LOAD** ✅ (merged data/BSS sections in custom `link.x`)
+- **Libraries:** `-lSceLibcInternal -lkernel`
+
+**Three root causes discovered (2026-06-11):**
+1. Wrong container format (deployed fself wrapper instead of signed ELF `.oelf`)
+2. TLS segment from musl libc (`-lc` pulled in `.tbss.__musl_current_locale`, creating PT_TLS)
+3. Duplicate LOAD program header (linker script placed data sections separately)
 
 **See also:**
 - [[rb4dx-plugin-architecture-reference]] for the working GoldHEN plugin pattern

@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <errno.h>
 
 // module_start is defined in main.cpp — we call it from _init
 extern "C" int module_start(size_t argc, const void *args);
@@ -49,7 +48,7 @@ extern "C" void _init(void) {
     // has write access. Each working path gets a marker file; the first
     // working path also gets a full summary table of all attempts.
 
-    struct { const char* path; int ok; int e; } results[16];
+    struct { const char* path; int ok; } results[16];
     int n = 0, any_ok = 0;
 
     const char* paths[] = {
@@ -82,7 +81,7 @@ extern "C" void _init(void) {
                        paths[i]);
             fclose(f);
         } else {
-            results[n].e = errno;
+            results[n].ok = 0;
         }
         n++;
     }
@@ -98,14 +97,13 @@ extern "C" void _init(void) {
                                "Plugin:  Beat Saber Deluxe\n"
                                "Exp:     4f (_init entry, .oelf)\n"
                                "\n"
-                               "%-32s %-5s  errno\n"
-                               "-------------------------------- ----- -----\n",
-                               "Path", "OK?");
+                               "%-32s %s\n"
+                               "-------------------------------- %s\n",
+                               "Path", "Status",
+                               "------");
                     for (int j = 0; j < n; j++) {
-                        if (results[j].ok)
-                            fprintf(f, "%-32s  YES   --\n", results[j].path);
-                        else
-                            fprintf(f, "%-32s  NO   %d\n", results[j].path, results[j].e);
+                        const char* st = results[j].ok ? "YES" : "NO";
+                        fprintf(f, "%-32s  %s\n", results[j].path, st);
                     }
                     fclose(f);
                 }

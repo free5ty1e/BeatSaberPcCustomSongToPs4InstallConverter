@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** Experiment 4f (_init entry point, .oelf format) 🔄 DEPLOYED — awaiting test | ⚠️ CRITICAL FIX: GoldHEN expects .oelf format (signed ELF), not fself wrapper
+**Current Status:** Experiment 4f (SceLibcInternal, no TLS, 7 PHDRs) 🔄 DEPLOYED — awaiting test | ⚠️ Three root causes identified: wrong format, TLS segment, duplicate LOAD — all fixed
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -167,10 +167,20 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - The deployed RB4DX PRX on the PS4 IS a signed ELF (`.oelf`), NOT the fself wrapper
   - **Fix:** Changed Makefile to `cp obj/beat_saber_deluxe.oelf beat_saber_deluxe.prx`, deploying the signed ELF as the .prx
   - All prior experiments had correct code but wrong container format
-- **Expected result:** `heartbeat.txt` appears in `/data/custom/bs_deluxe/` after PS4 reboot + GoldHEN + game launch.
-- **If fails (after format fix):** The issue is with GoldHEN plugin loading itself. Next steps:
-  1. Try registering under `[default]` in plugins.ini instead of `[CUSA12878]` to test if scoping is the issue
-  2. Install GoldHEN SDK and use `crtprx.o` + GoldHEN hook system (matching RB4DX exactly)
+- **🔄 PATH PROBE (2026-06-11):** After format fix still no heartbeat. Hypothesis: game process lacks write permission to `/data/custom/bs_deluxe/`. Updated `_init()` in crt_patch.cpp to probe **14 candidate paths** across the PS4 filesystem:
+  - `/data/`, `/data/cache0001/`, `/data/GoldHEN/`, `/data/PS4Xplorer/`, `/data/sce_logs/`
+  - `/tmp/`, `/user/temp/`, `/user/data/`, `/user/savedata/`, `/user/settings/`
+  - `/mnt/usb0/`, `/mnt/usb1/`, `/mnt/ext0/` (USB drive)
+  - Each path gets fopen() with "w" — success/failure recorded with errno
+  - First working path gets a full report table of all 14 attempts
+  - USB drive connected by user for guaranteed writable target
+- **🔧 ELF STRUCTURE FIXES (2026-06-11):** After path probe showed NO file on any of 14 paths (including USB), confirmed `_init` is never called. Deep ELF comparison with working RB4DX PRX revealed **three root causes**:
+  1. **Wrong container format** (fixed earlier) — deployed fself wrapper instead of signed ELF `.oelf`
+  2. **TLS segment** — Linking against `-lc` (musl) pulled in `__musl_current_locale` via `.tbss`, creating a PT_TLS program header. GoldHEN/PS4 loader likely rejects PRX with TLS. **Fix:** Changed `LIBS` from `-lc -lc++ -lkernel` to `-lSceLibcInternal -lkernel` (matches RB4DX).
+  3. **Duplicate LOAD segment** — Original `link.x` placed `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical RW LOAD segments at the same vaddr (invalid ELF). **Fix:** Copied `link.x` to project, merged data sections into one, updated Makefile to use local `--script link.x`.
+- **Current PRX state:** 7 program headers (matches RB4DX), no TLS, no duplicate LOAD, signed ELF `.oelf` format. Libraries: `-lSceLibcInternal -lkernel`.
+- **Expected result:** `_init` is now called by GoldHEN. One or more `heartbeat.txt` files appear at writable paths on the PS4. USB path will contain the full probe report.
+- **If fails (after all fixes):** Plugin structure now matches RB4DX. Next step: install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path).
 
 ### crtlib.o Disassembly Analysis
 **Analyzed:** 2026-06-11
@@ -225,7 +235,7 @@ ret
 | **PRX format** | `.oelf` signed ELF (magic `7f 45 4c 46`, e_type=0xfe18) ✅ fixed 2026-06-11 | `.oelf` signed ELF (same format) |
 | **Hook system** | Custom `memcpy` (no mprotect, dangerous) | GoldHEN SDK `HOOK` macros with mprotect |
 | **Visibility** | No export attributes | `attr_public` = `__attribute__((visibility("default")))` |
-| **Libraries** | `-lc -lc++ -lkernel` | `-lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad` |
+| **Libraries** | `-lSceLibcInternal -lkernel` ✅ (no TLS, matches RB4DX) | `-lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad` |
 | **Logging** | `fprintf` to `/data/custom/bs_deluxe/heartbeat.txt` | `klog()` (kernel debug log) via `final_printf` macro |
 | **GoldHEN SDK** | Not installed ($GOLDHEN_SDK unset) | Required (`#include <GoldHEN/Common.h>`) |
 
@@ -308,6 +318,8 @@ nm /opt/openorbis/OpenOrbis/PS4Toolchain/lib/crt_dyn.o
 - **Linker:** `ld.lld` with script `$(TOOLCHAIN)/link.x`
 - **Entry point:** `-e _init` (CRITICAL — matching RB4DX pattern; GoldHEN calls `_init`, not `module_start`)
 - **CRT:** Dropped `$(TOOLCHAIN)/lib/crtlib.o`; custom CRT replacement in `src/crt_patch.cpp`
+- **Linker script:** Copied from toolchain to local `link.x` and modified to merge `.data.sce_module_param + .data + .bss` into one output section (eliminates duplicate LOAD PHDR)
+- **Libraries:** `-lSceLibcInternal -lkernel` (NOT `-lc -lc++ -lkernel`) — SceLibcInternal avoids musl's TLS dependency
 - **Output packaging:** `create-fself -out=<oelf> --lib=<fself>.prx --paid 0x3800000000000011`
   - ⚠️ **FORMAT:** `--lib` produces fself wrapper (SCE magic `4f 15 3d 1d`) — **DO NOT DEPLOY THIS**
   - The `-out` file (signed ELF, magic `7f 45 4c 46`, e_type=0xfe18) is what GoldHEN expects
@@ -379,13 +391,13 @@ quit
 EOF
 ```
 
-### Phase 5: Iterate (updated after PRX format fix)
+### Phase 5: Iterate (updated after ELF structure fixes)
 Based on results:
-- **heartbeat.txt found ✅:** Plugin loads. Move to Experiment 5 (safe hooking with mprotect).
-- **No heartbeat ❌ (even after all fixes):** The code and format are now correct. If the plugin still doesn't produce a heartbeat:
-  1. Try registering under `[default]` in plugins.ini instead of `[CUSA12878]` to rule out CUSA scoping
-  2. Install GoldHEN SDK and use `crtprx.o` + GoldHEN hook system (matching RB4DX exactly)
-  3. Use `klog()` for kernel debug output instead of file writes (visible in GoldHEN logs)
+- **heartbeat.txt found ✅ (on any path):** Plugin now loads. We know a writable path. Proceed to hooking.
+- **heartbeat.txt found ✅ (on USB):** Use `/mnt/usb0/` for future diagnostic output.
+- **No heartbeat ❌ (after all 3 fixes):** The ELF structure (no TLS, no duplicate LOAD, .oelf format, SceLibcInternal, 7 PHDRs) now matches the working RB4DX PRX. If GoldHEN still doesn't load it, the remaining path is:
+  1. Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path)
+  2. Use `klog()` for kernel debug output (visible in GoldHEN logs)
 - **If plugin crashes or causes issues:** Investigate `klog()` output via GoldHEN logging, add proper error handling
 
 ## File Reference
@@ -394,7 +406,8 @@ Based on results:
 - `/workspace/beat_saber_deluxe/src/hooks.cpp` - Hook utilities (`find_symbol`, `install_hook` — naive memcpy, needs mprotect)
 - `/workspace/beat_saber_deluxe/include/bs_deluxe.h` - Plugin definitions
 - `/workspace/beat_saber_deluxe/include/hooks.h` - Hook function declarations
-- `/workspace/beat_saber_deluxe/Makefile` - Build system (no crtlib.o, -e _init entry, produces signed ELF .prx)
+- `/workspace/beat_saber_deluxe/Makefile` - Build system (no crtlib.o, -e _init entry, produces signed ELF .prx, `-lSceLibcInternal`)
+- `/workspace/beat_saber_deluxe/link.x` - Modified linker script (merged data/BSS sections, local copy of toolchain's link.x)
 - `/workspace/beat_saber_deluxe/beat_saber_deluxe.prx` - Compiled binary
 - `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to PS4)
 - `/workspace/resources_patched.assets` - Modified manifest
@@ -437,3 +450,5 @@ Based on results:
 6. **crtlib.o limitation (discovered 2026-06-11):** OpenOrbis's `crtlib.o` provides a `module_start` that only runs the init array — it does NOT call any user-defined `plugin_main()`. All user init code must be `__attribute__((constructor))` or we must drop crtlib.o and define `module_start` ourselves. Long-term, the RB4DX pattern (GoldHEN SDK's `crtprx.o` + `-e _init` + custom `module_start`) is the correct approach.
 7. **GoldHEN SDK not installed:** Future work may require installing GoldHEN_Plugins_SDK for proper `HOOK` macros with `mprotect` support. Until then, we can implement our own mprotect-based hooking.
 8. **⚠️ PRX format (discovered 2026-06-11):** GoldHEN expects the **signed ELF (`.oelf`)** from `create-fself`, NOT the fself wrapper (`--lib` output). The deployed RB4DX plugin on the PS4 has ELF magic `7f 45 4c 46` with e_type=0xfe18, not SCE fself magic `4f 15 3d 1d`. All experiments 4a-4f deployed the wrong format until this fix. **Makefile updated:** `cp obj/*.oelf $(TARGET)`
+9. **⚠️ TLS segment (discovered 2026-06-11):** Linking against `-lc` (musl) pulls in `__musl_current_locale` via `.tbss`, creating a PT_TLS program header. The PS4/FreeBSD kernel likely rejects PRX modules with TLS segments. **Fix:** Link against `-lSceLibcInternal` instead of `-lc -lc++`.
+10. **⚠️ Duplicate LOAD PHDR (discovered 2026-06-11):** The toolchain's `link.x` linker script places `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical LOAD segments at the same vaddr. **Fix:** Copied `link.x` to project, merged data/BSS into one output section.
