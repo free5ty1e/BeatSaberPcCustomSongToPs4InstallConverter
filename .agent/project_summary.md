@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** Experiment 4f — all 5 root causes fixed + [default] added | Plugin now registered under [default] AND [CUSA12878] | AWAITING TEST
+**Current Status:** GoldHEN SDK crtprx.o build DEPLOYED — first test with GoldHEN SDK CRT (matching RB4DX exactly) | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -184,7 +184,30 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **Expected result:** GoldHEN loads the plugin and calls `_init`. One or more heartbeat files appear.
 - **If fails (after all 5 fixes + [default]):** Plugin structure now matches RB4DX completely. Only remaining difference: RB4DX uses GoldHEN SDK's `crtprx.o` and `HOOK64()` macros. Next step: install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK system.
 
-### crtlib.o Disassembly Analysis
+### Experiment 4g: GoldHEN SDK crtprx.o [CURRENT]
+- **Status:** 🔄 DEPLOYED — awaiting test (2026-06-11)
+- **Why:** After all 5 structural fixes + correct plugins.ini path, `_init` was still not called. The remaining difference with RB4DX was the CRT — RB4DX uses GoldHEN SDK's `crtprx.o`, we used a custom CRT replacement (`crt_patch.cpp`). This build uses the exact same CRT as RB4DX.
+- **What we did:**
+  - Installed GoldHEN Plugin SDK from https://github.com/GoldHEN/GoldHEN_Plugins_SDK
+  - Built `crtprx.o` and `libGoldHEN_Hook.a` from SDK source
+  - Installed SDK headers and library to OpenOrbis toolchain
+  - Replaced `crt_patch.cpp` with `crtprx.o` in the build (`$(TOOLCHAIN)/lib/crtprx.o` linked before our `.o` files)
+  - Simplified `main.cpp`: `module_start` now contains the heartbeat code (crtprx.o's `_init` calls `module_start`)
+  - Kept `-e _init` entry point, `-lSceLibcInternal -lkernel`, and our local `link.x`
+  - Not yet linking `-lGoldHEN_Hook` — will add when hooks are needed
+- **Binary verification:**
+  - Entry point: `0x20` (crtprx.o's _init) ✅
+  - `_init` at 0x20 (35 bytes — calls module_start) ✅
+  - `module_start` at 0x0120 (103 bytes — writes heartbeat) ✅
+  - `_sceProcessParam` at 0x10000 (module param from crtprx.o) ✅
+  - Module param flags: `0x0000000001000051` (matches RB4DX) ✅
+  - 7 program headers (matches RB4DX) ✅
+  - PRX: 86160 bytes ✅
+- **Expected result:** GoldHEN loads the plugin via crtprx.o's `_init`, which calls our `module_start`, which writes `heartbeat.txt`. This now matches the exact RB4DX loading pattern.
+- **If fails:** The issue is not with the CRT or PRX structure. Possible causes:
+  1. GoldHEN version on this PS4 doesn't support these plugins
+  2. GoldHEN's `PluginLoader_Enabled = 1` in config but actual plugin loading is broken
+  3. PS4 firmware version incompatibility with GoldHEN plugin loader
 **Analyzed:** 2026-06-11
 **Command used:**
 ```bash
@@ -444,6 +467,7 @@ Based on results:
 - [PRX Format Discovery] — GoldHEN expects `.oelf` (signed ELF), not fself wrapper. All prior experiments deployed wrong format. FIXED in Makefile.
 - [⚠️ plugins.ini Path Discovery](../.ai_memory/beat-saber-ps4-custom-songs/plugins-ini-path-discovery.md) — **CRITICAL:** GoldHEN reads root `/data/GoldHEN/plugins.ini`, not `plugins/`. All prior tests were never registered. FIXED.
 - [Module param flags fix] — Bit 32 (exports) was set in our SceModuleParam flags. RB4DX has it clear. Fixed by setting `.flags = 0x0000000000000051`.
+- [Experiment 4g: GoldHEN SDK crtprx.o] — First build using GoldHEN SDK CRT (matching RB4DX exactly). DEPLOYED 2026-06-11.
 
 ## Key Technical Decisions
 1. **Plugin over PKG:** `.prx` plugin via GoldHEN chosen for rapid iteration vs full PKG rebuild
@@ -458,3 +482,4 @@ Based on results:
 10. **⚠️ Duplicate LOAD PHDR (discovered 2026-06-11):** The toolchain's `link.x` linker script places `.data.sce_module_param`, `.data`, and `.bss` in separate output sections, causing the linker to emit two identical LOAD segments at the same vaddr. **Fix:** Copied `link.x` to project, merged data/BSS into one output section.
 11. **⚠️ WRONG plugins.ini path (discovered 2026-06-11):** GoldHEN reads `/data/GoldHEN/plugins.ini` (root level), NOT `/data/GoldHEN/plugins/plugins.ini` (subdirectory). All experiments 4b-4f deployed to the wrong path and were never registered. **Fix:** Deploy `plugins.ini` to root path, preserving existing RB4DX entries.
 12. **⚠️ Module param flags (discovered 2026-06-11):** Our SceModuleParam `.flags = 0x0000000100000051` set bit 32 (exports flag), but RB4DX has `0x0000000001000051` (bit 32 clear). The PS4 loader may reject PRX modules that falsely claim exports. `create-fself` adds bit 24 (PRX flag) automatically. **Fix:** Set `.flags = 0x0000000000000051`.
+13. **GoldHEN SDK installed (2026-06-11):** Installed GoldHEN Plugin SDK from GitHub. Built `crtprx.o` and `libGoldHEN_Hook.a`. Modified plugin to use `crtprx.o` as CRT (matching RB4DX exactly). This is the last structural difference between our plugin and RB4DX.

@@ -4,9 +4,11 @@ LIBS := -lSceLibcInternal -lkernel
 
 TOOLCHAIN := $(OO_PS4_TOOLCHAIN)
 INTDIR := obj
+CRT := $(TOOLCHAIN)/lib/crtprx.o
 
 CFILES := $(wildcard src/*.c)
-CPPFILES := $(wildcard src/*.cpp)
+# Exclude crt_patch.cpp — it conflicts with GoldHEN SDK's crtprx.o
+CPPFILES := $(filter-out src/crt_patch.cpp, $(wildcard src/*.cpp))
 OBJS := $(patsubst src/%.c, $(INTDIR)/%.o, $(CFILES)) $(patsubst src/%.cpp, $(INTDIR)/%.o, $(CPPFILES))
 
 CFLAGS := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -I./include
@@ -31,7 +33,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 $(TARGET): $(OBJS) | $(INTDIR)
-	$(LD) $(INTDIR)/*.o -o $(INTDIR)/beat_saber_deluxe.elf $(LDFLAGS)
+	$(LD) $(CRT) $(INTDIR)/*.o -o $(INTDIR)/beat_saber_deluxe.elf $(LDFLAGS)
 	$(TOOLCHAIN)/bin/$(CDIR)/create-fself -in=$(INTDIR)/beat_saber_deluxe.elf -out=$(INTDIR)/beat_saber_deluxe.oelf --lib=$(INTDIR)/beat_saber_deluxe_fself.prx --paid 0x3800000000000011
 	# GoldHEN expects the signed ELF (.oelf), not the fself wrapper (--lib)
 	cp $(INTDIR)/beat_saber_deluxe.oelf $(TARGET)
