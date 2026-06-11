@@ -35,3 +35,7 @@ beat-saber-ps4-custom-songs/windows_build/songs/
 rb4dx_installer/
 beat-saber-ps4-custom-songs/unity_project/
 .claude_config/
+beat_saber_deluxe/build/
+.claude_config_zen/
+beat_saber_deluxe/beat_saber_deluxe/x64/Debug/
+beat_saber_deluxe/obj/
