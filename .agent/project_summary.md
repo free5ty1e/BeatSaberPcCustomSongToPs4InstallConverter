@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** Experiment 4c (Heartbeat) - Awaiting Test, Experiment 4d (crtlib fix) PLANNED
+**Current Status:** Experiment 4c FAILED (confirmed), Experiment 4d (constructor fix) IN PROGRESS
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -74,8 +74,9 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **Result:** Still no `heartbeat.txt`.
 - **Root cause identified:** ELF entry point was `0x0` (not set). The linker was not pointing `e_entry` to `module_start`. The PS4 PRX loader likely rejected the module.
 
-### Experiment 4c: Heartbeat (entry point fix) [TESTING]
-- **Status:** AWAITING TEST (2026-06-11)
+### Experiment 4c: Heartbeat (entry point fix) [FAILED]
+- **Status:** ❌ FAILED — No heartbeat.txt (2026-06-11)
+- **Actual Result:** `heartbeat.txt` did NOT appear. Confirmed via PS4 FTP check.
 - **What we tried:**
   - Added `-e module_start` to linker flags in Makefile
   - Verified `e_entry` = `0x53e0` (points to `module_start`)
@@ -83,12 +84,12 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Rebuilt and re-uploaded plugin + `plugins.ini`
 - **Expected Result:** `heartbeat.txt` appears in `/data/custom/bs_deluxe/` after boot + game launch
 - **Post-hoc analysis:** Even if entry point is correct, `crtlib.o`'s `module_start` only runs the init array — it does NOT call `plugin_main()`, so heartbeat will likely still not appear (see Experiment 4d for root cause).
-- **Next step if successes:** Build proper hooking plugin with `mprotect` and `sceFileUtilsOpen`
-- **Next step if fails:** Implement Experiment 4d (constructor fix) — rename `plugin_main` to `__attribute__((constructor))`
+- **Next step if successes:** Build proper hooking plugin with `mprotect` and `sceFileUtilsOpen` (skipped — 4c failed)
+- **Next step if fails:** ⬅️ THIS HAPPENED. Implementing Experiment 4d (constructor fix) — rename `plugin_main` to `__attribute__((constructor))`
 
-### Experiment 4d: Heartbeat (crtlib analysis & constructor fix) [PLANNED]
-- **Status:** PLANNED (based on code analysis conducted 2026-06-11)
-- **Root cause discovered:** `crtlib.o`'s `module_start` does NOT call `plugin_main()`.
+### Experiment 4d: Heartbeat (crtlib analysis & constructor fix) [CURRENT]
+- **Status:** 🔄 IN PROGRESS (analysis complete, fix ready to implement)
+- **Root cause confirmed:** The heartbeat test (4c) failed exactly as predicted. `crtlib.o`'s `module_start` does NOT call `plugin_main()`.
 - **What the analysis found:**
   - Disassembled `/opt/openorbis/OpenOrbis/PS4Toolchain/lib/crtlib.o` and found `module_start` at offset 0x00
   - `module_start` only iterates the `__init_array` (calls `__attribute__((constructor))` functions), then returns 0
@@ -328,6 +329,8 @@ Based on results:
 - `/workspace/CustomSong` - Test song AssetBundle
 - `/workspace/.devcontainer/openorbis/` - OpenOrbis SDK installation
 - `/workspace/.agent/project_summary.md` - This file
+- `/workspace/setup_claude_zen_devcontainer.sh` - Devcontainer setup script (includes memory symlink step)
+- `/workspace/setup_claude_ollama_local_in_devcontainer.sh` - Alternative ollama-based setup script
 - `/workspace/beat-saber-ps4-custom-songs/rb4dx_plugin_source/` - **RB4DX plugin source (REFERENCE)** — working GoldHEN plugin
   - `source/main.c` — module_start/stop, HOOK_INIT/HOOK pattern, game-specific offsets
   - `source/plugin_common.c` — base_address detection, file_exists, sys_sdk_proc_info
