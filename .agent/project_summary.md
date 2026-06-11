@@ -1,86 +1,187 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-05-28
-**Current Status:** Deployment Complete - Awaiting In-Game Verification
+**Last Updated:** 2026-06-10
+**Current Status:** Experiment 4c (Heartbeat) - Awaiting Test with Entry Point Fix
 
-## 🎯 The Goal
-Enable the installation and playback of custom songs on a jailbroken PS4 by modifying both the game's global song database and the individual song assets.
+## The Goal
+Enable installation and playback of custom songs on a jailbroken PS4 by patching the game's global song database (`resources.assets`) and redirecting asset loads via a GoldHEN plugin.
 
-## 🛠️ The Technical Landscape
-- **Game Engine:** Unity 2022.3 (LZ4HAM Compression).
-- **Asset Format:** Unity AssetBundles (`.assets`, `.bundle`, and resource files).
-- **Audio Format:** FSB5 (contained within AssetBundles).
-- **Environment:** **Strictly Offline.** All data must be stored locally.
-- **Loading Mechanism:**
-    1. **The ID Table:** A packed list of internal IDs used to locate AssetBundles.
-    2. **The Metadata Record:** A length-prefixed string sequence containing Display Names and Artists.
+## Technical Landscape
+- **Game Engine:** Unity 2022.3 (LZ4HAM Compression)
+- **Asset Format:** Unity AssetBundles (`.assets`, `.bundle`)
+- **Audio Format:** FSB5 (contained within AssetBundles)
+- **Environment:** Strictly offline, no Unity PS4 license, FTP is read-only
+- **PS4 Info:** GoldHEN jailbreak, FTP on port 2121
+- **Beat Saber CUSA ID:** CUSA12878
 
-## 📦 Explored Assets & Components
+## Fixed Context
+- **PS4 IP:** `192.168.100.117:2121`
+- **FTP Credentials:** anonymous (no password)
+- **Plugin path on PS4:** `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
+- **Custom assets path:** `/data/custom/bs_deluxe/`
+- **GoldHEN plugin config:** `/data/GoldHEN/plugins/plugins.ini`
+- **Custom assets deployed:**
+  - `resources_patched.assets` (modified manifest)
+  - `CustomSong` (test AssetBundle, clone of $100 Bills)
 
-| Asset / File | Location | Description | Role |
-| :--- | :--- | :--- | :--- |
-| `resources.assets` | `Media/` | Global AssetBundle. | **The Soul.** Contains both the ID Table and Metadata Records. |
-| `BeatmapLevelsData/[song]` | `StreamingAssets/` | Individual AssetBundles. | **The Body.** Contains gameplay and audio. |
-| `beat_saber_songs.json` | `/workspace/` | Extracted Wikipedia song list. | **The Library.** Reference for all official song metadata. |
-| `List of songs in Beat Saber` | [Wiki Link](https://en.wikipedia.org/wiki/List_of_songs_in_Beat_Saber) | Official song list. | **The Source.** |
+## Experiment Timeline
 
-## 🧪 Breakthrough: The "Manifest" Anatomy
-Through raw binary analysis of the memory dump, we have decoded the exact structure of the song database in `resources.assets`.
+### Experiment 1: Direct FTP Overwrite
+- **Status:** FAILED
+- **What we tried:** Modified `resources.assets` and attempted to upload directly to the game's installation directory via FTP.
+- **Result:** FTP server rejected writes to the game directory (read-only). Files are also likely checksummed/encrypted.
+- **Key insight:** Direct file modification on PS4 is blocked. Need a plugin for redirection.
 
-### 1. The ID Table (The "Lookup")
-- **Location:** Around offset `872249`.
-- **Structure:** A packed sequence of null-terminated or length-prefixed internal IDs.
+### Experiment 2: "The First Hijack" (Initial PRX)
+- **Status:** FAILED
+- **What we tried:**
+  - Created "Beat Saber Deluxe" `.sprx` plugin
+  - Hooked `sceFileUtilsOpen` with strict path matching (`strcmp`)
+  - Redirection table: `resources.assets` -> `/data/custom/bs_deluxe/resources_patched.assets`, `startmeup` -> `/data/custom/bs_deluxe/CustomSong`
+  - Compiled using host `clang` targeting `x86_64-pc-linux-gnu` (WRONG target)
+  - Manual hook installation using raw `memcpy` into system function bytes (no `mprotect`)
+- **Result:** Game played original "Start Me Up". Plugin either not loading or crashing immediately.
+- **Key insights:**
+  - Host `clang` produces Linux x86_64 ELF, not PS4 PRX - completely invalid binary
+  - `memcpy` on code pages without `mprotect` causes segfault
+  - Need PS4 target triple: `--target=x86_64-pc-freebsd12-elf`
 
-### 2. The Metadata Record (The "Identity")
-- **Location:** Around offset `961965` (for $100 Bills).
-- **Structure:** `[Asset Name String]` $\rightarrow$ `[Length (4 bytes)][Short ID]` $\rightarrow$ `[Length (4 bytes)][Display Name]` $\rightarrow$ `[Length (4 bytes)][Artist Name]`
+### Experiment 3: "Logging & Fuzzy Match"
+- **Status:** FAILED (no log file created)
+- **What we tried:**
+  - Changed hook target from `sceFileUtilsOpen` to `open`
+  - Added fuzzy matching (`strstr`) instead of strict `strcmp`
+  - Added file-based logging to `/data/custom/bs_deluxe/plugin.log`
+  - Still compiled with host `clang` target (WRONG)
+- **Result:** `/data/custom/bs_deluxe/plugin.log` was never created. Binary was still invalid (Linux ELF, not PS4 PRX).
+- **Key insight:** The compiler target must match PS4's FreeBSD-based kernel.
 
----
+### Experiment 4a: Heartbeat (Initial)
+- **Status:** FAILED - no heartbeat.txt
+- **What we tried:**
+  - Stripped plugin to absolute minimum: zero hooks, zero redirection
+  - Only action: write `/data/custom/bs_deluxe/heartbeat.txt` on load
+  - Fixed Makefile to use proper OpenOrbis toolchain
+  - Installed plugin to `/data/GoldHEN/plugins/`
+- **Result:** No `heartbeat.txt` appeared.
+- **Root cause identified:** Plugin was not listed in `plugins.ini` (GoldHEN requires explicit registration).
 
-## 🛡️ Safety & Rollback Plan (The "Safety Net")
-To ensure the experiment is non-destructive:
-1. **The Master Backup:** Create a full backup of the original `resources.assets` and the target AssetBundle.
-2. **Versioned Patches:** Every modified `resources.assets` will be named with a version (e.g., `resources_v1_test.assets`).
-3. **Restore Process:** Delete the modified file and restore the backup.
+### Experiment 4b: Heartbeat (plugins.ini fix)
+- **Status:** FAILED - no heartbeat.txt
+- **What we tried:**
+  - Added `beat_saber_deluxe.prx` to `plugins.ini` under `[default]` section
+- **Result:** Still no `heartbeat.txt`.
+- **Root cause identified:** ELF entry point was `0x0` (not set). The linker was not pointing `e_entry` to `module_start`. The PS4 PRX loader likely rejected the module.
 
----
+### Experiment 4c: Heartbeat (entry point fix) [CURRENT]
+- **Status:** AWAITING TEST
+- **What we tried:**
+  - Added `-e module_start` to linker flags in Makefile
+  - Verified `e_entry` = `0x53e0` (points to `module_start`)
+  - Scoped `plugins.ini` to Beat Saber only: `[CUSA12878]` instead of `[default]`
+  - Rebuilt and re-uploaded plugin + `plugins.ini`
+- **Expected Result:** `heartbeat.txt` appears in `/data/custom/bs_deluxe/` after boot + game launch
+- **Next step if successes:** Build proper hooking plugin with `mprotect` and `sceFileUtilsOpen`
+- **Next step if fails:** Investigate GoldHEN plugin format requirements more deeply (check RB4DX-Plugin.prx as reference)
 
-## 🚀 Implementation: "Beat Saber Deluxe" Plugin
-To avoid the risks of permanent file modification and to allow for "Adding" songs in the future, we have implemented a **Plugin-based Redirection System**.
+## Technical Details: Build System
 
-### v1: The "Single-Song Hijack" (Implemented)
-The plugin is a `.sprx` system plugin that hooks the PS4's file system calls.
+### Makefile structure (OpenOrbis SDK)
+The build uses the OpenOrbis PS4 Toolchain at `/opt/openorbis/OpenOrbis/PS4Toolchain/`.
 
-**Technical Implementation:**
-- **Hook:** `sceFileUtilsOpen` is intercepted using a symbol-lookup hook.
-- **Redirection Table:** A mapping of original game paths to custom file paths.
-- **Logic:** If the game requests `resources.assets` or `startmeup`, the plugin redirects the request to `/data/custom/bs_deluxe/`.
+Key build commands (run from `/workspace/beat_saber_deluxe/`):
+```bash
+# Set toolchain path
+export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain
 
-**Files Created:**
-- `include/bs_deluxe.h`: Plugin definitions.
-- `src/main.cpp`: Implementation of the `hooked_sceFileUtilsOpen` logic.
-- `Makefile`: Build configuration for OpenOrbis cross-compilation.
-- `build/beat_saber_deluxe.sprx`: The compiled binary plugin.
+# Clean and rebuild
+make clean && rm -rf obj && make -B
 
-### v2: The "Dynamic Expansion" (Future)
-- Implement a memory-patching system to modify the `m_ArraySize` of the song list in real-time.
-- Append new song records to the end of the manifest in memory.
+# Verify entry point
+readelf -h obj/beat_saber_deluxe.elf | grep Entry
 
-## 🔬 Current Experiment: "The Heartbeat Test"
-The previous logging plugin failed to create a log file, indicating the plugin is either not loading or crashing immediately (likely due to a memory protection fault during hooking).
+# Verify exported symbol
+readelf -s obj/beat_saber_deluxe.elf | grep plugin_main
+```
 
-- **Goal:** Confirm the plugin is actually being loaded by GoldHEN.
-- **Implementation:** A minimalist `.sprx` that performs zero hooking and simply attempts to write a "heartbeat" file to `/data/custom/bs_deluxe/heartbeat.txt`.
-- **Success Metric:** Presence of `heartbeat.txt` after a system reboot.
+### Critical compiler flags (Makefile)
+- **Target triple:** `--target=x86_64-pc-freebsd12-elf` (MUST be this, NOT linux-gnu)
+- **Sysroot:** `-isysroot $(OO_PS4_TOOLCHAIN)`
+- **Linker:** `ld.lld` with script `$(TOOLCHAIN)/link.x`
+- **Entry point:** `-e module_start` (CRITICAL - must be set explicitly)
+- **CRT for libraries:** `$(TOOLCHAIN)/lib/crtlib.o` (NOT `crt1.o` which is for eboot)
+- **Output packaging:** `create-fself --lib=beat_saber_deluxe.prx --paid 0x3800000000000011`
 
-**Next Phase (Post-Heartbeat):**
-1. **Memory Protection:** Implement proper memory permission changes (making target pages writable) before applying hooks.
-2. **Target Refinement:** Shift from hooking `open` to `sceFileUtilsOpen`, which is the specific PS4 system call for file access.
-3. **Log-Driven Discovery:** Re-introduce logging only after the heartbeat and memory protections are verified.
+## Workflow: End-to-End Test Procedure
 
-## 🚩 Current Blockers
-- **Plugin Load Verification:** Awaiting "Heartbeat" test results.
+### Phase 1: Development (this environment)
+1. Edit source files in `/workspace/beat_saber_deluxe/`
+2. Rebuild: `export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain && make clean && rm -rf obj && make -B`
+3. Verify entry point and symbols with `readelf`
 
-## 📓 Recent Findings & Updates
-- **Crash Hypothesis:** The naive `memcpy` into system function addresses likely triggered a kernel panic/crash because the code segment is read-only.
-- **Strategy Shift:** Prioritizing "Proof of Life" over functionality to isolate the failure point.
+### Phase 2: Deploy to PS4
+```bash
+lftp -u anonymous, <<EOF
+open -p 2121 192.168.100.117
+put /workspace/beat_saber_deluxe/beat_saber_deluxe.prx -o /data/GoldHEN/plugins/beat_saber_deluxe.prx
+put /workspace/plugins.ini -o /data/GoldHEN/plugins/plugins.ini
+# Also deploy custom assets if changed:
+# put /workspace/resources_patched.assets -o /data/custom/bs_deluxe/resources_patched.assets
+# put /workspace/CustomSong -o /data/custom/bs_deluxe/CustomSong
+quit
+EOF
+```
 
+### Phase 3: Test (user on PS4)
+1. **Full reboot** the PS4 (hold power button, select Restart PS4)
+2. **Re-run GoldHEN jailbreak** (the exploit payload)
+3. **Launch Beat Saber** (CUSA12878)
+4. Navigate to Rolling Stones album, select "Start Me Up" on Hard difficulty
+5. Report whether you hear original track or $100 Bills
+6. Notify the dev environment that PS4 is ready for log check
+
+### Phase 4: Analyze (this environment)
+Check for heartbeat or log file:
+```bash
+lftp -u anonymous, <<EOF
+open -p 2121 192.168.100.117
+ls /data/custom/bs_deluxe/
+# To download a specific log:
+# get /data/custom/bs_deluxe/heartbeat.txt -o /workspace/heartbeat.txt
+# get /data/custom/bs_deluxe/plugin.log -o /workspace/plugin.log
+quit
+EOF
+```
+
+Check plugin deployment:
+```bash
+lftp -u anonymous, <<EOF
+open -p 2121 192.168.100.117
+ls /data/GoldHEN/plugins/
+quit
+EOF
+```
+
+### Phase 5: Iterate
+Based on results:
+- **heartbeat.txt found:** Plugin loads. Move to Experiment 5 (safe hooking with mprotect)
+- **No heartbeat:** Check entry point, check plugins.ini format, check GoldHEN compatibility
+
+## File Reference
+- `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (`plugin_main`)
+- `/workspace/beat_saber_deluxe/src/hooks.cpp` - Hook utilities (`find_symbol`, `install_hook`)
+- `/workspace/beat_saber_deluxe/include/bs_deluxe.h` - Plugin definitions
+- `/workspace/beat_saber_deluxe/include/hooks.h` - Hook function declarations
+- `/workspace/beat_saber_deluxe/Makefile` - Build system
+- `/workspace/beat_saber_deluxe/beat_saber_deluxe.prx` - Compiled binary
+- `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to PS4)
+- `/workspace/resources_patched.assets` - Modified manifest
+- `/workspace/CustomSong` - Test song AssetBundle
+- `/workspace/.devcontainer/openorbis/` - OpenOrbis SDK installation
+- `/workspace/.agent/project_summary.md` - This file
+
+## Key Technical Decisions
+1. **Plugin over PKG:** `.prx` plugin via GoldHEN chosen for rapid iteration vs full PKG rebuild
+2. **Sacrifice Song:** "Start Me Up" (Rolling Stones) selected as the hijack target
+3. **Sacrifice Replacement:** `CustomSong` bundle (clone of $100 Bills) as test replacement
+4. **Toolchain:** OpenOrbis SDK for cross-compilation (provides PS4 headers, linker script, `create-fself`)
+5. **CUSA scoping:** Plugin registered under `[CUSA12878]` (Beat Saber) so it only loads for this game

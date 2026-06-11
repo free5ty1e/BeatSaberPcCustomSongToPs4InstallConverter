@@ -11,7 +11,7 @@ OBJS := $(patsubst src/%.c, $(INTDIR)/%.o, $(CFILES)) $(patsubst src/%.cpp, $(IN
 
 CFLAGS := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -I./include
 CXXFLAGS := $(CFLAGS) -isystem $(TOOLCHAIN)/include/c++/v1
-LDFLAGS := -m elf_x86_64 -pie --script $(TOOLCHAIN)/link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib $(LIBS) $(TOOLCHAIN)/lib/crtlib.o
+LDFLAGS := -m elf_x86_64 -pie -e module_start --script $(TOOLCHAIN)/link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib $(LIBS) $(TOOLCHAIN)/lib/crtlib.o
 
 _unused := $(shell mkdir -p $(INTDIR))
 
