@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** GoldHEN SDK crtprx.o build DEPLOYED — first test with GoldHEN SDK CRT (matching RB4DX exactly) | AWAITING TEST
+**Current Status:** GoldHEN SDK build + notification heartbeat DEPLOYED | Uses sceKernelSendNotificationRequest() for on-screen popup (bypasses file permissions) | AWAITING TEST — watch for "BS Deluxe" popup when launching game
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -193,8 +193,9 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Installed SDK headers and library to OpenOrbis toolchain
   - Replaced `crt_patch.cpp` with `crtprx.o` in the build (`$(TOOLCHAIN)/lib/crtprx.o` linked before our `.o` files)
   - Simplified `main.cpp`: `module_start` now contains the heartbeat code (crtprx.o's `_init` calls `module_start`)
+  - Switched to **PS4 notification API** (`sceKernelSendNotificationRequest()`) for heartbeat detection — shows on-screen popup, bypasses file system permissions
+  - Also kept `fopen()` file write attempt as fallback evidence
   - Kept `-e _init` entry point, `-lSceLibcInternal -lkernel`, and our local `link.x`
-  - Not yet linking `-lGoldHEN_Hook` — will add when hooks are needed
 - **Binary verification:**
   - Entry point: `0x20` (crtprx.o's _init) ✅
   - `_init` at 0x20 (35 bytes — calls module_start) ✅
@@ -203,11 +204,12 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Module param flags: `0x0000000001000051` (matches RB4DX) ✅
   - 7 program headers (matches RB4DX) ✅
   - PRX: 86160 bytes ✅
-- **Expected result:** GoldHEN loads the plugin via crtprx.o's `_init`, which calls our `module_start`, which writes `heartbeat.txt`. This now matches the exact RB4DX loading pattern.
-- **If fails:** The issue is not with the CRT or PRX structure. Possible causes:
-  1. GoldHEN version on this PS4 doesn't support these plugins
-  2. GoldHEN's `PluginLoader_Enabled = 1` in config but actual plugin loading is broken
-  3. PS4 firmware version incompatibility with GoldHEN plugin loader
+- **Expected result:** On-screen notification "BS Deluxe: Plugin Loaded via GoldHEN SDK!" appears when launching a game. Also writes `heartbeat.txt` to `/data/custom/bs_deluxe/` if file writes work.
+- **If fails (no notification):** The plugin is not being loaded. After matching RB4DX in CRT, format, module param, plugins.ini, and libraries, the issue is likely:
+  1. GoldHEN version incompatibility — this PS4's GoldHEN build may not support user-installed PRX plugins
+  2. GoldHEN's plugin loader requires more than a plugins.ini entry (e.g., specific registration API calls)
+  3. The `PluginLoader_Enabled = 1` config may not be sufficient
+  **Next step:** Investigate GoldHEN version and verify if ANY non-bundled plugin loads on this PS4 other than RB4DX.
 **Analyzed:** 2026-06-11
 **Command used:**
 ```bash
