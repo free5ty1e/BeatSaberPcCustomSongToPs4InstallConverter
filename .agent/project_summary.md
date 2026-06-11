@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔴 FIVE root causes found — last: module param flags bit 32 caused mismatch | 0x0000000100000051 → 0x0000000000000051 (create-fself adds PRX bit) | FIX DEPLOYED — awaiting test
+**Current Status:** Experiment 4f — all 5 root causes fixed + [default] added | Plugin now registered under [default] AND [CUSA12878] | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -180,9 +180,9 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   3. **Duplicate LOAD segment** — Original `link.x` placed `.data.sce_module_param`, `.data`, `.bss` in separate sections, causing two identical LOAD segments at same vaddr. **Fix:** Merged data sections in local `link.x`.
   4. **Wrong plugins.ini path** — Deployed to `/data/GoldHEN/plugins/plugins.ini` but GoldHEN reads `/data/GoldHEN/plugins.ini` (root). **Fix:** Deploy to root path.
   5. **⚠️ Module param flags bit 32** — Our `.flags = 0x0000000100000051` had bit 32 (exports) set; RB4DX has `0x0000000001000051` (bit 32 clear). `create-fself` adds bit 24 (PRX flag). **Fix:** Set `.flags = 0x0000000000000051` (create-fself adds PRX bit).
-- **Current state:** All five fixes applied. PRX has matching module param, 7 PHDRs, no TLS, no duplicate LOAD, signed ELF, correct plugins.ini, correct CUSA.
+- **Current state:** All five fixes applied + plugin added to [default] section. PRX has matching module param, 7 PHDRs, no TLS, no duplicate LOAD, signed ELF.
 - **Expected result:** GoldHEN loads the plugin and calls `_init`. One or more heartbeat files appear.
-- **If fails (after all 5 fixes):** Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros.
+- **If fails (after all 5 fixes + [default]):** Plugin structure now matches RB4DX completely. Only remaining difference: RB4DX uses GoldHEN SDK's `crtprx.o` and `HOOK64()` macros. Next step: install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK system.
 
 ### crtlib.o Disassembly Analysis
 **Analyzed:** 2026-06-11
