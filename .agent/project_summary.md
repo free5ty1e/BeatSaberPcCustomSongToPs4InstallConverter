@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** GoldHEN SDK build + notification heartbeat DEPLOYED | Uses sceKernelSendNotificationRequest() for on-screen popup (bypasses file permissions) | AWAITING TEST — watch for "BS Deluxe" popup when launching game
+**Current Status:** GoldHEN SDK build with section headers stripped (matching RB4DX exactly) DEPLOYED | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -195,6 +195,7 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Simplified `main.cpp`: `module_start` now contains the heartbeat code (crtprx.o's `_init` calls `module_start`)
   - Switched to **PS4 notification API** (`sceKernelSendNotificationRequest()`) for heartbeat detection — shows on-screen popup, bypasses file system permissions
   - Also kept `fopen()` file write attempt as fallback evidence
+  - Added section header stripping post-processing (zeroed `e_shoff`, `e_shentsize`, `e_shnum`, `e_shstrndx` in ELF header) to match RB4DX's no-section-headers format
   - Kept `-e _init` entry point, `-lSceLibcInternal -lkernel`, and our local `link.x`
 - **Binary verification:**
   - Entry point: `0x20` (crtprx.o's _init) ✅

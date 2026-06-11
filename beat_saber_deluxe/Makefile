@@ -35,6 +35,8 @@ endif
 $(TARGET): $(OBJS) | $(INTDIR)
 	$(LD) $(CRT) $(INTDIR)/*.o -o $(INTDIR)/beat_saber_deluxe.elf $(LDFLAGS)
 	$(TOOLCHAIN)/bin/$(CDIR)/create-fself -in=$(INTDIR)/beat_saber_deluxe.elf -out=$(INTDIR)/beat_saber_deluxe.oelf --lib=$(INTDIR)/beat_saber_deluxe_fself.prx --paid 0x3800000000000011
+	# Strip section headers from signed ELF (matching RB4DX format)
+	python3 -c "import struct; f=open('$(INTDIR)/beat_saber_deluxe.oelf','r+b'); [(f.seek(o),f.write(b'\x00'*s)) for o,s in [(0x28,8),(0x3A,2),(0x3C,2),(0x3E,2)]]; f.close()"
 	# GoldHEN expects the signed ELF (.oelf), not the fself wrapper (--lib)
 	cp $(INTDIR)/beat_saber_deluxe.oelf $(TARGET)
 
