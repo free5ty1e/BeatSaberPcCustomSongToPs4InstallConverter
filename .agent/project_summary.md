@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔍 CRITICAL DISCOVERY: GoldHEN processes ALL entries per section sequentially. Our PRX was FIRST in [CUSA02084] but was SKIPPED (RB4DX at position 2 loaded). This confirms our PRX binary **fails PS4 module validation** at load time. All structural fixes match RB4DX but our `create-fself` likely produces incompatible SCE authentication data.
+**Current Status:** 🔬 PTYPE TEST: Trying `-ptype system_dynlib` (0x9) for kernel-level module permissions. Our create-fself defaults to `npdrm_dynlib` (0x5), but make_fself.py defaults to `fake` (0x1). Changelog reveals v0.5.2 create-fself had "Fixed various miscalculation bugs" — our toolchain may be buggy. | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
