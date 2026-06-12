@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** GoldHEN SDK build + GoldHEN_Hook linked (matches RB4DX libraries exactly) | sys_sdk_proc_info() called to force GoldHEN SDK code inclusion | AWAITING TEST
+**Current Status:** 🔍 ORDER TEST: Our plugin (holding RB4DX binary) moved to FIRST in [CUSA02084]. If notification appears → path/filename works, GoldHEN loads first entry per section. If RB4DX notification from original path → GoldHEN loads specific paths not first-come.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -199,7 +199,9 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Updated libraries to match RB4DX exactly: `LIBS := -lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad`
   - Added `sys_sdk_proc_info()` call in `module_start` to force `libGoldHEN_Hook.a` static code into the PRX
   - Added `attr_public` visibility attribute to `module_start`/`module_stop`
+  - Added plugin metadata exports (`g_pluginName`, `g_pluginDesc`, `g_pluginAuth`, `g_pluginVersion`) matching RB4DX pattern
   - Kept `-e _init` entry point and our local `link.x`
+- **🔍 DIAGNOSTIC TEST (2026-06-11):** After all structural fixes matched RB4DX but plugin still didn't load, added our plugin to [CUSA02084] (RB4's CUSA — known working). If plugin loads here when launching RB4, the PRX is correct and the issue is CUSA12878 or Beat Saber's process. If it still doesn't load, the PRX itself is the problem.
 - **Binary verification:**
   - Entry point: `0x20` (crtprx.o's _init) ✅
   - `_init` at 0x20 (35 bytes — calls module_start) ✅
@@ -208,12 +210,11 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - Module param flags: `0x0000000001000051` (matches RB4DX) ✅
   - 7 program headers (matches RB4DX) ✅
   - PRX: 86160 bytes ✅
-- **Expected result:** On-screen notification "BS Deluxe: Plugin Loaded via GoldHEN SDK!" appears when launching a game. Also writes `heartbeat.txt` to `/data/custom/bs_deluxe/` if file writes work.
-- **If fails (no notification):** The plugin is not being loaded. After matching RB4DX in CRT, format, module param, plugins.ini, and libraries, the issue is likely:
-  1. GoldHEN version incompatibility — this PS4's GoldHEN build may not support user-installed PRX plugins
-  2. GoldHEN's plugin loader requires more than a plugins.ini entry (e.g., specific registration API calls)
-  3. The `PluginLoader_Enabled = 1` config may not be sufficient
-  **Next step:** Investigate GoldHEN version and verify if ANY non-bundled plugin loads on this PS4 other than RB4DX.
+- **🔍 DIAGNOSTIC TEST — Expected result:** If our plugin is valid, launching RB4 will show "BS Deluxe: SDK Plugin Loaded!" notification (alongside RB4DX's usual notification). If no notification appears, our PRX is the problem despite all structural fixes.
+- **If fails (no notification even under [CUSA02084]):** Our PRX is not loadable by GoldHEN despite matching RB4DX structurally. This suggests:
+  1. GoldHEN may require specific plugin registration beyond plugins.ini
+  2. The version of `create-fself` we're using may produce incompatible signed ELFs
+  3. GoldHEN may have a whitelist/checksum for loaded plugins
 **Analyzed:** 2026-06-11
 **Command used:**
 ```bash

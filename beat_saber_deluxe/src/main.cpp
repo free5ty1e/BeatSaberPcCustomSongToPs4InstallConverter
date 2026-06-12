@@ -10,6 +10,12 @@
 
 #define attr_public __attribute__((visibility("default")))
 
+// Plugin metadata — GoldHEN/PS4 may check for these exports
+attr_public const char* g_pluginName    = "Beat Saber Deluxe";
+attr_public const char* g_pluginDesc    = "Custom song support for Beat Saber on PS4";
+attr_public const char* g_pluginAuth    = "BSDeluxe";
+attr_public uint32_t    g_pluginVersion = 0x00000100;
+
 extern "C" attr_public int module_start(size_t argc, const void *args) {
     (void)argc;
     (void)args;
