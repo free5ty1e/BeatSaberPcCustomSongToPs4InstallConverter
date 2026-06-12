@@ -16,6 +16,9 @@ smb://192.168.100.135/incoming/temp/rb4dx (Rock Band 4 Deluxe installer, example
 
 For reference, the CUSA ID CUSA12878 is confirmed correct for US PS4. Some of the filenames may have typos in this ID, but they are all for CUSA12878.
 
+**PS4 Details:**
+I have GoldHEN 2.3 and 2.4b16.2, applied via EXFAT USB hack, and I'm running ps4 firmware v9.00.
+
 **PS4 FTP Access (READ-ONLY):**
 
 ```

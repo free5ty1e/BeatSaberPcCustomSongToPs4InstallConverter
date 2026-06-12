@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔍 ORDER TEST: Our plugin (holding RB4DX binary) moved to FIRST in [CUSA02084]. If notification appears → path/filename works, GoldHEN loads first entry per section. If RB4DX notification from original path → GoldHEN loads specific paths not first-come.
+**Current Status:** 🔍 CRITICAL DISCOVERY: GoldHEN processes ALL entries per section sequentially. Our PRX was FIRST in [CUSA02084] but was SKIPPED (RB4DX at position 2 loaded). This confirms our PRX binary **fails PS4 module validation** at load time. All structural fixes match RB4DX but our `create-fself` likely produces incompatible SCE authentication data.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -18,6 +18,8 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 ## Fixed Context
 - **PS4 IP:** `192.168.100.117:2121`
 - **FTP Credentials:** anonymous (no password)
+- **PS4 Firmware:** 9.00
+- **GoldHEN versions:** 2.3 / 2.4b16.2
 - **Plugin path on PS4:** `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
 - **Custom assets path:** `/data/custom/bs_deluxe/`
 - **GoldHEN plugin config:** `/data/GoldHEN/plugins.ini` (⚠️ root level, NOT `plugins/` subdirectory)
@@ -211,11 +213,15 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
   - 7 program headers (matches RB4DX) ✅
   - PRX: 86160 bytes ✅
 - **🔍 DIAGNOSTIC TEST — Expected result:** If our plugin is valid, launching RB4 will show "BS Deluxe: SDK Plugin Loaded!" notification (alongside RB4DX's usual notification). If no notification appears, our PRX is the problem despite all structural fixes.
-- **If fails (no notification even under [CUSA02084]):** Our PRX is not loadable by GoldHEN despite matching RB4DX structurally. This suggests:
-  1. GoldHEN may require specific plugin registration beyond plugins.ini
-  2. The version of `create-fself` we're using may produce incompatible signed ELFs
-  3. GoldHEN may have a whitelist/checksum for loaded plugins
-**Analyzed:** 2026-06-11
+- **🔬 ORDER TEST RESULTS (2026-06-11):** Put our PRX FIRST in [CUSA02084] (before RB4DX). When user launched RB4, only RB4DX notification appeared. This proves:
+  1. ✅ GoldHEN processes ALL entries per section sequentially — our entry was attempted
+  2. ✅ GoldHEN then moved to the next entry (RB4DX) when ours failed — confirming PRX attempted but rejected
+  3. ❌ Our PRX binary **fails PS4 module validation** at load time — not a path/filename issue
+  4. ❌ Not a CUSA scoping issue — the same [CUSA02084] that loads RB4DX rejected ours
+- **🧪 FSELF FORMAT TEST (2026-06-11):** Deployed the `--lib` output (fself wrapper, SCE magic `4f 15 3d 1d`) instead of signed ELF. All working plugins on PS4 (game_patch.prx, no_share_watermark.prx, RB4DX) are signed ELF format (`7f 45 4c 46`). Unlikely to work but tested for completeness.
+- **💡 KEY INSIGHT:** Our PRX now matches RB4DX in ALL observable aspects (CRT, format, module param, program headers, libraries, exports) but the PS4's `sys_dynlib_load_prx()` still rejects it. The remaining likely cause is the `create-fself` tool version producing incompatible **SCE authentication data** (NIDs, digests, or signing format). Working plugins on the PS4 were built with a different toolchain version (dated Dec 2023 or earlier via GoldHEN devs).
+- **System info:** GoldHEN 2.3 / 2.4b16.2, PS4 firmware 9.00
+- **If fails:** The `create-fself` from our OpenOrbis toolchain likely produces a signed ELF with invalid or incompatible authentication data for this PS4 firmware/GoldHEN combination. Next steps: compare our signed ELF byte-by-byte with known-working plugins; try different create-fself options (-ptype, -fwversion); use alternative signing tools (ps4sdk, python-fself); or update the toolchain.
 **Command used:**
 ```bash
 objdump -d /opt/openorbis/OpenOrbis/PS4Toolchain/lib/crtlib.o
@@ -423,14 +429,16 @@ quit
 EOF
 ```
 
-### Phase 5: Iterate (updated after plugins.ini path fix)
+### Phase 5: Iterate (updated after order test)
 Based on results:
-- **heartbeat.txt found ✅ (on any path):** Plugin now loads. We know a writable path. Proceed to hooking.
-- **heartbeat.txt found ✅ (on USB):** Use `/mnt/usb0/` for future diagnostic output.
-- **No heartbeat ❌ (after all 4 fixes):** All four root causes fixed. If GoldHEN still doesn't load, remaining options:
-  1. Install GoldHEN SDK and build using `crtprx.o` + GoldHEN HOOK macros (exact RB4DX build path)
-  2. Use `klog()` for kernel debug output (visible in GoldHEN logs)
-- **If plugin crashes or causes issues:** Investigate `klog()` output via GoldHEN logging, add proper error handling
+- **heartbeat.txt found ✅ (on any path):** Plugin now loads. Proceed to hooking.
+- **No heartbeat ❌:** All structural fixes applied (CRT, format, module param, libraries). Order test confirmed GoldHEN attempts to load our PRX but PS4's `sys_dynlib_load_prx()` rejects it. The issue is likely the **create-fself** tool version producing incompatible SCE authentication data.
+- **Next steps:**
+  1. Compare our signed ELF byte-by-byte with working plugins (no_share_watermark.prx) to find SCE metadata differences
+  2. Try create-fself options: `-ptype system_dynlib`, `-fwversion <firmware>`, different `-paid` values
+  3. Try alternative signing tools (ps4sdk, python-fself)
+  4. Update OpenOrbis toolchain/create-fself to a newer version
+  5. Attempt to build RB4DX plugin locally to test if create-fself output is the issue
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)
@@ -491,3 +499,4 @@ Based on results:
 12. **⚠️ Module param flags (discovered 2026-06-11):** Our SceModuleParam `.flags = 0x0000000100000051` set bit 32 (exports flag), but RB4DX has `0x0000000001000051` (bit 32 clear). The PS4 loader may reject PRX modules that falsely claim exports. `create-fself` adds bit 24 (PRX flag) automatically. **Fix:** Set `.flags = 0x0000000000000051`.
 13. **GoldHEN SDK installed (2026-06-11):** Installed GoldHEN Plugin SDK from GitHub. Built `crtprx.o` and `libGoldHEN_Hook.a`. Modified plugin to use `crtprx.o` as CRT (matching RB4DX exactly).
 14. **Full RB4DX library set (2026-06-11):** Updated to link against the same libraries as RB4DX: `-lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad`. Added `sys_sdk_proc_info()` call to force `libGoldHEN_Hook.a` into the final PRX (static library only included when referenced). PRX now includes GoldHEN SDK symbols.
+15. **🔴 create-fself SCE authentication (2026-06-11):** After matching RB4DX in ALL structural aspects, our PRX still fails `sys_dynlib_load_prx()` validation. Order test confirmed GoldHEN attempts our entry but rejects it, continuing to the next. The remaining difference is likely the SCE authentication data generated by our `create-fself` tool (from OpenOrbis toolchain). Working PS4 plugins (game_patch.prx, no_share_watermark.prx, RB4DX) were built with potentially different toolchains. GoldHEN 2.3/2.4b16.2 on PS4 firmware 9.00.
