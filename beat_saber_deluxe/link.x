@@ -67,16 +67,16 @@ SECTIONS
 		KEEP(*(.data.sce_process_param))
 	}
 
-	# Merged data + BSS in one output section so the linker produces
-	# a single RW LOAD segment (avoids duplicate program headers).
 	.data.sce_module_param : ALIGN(0x4000) {
 		KEEP(*(.data.sce_module_param))
+	}
+
+	.data : {
 		*(.data)
-		. = ALIGN(16);
+	}
+
+	.bss : {
 		*(.bss .bss.*)
-		. = ALIGN(16);
-		*(.tdata);
-		*(.tbss);
 	}
 
 	# Force .got.plt to appear, because SPRX requires a valid .got.plt.

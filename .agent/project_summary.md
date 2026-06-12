@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔬 PTYPE TEST 2: `-ptype system_dynlib` FAILED. Now testing `-ptype fake` (0x1, the original make_fself.py default). | AWAITING TEST
+**Current Status:** 🧪 MODULE PARAM FIX: Reverted to original link.x (no merged sections). Module param LOOS+0x1000002 segment now 0x18 bytes (matches RB4DX). Was 0x50 bytes with merged link.x — PS4 loader may reject oversized module param segment. | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
