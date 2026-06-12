@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔬 PTYPE TEST: Trying `-ptype system_dynlib` (0x9) for kernel-level module permissions. Our create-fself defaults to `npdrm_dynlib` (0x5), but make_fself.py defaults to `fake` (0x1). Changelog reveals v0.5.2 create-fself had "Fixed various miscalculation bugs" — our toolchain may be buggy. | AWAITING TEST
+**Current Status:** 🔬 PTYPE TEST 2: `-ptype system_dynlib` FAILED. Now testing `-ptype fake` (0x1, the original make_fself.py default). | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
