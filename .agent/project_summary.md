@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 MODULE PARAM FIX: Reverted to original link.x (no merged sections). Module param LOOS+0x1000002 segment now 0x18 bytes (matches RB4DX). Was 0x50 bytes with merged link.x — PS4 loader may reject oversized module param segment. | AWAITING TEST
+**Current Status:** 🔴🔴🔴 DEFINITIVE FSELF TEST: RB4DX FSELF (local build, 96048 bytes) deployed to our path. Original RB4DX REMOVED from [CUSA02084] section. If RB4DX notification appears → FSELF works at our path. If not → even working FSELF fails at our path. | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
