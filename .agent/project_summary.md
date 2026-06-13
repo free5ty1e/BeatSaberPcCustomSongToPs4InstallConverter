@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔴🔴🔴 CRITICAL CONTROL TEST: RB4DX completely removed from ALL plugins.ini sections. If RB4DX notification disappears → we control plugins.ini. If it still appears → RB4DX loaded through DIFFERENT mechanism. Our PRX (with notification) also deployed to test loading. | AWAITING TEST
+**Current Status:** 🔬 FSELF FORMAT TEST: Control over plugins.ini CONFIRMED ✅ (RB4DX disabled from plugins.ini → no notification on launch). Now testing FSELF format (`--lib` output, SCE magic `4f 15 3d 1d`, 70560 bytes) instead of OELF signed ELF. If FSELF loads → "BS Deluxe" notification appears. | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
