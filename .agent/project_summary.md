@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔴🔴🔴 DEFINITIVE FSELF TEST: RB4DX FSELF (local build, 96048 bytes) deployed to our path. Original RB4DX REMOVED from [CUSA02084] section. If RB4DX notification appears → FSELF works at our path. If not → even working FSELF fails at our path. | AWAITING TEST
+**Current Status:** 🔴🔴🔴 CRITICAL CONTROL TEST: RB4DX completely removed from ALL plugins.ini sections. If RB4DX notification disappears → we control plugins.ini. If it still appears → RB4DX loaded through DIFFERENT mechanism. Our PRX (with notification) also deployed to test loading. | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
