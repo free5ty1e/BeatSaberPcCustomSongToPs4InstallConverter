@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <dlfcn.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
@@ -74,38 +75,69 @@ extern "C" int module_start(size_t argc, const void *args) {
         klog("BS Deluxe: Started for %s (titleid: %s)\n", info.name, info.titleid);
     }
 
-    // Look up sceFileUtilsOpen address using sys_dynlib_dlsym
-    void *func_ptr = NULL;
-    int ret = sys_dynlib_dlsym(-1, "sceFileUtilsOpen", &func_ptr);
+    // Try to find file functions using dlsym(RTLD_DEFAULT, ...)
+    // dlsym searches all loaded modules — more reliable than sys_dynlib_dlsym
+    const char* func_names[] = {
+        "sceFileUtilsOpen",   // Orbis file open (often in libkernel or libSceFilesystem)
+        "open",               // POSIX open (from libc or libkernel)
+        "fopen",              // fopen from libc
+        "sceKernelOpen",      // Orbis kernel open
+        "read",               // POSIX read
+        "write",              // POSIX write
+        "stat",               // POSIX stat
+        "printf",             // libc printf (we KNOW this works - verify dlsym works)
+        "dlopen",             // dlopen itself
+        NULL
+    };
 
-    // Show notification with result
+    // Build a notification with all found functions
+    char notify_msg[256];
+    char temp[64];
+    int found_count = 0;
+    notify_msg[0] = '\0';
+
+    for (int i = 0; func_names[i]; i++) {
+        void *ptr = dlsym(RTLD_DEFAULT, func_names[i]);
+        if (ptr) {
+            found_count++;
+            if (found_count > 1) strncat(notify_msg, " ", sizeof(notify_msg) - strlen(notify_msg) - 1);
+            snprintf(temp, sizeof(temp), "%s", func_names[i]);
+            strncat(notify_msg, temp, sizeof(notify_msg) - strlen(notify_msg) - 1);
+        }
+    }
+
+    if (found_count == 0) {
+        snprintf(notify_msg, sizeof(notify_msg), "No functions found");
+    }
+
+    // Show notification with results — ONLY the found names
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0;
     req.targetId = -1;
-    snprintf(req.message, sizeof(req.message), "FS: %s at %p",
-             func_ptr ? "FOUND" : "NOT FOUND", func_ptr);
+    strncpy(req.message, notify_msg, sizeof(req.message) - 1);
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+    klog("BS Deluxe: dlsym found %d functions: %s\n", found_count, notify_msg);
 
-    // Install the hook if function was found
-    if (func_ptr) {
-        // Construct the Detour
+    // If sceFileUtilsOpen was found, install the hook
+    void *fsfunc_ptr = dlsym(RTLD_DEFAULT, "sceFileUtilsOpen");
+    if (fsfunc_ptr) {
+        klog("BS Deluxe: Found sceFileUtilsOpen at %p\n", fsfunc_ptr);
+
+        // Construct and install hook
         Detour_Construct(&Detour_sceFileUtilsOpen, DetourMode_x64);
-
-        // Install the hook — replaces sceFileUtilsOpen with our hook
         void *hook_ret = Detour_DetourFunction(&Detour_sceFileUtilsOpen,
-                                              (uint64_t)func_ptr,
+                                              (uint64_t)fsfunc_ptr,
                                               (void*)sceFileUtilsOpen_hook);
 
-        klog("BS Deluxe: Hook install %s (ret=%p)\n",
-             hook_ret != NULL ? "OK" : "FAILED", hook_ret);
-
-        // Show final notification
+        // Show hook notification
         memset(&req, 0, sizeof(req));
         req.type = (OrbisNotificationRequestType)0;
         req.targetId = -1;
-        snprintf(req.message, sizeof(req.message), "BS Deluxe: Hook %s",
-                 hook_ret != NULL ? "OK" : "FAIL");
+        snprintf(req.message, sizeof(req.message), "sceFileUtilsOpen %s",
+                 hook_ret != NULL ? "HOOKED OK" : "HOOK FAILED");
         sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+        klog("BS Deluxe: sceFileUtilsOpen hook %s\n",
+             hook_ret != NULL ? "installed OK" : "FAILED");
     }
 
     return 0;

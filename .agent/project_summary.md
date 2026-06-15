@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🪝 HOOK TEST DEPLOYED — Hooks `sceFileUtilsOpen` via GoldHEN SDK Detour system. Redirects "Start Me Up" song requests to `/data/custom/bs_deluxe/CustomSong`. Also redirects `resources.assets` to patched version. User tests by navigating to sacrifice song in Beat Saber. See `experiment_log.md` for full test history.
+**Current Status:** 🔍 DLSYM SEARCH TEST — `sys_dynlib_dlsym(-1, "sceFileUtilsOpen")` FAILED. Now using POSIX `dlsym(RTLD_DEFAULT, ...)` to search multiple functions. Reports ALL found functions in notification. Hooks `sceFileUtilsOpen` if found. See `experiment_log.md` for full history.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

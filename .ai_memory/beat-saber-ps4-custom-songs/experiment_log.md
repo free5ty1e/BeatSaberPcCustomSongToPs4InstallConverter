@@ -247,3 +247,13 @@ metadata:
   4. "BS: Redirecting song!" (when sacrifice song is accessed)
 - **Result:** ⏳ AWAITING TEST
 - **Learned:** — (pending)
+
+### Experiment 21 — dlsym Function Search
+- **Date:** 2026-06-12
+- **Change:** Changed from `sys_dynlib_dlsym(-1, ...)` to `dlsym(RTLD_DEFAULT, ...)` (POSIX dlsym). Searches for: sceFileUtilsOpen, open, fopen, sceKernelOpen, read, write, stat, printf, dlopen. Reports ALL found functions in notification. Hooks sceFileUtilsOpen if found via dlsym.
+- **Result:** ⏳ AWAITING TEST
+- **Notifications expected:**
+  1. "BS Deluxe: Loading hooks..." (startup)
+  2. List of found functions (e.g., "open printf read ...")
+  3. If sceFileUtilsOpen found: "sceFileUtilsOpen HOOKED OK"
+- **Learned:** — (pending)
