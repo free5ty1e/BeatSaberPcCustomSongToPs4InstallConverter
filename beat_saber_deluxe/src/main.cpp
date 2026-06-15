@@ -1,44 +1,28 @@
-// Beat Saber Deluxe — POSIX file write test (open/write/close)
-// Tests if low-level file I/O works during module_start
-// fopen/fprintf crashes — let's try open/write/close instead
+// Beat Saber Deluxe — GoldHEN SDK linkage test
+// Tests if linking AND calling GoldHEN SDK functions causes crashes
 
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <orbis/libkernel.h>
+
+// Declare GoldHEN SDK functions we want to call
+extern "C" int sys_sdk_version(void);
 
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;
     (void)args;
+
+    // Call a GoldHEN SDK function to ensure libGoldHEN_Hook is linked
+    int sdk_ver = sys_sdk_version();
 
     // Show notification
     OrbisNotificationRequest req;
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0;
     req.targetId = -1;
-    strcpy(req.message, "BS Deluxe: Plugin Loaded!");
+    sprintf(req.message, "BS Deluxe: SDK v%d", sdk_ver);
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
-
-    // Try writing to USB using POSIX open/write/close
-    // This bypasses libc's FILE* layer (fopen) which might cause the crash
-    const char* paths[] = {
-        "/mnt/usb0/bs_deluxe.log",
-        "/data/bs_deluxe.log",
-        "/tmp/bs_deluxe.log",
-        NULL
-    };
-
-    for (int i = 0; paths[i]; i++) {
-        int fd = open(paths[i], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        if (fd >= 0) {
-            write(fd, "BS Deluxe: plugin loaded successfully!\n", 39);
-            write(fd, "Format: FSELF\n", 14);
-            write(fd, "module_start ran OK\n", 20);
-            close(fd);
-        }
-    }
 
     return 0;
 }

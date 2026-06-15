@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🖨️ PRINTF LOGGING TEST DEPLOYED — Uses `printf()`/klog instead of `fopen()`. Theory: printf writes to kernel log (no file sandbox needed), should work during early game init. If no crash → we have a working logging mechanism. If crashes → crash isn't from fopen specifically.
+**Current Status:** 🧪 GOLDHEN SDK LINKAGE TEST — Notification works, printf works. Now testing if GoldHEN SDK library (libGoldHEN_Hook.a) causes crashes when linked AND called. Calls `sys_sdk_version()` via GoldHEN syscall. No file I/O. If this works → we can use GoldHEN SDK HOOK macros for game hooking. | AWAITING TEST
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
