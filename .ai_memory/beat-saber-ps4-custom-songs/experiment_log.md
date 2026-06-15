@@ -234,3 +234,16 @@ metadata:
 5. Check FTP for any log files (if applicable)
 
 **See also:** [[project-summary]], [[experiment-4f-init-entry-point]], [[plugins-ini-path-discovery]], [[rb4dx-plugin-architecture-reference]]
+
+## Phase 5: Hooking Game Functions
+
+### Experiment 20 — sceFileUtilsOpen Hook Test
+- **Date:** 2026-06-12
+- **Change:** First hook test using GoldHEN SDK Detour system. Hooks `sceFileUtilsOpen` (found via `sys_dynlib_dlsym`). Redirects "Start Me Up" song paths to `/data/custom/bs_deluxe/CustomSong` and `resources.assets` to `/data/custom/bs_deluxe/resources_patched.assets`. No file I/O — uses only GoldHEN SDK + notification + klog.
+- **Notifications expected:**
+  1. "BS Deluxe: Loading hooks..." (startup)
+  2. "FS: FOUND at 0x..." (sceFileUtilsOpen found)
+  3. "BS Deluxe: Hook OK" (hook installed)
+  4. "BS: Redirecting song!" (when sacrifice song is accessed)
+- **Result:** ⏳ AWAITING TEST
+- **Learned:** — (pending)

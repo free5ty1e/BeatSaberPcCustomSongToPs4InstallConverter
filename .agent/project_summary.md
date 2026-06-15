@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🚀 **READY FOR HOOKING!** GoldHEN SDK v1 confirmed working via `sys_sdk_version()`. Plugin loads stably in FSELF format with notification + GoldHEN SDK. No file I/O possible during module_start (sandbox not initialized). Next step: hook Beat Saber's `sceFileUtilsOpen` to redirect song asset loads. See `experiment_log.md` for full test history.
+**Current Status:** 🪝 HOOK TEST DEPLOYED — Hooks `sceFileUtilsOpen` via GoldHEN SDK Detour system. Redirects "Start Me Up" song requests to `/data/custom/bs_deluxe/CustomSong`. Also redirects `resources.assets` to patched version. User tests by navigating to sacrifice song in Beat Saber. See `experiment_log.md` for full test history.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
