@@ -1,6 +1,6 @@
 TARGET := beat_saber_deluxe.prx
 
-LIBS := -lGoldHEN_Hook -lkernel -lSceLibcInternal -lSceSysmodule -lScePad
+LIBS := -lSceLibcInternal -lkernel
 
 TOOLCHAIN := $(OO_PS4_TOOLCHAIN)
 INTDIR := obj
@@ -8,7 +8,7 @@ CRT := $(TOOLCHAIN)/lib/crtprx.o
 
 CFILES := $(wildcard src/*.c)
 # Exclude crt_patch.cpp — it conflicts with GoldHEN SDK's crtprx.o
-CPPFILES := $(filter-out src/crt_patch.cpp, $(wildcard src/*.cpp))
+CPPFILES := $(filter-out src/crt_patch.cpp src/hooks.cpp src/main_printf_backup.cpp, $(wildcard src/*.cpp))
 OBJS := $(patsubst src/%.c, $(INTDIR)/%.o, $(CFILES)) $(patsubst src/%.cpp, $(INTDIR)/%.o, $(CPPFILES))
 
 CFLAGS := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -I./include
