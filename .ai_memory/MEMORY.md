@@ -10,6 +10,9 @@
 
 ## 🔬 Key Technical Findings
 
+### Experiment Log
+- [📋 Experiment Log](beat-saber-ps4-custom-songs/experiment_log.md) — **Complete chronological log of ALL 19+ experiments and tests with results. Updated every test cycle.**
+
 ### Plugin Architecture
 - [crtlib.o module_start analysis](beat-saber-ps4-custom-songs/crtlib-o-module-start-analysis.md) — Root cause: plugin_main() never called by CRT. Fix: use __attribute__((constructor)) or define module_start directly.
 - [RB4DX Plugin Architecture Reference](beat-saber-ps4-custom-songs/rb4dx-plugin-architecture-reference.md) — Working GoldHEN plugin pattern: crtprx.o, -e _init, GoldHEN SDK HOOK macros.

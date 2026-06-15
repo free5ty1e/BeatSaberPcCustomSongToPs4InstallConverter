@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 GOLDHEN SDK LINKAGE TEST — Notification works, printf works. Now testing if GoldHEN SDK library (libGoldHEN_Hook.a) causes crashes when linked AND called. Calls `sys_sdk_version()` via GoldHEN syscall. No file I/O. If this works → we can use GoldHEN SDK HOOK macros for game hooking. | AWAITING TEST
+**Current Status:** 🚀 **READY FOR HOOKING!** GoldHEN SDK v1 confirmed working via `sys_sdk_version()`. Plugin loads stably in FSELF format with notification + GoldHEN SDK. No file I/O possible during module_start (sandbox not initialized). Next step: hook Beat Saber's `sceFileUtilsOpen` to redirect song asset loads. See `experiment_log.md` for full test history.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -412,21 +412,20 @@ nm /opt/openorbis/OpenOrbis/PS4Toolchain/lib/crt_dyn.o
 lftp -u anonymous, <<EOF
 open -p 2121 192.168.100.117
 put /workspace/beat_saber_deluxe/beat_saber_deluxe.prx -o /data/GoldHEN/plugins/beat_saber_deluxe.prx
-put /workspace/plugins.ini -o /data/GoldHEN/plugins/plugins.ini
-# Also deploy custom assets if changed:
-# put /workspace/resources_patched.assets -o /data/custom/bs_deluxe/resources_patched.assets
-# put /workspace/CustomSong -o /data/custom/bs_deluxe/CustomSong
+put /workspace/plugins.ini -o /data/GoldHEN/plugins.ini
 quit
 EOF
 ```
 
 ### Phase 3: Test (user on PS4)
-1. **Full reboot** the PS4 (hold power button, select Restart PS4)
-2. **Re-run GoldHEN jailbreak** (the exploit payload)
-3. **Launch Beat Saber** (CUSA12878)
-4. Navigate to Rolling Stones album, select "Start Me Up" on Hard difficulty
-5. Report whether you hear original track or $100 Bills
-6. Notify the dev environment that PS4 is ready for log check
+⚠️ **No reboot needed** — plugins.ini is solidified. GoldHEN reads plugin updates on game launch.
+
+1. **Deploy** updated PRX + plugins.ini via FTP (Phase 2 above)
+2. **Launch Beat Saber** (CUSA12878) or configured game
+3. Report:
+   - **Notification text** seen on screen (if any)
+   - **Did the game crash?** (PS4 may need hard reset if crash occurs)
+   - **Did the game reach the "turn on VR headset" screen?** (baseline: plugin loaded without crash)
 
 ### Phase 4: Analyze (this environment)
 Check for heartbeat or log file:
