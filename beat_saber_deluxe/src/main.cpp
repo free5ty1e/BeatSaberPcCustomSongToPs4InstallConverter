@@ -1,5 +1,6 @@
-// Beat Saber Deluxe v0.04 — fopen hook ONLY (no open hook = no crash)
-// Persistent log file via jailbreak. Logs only fopen calls.
+// Beat Saber Deluxe v0.05 — Jailbreak deferred to first hook call
+// No jailbreak in module_start (caused crash with multi-threading).
+// Jailbreak + log init happens from first hook when game is stable.
 
 #include <stdio.h>
 #include <stddef.h>
@@ -8,7 +9,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.04"
+#define PLUGIN_VERSION "v0.05"
 #define LOG_PATH "/data/bs_debug.txt"
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -22,20 +23,32 @@ static FILE *log_fp = NULL;
 static void init_log() {
     if (log_inited) return;
     log_inited = 1;
+
+    // Jailbreak from within hook (game is fully initialized, safe)
+    struct jailbreak_backup jb;
+    memset(&jb, 0, sizeof(jb));
+    int jr = sys_sdk_jailbreak(&jb);
+
     log_fp = fopen(LOG_PATH, "w");
     if (log_fp) {
         fprintf(log_fp, "=== BS Deluxe Debug Log ===\n");
         fprintf(log_fp, "Version: %s\n", PLUGIN_VERSION);
+        fprintf(log_fp, "Jailbreak: %s\n", jr == 0 ? "OK" : "FAIL");
         fprintf(log_fp, "fopen=%p\n", (void*)&fopen);
         fprintf(log_fp, "============================\n");
         fflush(log_fp);
-        OrbisNotificationRequest req;
-        memset(&req, 0, sizeof(req));
-        req.type = (OrbisNotificationRequestType)0;
-        req.targetId = -1;
-        snprintf(req.message, sizeof(req.message), "Log: %s", LOG_PATH);
-        sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
     }
+
+    // Show jailbreak + log status in one notification
+    OrbisNotificationRequest req;
+    memset(&req, 0, sizeof(req));
+    req.type = (OrbisNotificationRequestType)0;
+    req.targetId = -1;
+    if (log_fp)
+        snprintf(req.message, sizeof(req.message), "Log: %s", LOG_PATH);
+    else
+        snprintf(req.message, sizeof(req.message), "Log FAIL (jb=%s)", jr == 0 ? "OK" : "FAIL");
+    sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 }
 
 static void log_line(const char *line) {
@@ -76,24 +89,15 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;
     (void)args;
 
+    // Only one notification from module_start (no jailbreak here)
     OrbisNotificationRequest req;
-
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0;
     req.targetId = -1;
     snprintf(req.message, sizeof(req.message), "BS Deluxe %s Started!", PLUGIN_VERSION);
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 
-    struct jailbreak_backup jb;
-    memset(&jb, 0, sizeof(jb));
-    int jr = sys_sdk_jailbreak(&jb);
-    memset(&req, 0, sizeof(req));
-    req.type = (OrbisNotificationRequestType)0;
-    req.targetId = -1;
-    snprintf(req.message, sizeof(req.message), "Jailbreak %s", jr == 0 ? "OK" : "FAIL");
-    sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
-
-    // fopen hook ONLY — no open hook (causes crash with short function detour)
+    // fopen hook only — jailbreak + log from first hook call
     Detour_Construct(&Detour_hook_fopen, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_fopen, (uint64_t)(void*)&fopen, (void*)fopen_hook);
 

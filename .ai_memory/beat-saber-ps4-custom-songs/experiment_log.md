@@ -378,3 +378,15 @@ metadata:
 - **Change:** Removed open hook entirely (causing crash — likely PC-relative `jb` in short-function trampoline). Kept fopen hook only (long function, safe detour). Persistent FILE* logging. Jailbreak for write access. NULL-safe path logging (`safe = path ? path : "NULL"`).
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** 3 notifications, no crash. Log at /data/bs_debug.txt captures fopen calls only.
+
+### Experiment 30 — fopen Only + Persistent Log (v0.04) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** Removed open hook. fopen hook only with persistent FILE* logging. Jailbreak in module_start.
+- **Result:** ❌ Crashed BEFORE any hook fired. Log was never created (v0.03's old log still present). User saw "BS Deluxe v0.04 Started!" and "Jailbreak OK" but NOT "Log: ..." notification. Crash after jailbreak but before or during hook installation.
+- **Learned:** Jailbreak in module_start combined with hook installation may cause multi-threading issues. Another thread calling fopen while Detour_DetourFunction is modifying it could execute corrupted code. v0.02 (dual hooks + jailbreak in module_start) worked because the timing was different (two hook installs = more delay).
+
+### Experiment 31 — Deferred Jailbreak (v0.05) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Moved `sys_sdk_jailbreak()` out of module_start into `init_log()` (first hook call). Module_start now only shows startup notification and installs one hook (fopen). Crash theory: jailbreak + hook install + another thread calling fopen simultaneously causes corruption. Deferring jailbreak to hook call avoids this. Yes, log IS cleared on each launch — `fopen(LOG_PATH, "w")` truncates the old log.
+- **Notifications:** Only "BS Deluxe v0.05 Started!" from module_start. Then "Log: /data/bs_debug.txt" from first hook (which also does jailbreak silently).
+- **Status:** ✅ DEPLOYED — awaiting test

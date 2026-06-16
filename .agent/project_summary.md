@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧹 fopen-ONLY HOOK v0.04 DEPLOYED — Removed open hook (crash culprit: short function detour + PC-relative jb). fopen hook is long function (safe). Persistent logging via jailbreak. NULL-safe path handling. AWAITING TEST.
+**Current Status:** 🧪 DEFERRED JAILBREAK v0.05 DEPLOYED — Jailbreak moved from module_start to first hook call (game stable). Only one startup notification. Log IS cleared each launch (fopen w mode truncates). Crash theory: jailbreak + Detour_DetourFunction + multi-threaded fopen access = corrupted code. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
