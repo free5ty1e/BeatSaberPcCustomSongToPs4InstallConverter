@@ -294,3 +294,15 @@ metadata:
 - **Change:** Switched from `open()` to `fopen()`. `fopen` is much longer (~100+ bytes with FILE buffering logic), so the x64 detour won't overflow. Uses same GOT dereference technique (`*(void**)&fopen`). Added reentrancy guard. Removed second notification after hook install to avoid triggering the hook via sceKernelSendNotificationRequest.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** "fopen @ 0x..." notification, then no crash. If the game uses fopen() for file operations, navigating to the sacrifice song should trigger the redirect (no notification visible).
+
+### Experiment 24 — fopen() Hook via Direct Address [COMPLETED]
+- **Date:** 2026-06-29
+- **Change:** Fixed address resolution: used `(void*)&fopen` directly instead of `*(void**)&fopen` (which was reading fopen's machine code bytes as a pointer). Hooked fopen only, no second notification after install.
+- **Result:** ✅ **NO CRASH!** fopen address shown: 0x8000c2f00. Game booted normally, VR headset worked. But redirect did NOT trigger — navigated to Start Me Up, heard original song.
+- **Learned:** PS4 uses direct binding for imported function references. `(void*)&func` gives the real function address in libc, NOT a GOT entry address. Double dereference reads machine code bytes as a pointer — garbage. Game likely uses `open()` instead of `fopen()` for song file access.
+
+### Experiment 25 — Dual fopen+open Hook with Path Logging [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Hooked BOTH fopen AND open with correct address resolution. Added path logging notifications (shows first 40 chars of opened file path). Separate reentrancy guards for each hook. `try_notify()` helper that only sends notifications when not already inside a hook (prevents recursion).
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** Flood of notifications showing opened file paths. Look for path containing "startmeup" or similar when navigating to sacrifice song. Then we can fix the redirect pattern.

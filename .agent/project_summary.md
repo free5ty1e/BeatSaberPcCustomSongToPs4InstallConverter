@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🪝 **fopen() HOOK DEPLOYED** — open() crash likely from `open()` being too short (syscall wrapper, ~8-13 bytes). x64 detour may overflow adjacent functions. Switching to `fopen()` which is much longer (~100+ bytes with FILE buffering). fopen also imported via GOT dereference. No second notification after hook install (to avoid triggering hook via sceKernelSendNotificationRequest). AWAITING TEST.
+**Current Status:** 🪝 **DUAL fopen+open HOOK WITH PATH LOGGING DEPLOYED** — fopen hook works (no crash, address 0x8000c2f00 confirmed real). But redirect didn't trigger — game likely uses `open()` not `fopen()`. Now hooking BOTH functions with path logging notifications (shows first 40 chars of opened files). Looking for "startmeup" path pattern. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
