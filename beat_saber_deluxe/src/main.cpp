@@ -43,10 +43,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;
     (void)args;
 
-    // Get real fopen address from GOT
-    volatile void *force = (void*)&fopen;
-    (void)force;
-    void *real_fopen = *(void**)&fopen;
+    // Get real fopen address from libc directly
+    void *real_fopen = (void*)&fopen;
 
     OrbisNotificationRequest req;
 
