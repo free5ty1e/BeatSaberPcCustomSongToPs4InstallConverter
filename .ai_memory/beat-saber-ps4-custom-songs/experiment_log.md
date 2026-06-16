@@ -397,3 +397,15 @@ metadata:
 - **Notifications:** "BS Deluxe v0.06 Started!" + "BS path: /the/actual/path..." (only when Start Me Up is selected)
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** No crash. Navigate to Start Me Up → a notification shows the exact path the game is trying to open. This tells us the file format and location for CustomSong.
+
+### Experiment 32 — Clean fopen Hook (v0.06) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** Back to Experiment 24: fopen hook only, no jailbreak, no logging, no open hook. Added path display notification on redirect.
+- **Result:** ❌ Redirect didn't work (Start Me Up played normally). Notifications didn't show in VR. Game runs fine but no intercept.
+- **Learned:** Confirmed that the game uses `open()` for song loading, not `fopen()`. fopen-only hook doesn't intercept song files.
+
+### Experiment 33 — Detour + Stub jb Fix for open() (v0.07) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Full v0.02 approach (both fopen+open hooks, jailbreak, logging) PLUS a critical fix: after installing the open hook via standard Detour_DetourFunction, `fix_stub_jumps()` patches the allocated stub memory (RWX) to replace `jb`/`jne`/`je` (PC-relative) with `nop;nop`. This prevents the crash that happened after 6 successful open calls — the jb's PC-relative offset was wrong in the stub because the stub is at a different address than open(). Now error returns are handled correctly (the stub returns -1 to the caller instead of jumping to the wrong error handler).
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** Both hooks install. Log created. open() hook works without crashing (even on errors). Redirect for "startmeup" paths works. Navigate to Start Me Up → file redirected → CustomSong loaded (may fail).

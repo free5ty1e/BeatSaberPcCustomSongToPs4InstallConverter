@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎯 v0.06 DEPLOYED — Clean Experiment 24 approach (fopen hook only, no jailbreak, no logging). When Start Me Up is selected, a notification shows the exact file path the game tries to open. ONE notification, no spam, no crash. AWAITING TEST.
+**Current Status:** 🛠️ v0.07 DEPLOYED — Both fopen+open hooks installed (like v0.02 which partially worked). Critical fix: `fix_stub_jumps()` patches jb in the open hook stub to prevent crash on syscall errors. Logging via jailbreak. Redirect active for open() calls. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
