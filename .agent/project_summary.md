@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 💾 **DEFERRED USB LOGGING v0.01a** — NO file I/O in module_start (crashes). Log init deferred to first hook call (game fully initialized). Notifications: "BS Deluxe v0.01a Started!" + "Log: /mnt/usb0/bs_debug.txt". Logs ALL fopen/open calls. Clear log each launch. AWAITING TEST.
+**Current Status:** 💾 **MULTI-PATH LOG PROBE v0.01b** — Probes 7 paths from within hooks (game initialized). First writable path gets the log. Notifications: "BS Deluxe v0.01b Started!" + "Log: /actual/working/path" from first hook. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

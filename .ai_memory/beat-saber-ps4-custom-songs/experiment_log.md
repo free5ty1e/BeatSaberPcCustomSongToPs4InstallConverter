@@ -341,3 +341,9 @@ metadata:
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** "BS Deluxe v0.01a Started!" + "Log: /mnt/usb0/bs_debug.txt" notifications. No crash. Log file created on USB with all file paths.
 - **To test:** Launch Beat Saber → navigate to Start Me Up → exit → we check USB log via FTP
+
+### Experiment 28 — Multi-Path Log Probe (from hooks) [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Tries 7 paths for logging from within hooks (game fully initialized). First working path gets the log. Notifications: "BS Deluxe v0.01b Started!" + "Log: /path/that/worked" (from first hook call). Paths tried: /data/, /tmp/, /data/custom/bs_deluxe/, /data/cache0001/, /data/GoldHEN/, /mnt/usb0/, /mnt/usb1/. Logs ALL fopen/open calls. Cleared on each launch.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** Two notifications. Log file created at first writable path. Then navigate to Start Me Up → log captures all file paths.
