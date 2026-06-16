@@ -9,7 +9,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.10"
+#define PLUGIN_VERSION "v0.11"
 #define LOG_PATH "/data/bs_debug.txt"
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -21,12 +21,21 @@ HOOK_INIT(hook_open);
 static int in_hook = 0;
 static void init_log();  // forward declaration
 
-// Fix jb in stub (RWX memory allocated by Detour)
+// Fix PC-relative jump after the syscall in open's stub.
+// The stub has open's saved bytes: mov eax,SYS_open(5) syscall(2) jb_REL8(2) ret(1) ...
+// We look for the pattern syscall(0F 05) followed by a conditional jump (72/74/75)
+// and replace that jump with nop;nop. Searching for plain 0x72 is unreliable because
+// SYS_open's syscall number might be 0x72, appearing in the mov eax instruction.
 static void fix_jb(void *stub, uint32_t size) {
-    if (!stub || size < 2) return;
+    if (!stub || size < 4) return;
     uint8_t *b = (uint8_t*)stub;
-    for (uint32_t i = 0; i < size - 1; i++) {
-        if (b[i] == 0x72) { b[i]=0x90; b[i+1]=0x90; break; }
+    for (uint32_t i = 0; i < size - 3; i++) {
+        // 0x0F 0x05 = syscall, followed by a conditional jump (72/74/75 + rel8)
+        if (b[i] == 0x0F && b[i+1] == 0x05 && (b[i+2] == 0x72 || b[i+2] == 0x74 || b[i+2] == 0x75)) {
+            b[i+2] = 0x90;  // nop
+            b[i+3] = 0x90;  // nop
+            break;
+        }
     }
 }
 

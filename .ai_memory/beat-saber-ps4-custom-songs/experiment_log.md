@@ -422,3 +422,9 @@ metadata:
 - **Change:** Exact v0.02 approach that created working log file (6 entries captured). Jailbreak + Detour hooks + file logging (fopen/fclose per line, no persistent FILE*). PLUS: `fix_jb()` patches jb in open's RWX stub after Detour installs it. init_log deferred to first hook call (not module_start — avoids pre-jailbreak fopen crash).
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** Same as v0.02 (logging to /data/bs_debug.txt) but without the jb crash.
+
+### Experiment 36 — Corrected jb fix for open stub (v0.11) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Log showed exact same 6 entries as v0.02 — crash still on 7th open call. Root cause: old `fix_jb()` scanned for plain `0x72` byte, but SYS_open syscall number on PS4 is likely `0x72` (114), which appears in the `mov eax, SYS_open` instruction. fix_jb corrupted the mov eax instruction (NOP'd bytes 1-2) and never fixed the actual jb at offset 7.
+- **Fix:** `fix_jb()` now searches for pattern `0x0F 0x05` (syscall) followed by `0x72`/`0x74`/`0x75` (conditional jump), and only replaces that specific byte.
+- **Status:** ✅ DEPLOYED — awaiting test
