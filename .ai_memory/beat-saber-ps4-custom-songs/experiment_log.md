@@ -416,3 +416,9 @@ metadata:
 - **Theory:** The crash was either from Detour's mprotect interacting badly with jailbreak, or from the fopen logging causing file I/O issues during startup. v0.09 avoids BOTH: no mprotect (uses sys_sdk_proc_rw), no file I/O logging (uses klog).
 - **Notifications:** "BS Deluxe v0.09" + "JB OK" + "fopen=OK open=OK" (or FAIL)
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 35 — v0.02 rebuild with jb fix (v0.10) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Exact v0.02 approach that created working log file (6 entries captured). Jailbreak + Detour hooks + file logging (fopen/fclose per line, no persistent FILE*). PLUS: `fix_jb()` patches jb in open's RWX stub after Detour installs it. init_log deferred to first hook call (not module_start — avoids pre-jailbreak fopen crash).
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** Same as v0.02 (logging to /data/bs_debug.txt) but without the jb crash.

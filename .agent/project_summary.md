@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔧 v0.09 DEPLOYED — Complete rewrite. Manual hooks via sys_sdk_proc_rw (no mprotect). klog logging (no file I/O). Both hooks active with proper stubs + jb fix. AWAITING TEST.
+**Current Status:** 🔄 v0.10 DEPLOYED — Exact v0.02 rebuild (working logging) + jb fix in open stub. File logging to /data/bs_debug.txt. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
