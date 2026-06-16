@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🛡️ **JAILBREAK v0.02 DEPLOYED** — Game sandbox blocks all 7 log paths. Added `sys_sdk_jailbreak()` in module_start to lift sandbox. Log file at `/data/bs_debug.txt` from first hook. Notifications: "BS Deluxe v0.02 Started!" + "Jailbreak OK/FAIL" + "Log: /data/bs_debug.txt". AWAITING TEST.
+**Current Status:** 💾 **PERSISTENT LOG FILE v0.03 DEPLOYED** — Jailbreak OK ✅, log created and captured (6 entries before crash). Crash was from overhead of fopen/fclose per log entry during heavy startup. v0.03 uses persistent `static FILE *log_fp` — opened once, fprintf per entry only. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

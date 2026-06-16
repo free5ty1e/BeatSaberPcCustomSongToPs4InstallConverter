@@ -359,3 +359,16 @@ metadata:
 - **Change:** Added `sys_sdk_jailbreak()` in module_start to lift sandbox restrictions. Notifications: "BS Deluxe v0.02 Started!" + "Jailbreak OK" + "Log: /data/bs_debug.txt" (from first hook). Uses jailbreak to allow writes anywhere.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** Three notifications. Log file created at /data/bs_debug.txt with all file paths captured. Navigate to Start Me Up → log shows the redirected paths.
+
+### Experiment 29 — GoldHEN Jailbreak for Write Access [COMPLETED]
+- **Date:** 2026-06-29
+- **Change:** Added `sys_sdk_jailbreak()` in module_start. Log initialized on first hook.
+- **Result:** ✅ Jailsbreak OK. Log CREATED at `/data/bs_debug.txt` (6 entries captured). However game crashed with CE-34878-0 after logging only 6 entries. Likely cause: overhead of fopen/fclose in log_line for every hook call during heavy startup.
+- **Log captured:** /workspace/screenshots/bs_debug_capture_v02.txt
+- **Learned:** Jailbreak works! Logging works (from hooks, after jailbreak). But opening/closing the log file for EVERY file operation is too slow during game startup. Need persistent FILE pointer.
+
+### Experiment 30 — Persistent Log File (v0.03) [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Changed to persistent `static FILE *log_fp`. Opened once in init_log, kept open. log_line now just fprintf + fflush (no fopen/fclose per call). Drastically reduces overhead.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** Same 3 notifications. No crash (persistent file is much faster). Log captures ALL file paths during startup and gameplay.
