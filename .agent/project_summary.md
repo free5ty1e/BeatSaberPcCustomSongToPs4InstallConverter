@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 💾 **USB LOGGING DEPLOYED — no notification spam.** Path logging now writes to `/mnt/usb0/bs_debug.txt` via `log_line()` from within hooks. Shared `in_hook` guard prevents recursion. Only 2 startup notifications (fopen + open addresses). Redirect confirmed working (Start Me Up fails, other songs work) — need to see what path is being redirected. USB stick required. AWAITING TEST.
+**Current Status:** 💾 **DEFERRED USB LOGGING v0.01a** — NO file I/O in module_start (crashes). Log init deferred to first hook call (game fully initialized). Notifications: "BS Deluxe v0.01a Started!" + "Log: /mnt/usb0/bs_debug.txt". Logs ALL fopen/open calls. Clear log each launch. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

@@ -334,3 +334,10 @@ metadata:
   2. **USB log:** `/mnt/usb0/bs_debug.txt` created with file paths
   3. Navigate to Start Me Up → log shows which paths are accessed (esp. "REDIR" entries)
   4. After test, download & review log via FTP
+
+### Experiment 27 — Deferred USB Logging (no early fopen) [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Removed ALL `fopen` calls from `module_start`. Log file initialization deferred to first hook call (when game is fully initialized). Added version notification ("BS Deluxe v0.01a Started!"). Added logging notification with path. Log captures ALL fopen and open calls (no count limit). File cleared on each game launch (first hook truncates the log).
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** "BS Deluxe v0.01a Started!" + "Log: /mnt/usb0/bs_debug.txt" notifications. No crash. Log file created on USB with all file paths.
+- **To test:** Launch Beat Saber → navigate to Start Me Up → exit → we check USB log via FTP
