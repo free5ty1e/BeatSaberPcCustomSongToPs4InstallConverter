@@ -257,3 +257,40 @@ metadata:
   2. List of found functions (e.g., "open printf read ...")
   3. If sceFileUtilsOpen found: "sceFileUtilsOpen HOOKED OK"
 - **Learned:** — (pending)
+
+### Experiment 22 — open() Hook via GOT Dereference
+- **Date:** 2026-06-12
+- **Change:** Used `*(void**)&open` to read the real address of `open()` in libc from our PRX's GOT (confirmed working with printf: GOT=0x23fff9d0 REAL=0x24059810). Hooks the real `open()` function in libc to intercept all file opens. Creates redirects for "startmeup" song paths to CustomSong.
+- **Notifications expected:**
+  1. "open @ 0x..." (real address)
+  2. "open hook: OK" or "FAIL"
+  3. "BS: Song redirected!" (when sacrifice song is accessed)
+- **Result:** ⏳ AWAITING TEST
+- **Learned:** — (pending)
+
+### Experiment 22 — open() Hook (no reentrancy guard) [COMPLETED]
+- **Date:** 2026-06-12
+- **What:** Hooked the real `open()` function in libc via GOT dereference (`*(void**)&open`). Had klog + notification in hook. No reentrancy protection.
+- **Result:** ❌ **Crashed (error 34878)** — hook installed successfully (confirmed by "open @ 0x..." notification), but immediate crash. Likely reentrancy: hook called klog/notification which internally call open() → infinite recursion.
+- **Learned:** The GOT dereference technique WORKS — we can find and hook real function addresses in libc. But hooks that call I/O functions need reentrancy protection.
+
+### Experiment 23 — open() Hook with Reentrancy Guard [READY]
+- **Date:** 2026-06-12
+- **What:** Added `static int in_hook` guard to prevent reentrancy. Hook function now only calls `strstr()` and `HOOK_CONTINUE()` — no klog, no notifications. Notifications moved to module_start (before/after hook install).
+- **Status:** ✅ BUILT AND STAGED IN GIT — awaiting PS4 test
+- **Expected notifications:**
+  1. "open @ 0x..." (real open() address via GOT)
+  2. "open hook: OK" (hook installed successfully)
+  3. No crash — hook passes through silently, redirects matching paths
+
+### Experiment 23 — open() Hook with Reentrancy Guard [COMPLETED]
+- **Date:** 2026-06-29
+- **Change:** Added `static int in_hook` guard to prevent reentrancy. Hook was minimal (strstr + HOOK_CONTINUE only).
+- **Result:** ❌ **Crashed (error CE-34878-0)** — Same crash as before. GOT dereference works (confirmed by "open @ 0x..." notification) but hook at `open()` in libc crashes immediately. Likely cause: `open()` is a very short function (~8-13 bytes, syscall wrapper) and the 12-byte GoldHEN x64 detour may overflow into adjacent functions, corrupting the trampoline.
+- **Learned:** The GOT dereference technique works, but hooking very short functions like `open()` is unsafe with the GoldHEN SDK's current detour implementation.
+
+### Experiment 24 — fopen() Hook via GOT [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Switched from `open()` to `fopen()`. `fopen` is much longer (~100+ bytes with FILE buffering logic), so the x64 detour won't overflow. Uses same GOT dereference technique (`*(void**)&fopen`). Added reentrancy guard. Removed second notification after hook install to avoid triggering the hook via sceKernelSendNotificationRequest.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** "fopen @ 0x..." notification, then no crash. If the game uses fopen() for file operations, navigating to the sacrifice song should trigger the redirect (no notification visible).

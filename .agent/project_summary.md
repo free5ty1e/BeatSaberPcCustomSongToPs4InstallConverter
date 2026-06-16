@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔍 DLSYM SEARCH TEST — `sys_dynlib_dlsym(-1, "sceFileUtilsOpen")` FAILED. Now using POSIX `dlsym(RTLD_DEFAULT, ...)` to search multiple functions. Reports ALL found functions in notification. Hooks `sceFileUtilsOpen` if found. See `experiment_log.md` for full history.
+**Current Status:** 🪝 **fopen() HOOK DEPLOYED** — open() crash likely from `open()` being too short (syscall wrapper, ~8-13 bytes). x64 detour may overflow adjacent functions. Switching to `fopen()` which is much longer (~100+ bytes with FILE buffering). fopen also imported via GOT dereference. No second notification after hook install (to avoid triggering hook via sceKernelSendNotificationRequest). AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

@@ -37,6 +37,7 @@ Before reporting to the user:
 1. Update `experiment_log.md` with the latest test result
 2. Update `project_summary.md` status header and workflow
 3. Update `MEMORY.md` if needed
-4. Then report
+4. **Stage relevant changes in git** (`git add -A` for related files, or `git add <file>` for specific files)
+5. Then report
 
 **See also:** [[research-index-update]] for keeping RESEARCH_INDEX.md in sync.
