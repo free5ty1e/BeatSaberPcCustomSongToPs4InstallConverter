@@ -347,3 +347,15 @@ metadata:
 - **Change:** Tries 7 paths for logging from within hooks (game fully initialized). First working path gets the log. Notifications: "BS Deluxe v0.01b Started!" + "Log: /path/that/worked" (from first hook call). Paths tried: /data/, /tmp/, /data/custom/bs_deluxe/, /data/cache0001/, /data/GoldHEN/, /mnt/usb0/, /mnt/usb1/. Logs ALL fopen/open calls. Cleared on each launch.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** Two notifications. Log file created at first writable path. Then navigate to Start Me Up → log captures all file paths.
+
+### Experiment 28 — Multi-Path Log Probe (from hooks) [COMPLETED]
+- **Date:** 2026-06-29
+- **Change:** Tried 7 paths for logging from within hooks. No file I/O in module_start.
+- **Result:** ❌ No logging notification appeared. All 7 paths blocked by game sandbox even from hooks. "BS Deluxe v0.01b Started!" notification appeared but no "Log: ..." notification — meaning init_log() found NO writable path.
+- **Learned:** Game sandbox blocks writes to /data/, /tmp/, /data/custom/, /data/cache0001/, /data/GoldHEN/, /mnt/usb0/, /mnt/usb1/ even from hooks. Need to lift sandbox.
+
+### Experiment 29 — GoldHEN Jailbreak for Write Access [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Added `sys_sdk_jailbreak()` in module_start to lift sandbox restrictions. Notifications: "BS Deluxe v0.02 Started!" + "Jailbreak OK" + "Log: /data/bs_debug.txt" (from first hook). Uses jailbreak to allow writes anywhere.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** Three notifications. Log file created at /data/bs_debug.txt with all file paths captured. Navigate to Start Me Up → log shows the redirected paths.

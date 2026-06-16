@@ -1,6 +1,6 @@
-// Beat Saber Deluxe v0.01b — Multi-path log probe
-// Probes multiple writable paths from within hooks (game fully initialized).
-// Reports which path works via notification. NO file I/O in module_start.
+// Beat Saber Deluxe v0.02 — With GoldHEN jailbreak for filesystem write access
+// Calls sys_sdk_jailbreak() in module_start to lift sandbox restrictions,
+// then initializes log on first hook call when game heap is ready.
 
 #include <stdio.h>
 #include <stddef.h>
@@ -9,7 +9,8 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.01b"
+#define PLUGIN_VERSION "v0.02"
+#define LOG_PATH "/data/bs_debug.txt"
 
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
@@ -19,53 +20,33 @@ HOOK_INIT(hook_open);
 
 static int in_hook = 0;
 static int log_inited = 0;
-static char working_path[128] = "";  // first path that works for writing
 
-// Candidate paths (in order of likelihood)
-static const char* log_paths[] = {
-    "/data/bs_debug.txt",
-    "/tmp/bs_debug.txt",
-    "/data/custom/bs_deluxe/bs_debug.txt",
-    "/data/cache0001/bs_debug.txt",
-    "/data/GoldHEN/bs_debug.txt",
-    "/mnt/usb0/bs_debug.txt",
-    "/mnt/usb1/bs_debug.txt",
-    NULL
-};
-
-// Probe all paths, write to first working one (called from first hook)
+// Init log file — called from first hook (game heap ready)
 static void init_log() {
     if (log_inited) return;
     log_inited = 1;
-
-    for (int i = 0; log_paths[i]; i++) {
-        FILE *f = fopen(log_paths[i], "w");
-        if (f) {
-            strncpy(working_path, log_paths[i], sizeof(working_path) - 1);
-            fprintf(f, "=== BS Deluxe Debug Log ===\n");
-            fprintf(f, "Version: %s\n", PLUGIN_VERSION);
-            fprintf(f, "Logging to: %s\n", working_path);
-            fprintf(f, "fopen=%p open=%p\n", (void*)&fopen, (void*)&open);
-            fprintf(f, "Redirect: startmeup->/data/custom/bs_deluxe/CustomSong\n");
-            fprintf(f, "============================\n");
-            fclose(f);
-            // Show notification with the working path
-            OrbisNotificationRequest req;
-            memset(&req, 0, sizeof(req));
-            req.type = (OrbisNotificationRequestType)0;
-            req.targetId = -1;
-            snprintf(req.message, sizeof(req.message), "Log: %s", working_path);
-            sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
-            return;  // first working path wins
-        }
+    FILE *f = fopen(LOG_PATH, "w");
+    if (f) {
+        fprintf(f, "=== BS Deluxe Debug Log ===\n");
+        fprintf(f, "Version: %s\n", PLUGIN_VERSION);
+        fprintf(f, "fopen=%p open=%p\n", (void*)&fopen, (void*)&open);
+        fprintf(f, "Jailbreak: active\n");
+        fprintf(f, "Redirect: startmeup->/data/custom/bs_deluxe/CustomSong\n");
+        fprintf(f, "============================\n");
+        fclose(f);
+        // Show log path notification
+        OrbisNotificationRequest req;
+        memset(&req, 0, sizeof(req));
+        req.type = (OrbisNotificationRequestType)0;
+        req.targetId = -1;
+        snprintf(req.message, sizeof(req.message), "Log: %s", LOG_PATH);
+        sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
     }
 }
 
-// Append line to the working log path
 static void log_line(const char *line) {
     if (!log_inited) init_log();
-    if (working_path[0] == '\0') return;  // no writable path found
-    FILE *f = fopen(working_path, "a");
+    FILE *f = fopen(LOG_PATH, "a");
     if (f) {
         fprintf(f, "%s\n", line);
         fclose(f);
@@ -81,13 +62,11 @@ static const char* redirect_path(const char* path) {
     return NULL;
 }
 
-// fopen hook
 static FILE *fopen_hook(const char *path, const char *mode) {
     if (in_hook)
         return HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), path, mode);
     in_hook = 1;
     if (!log_inited) init_log();
-
     const char *newpath = redirect_path(path);
     FILE *result;
     if (newpath) {
@@ -105,13 +84,11 @@ static FILE *fopen_hook(const char *path, const char *mode) {
     return result;
 }
 
-// open hook
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook)
         return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
     if (!log_inited) init_log();
-
     const char *newpath = redirect_path(path);
     int result;
     if (newpath) {
@@ -142,11 +119,32 @@ extern "C" int module_start(size_t argc, const void *args) {
     snprintf(req.message, sizeof(req.message), "BS Deluxe %s Started!", PLUGIN_VERSION);
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 
-    // Install fopen hook
+    // Lift sandbox restrictions via GoldHEN jailbreak
+    // This allows the game process to write to filesystem for logging
+    struct jailbreak_backup jb;
+    memset(&jb, 0, sizeof(jb));
+    int jb_ret = sys_sdk_jailbreak(&jb);
+
+    if (jb_ret == 0) {
+        // Jailbreak succeeded
+        memset(&req, 0, sizeof(req));
+        req.type = (OrbisNotificationRequestType)0;
+        req.targetId = -1;
+        snprintf(req.message, sizeof(req.message), "Jailbreak OK");
+        sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+    } else {
+        // Jailbreak failed — but continue anyway
+        memset(&req, 0, sizeof(req));
+        req.type = (OrbisNotificationRequestType)0;
+        req.targetId = -1;
+        snprintf(req.message, sizeof(req.message), "Jailbreak FAIL (%d)", jb_ret);
+        sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+    }
+
+    // Install hooks (jailbreak status doesn't affect this)
     Detour_Construct(&Detour_hook_fopen, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_fopen, (uint64_t)(void*)&fopen, (void*)fopen_hook);
 
-    // Install open hook
     Detour_Construct(&Detour_hook_open, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 

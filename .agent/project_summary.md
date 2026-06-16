@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 💾 **MULTI-PATH LOG PROBE v0.01b** — Probes 7 paths from within hooks (game initialized). First writable path gets the log. Notifications: "BS Deluxe v0.01b Started!" + "Log: /actual/working/path" from first hook. AWAITING TEST.
+**Current Status:** 🛡️ **JAILBREAK v0.02 DEPLOYED** — Game sandbox blocks all 7 log paths. Added `sys_sdk_jailbreak()` in module_start to lift sandbox. Log file at `/data/bs_debug.txt` from first hook. Notifications: "BS Deluxe v0.02 Started!" + "Jailbreak OK/FAIL" + "Log: /data/bs_debug.txt". AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
