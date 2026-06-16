@@ -390,3 +390,10 @@ metadata:
 - **Change:** Moved `sys_sdk_jailbreak()` out of module_start into `init_log()` (first hook call). Module_start now only shows startup notification and installs one hook (fopen). Crash theory: jailbreak + hook install + another thread calling fopen simultaneously causes corruption. Deferring jailbreak to hook call avoids this. Yes, log IS cleared on each launch — `fopen(LOG_PATH, "w")` truncates the old log.
 - **Notifications:** Only "BS Deluxe v0.05 Started!" from module_start. Then "Log: /data/bs_debug.txt" from first hook (which also does jailbreak silently).
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 32 — Clean fopen Hook + Path Display (v0.06) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Back to Experiment 24's working approach: fopen hook ONLY, NO jailbreak, NO logging, NO open hook. One notification added when redirect triggers, showing the exact file path the game tried to open. This is the single diagnostic notification we've been needing — no spam, no crash.
+- **Notifications:** "BS Deluxe v0.06 Started!" + "BS path: /the/actual/path..." (only when Start Me Up is selected)
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** No crash. Navigate to Start Me Up → a notification shows the exact path the game is trying to open. This tells us the file format and location for CustomSong.

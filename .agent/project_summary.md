@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 DEFERRED JAILBREAK v0.05 DEPLOYED — Jailbreak moved from module_start to first hook call (game stable). Only one startup notification. Log IS cleared each launch (fopen w mode truncates). Crash theory: jailbreak + Detour_DetourFunction + multi-threaded fopen access = corrupted code. AWAITING TEST.
+**Current Status:** 🎯 v0.06 DEPLOYED — Clean Experiment 24 approach (fopen hook only, no jailbreak, no logging). When Start Me Up is selected, a notification shows the exact file path the game tries to open. ONE notification, no spam, no crash. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
