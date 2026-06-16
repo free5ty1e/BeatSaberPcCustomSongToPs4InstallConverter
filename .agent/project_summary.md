@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔴🔴 **BREAKTHROUGH + BUG FIX DEPLOYED** — Dual hooks work (no crash). Start Me Up FAILED to load while other songs worked — proving the redirect IS intercepting song files. But `try_notify()` had a bug (shared guard suppressed all notifications) so we couldn't see what path was being redirected. Fixed now with separate `notify_in_progress` guard. AWAITING TEST — expected notification flood showing file paths.
+**Current Status:** 💾 **USB LOGGING DEPLOYED — no notification spam.** Path logging now writes to `/mnt/usb0/bs_debug.txt` via `log_line()` from within hooks. Shared `in_hook` guard prevents recursion. Only 2 startup notifications (fopen + open addresses). Redirect confirmed working (Start Me Up fails, other songs work) — need to see what path is being redirected. USB stick required. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

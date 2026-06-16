@@ -324,3 +324,13 @@ metadata:
 - **Change:** Added separate `notify_in_progress` guard for try_notify (no longer shares hook guards which always suppressed notifications). Now notifications should actually appear when hooks are triggered.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** Notification flood showing file paths via "fopen: ..." and "open: ..." messages. When navigating to Start Me Up, we'll see what path the game actually uses.
+
+### Experiment 26 — USB Logging (no notification spam) [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Removed ALL notification-based path logging (was unusable — endless spam). Replaced with USB file logging via `log_line()` function that writes to `/mnt/usb0/bs_debug.txt`. Uses shared `in_hook` reentrancy guard for BOTH fopen and open hooks. `log_count` limits non-REDIR entries to 200. REDIR entries always logged. Module_start writes header and hook status to USB.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected behavior:**
+  1. **Notifications:** Only two: "fopen @ 0x..." and "open @ 0x..." — NO spam
+  2. **USB log:** `/mnt/usb0/bs_debug.txt` created with file paths
+  3. Navigate to Start Me Up → log shows which paths are accessed (esp. "REDIR" entries)
+  4. After test, download & review log via FTP
