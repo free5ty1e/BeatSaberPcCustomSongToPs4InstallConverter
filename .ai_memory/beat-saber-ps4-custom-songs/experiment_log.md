@@ -372,3 +372,9 @@ metadata:
 - **Change:** Changed to persistent `static FILE *log_fp`. Opened once in init_log, kept open. log_line now just fprintf + fflush (no fopen/fclose per call). Drastically reduces overhead.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** Same 3 notifications. No crash (persistent file is much faster). Log captures ALL file paths during startup and gameplay.
+
+### Experiment 30 — fopen Only + Persistent Log (v0.04) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Removed open hook entirely (causing crash — likely PC-relative `jb` in short-function trampoline). Kept fopen hook only (long function, safe detour). Persistent FILE* logging. Jailbreak for write access. NULL-safe path logging (`safe = path ? path : "NULL"`).
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** 3 notifications, no crash. Log at /data/bs_debug.txt captures fopen calls only.
