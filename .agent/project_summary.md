@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🛠️ v0.07 DEPLOYED — Both fopen+open hooks installed (like v0.02 which partially worked). Critical fix: `fix_stub_jumps()` patches jb in the open hook stub to prevent crash on syscall errors. Logging via jailbreak. Redirect active for open() calls. AWAITING TEST.
+**Current Status:** 🔧 v0.09 DEPLOYED — Complete rewrite. Manual hooks via sys_sdk_proc_rw (no mprotect). klog logging (no file I/O). Both hooks active with proper stubs + jb fix. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

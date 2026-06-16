@@ -409,3 +409,10 @@ metadata:
 - **Change:** Full v0.02 approach (both fopen+open hooks, jailbreak, logging) PLUS a critical fix: after installing the open hook via standard Detour_DetourFunction, `fix_stub_jumps()` patches the allocated stub memory (RWX) to replace `jb`/`jne`/`je` (PC-relative) with `nop;nop`. This prevents the crash that happened after 6 successful open calls — the jb's PC-relative offset was wrong in the stub because the stub is at a different address than open(). Now error returns are handled correctly (the stub returns -1 to the caller instead of jumping to the wrong error handler).
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** Both hooks install. Log created. open() hook works without crashing (even on errors). Redirect for "startmeup" paths works. Navigate to Start Me Up → file redirected → CustomSong loaded (may fail).
+
+### Experiment 34 — Manual Hooks + klog via sys_sdk_proc_rw (v0.09) [DEPLOYED]
+- **Date:** 2026-06-30
+- **Change:** Complete rewrite. NO Detour functions (manual hooking). Hooks installed via `sys_sdk_proc_rw` (GoldHEN kernel write) — no mprotect at all. Stubs via `sceKernelMmap` (RWX). Open stub has jb fixed. Logging via `sys_sdk_cmd(GOLDHEN_SDK_CMD_KLOG)` — no file I/O, no crash. fopen + open hooks both active.
+- **Theory:** The crash was either from Detour's mprotect interacting badly with jailbreak, or from the fopen logging causing file I/O issues during startup. v0.09 avoids BOTH: no mprotect (uses sys_sdk_proc_rw), no file I/O logging (uses klog).
+- **Notifications:** "BS Deluxe v0.09" + "JB OK" + "fopen=OK open=OK" (or FAIL)
+- **Status:** ✅ DEPLOYED — awaiting test
