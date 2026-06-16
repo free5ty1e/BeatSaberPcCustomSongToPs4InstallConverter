@@ -17,20 +17,25 @@ HOOK_INIT(hook_fopen);
 extern "C" int open(const char *path, int flags, ...);
 HOOK_INIT(hook_open);
 
-// Reentrancy guards (one per hook)
+// Reentrancy guards
 static int fopen_in_hook = 0;
 static int open_in_hook = 0;
+static int notify_in_progress = 0;  // prevents notification-reentrancy chains
 
-// Notification helper (sends only if not already in a hook)
+// Notification helper — uses its OWN guard so we can call from within hooks.
+// If sceKernelSendNotificationRequest internally triggers fopen/open, the hook
+// guards handle reentrancy there. If those cascading calls try to send another
+// notification, this guard prevents infinite recursion.
 static void try_notify(const char *msg) {
-    // Only send if not already inside a hook (prevent recursion)
-    if (fopen_in_hook || open_in_hook) return;
+    if (notify_in_progress) return;
+    notify_in_progress = 1;
     OrbisNotificationRequest req;
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0;
     req.targetId = -1;
     strncpy(req.message, msg, sizeof(req.message) - 1);
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+    notify_in_progress = 0;
 }
 
 // Redirect paths

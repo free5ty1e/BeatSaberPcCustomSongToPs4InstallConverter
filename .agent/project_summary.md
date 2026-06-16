@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🪝 **DUAL fopen+open HOOK WITH PATH LOGGING DEPLOYED** — fopen hook works (no crash, address 0x8000c2f00 confirmed real). But redirect didn't trigger — game likely uses `open()` not `fopen()`. Now hooking BOTH functions with path logging notifications (shows first 40 chars of opened files). Looking for "startmeup" path pattern. AWAITING TEST.
+**Current Status:** 🔴🔴 **BREAKTHROUGH + BUG FIX DEPLOYED** — Dual hooks work (no crash). Start Me Up FAILED to load while other songs worked — proving the redirect IS intercepting song files. But `try_notify()` had a bug (shared guard suppressed all notifications) so we couldn't see what path was being redirected. Fixed now with separate `notify_in_progress` guard. AWAITING TEST — expected notification flood showing file paths.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

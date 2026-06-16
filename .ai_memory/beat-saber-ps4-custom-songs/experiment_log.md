@@ -306,3 +306,21 @@ metadata:
 - **Change:** Hooked BOTH fopen AND open with correct address resolution. Added path logging notifications (shows first 40 chars of opened file path). Separate reentrancy guards for each hook. `try_notify()` helper that only sends notifications when not already inside a hook (prevents recursion).
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected result:** Flood of notifications showing opened file paths. Look for path containing "startmeup" or similar when navigating to sacrifice song. Then we can fix the redirect pattern.
+
+### Experiment 25 — Dual fopen+open Hook with Path Logging [COMPLETED]
+- **Date:** 2026-06-29
+- **Change:** Hooked BOTH fopen and open with correct address resolution `(void*)&func`. Added `try_notify()` helper for path logging. Separate reentrancy guards per hook.
+- **Result:** 🔴 **No path notifications appeared (try_notify bug).** BUT: Start Me Up failed to load (black screen → menu) while other songs worked. This proves the redirect IS triggering! The CustomSong replacement file is likely invalid or incompatible format. Other significant findings:
+  - `fopen @ 0x8000c2f00` ✅ confirmed
+  - `open @ 0x80000e050` ✅ confirmed — open hook also works! No crash!
+  - **Path logging suppressed** because `try_notify` checked `fopen_in_hook || open_in_hook` which was always TRUE when inside a hook
+- **Learned:** The redirect works at a basic level — we intercepted *something* related to Start Me Up. The CustomSong file isn't working as a replacement. Need to:
+  1. Fix try_notify logging (separate guard)
+  2. Investigate what file format/type the game expects for songs
+  3. Create a proper CustomSong replacement
+
+### Experiment 26 — Fixed Path Logging via try_notify [DEPLOYED]
+- **Date:** 2026-06-29
+- **Change:** Added separate `notify_in_progress` guard for try_notify (no longer shares hook guards which always suppressed notifications). Now notifications should actually appear when hooks are triggered.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected result:** Notification flood showing file paths via "fopen: ..." and "open: ..." messages. When navigating to Start Me Up, we'll see what path the game actually uses.
