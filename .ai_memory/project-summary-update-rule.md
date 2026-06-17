@@ -18,6 +18,11 @@ metadata:
   - What changed
   - Result (✅ success / ❌ failed / ⏳ pending)
   - What was learned
+- **Capture log entries from `/data/bs_debug.txt`** (if the log was created during the test):
+  - Download the log via FTP: `lftp -u anonymous, -p 2121 192.168.100.117 -e "get /data/bs_debug.txt -o /tmp/bs_debug_log.txt; quit"`
+  - Include the log content in the experiment entry (as a code block or saved file reference)
+  - If no log file exists (crash before any hook calls), note that as well
+  - Save a copy to `/workspace/screenshots/` for permanent reference
 - Update the "Working Configuration" section if the build process changes
 - Update the "What We Know" section with confirmed findings
 

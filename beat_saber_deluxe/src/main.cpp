@@ -10,7 +10,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.14"
+#define PLUGIN_VERSION "v0.15"
 #define LOG_PATH "/data/bs_debug.txt"
 #define JUMP_SIZE 12
 
@@ -20,6 +20,7 @@ extern "C" int open(const char *path, int flags, ...);
 HOOK_INIT(hook_fopen);
 
 static int in_hook = 0;
+static int hook_depth = 0;
 static uint8_t open_saved[JUMP_SIZE];  // saved original bytes of open()
 static int (*real_open)(const char*, int, int) = NULL;
 
@@ -82,36 +83,38 @@ static FILE *fopen_hook(const char *path, const char *mode) {
     return result;
 }
 
-// open hook: save bytes at entry, call original, rehook on exit
-// AVOIDS stub/trampoline entirely — no InstructionSize, no jb, no PC-relative issues
+// open hook: restore bytes, call original, rehook only at outermost level
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) {
-        // Reentrant: restore, call original, rehook
+        // Reentrant: restore, call original — outer call will rehook
         mem_write((uint64_t)real_open, open_saved, JUMP_SIZE);
+        hook_depth++;
         int r = real_open(path, flags, 0);
-        write_jump((void*)real_open, (void*)open_hook);
+        hook_depth--;
         return r;
     }
     in_hook = 1;
+    hook_depth++;
 
     const char *safe = path ? path : "NULL";
     const char *newpath = redirect_path(path);
     int result;
 
-    // Restore original bytes at open() so we can call it directly
+    // Restore original bytes so we can call open() directly
     mem_write((uint64_t)real_open, open_saved, JUMP_SIZE);
 
     if (newpath) {
         char buf[256]; snprintf(buf, sizeof(buf), "REDIR open:%s->%s", safe, newpath); log_line(buf);
         result = real_open(newpath, flags, 0);
     } else {
-        // Log every open call to see all paths
         char buf[256]; snprintf(buf, sizeof(buf), "open:%s", safe); log_line(buf);
         result = real_open(path, flags, 0);
     }
 
-    // Re-install the hook jump
-    write_jump((void*)real_open, (void*)open_hook);
+    // Rehook only if we're the outermost call
+    hook_depth--;
+    if (hook_depth == 0)
+        write_jump((void*)real_open, (void*)open_hook);
 
     in_hook = 0;
     return result;

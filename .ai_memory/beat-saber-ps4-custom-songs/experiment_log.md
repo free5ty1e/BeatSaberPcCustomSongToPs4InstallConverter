@@ -453,3 +453,8 @@ metadata:
 - **Theory:** If the crash was from the stub/trampoline (saved bytes execution + jump back), the restore+call+rehook approach should fix it since it never uses a stub. The reentrant path also restores + calls + rehooks.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Notifications:** "BS Deluxe v0.14" + "JB OK" + "saved: XX XX ..." (first 8 bytes of open, for comparison) + "hooks: fopen=OK open=OK"
+
+### Experiment 40 — hook_depth fix for restore+call+rehook (v0.15) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** v0.14 (restore+call+rehook) crashed same way. Root cause: reentrant path called `write_jump` (rehook) while outer call was still in the middle of `real_open`. When outer call continued, it called the REHOOKED function → infinite recursion → stack overflow → crash. Fix: `hook_depth` counter. Reentrant path does NOT rehook (only restores + calls + returns). Only outermost (hook_depth==0) call rehooks after all nested calls complete.
+- **Status:** ✅ DEPLOYED — awaiting test
