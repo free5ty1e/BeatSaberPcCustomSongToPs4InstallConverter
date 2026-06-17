@@ -446,3 +446,10 @@ metadata:
 - **Version:** v0.13
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Diagnostic retained:** Notification on open_call >= 6 shows path and count
+
+### Experiment 39 — Restore+Call+Rehook for open() (v0.14) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** COMPLETELY new approach for open() hook. No Detour, no stub, no trampoline. Save original bytes → write jump via sys_sdk_proc_rw → in hook, restore bytes → call original directly → rehook. This avoids ALL stub-related issues (InstructionSize, PC-relative jumps, HDE bugs). fopen hook still via Detour (safe, long function).
+- **Theory:** If the crash was from the stub/trampoline (saved bytes execution + jump back), the restore+call+rehook approach should fix it since it never uses a stub. The reentrant path also restores + calls + rehooks.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Notifications:** "BS Deluxe v0.14" + "JB OK" + "saved: XX XX ..." (first 8 bytes of open, for comparison) + "hooks: fopen=OK open=OK"

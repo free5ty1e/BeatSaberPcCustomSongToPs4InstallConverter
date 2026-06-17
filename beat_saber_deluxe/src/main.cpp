@@ -1,5 +1,7 @@
-// Beat Saber Deluxe v0.12 — Diagnostic: dump open() bytes, count open calls
-// Trying to find WHY the 6th open call crashes.
+// Beat Saber Deluxe v0.14 — No stub hooking for open()
+// Save original bytes, CALL ORIGINAL DIRECTLY (no stub), rehook after return.
+// fopen hook still via Detour (safe, long function).
+// Logging via file.
 
 #include <stdio.h>
 #include <stddef.h>
@@ -8,27 +10,32 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.13"
+#define PLUGIN_VERSION "v0.14"
 #define LOG_PATH "/data/bs_debug.txt"
+#define JUMP_SIZE 12
 
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
 
 HOOK_INIT(hook_fopen);
-HOOK_INIT(hook_open);
 
 static int in_hook = 0;
-static int open_call = 0;
+static uint8_t open_saved[JUMP_SIZE];  // saved original bytes of open()
+static int (*real_open)(const char*, int, int) = NULL;
 
-// Fix jb after syscall (0F 05 72/74/75 -> 0F 05 90 90)
-static void fix_jb(void *stub, uint32_t size) {
-    if (!stub || size < 4) return;
-    uint8_t *b = (uint8_t*)stub;
-    for (uint32_t i = 0; i < size - 3; i++) {
-        if (b[i] == 0x0F && b[i+1] == 0x05 && (b[i+2] == 0x72 || b[i+2] == 0x74 || b[i+2] == 0x75)) {
-            b[i+2] = 0x90; b[i+3] = 0x90; break;
-        }
-    }
+// GoldHEN kernel memory write (no mprotect)
+static void mem_write(uint64_t addr, void *data, uint64_t len) {
+    struct proc_rw rw;
+    memset(&rw, 0, sizeof(rw));
+    rw.address = addr; rw.data = data; rw.length = len; rw.write_flags = 1;
+    sys_sdk_proc_rw(&rw);
+}
+
+// Install/reinstall the hook jump at open()
+static void write_jump(void *target, void *hook) {
+    uint8_t j[JUMP_SIZE] = {0x48,0xB8,0,0,0,0,0,0,0,0,0xFF,0xE0};
+    *(uint64_t*)&j[2] = (uint64_t)hook;
+    mem_write((uint64_t)target, j, JUMP_SIZE);
 }
 
 static int log_inited = 0;
@@ -75,30 +82,37 @@ static FILE *fopen_hook(const char *path, const char *mode) {
     return result;
 }
 
+// open hook: save bytes at entry, call original, rehook on exit
+// AVOIDS stub/trampoline entirely — no InstructionSize, no jb, no PC-relative issues
 static int open_hook(const char *path, int flags, ...) {
-    if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
-    in_hook = 1;
-    open_call++;
-
-    // DIAGNOSTIC: Show path on 6th+ call (BEFORE HOOK_CONTINUE)
-    if (open_call >= 6) {
-        const char *safe = path ? path : "NULL";
-        OrbisNotificationRequest req;
-        memset(&req, 0, sizeof(req));
-        req.type = (OrbisNotificationRequestType)0; req.targetId = -1;
-        snprintf(req.message, sizeof(req.message), "open #%d: %.60s", open_call, safe);
-        sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+    if (in_hook) {
+        // Reentrant: restore, call original, rehook
+        mem_write((uint64_t)real_open, open_saved, JUMP_SIZE);
+        int r = real_open(path, flags, 0);
+        write_jump((void*)real_open, (void*)open_hook);
+        return r;
     }
+    in_hook = 1;
 
-    // No log_line() here — removes reentrant chain through fopen/open
-    // fopen_hook still logs fopen calls (safer, long function)
+    const char *safe = path ? path : "NULL";
     const char *newpath = redirect_path(path);
     int result;
+
+    // Restore original bytes at open() so we can call it directly
+    mem_write((uint64_t)real_open, open_saved, JUMP_SIZE);
+
     if (newpath) {
-        result = HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), newpath, flags, 0);
+        char buf[256]; snprintf(buf, sizeof(buf), "REDIR open:%s->%s", safe, newpath); log_line(buf);
+        result = real_open(newpath, flags, 0);
     } else {
-        result = HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
+        // Log every open call to see all paths
+        char buf[256]; snprintf(buf, sizeof(buf), "open:%s", safe); log_line(buf);
+        result = real_open(path, flags, 0);
     }
+
+    // Re-install the hook jump
+    write_jump((void*)real_open, (void*)open_hook);
+
     in_hook = 0;
     return result;
 }
@@ -107,7 +121,6 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc; (void)args;
     OrbisNotificationRequest req;
 
-    // Startup
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0; req.targetId = -1;
     snprintf(req.message, sizeof(req.message), "BS Deluxe %s", PLUGIN_VERSION);
@@ -122,34 +135,37 @@ extern "C" int module_start(size_t argc, const void *args) {
     snprintf(req.message, sizeof(req.message), "JB %s", jr == 0 ? "OK" : "FAIL");
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 
-    // Dump first 16 bytes of open() to check what we're hooking
-    uint8_t open_bytes[16];
-    memcpy(open_bytes, (void*)&open, 16);
+    // Save real open address and original bytes BEFORE hooking
+    real_open = (int (*)(const char*, int, int))(void*)&open;
+    memcpy(open_saved, (void*)&open, JUMP_SIZE);
+
+    // Show saved bytes in notification
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0; req.targetId = -1;
-    snprintf(req.message, sizeof(req.message), "open: %02x%02x %02x%02x %02x%02x %02x%02x",
-             open_bytes[0], open_bytes[1], open_bytes[2], open_bytes[3],
-             open_bytes[4], open_bytes[5], open_bytes[6], open_bytes[7]);
+    snprintf(req.message, sizeof(req.message), "saved: %02x%02x %02x%02x %02x%02x %02x%02x",
+             open_saved[0], open_saved[1], open_saved[2], open_saved[3],
+             open_saved[4], open_saved[5], open_saved[6], open_saved[7]);
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 
-    // fopen hook
+    // Install fopen hook (Detour — safe for long functions)
     Detour_Construct(&Detour_hook_fopen, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_fopen, (uint64_t)(void*)&fopen, (void*)fopen_hook);
 
-    // open hook
-    Detour_Construct(&Detour_hook_open, DetourMode_x64);
-    Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
-    fix_jb(Detour_hook_open.StubPtr, Detour_hook_open.StubSize);
+    // Install open hook via sys_sdk_proc_rw (no stub, no mprotect)
+    // First write restores will use open_saved
+    write_jump((void*)real_open, (void*)open_hook);
 
     memset(&req, 0, sizeof(req));
     req.type = (OrbisNotificationRequestType)0; req.targetId = -1;
-    snprintf(req.message, sizeof(req.message), "stub: %s", Detour_hook_open.StubPtr ? "OK" : "NULL");
+    snprintf(req.message, sizeof(req.message), "hooks: fopen=OK open=OK");
     sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
 
     return 0;
 }
 
 extern "C" int module_stop(size_t argc, const void *args) {
+    // Restore original open bytes (cleanup)
+    if (real_open) mem_write((uint64_t)real_open, open_saved, JUMP_SIZE);
     (void)argc; (void)args;
     return 0;
 }

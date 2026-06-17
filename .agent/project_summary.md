@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔬 v0.13 DEPLOYED — open() bytes = function prologue (not syscall wrapper). Crash on 6th call, notification never appears → crash is BEFORE open_call check. Removed log_line from open_hook to break reentrant chain. Diagnostic notification on open #6+ still present. AWAITING TEST.
+**Current Status:** 🔄 v0.14 DEPLOYED — NEW hook approach: restore+call+rehook for open(). No Detour stub/trampoline (bypasses InstructionSize, PC-relative jump, HDE issues). fopen still via Detour (safe). AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
