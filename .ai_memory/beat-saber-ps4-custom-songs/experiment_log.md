@@ -428,3 +428,14 @@ metadata:
 - **Change:** Log showed exact same 6 entries as v0.02 — crash still on 7th open call. Root cause: old `fix_jb()` scanned for plain `0x72` byte, but SYS_open syscall number on PS4 is likely `0x72` (114), which appears in the `mov eax, SYS_open` instruction. fix_jb corrupted the mov eax instruction (NOP'd bytes 1-2) and never fixed the actual jb at offset 7.
 - **Fix:** `fix_jb()` now searches for pattern `0x0F 0x05` (syscall) followed by `0x72`/`0x74`/`0x75` (conditional jump), and only replaces that specific byte.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 37 — Diagnostic: open bytes + call counter (v0.12) [READY]
+- **Date:** 2026-06-30
+- **Change:** Added TWO diagnostics to determine why the 6th open call crashes:
+  1. Dumps first 8 bytes of `open()` in notification (verify correct function)
+  2. Shows notification with path on open call #6+ (before HOOK_CONTINUE — if it appears, crash is in stub; if not, crash is in our code)
+- **Theory:** Despite fixing the jb in v0.11, the 6th call STILL crashes with same 5 entries logged. The crash is NOT from the jb issue. Possible causes:
+  - `open()` address might point to wrong function (dump bytes to verify)
+  - Crash might be from the NOTIFICATION called from within the hook (not from hook itself)
+  - Stub's trampoline might have InstructionSize mismatch
+- **Status:** ✅ BUILT & STAGED — awaiting PS4 power-on to deploy

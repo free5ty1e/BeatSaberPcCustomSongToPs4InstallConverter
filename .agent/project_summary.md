@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔍 v0.11 DEPLOYED — Root cause found: old fix_jb corrupted mov eax,SYS_open because SYS_open=0x72 matches jb opcode. fix_jb now searches for syscall(0F 05) then jb(72). File logging to /data/bs_debug.txt. AWAITING TEST.
+**Current Status:** 🔍 v0.12 DIAGNOSTIC READY — Dumps open() bytes + shows notification on open call #6. Built and staged, deploy when PS4 is on. PS4 is off for the night.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
