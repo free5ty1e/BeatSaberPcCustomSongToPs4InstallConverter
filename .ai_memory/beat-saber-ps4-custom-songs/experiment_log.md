@@ -439,3 +439,10 @@ metadata:
   - Crash might be from the NOTIFICATION called from within the hook (not from hook itself)
   - Stub's trampoline might have InstructionSize mismatch
 - **Status:** ✅ BUILT & STAGED — awaiting PS4 power-on to deploy
+
+### Experiment 38 — Remove log_line from open_hook (v0.13) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Removed `log_line()` call from `open_hook`. The fopen hook still logs. This eliminates the reentrant chain: `open_hook → log_line → fopen → fopen_hook → original fopen → open() → open_hook reentrant`. Theory: the 6th open call arrives while call #5 is still in log_line (file I/O), causing reentrant HOOK_CONTINUE to crash (possibly from simultaneous stub execution). Without log_line, open_hook returns instantly, in_hook is cleared faster, reducing race window.
+- **Version:** v0.13
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Diagnostic retained:** Notification on open_call >= 6 shows path and count

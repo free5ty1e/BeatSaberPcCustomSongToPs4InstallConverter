@@ -8,7 +8,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.12"
+#define PLUGIN_VERSION "v0.13"
 #define LOG_PATH "/data/bs_debug.txt"
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -79,11 +79,10 @@ static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
     open_call++;
-    const char *safe = path ? path : "NULL";
-    const char *newpath = redirect_path(path);
 
-    // DIAGNOSTIC: Show notification on call #6+ to see what crashes
+    // DIAGNOSTIC: Show path on 6th+ call (BEFORE HOOK_CONTINUE)
     if (open_call >= 6) {
+        const char *safe = path ? path : "NULL";
         OrbisNotificationRequest req;
         memset(&req, 0, sizeof(req));
         req.type = (OrbisNotificationRequestType)0; req.targetId = -1;
@@ -91,12 +90,13 @@ static int open_hook(const char *path, int flags, ...) {
         sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
     }
 
+    // No log_line() here — removes reentrant chain through fopen/open
+    // fopen_hook still logs fopen calls (safer, long function)
+    const char *newpath = redirect_path(path);
     int result;
     if (newpath) {
-        char buf[256]; snprintf(buf, sizeof(buf), "REDIR open:%s->%s", safe, newpath); log_line(buf);
         result = HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), newpath, flags, 0);
     } else {
-        char buf[256]; snprintf(buf, sizeof(buf), "open:%s", safe); log_line(buf);
         result = HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     }
     in_hook = 0;
