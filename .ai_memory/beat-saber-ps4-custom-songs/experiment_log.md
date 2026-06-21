@@ -404,32 +404,49 @@ metadata:
 - **Result:** ❌ Redirect didn't work (Start Me Up played normally). Notifications didn't show in VR. Game runs fine but no intercept.
 - **Learned:** Confirmed that the game uses `open()` for song loading, not `fopen()`. fopen-only hook doesn't intercept song files.
 
-### Experiment 33 — Detour + Stub jb Fix for open() (v0.07) [DEPLOYED]
+### Experiment 33 — Detour + Stub jb Fix for open() (v0.07) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** Full v0.02 approach (both fopen+open hooks, jailbreak, logging) PLUS fix_stub_jumps()
+- **Result:** ❌ Same CE-34878-0 crash. 5 log entries captured before crash.
+- **Log:** /workspace/screenshots/bs_debug_capture_v02.txt
 - **Date:** 2026-06-30
 - **Change:** Full v0.02 approach (both fopen+open hooks, jailbreak, logging) PLUS a critical fix: after installing the open hook via standard Detour_DetourFunction, `fix_stub_jumps()` patches the allocated stub memory (RWX) to replace `jb`/`jne`/`je` (PC-relative) with `nop;nop`. This prevents the crash that happened after 6 successful open calls — the jb's PC-relative offset was wrong in the stub because the stub is at a different address than open(). Now error returns are handled correctly (the stub returns -1 to the caller instead of jumping to the wrong error handler).
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** Both hooks install. Log created. open() hook works without crashing (even on errors). Redirect for "startmeup" paths works. Navigate to Start Me Up → file redirected → CustomSong loaded (may fail).
 
-### Experiment 34 — Manual Hooks + klog via sys_sdk_proc_rw (v0.09) [DEPLOYED]
+### Experiment 34 — Manual Hooks + klog via sys_sdk_proc_rw (v0.09) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** Manual hooks via sys_sdk_proc_rw, klog logging
+- **Result:** ❌ Same CE-34878-0 crash. Crashed before any log entries (klog output not retrievable).
 - **Date:** 2026-06-30
 - **Change:** Complete rewrite. NO Detour functions (manual hooking). Hooks installed via `sys_sdk_proc_rw` (GoldHEN kernel write) — no mprotect at all. Stubs via `sceKernelMmap` (RWX). Open stub has jb fixed. Logging via `sys_sdk_cmd(GOLDHEN_SDK_CMD_KLOG)` — no file I/O, no crash. fopen + open hooks both active.
 - **Theory:** The crash was either from Detour's mprotect interacting badly with jailbreak, or from the fopen logging causing file I/O issues during startup. v0.09 avoids BOTH: no mprotect (uses sys_sdk_proc_rw), no file I/O logging (uses klog).
 - **Notifications:** "BS Deluxe v0.09" + "JB OK" + "fopen=OK open=OK" (or FAIL)
 - **Status:** ✅ DEPLOYED — awaiting test
 
-### Experiment 35 — v0.02 rebuild with jb fix (v0.10) [DEPLOYED]
+### Experiment 35 — v0.02 rebuild with jb fix (v0.10) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** Exact v0.02 + fix_stub_jumps (plain 0x72 scan)
+- **Result:** ❌ Same CE-34878-0 crash. 5 log entries. fix_jb corrupted mov eax (SYS_open=0x72 matched 0x72 opcode).
+- **Log:** 5 entries: /dev/urandom, /app0/sce_discmap.plt (x2), /app0/sce_discmap_patch.plt, /app0/media/boot.config
 - **Date:** 2026-06-30
 - **Change:** Exact v0.02 approach that created working log file (6 entries captured). Jailbreak + Detour hooks + file logging (fopen/fclose per line, no persistent FILE*). PLUS: `fix_jb()` patches jb in open's RWX stub after Detour installs it. init_log deferred to first hook call (not module_start — avoids pre-jailbreak fopen crash).
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** Same as v0.02 (logging to /data/bs_debug.txt) but without the jb crash.
 
-### Experiment 36 — Corrected jb fix for open stub (v0.11) [DEPLOYED]
+### Experiment 36 — Corrected jb fix for open stub (v0.11) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** fix_jb now looks for syscall(0x0F 0x05) + jb, not plain 0x72
+- **Result:** ❌ Same CE-34878-0 crash. 5 log entries. Confirmed open() first bytes are function prologue (55 48 89 e5), not a syscall wrapper. fix_jb was irrelevant.
 - **Date:** 2026-06-30
 - **Change:** Log showed exact same 6 entries as v0.02 — crash still on 7th open call. Root cause: old `fix_jb()` scanned for plain `0x72` byte, but SYS_open syscall number on PS4 is likely `0x72` (114), which appears in the `mov eax, SYS_open` instruction. fix_jb corrupted the mov eax instruction (NOP'd bytes 1-2) and never fixed the actual jb at offset 7.
 - **Fix:** `fix_jb()` now searches for pattern `0x0F 0x05` (syscall) followed by `0x72`/`0x74`/`0x75` (conditional jump), and only replaces that specific byte.
 - **Status:** ✅ DEPLOYED — awaiting test
 
-### Experiment 37 — Diagnostic: open bytes + call counter (v0.12) [READY]
+### Experiment 37 — Diagnostic: open bytes + call counter (v0.12) [COMPLETED]
+- **Date:** 2026-06-30
+- **Change:** Dump first 8 bytes of open() + notification on open call #6+ 
+- **Result:** ❌ Same CE-34878-0 crash. First 8 bytes of open() = 55 48 89 e5 41 57 41 56 (function prologue). Notification for call #6 NEVER appeared — confirming crash happens BEFORE the call counter increment.
 - **Date:** 2026-06-30
 - **Change:** Added TWO diagnostics to determine why the 6th open call crashes:
   1. Dumps first 8 bytes of `open()` in notification (verify correct function)
@@ -440,21 +457,63 @@ metadata:
   - Stub's trampoline might have InstructionSize mismatch
 - **Status:** ✅ BUILT & STAGED — awaiting PS4 power-on to deploy
 
-### Experiment 38 — Remove log_line from open_hook (v0.13) [DEPLOYED]
+### Experiment 38 — Remove log_line from open_hook (v0.13) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Removed log_line from open_hook to break reentrant chain
+- **Result:** ❌ Same CE-34878-0 crash. Even without log_line, call #6 notification never appeared. Crash is NOT from reentrant logging.
 - **Date:** 2026-07-01
 - **Change:** Removed `log_line()` call from `open_hook`. The fopen hook still logs. This eliminates the reentrant chain: `open_hook → log_line → fopen → fopen_hook → original fopen → open() → open_hook reentrant`. Theory: the 6th open call arrives while call #5 is still in log_line (file I/O), causing reentrant HOOK_CONTINUE to crash (possibly from simultaneous stub execution). Without log_line, open_hook returns instantly, in_hook is cleared faster, reducing race window.
 - **Version:** v0.13
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Diagnostic retained:** Notification on open_call >= 6 shows path and count
 
-### Experiment 39 — Restore+Call+Rehook for open() (v0.14) [DEPLOYED]
+### Experiment 39 — Restore+Call+Rehook for open() (v0.14) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Completely new approach - restore original bytes, call open() directly, rehook. No stub/trampoline.
+- **Result:** ❌ Same CE-34878-0 crash. 5 log entries. Bug: reentrant path rehooked while outer call was still in real_open → stack overflow.
 - **Date:** 2026-07-01
 - **Change:** COMPLETELY new approach for open() hook. No Detour, no stub, no trampoline. Save original bytes → write jump via sys_sdk_proc_rw → in hook, restore bytes → call original directly → rehook. This avoids ALL stub-related issues (InstructionSize, PC-relative jumps, HDE bugs). fopen hook still via Detour (safe, long function).
 - **Theory:** If the crash was from the stub/trampoline (saved bytes execution + jump back), the restore+call+rehook approach should fix it since it never uses a stub. The reentrant path also restores + calls + rehooks.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Notifications:** "BS Deluxe v0.14" + "JB OK" + "saved: XX XX ..." (first 8 bytes of open, for comparison) + "hooks: fopen=OK open=OK"
 
-### Experiment 40 — hook_depth fix for restore+call+rehook (v0.15) [DEPLOYED]
+### Experiment 40 — hook_depth fix for restore+call+rehook (v0.15) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Hook_depth counter - only outermost call rehooks after all nested calls complete
+- **Result:** ❌ Same CE-34878-0 crash. 5 log entries. hook_depth fix didn't help - crash is NOT from rehook issue.
+- **Log captured:** /workspace/screenshots/bs_debug_v15_log.txt
+- **Log content:**
+```
+=== BS Deluxe Debug Log ===
+Version: v0.15
+fopen=8000c2f00 open=80000e050
+============================
+open:/dev/urandom
+open:/app0/sce_discmap.plt
+open:/app0/sce_discmap.plt
+open:/app0/sce_discmap_patch.plt
+open:/app0/media/boot.config
+```
+- **Screenshots:** /workspace/screenshots/bs_debug_v15_log.txt
 - **Date:** 2026-07-01
 - **Change:** v0.14 (restore+call+rehook) crashed same way. Root cause: reentrant path called `write_jump` (rehook) while outer call was still in the middle of `real_open`. When outer call continued, it called the REHOOKED function → infinite recursion → stack overflow → crash. Fix: `hook_depth` counter. Reentrant path does NOT rehook (only restores + calls + returns). Only outermost (hook_depth==0) call rehooks after all nested calls complete.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 41 — fopen only, no open hook, no jailbreak (v0.16) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Removed open() hook entirely. Removed jailbreak. Only fopen hook remains (safe, proven working). This tests whether the game uses fopen() for resources.assets loading. If resources.assets IS loaded via fopen(), the redirect to patched version will be visible via notification. No open hook means no 6th call crash.
+- **Theory:** After 40 experiments, modifying open()'s code (even via restore+call+rehook) consistently crashes on the 6th call. This suggests PS4 OS may have integrity checks on system functions that trigger after ~5 modifications. Removing the open hook completely bypasses this. The fopen hook alone may be sufficient for song redirection if the patched resources.assets correctly points to CustomSong.
+- **Notifications:** "BS Deluxe v0.16 Started!" + "BS redirect: /app0/Media/resources.assets" (if fopen is called for it)
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 42 — Jailbreak + delay + fopen via sys_sdk_proc_rw (v0.17) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Jailbreak + ~60ms delay before fopen hook installation via sys_sdk_proc_rw (no Detour, no mprotect). No open hook (avoids 6th call crash). hook_depth fix for fopen (only outermost call rehooks). Logging to /data/bs_debug.txt via fopen/fprintf from within hook.
+- **Theory:** v0.04 (jailbreak + fopen via Detour) crashed immediately — likely mprotect failing after jailbreak due to credential changes. sys_sdk_proc_rw bypasses mprotect entirely. hook_depth prevents reentrant rehook crash. Delay gives jailbreak time to stabilize. No open hook → no 6th call crash. If this works, we have logging + jailbreak without crashes.
+- **Notifications:** "BS Deluxe v0.17" + "JB OK" + "fopen hook installed"
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 43 — Two fopen hooks after jailbreak (v0.19) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** v0.18 crashed before first hook call. Pattern discovered: v0.02 (jailbreak + TWO hooks) worked for 5 calls, but ALL versions with ONE hook after jailbreak crash immediately. Theory: the PS4/kernel needs TWO code modifications after jailbreak for stability, or the second `sys_sdk_proc_rw` call provides necessary kernel-side state. v0.19 installs the SAME fopen hook TWICE — second `ji()` call is a no-op (writes same bytes) but provides the second kernel write operation.
 - **Status:** ✅ DEPLOYED — awaiting test

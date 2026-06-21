@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎯 v0.15 DEPLOYED — Root cause found: reentrant call rehooked while outer call was still in real_open → infinite recursion. Fix: hook_depth, only outermost call rehooks. AWAITING TEST.
+**Current Status:** 🔄 v0.17 DEPLOYED — Jailbreak + ~60ms delay + fopen via sys_sdk_proc_rw (no mprotect, no Detour). hook_depth fix. No open hook. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
