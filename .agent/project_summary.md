@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔄 v0.17 DEPLOYED — Jailbreak + ~60ms delay + fopen via sys_sdk_proc_rw (no mprotect, no Detour). hook_depth fix. No open hook. AWAITING TEST.
+**Current Status:** 🔄 v0.19 DEPLOYED — Pattern: v0.02 (jailbreak + TWO hooks) WORKED. ALL single-hook versions crashed immediately. v0.19 installs fopen hook TWICE (second is no-op). Tests if two modifications after jailbreak are required for stability. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
