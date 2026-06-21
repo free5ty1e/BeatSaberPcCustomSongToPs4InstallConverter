@@ -517,3 +517,9 @@ open:/app0/media/boot.config
 - **Date:** 2026-07-01
 - **Change:** v0.18 crashed before first hook call. Pattern discovered: v0.02 (jailbreak + TWO hooks) worked for 5 calls, but ALL versions with ONE hook after jailbreak crash immediately. Theory: the PS4/kernel needs TWO code modifications after jailbreak for stability, or the second `sys_sdk_proc_rw` call provides necessary kernel-side state. v0.19 installs the SAME fopen hook TWICE — second `ji()` call is a no-op (writes same bytes) but provides the second kernel write operation.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 44 — Detour for both hooks, open=silent (v0.20) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Back to EXACT v0.02 pattern: jailbreak + 2x Detour (not sys_sdk_proc_rw). Theory: `sys_sdk_proc_rw` uses syscall 500 (same as jailbreak) → conflict in GoldHEN handler. Detour uses `mprotect` (different syscall) → no conflict. open_hook is silent pass-through (no logging) — eliminates reentrant chain that may have caused v0.02's 6th call crash. fopen_hook handles logging + redirect.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** 3 notifications. No crash. Log at /data/bs_debug.txt captures fopen calls.
