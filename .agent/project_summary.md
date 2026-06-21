@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎯 v0.20 DEPLOYED — Back to Detour (mprotect) for both hooks like v0.02. Theory: sys_sdk_proc_rw uses syscall 500 (same as jailbreak) causing conflict. open_hook is silent pass-through to eliminate reentrant chain. AWAITING TEST.
+**Current Status:** 🔬 v0.21 DEPLOYED — ULTIMATE BASELINE: no hooks, no code modifications, just jailbreak + file write. If this crashes, jailbreak itself is the problem (not hooks). If it works, the crash is from modifying function code.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

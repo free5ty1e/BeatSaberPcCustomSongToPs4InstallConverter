@@ -523,3 +523,8 @@ open:/app0/media/boot.config
 - **Change:** Back to EXACT v0.02 pattern: jailbreak + 2x Detour (not sys_sdk_proc_rw). Theory: `sys_sdk_proc_rw` uses syscall 500 (same as jailbreak) → conflict in GoldHEN handler. Detour uses `mprotect` (different syscall) → no conflict. open_hook is silent pass-through (no logging) — eliminates reentrant chain that may have caused v0.02's 6th call crash. fopen_hook handles logging + redirect.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** 3 notifications. No crash. Log at /data/bs_debug.txt captures fopen calls.
+
+### Experiment 45 — ULTIMATE BASELINE: no hooks, just jailbreak + file I/O (v0.21) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** ZERO hooks. ZERO code modifications. Just jailbreak + fopen + write log + fclose in module_start. If this crashes, jailbreak itself causes the crash. If it works, the issue is specifically with modifying function code after jailbreak.
+- **Status:** ✅ DEPLOYED — awaiting test
