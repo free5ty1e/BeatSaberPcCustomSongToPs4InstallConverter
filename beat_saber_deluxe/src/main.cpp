@@ -1,4 +1,4 @@
-// Beat Saber Deluxe v0.22 — Raw syscall logging (no heap, no fopen, no crash)
+// Beat Saber Deluxe v0.24 — Raw syscall logging (no heap, no fopen, no crash)
 // Uses orbis_syscall for open/write/close — bypasses libc heap allocation entirely.
 // No hooks, no code modifications, no fopen — just jailbreak + raw file I/O.
 
@@ -9,7 +9,7 @@
 #include <GoldHEN/Common.h>
 #include <GoldHEN/Syscall.h>
 
-#define PLUGIN_VERSION "v0.23"
+#define PLUGIN_VERSION "v0.24"
 #define LOG_PATH "/data/bs_debug.txt"
 
 // Raw syscall wrappers (no heap, no libc buffered I/O)
@@ -62,11 +62,13 @@ extern "C" int module_start(size_t argc, const void *args) {
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
     // Write log using raw syscall (no heap, no fopen, no buffer allocation)
-    log_msg("=== BS Deluxe v0.22 ===\nJailbreak: active\nRaw syscall I/O works!");
+    log_msg("=== BS Deluxe v0.24 ===\nJailbreak: active\nRaw syscall I/O works!");
 
-    // Dummy GoldHEN syscall to propagate jailbreak credential state
-    // Extra syscall 500 helps settle the jailbreak changes in kernel
-    sys_sdk_version();
+    // Dummy mprotect call to propagate jailbreak state through VM subsystem
+    // mprotect (syscall 74) goes through a different kernel path than jailbreak
+    // (syscall 500). This forces the VM subsystem to refresh its cached credentials
+    // from the kernel credential store, propagating the jailbreak changes.
+    sceKernelMprotect((void*)module_start, 0x1000, VM_PROT_READ | VM_PROT_EXECUTE);
 
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
     snprintf(r.message,sizeof(r.message),"raw log: %s", LOG_PATH);

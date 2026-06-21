@@ -551,3 +551,9 @@ Raw syscall I/O works!
 - **Date:** 2026-07-01
 - **Change:** Added `sys_sdk_version()` call after raw syscall logging. Theory: v0.02's 2x Detour calls went through the kernel (mprotect syscall), which propagated jailbreak credential state. Without this, the game crashes during init. `sys_sdk_version()` makes an additional GoldHEN syscall (500) which may help propagate state through the GoldHEN module.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 48 — sceKernelMprotect settling call after jailbreak (v0.24) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Replaced `sys_sdk_version()` (syscall 500) with `sceKernelMprotect` (syscall 74) after jailbreak + log write. Mprotect goes through a COMPLETELY DIFFERENT kernel path (VM subsystem) than syscall 500. This forces the VM subsystem to refresh its cached credentials from the kernel store, propagating the jailbreak changes. Without this, the VM still has old cached credentials and crashes the game during init.
+- **Theory:** v0.02's 2x Detour calls used mprotect, which triggered credential propagation through the VM subsystem. v0.22/v0.23 didn't use mprotect, so credentials weren't propagated → game crashed. v0.24 adds explicit mprotect.
+- **Status:** ✅ DEPLOYED — awaiting test

@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🌱 v0.23 DEPLOYED — Raw syscall logging WORKS (log captured in v0.22). Crash is from jailbreak state not propagated after module_start. Added sys_sdk_version() call after jailbreak to settle credential propagation. AWAITING TEST.
+**Current Status:** 🧪 v0.24 DEPLOYED — Replaced syscall 500 (sys_sdk_version) with mprotect (syscall 74) for jailbreak credential propagation. Mprotect goes through VM subsystem which caches credentials separately. Theory: VM subsystem needs explicit refresh to propagate jailbreak changes. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
