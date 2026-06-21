@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔬 v0.21 DEPLOYED — ULTIMATE BASELINE: no hooks, no code modifications, just jailbreak + file write. If this crashes, jailbreak itself is the problem (not hooks). If it works, the crash is from modifying function code.
+**Current Status:** 🧪 v0.22 DEPLOYED — Raw syscall logging (orbis_syscall SYS_open/SYS_write/SYS_close). Bypasses libc heap allocation entirely. fopen crashed because heap isn't initialized in module_start. Raw syscalls don't need heap. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

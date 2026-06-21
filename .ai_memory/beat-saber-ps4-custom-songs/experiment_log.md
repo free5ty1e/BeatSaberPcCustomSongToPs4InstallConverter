@@ -528,3 +528,8 @@ open:/app0/media/boot.config
 - **Date:** 2026-07-01
 - **Change:** ZERO hooks. ZERO code modifications. Just jailbreak + fopen + write log + fclose in module_start. If this crashes, jailbreak itself causes the crash. If it works, the issue is specifically with modifying function code after jailbreak.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 46 — Raw syscall logging (v0.22) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Replaced fopen/fprintf (heap-based FILE*) with raw syscalls (orbis_syscall SYS_open/SYS_write/SYS_close). No heap allocation needed. libc functions like fopen crash in module_start because the heap isn't initialized yet. Raw syscalls bypass the heap entirely. No hooks, no code modifications.
+- **Status:** ✅ DEPLOYED — awaiting test
