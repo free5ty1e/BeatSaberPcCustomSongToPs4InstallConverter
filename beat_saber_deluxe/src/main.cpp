@@ -9,7 +9,7 @@
 #include <GoldHEN/Common.h>
 #include <GoldHEN/Syscall.h>
 
-#define PLUGIN_VERSION "v0.22"
+#define PLUGIN_VERSION "v0.23"
 #define LOG_PATH "/data/bs_debug.txt"
 
 // Raw syscall wrappers (no heap, no libc buffered I/O)
@@ -63,6 +63,10 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     // Write log using raw syscall (no heap, no fopen, no buffer allocation)
     log_msg("=== BS Deluxe v0.22 ===\nJailbreak: active\nRaw syscall I/O works!");
+
+    // Dummy GoldHEN syscall to propagate jailbreak credential state
+    // Extra syscall 500 helps settle the jailbreak changes in kernel
+    sys_sdk_version();
 
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
     snprintf(r.message,sizeof(r.message),"raw log: %s", LOG_PATH);
