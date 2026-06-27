@@ -1,0 +1,9 @@
+=== BS Deluxe Debug Log ===
+Version: v0.15
+fopen=8000c2f00 open=80000e050
+============================
+open:/dev/urandom
+open:/app0/sce_discmap.plt
+open:/app0/sce_discmap.plt
+open:/app0/sce_discmap_patch.plt
+open:/app0/media/boot.config

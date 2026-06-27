@@ -664,3 +664,22 @@ BS Deluxe v0.27: AFR write OK!
   3. Understand the complete set of files opened for a single song
 - **Status:** ✅ DEPLOYED — awaiting test
 - **To test:** Launch Beat Saber, navigate to Start Me Up, PLAY IT COMPLETELY (let the song load and play), then exit. The log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` will be analyzed for song-loading file paths.
+
+### Experiment 55 — Song load path diagnostic (v0.31) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Disabled startmeup redirect. User played Start Me Up normally.
+- **Result:** ✅ Song played normally. Log captured at 751 lines. KEY FINDINGS:
+  - Game opens `BeatmapLevelsData/startmeup` from BOTH paths (mount point + app0) 4 times
+  - NO audio/FMOD file opens during song loading - audio is embedded in AssetBundles
+  - ALL pack bundles loaded during startup preload (every DLC pack's bundle)
+  - Local dump found at `/workspace/ps4_dump/CUSA12878-patch/` containing ALL original song files!
+  - `100bills` file is identical to our `CustomSong` file (same MD5 hash)
+  - Original `startmeup` file also present in dump (12.5MB vs 100bills' 8.7MB)
+- **Log captured:** /workspace/screenshots/bs_log_v31.txt
+
+### Experiment 56 — Redirect to original startmeup copy (v0.32) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Reason:** We now have the original startmeup file from the local dump. This is a CONTROL TEST: redirect startmeup to an EXACT COPY of itself (deployed to AFR directory). If the song plays normally, the redirect mechanism is 100% correct. Then we can try redirecting to 100bills for the actual replacement.
+- **Key discovery:** Local game dump found at `/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/` with ALL song files. Both `100bills` and `startmeup` files present. This gives us the original files to work with.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** Navigate to Start Me Up → song loads and plays normally (redirect goes to exact copy). If this works, next test: redirect to 100bills.

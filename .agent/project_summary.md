@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔍 v0.31 DEPLOYED — Song load path diagnostic. startmeup redirect DISABLED. resources.assets redirect still active. User will play Start Me Up normally while log captures ALL file opens during song loading. Goal: discover $100 Bills' file paths and understand full song loading architecture.
+**Current Status:** 🎯 v0.32 DEPLOYED — CONTROL TEST: redirect startmeup to EXACT COPY of itself (from local dump). v0.31 confirmed: game opens `BeatmapLevelsData/startmeup` from both paths, audio is embedded in bundles. Local dump discovered at `/workspace/ps4_dump/` with ALL original song files. Resources_assets redirect also active. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

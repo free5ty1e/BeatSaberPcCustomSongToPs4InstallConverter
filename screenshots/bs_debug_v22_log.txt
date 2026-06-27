@@ -1,0 +1,3 @@
+=== BS Deluxe v0.22 ===
+Jailbreak: active
+Raw syscall I/O works!
