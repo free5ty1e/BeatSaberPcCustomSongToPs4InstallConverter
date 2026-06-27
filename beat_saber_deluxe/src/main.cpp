@@ -10,7 +10,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.30"
+#define PLUGIN_VERSION "v0.31"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -64,9 +64,11 @@ static int open_hook(const char *path, int flags, ...) {
         if (strstr(path, "resources.assets") && !strstr(path, "/AFR/"))
             np = AFR_BASE "/" TITLE_ID "/resources_patched.assets";
 
-        // Redirect song files to CustomSong bundle
-        if (strstr(path, "startmeup") || strstr(path, "StartMeUp") || strstr(path, "start_me_up"))
-            np = AFR_BASE "/" TITLE_ID "/CustomSong";
+        // NOTE: startmeup redirect DISABLED for diagnostic pass-through.
+        // We want to log what files the game opens during NORMAL song loading
+        // so we can find where $100 Bills' level data is and redirect to it.
+        // Re-enable when we know the correct target path:
+        // if (strstr(path, "startmeup") || ...)
     }
 
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
@@ -98,8 +100,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
     // Init log
-    int log_success = log_write("=== BS Deluxe v0.30 started ===");
-    log_write("fopen+open hooks active, redirect in open_hook");
+    int log_success = log_write("=== BS Deluxe v0.31 started ===");
+    log_write("fopen+open hooks active, startmeup diagnostic mode");
 
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
     snprintf(r.message,sizeof(r.message),"%s v0.30",

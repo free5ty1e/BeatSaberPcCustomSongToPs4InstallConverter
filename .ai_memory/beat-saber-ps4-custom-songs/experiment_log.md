@@ -653,3 +653,14 @@ BS Deluxe v0.27: AFR write OK!
   4. ✅ Both resources.assets AND startmeup redirects work
   5. ❌ CustomSong AssetBundle has wrong internal asset naming (game expects "startmeup" asset, bundle contains "$100 Bills" assets)
 - **Next step needed:** Create properly formatted Beat Saber PS4 song AssetBundles. The CustomSong bundle needs to contain assets named "startmeup" (matching the filename the game expects). This requires understanding the Beat Saber Unity AssetBundle schema and creating/modifying bundles with correct asset names and references.
+
+### Experiment 55 — Song load path diagnostic (v0.31) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Reason:** v0.30 proved both redirects work, but CustomSong fails because internal asset names don't match. User suggested simplest test: redirect Start Me Up to play $100 Bills (unmodified working song). But we don't know where $100 Bills' level data file is on the PS4 (can't FTP-read from /app0/).
+- **Change:** Disabled the startmeup song redirect. resources.assets redirect still active. Game will play Start Me Up normally. The log will capture ALL file opens during the song loading process, revealing the paths for song data, audio banks, and other assets.
+- **Purpose:** Discover file paths used during normal song loading so we can:
+  1. See where $100 Bills (or base game songs) get their level data from
+  2. Find the correct path pattern for redirect targets
+  3. Understand the complete set of files opened for a single song
+- **Status:** ✅ DEPLOYED — awaiting test
+- **To test:** Launch Beat Saber, navigate to Start Me Up, PLAY IT COMPLETELY (let the song load and play), then exit. The log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` will be analyzed for song-loading file paths.

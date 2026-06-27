@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🏆 v0.30 TESTED — **Both redirects work!** Plugin infrastructure COMPLETE. resources.assets and startmeup redirects confirmed in log. Song fails because CustomSong AssetBundle has wrong internal asset names (game expects "startmeup" assets, bundle has "$100 Bills" assets). Next phase: creating properly formatted AssetBundles.
+**Current Status:** 🔍 v0.31 DEPLOYED — Song load path diagnostic. startmeup redirect DISABLED. resources.assets redirect still active. User will play Start Me Up normally while log captures ALL file opens during song loading. Goal: discover $100 Bills' file paths and understand full song loading architecture.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
