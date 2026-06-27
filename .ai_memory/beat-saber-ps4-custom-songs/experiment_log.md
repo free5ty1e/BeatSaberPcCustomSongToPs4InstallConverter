@@ -598,8 +598,43 @@ BS Deluxe v0.27: AFR write OK!
 - **File listing:** `---------- 1 1 0 44 Jun 27 2026 bs_log.txt`
 - **Analysis:** The file was created successfully by the game process (UID 1). The `0644` mode passed to `sceKernelOpen(O_CREAT)` had all permissions stripped by the game's `umask` (likely `0777` — common for PS4 game sandbox). The file exists with actual content (44 bytes of log entries) but neither the game (UID 1) nor root (UID 0, FTP server) can read it due to zero permissions. **This explains v0.27's success** — v0.27 was tested in the same session where the directory was created by FTP, and the FTP server's cached listing showed normal permissions. The actual permissions issue was always there but masked by FTP caching.
 
-### Experiment 53 — sceKernelFchmod to fix log permissions (v0.29) [DEPLOYED]
+### Experiment 53 — sceKernelFchmod to fix log permissions (v0.29) [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** Added `sceKernelFchmod(fd, 0644)` after `sceKernelOpen` in log_write. v0.28's log file was created at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` but with permissions `----------` (no read/write/execute for ANYONE). Root cause: game's `umask` (likely 0777) stripped all permissions from the `0644` mode passed to `sceKernelOpen`. FTP server (even running as root) can't read files with no permissions. Added auto-create directory logic (`sceKernelMkdir`) and accurate status reporting in notifications.
+- **Change:** Added `sceKernelFchmod(fd, 0644)` after `sceKernelOpen` in log_write. v0.28's log file was created with permissions `----------` due to game's `umask=0777`. Added auto-create directory logic (`sceKernelMkdir`) and accurate status reporting. Force permissions with `sceKernelFchmod`.
+- **Result:** ✅ **LOG SUCCESS!** Game ran without crashes. Log file at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` was created with READABLE permissions. FTP access works. Log captured: **674 lines** of file operations during startup to VR screen (672 open calls, 0 fopen calls). Confirmed the game uses `open()` exclusively.
+- **Log size:** 70.9KB, 674 lines
+- **Log captured:** /workspace/screenshots/bs_log_v29.txt
+- **Log preview (first entries):**
+  ```
+  open:/data/GoldHEN/AFR/CUSA12878/bs_log.txt
+  === BS Deluxe v0.29 started ===
+  open:/data/GoldHEN/AFR/CUSA12878/bs_log.txt
+  fopen+open hooks active
+  open:/dev/urandom
+  open:/app0/sce_discmap.plt
+  open:/app0/sce_discmap_patch.plt
+  open:/app0/sce_discmap.plt
+  open:/app0/sce_discmap_patch.plt
+  open:/app0/media/boot.config
+  open:/dev/urandom
+  open:/app0/debug.log
+  open:/app0/archive.psarc
+  open:/app0/archive_patch.psarc
+  open:/app0/Media/Metadata/global-metadata.dat
+  ...
+  ```
+- **Key findings:**
+  1. Game uses `open()` for ALL file operations — zero `fopen()` calls
+  2. `resources.assets` IS opened at two paths:
+     - `open:/archive/mount/point/Media/resources.assets`
+     - `open:/app0/Media/resources.assets`
+  3. Game checks `/archive/mount/point/` first, then falls back to `/app0/`
+  4. Game reads from: `/app0/`, `/archive/mount/point/`, `/dev/`, `/savedata0/`
+  5. 672 open calls during startup to VR screen
+  6. No song paths opened yet (only boot to VR screen, didn't navigate to a song)
+
+### Experiment 54 — OPEN hook redirect (v0.30) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Moved ALL redirect logic from fopen hook to open hook (game uses `open()` exclusively, proven by v0.29 log). fopen hook kept for compatibility but has no redirects. Custom `resources_patched.assets` and `CustomSong` files deployed to `/data/GoldHEN/AFR/CUSA12878/` (game can read this path — proven by v0.29's log writes).
 - **Status:** ✅ DEPLOYED — awaiting test
-- **Expected:** After launching Beat Saber: notification shows "log+AFR OK v0.29" if log write succeeds, or "AFR: NO LOG" if it fails. Log file at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` should have `-rw-r--r--` permissions (readable by FTP).
+- **Expected:** Game boots normally. Log shows redirects like `open:/app0/Media/resources.assets -> /data/GoldHEN/AFR/CUSA12878/resources_patched.assets`. If the patched resources.assets is valid, the game should load it. Navigate to Start Me Up to test song redirect.

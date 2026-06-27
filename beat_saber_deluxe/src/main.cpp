@@ -1,6 +1,7 @@
-// Beat Saber Deluxe v0.29 — AFR logging + auto-create dir + status reporting
-// v0.28 revealed: AFR directory may not persist between sessions.
-// Fix: auto-create dir hierarchy, report actual log status, multiple fallback paths.
+// Beat Saber Deluxe v0.30 — OPEN hook redirect + AFR logging
+// v0.29 log proved: game uses open() for EVERYTHING. No fopen() calls at all.
+// Redirect logic moved from fopen hook to open hook where it actually fires.
+// Custom files deployed to /data/GoldHEN/AFR/CUSA12878/ (game can read this dir).
 
 #include <stddef.h>
 #include <stdint.h>
@@ -9,7 +10,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.29"
+#define PLUGIN_VERSION "v0.30"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -23,63 +24,57 @@ HOOK_INIT(hook_open);
 static int in_hook = 0;
 static int log_ok = 0;
 
-// Ensure directory exists — mkdir each level, returns 1 if writable, 0 if not
-// sceKernelMkdir creates a directory. Returns 0 on success (or -1 if exists).
-// We ignore failures — the directory probably exists already.
+// Ensure directory exists
 static void ensure_dir(void) {
     sceKernelMkdir(AFR_BASE, 0777);
     sceKernelMkdir(AFR_BASE "/" TITLE_ID, 0777);
 }
 
-// Write to log file, returns 1 on success, 0 on failure
+// Write to log file, returns 1 on success
 static int log_write(const char *msg) {
-    if (!log_ok) {
-        ensure_dir();  // try to create directory hierarchy
-    }
+    if (!log_ok) ensure_dir();
     int fd = sceKernelOpen(LOG_PATH, O_WRONLY|O_CREAT|O_APPEND, 0644);
     if (fd < 0) { log_ok = 0; return 0; }
-    // Fix permissions: game's umask (likely 0777) strips all permissions.
-    // sceKernelFchmod forces read permissions so FTP can access the log.
     sceKernelFchmod(fd, 0644);
-    if (!log_ok) { log_ok = 1; }  // first successful write marks log as OK
+    if (!log_ok) log_ok = 1;
     sceKernelWrite(fd, msg, strlen(msg));
     sceKernelWrite(fd, "\n", 1);
     sceKernelClose(fd);
     return 1;
 }
 
-// fopen hook — logs path, handles redirects
+// fopen hook — kept for compatibility but game NEVER calls fopen (proven by v0.29 log)
 static FILE *fh(const char *p, const char *m) {
     if (in_hook) return HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), p, m);
     in_hook = 1;
-
-    const char *np = NULL;
-    if (p) {
-        if (strstr(p,"startmeup")||strstr(p,"StartMeUp")||strstr(p,"start_me_up"))
-            np = "/data/custom/bs_deluxe/CustomSong";
-        if (strstr(p,"resources.assets")&&!strstr(p,"/data/custom/"))
-            np = "/data/custom/bs_deluxe/resources_patched.assets";
-    }
-
-    char lb[512]; snprintf(lb,sizeof(lb),"fopen:%s",p?: "NULL");
-    if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
-    log_write(lb);
-
-    FILE *r = np ? HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), np, m)
-                 : HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), p, m);
+    char lb[512]; snprintf(lb,sizeof(lb),"fopen:%s",p?: "NULL"); log_write(lb);
+    FILE *r = HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), p, m);
     in_hook = 0;
     return r;
 }
 
-// open hook — logs path, no redirect
+// open hook — logs path, handles ALL redirects (game uses open() exclusively)
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
 
+    const char *np = NULL;
+    if (path) {
+        // Redirect resources.assets to patched version in AFR directory
+        if (strstr(path, "resources.assets") && !strstr(path, "/AFR/"))
+            np = AFR_BASE "/" TITLE_ID "/resources_patched.assets";
+
+        // Redirect song files to CustomSong bundle
+        if (strstr(path, "startmeup") || strstr(path, "StartMeUp") || strstr(path, "start_me_up"))
+            np = AFR_BASE "/" TITLE_ID "/CustomSong";
+    }
+
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
+    if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
     log_write(lb);
 
-    int r = HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
+    int r = np ? HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), np, flags, 0)
+               : HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 0;
     return r;
 }
@@ -92,22 +87,23 @@ extern "C" int module_start(size_t argc, const void *args) {
     snprintf(r.message,sizeof(r.message),"BS Deluxe %s",PLUGIN_VERSION);
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
-    // NO JAILBREAK — AFR path handles file writes via sceKernelOpen
+    // NO JAILBREAK — AFR handles writes via sceKernelOpen
 
-    // fopen hook via Detour
+    // fopen hook via Detour (kept for compatibility)
     Detour_Construct(&Detour_hook_fopen, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_fopen, (uint64_t)(void*)&fopen, (void*)fh);
 
-    // open hook via Detour
+    // open hook via Detour — handles logging + ALL redirects
     Detour_Construct(&Detour_hook_open, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
-    // Init log — auto-create directory if needed, report actual status
-    int log_success = log_write("=== BS Deluxe v0.29 started ===");
-    log_write("fopen+open hooks active");
+    // Init log
+    int log_success = log_write("=== BS Deluxe v0.30 started ===");
+    log_write("fopen+open hooks active, redirect in open_hook");
 
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
-    snprintf(r.message,sizeof(r.message),"%s v0.29", log_success ? "log+AFR OK" : "AFR: NO LOG (create dir)");
+    snprintf(r.message,sizeof(r.message),"%s v0.30",
+        log_success ? "log+AFR OK" : "AFR: NO LOG");
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
     return 0;
