@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎯 v0.30 DEPLOYED — Redirect in OPEN hook! v0.29 log PROVED: game uses `open()` for ALL 672 file operations — zero `fopen()` calls. `resources.assets` opened at `/archive/mount/point/Media/resources.assets` and `/app0/Media/resources.assets`. Custom files deployed to AFR directory. AWAITING TEST.
+**Current Status:** 🏆 v0.30 TESTED — **Both redirects work!** Plugin infrastructure COMPLETE. resources.assets and startmeup redirects confirmed in log. Song fails because CustomSong AssetBundle has wrong internal asset names (game expects "startmeup" assets, bundle has "$100 Bills" assets). Next phase: creating properly formatted AssetBundles.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

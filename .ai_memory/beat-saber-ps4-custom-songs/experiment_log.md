@@ -633,8 +633,23 @@ BS Deluxe v0.27: AFR write OK!
   5. 672 open calls during startup to VR screen
   6. No song paths opened yet (only boot to VR screen, didn't navigate to a song)
 
-### Experiment 54 — OPEN hook redirect (v0.30) [DEPLOYED]
+### Experiment 54 — OPEN hook redirect (v0.30) [COMPLETED — BOTH REDIRECTS WORK]
 - **Date:** 2026-07-01
-- **Change:** Moved ALL redirect logic from fopen hook to open hook (game uses `open()` exclusively, proven by v0.29 log). fopen hook kept for compatibility but has no redirects. Custom `resources_patched.assets` and `CustomSong` files deployed to `/data/GoldHEN/AFR/CUSA12878/` (game can read this path — proven by v0.29's log writes).
-- **Status:** ✅ DEPLOYED — awaiting test
-- **Expected:** Game boots normally. Log shows redirects like `open:/app0/Media/resources.assets -> /data/GoldHEN/AFR/CUSA12878/resources_patched.assets`. If the patched resources.assets is valid, the game should load it. Navigate to Start Me Up to test song redirect.
+- **Change:** Moved ALL redirect logic from fopen hook to open hook (game uses `open()` exclusively, proven by v0.29 log). Custom files deployed to AFR directory.
+- **Result:** ✅ **BOTH REDIRECTS FIRE SUCCESSFULLY!** User navigated to Start Me Up → black screen for 1-2 seconds → returned to menu (song failed to load). Log shows 1427 lines (vs 674 from v0.29 boot alone — the extra ~750 lines are from menu navigation + song selection).
+- **Log captured:** /workspace/screenshots/bs_log_v30.txt
+- **Redirect evidence:**
+  ```
+  open:/archive/mount/point/Media/resources.assets -> /data/GoldHEN/AFR/CUSA12878/resources_patched.assets
+  open:/archive/mount/point/Media/resources.assets -> /data/GoldHEN/AFR/CUSA12878/resources_patched.assets
+  open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/CustomSong
+  open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/CustomSong
+  ```
+- **Song load analysis:** After redirect, game loaded Rolling Stones environment bundles + `PlayerData.dat` save (returning to menu). The game read our CustomSong file (valid UnityFS AssetBundle, 8.7MB, Unity 2022.3.33f1), but when the game's code calls `AssetBundle.LoadAsset<BeatmapLevelsData>("startmeup")`, the asset isn't found in our bundle (which has assets named for "$100 Bills"). Unity's AssetBundle loader can parse the bundle format but fails to find the expected asset by name.
+- **Key infrastructure wins:**
+  1. ✅ Plugin loads without crash (AFR path, no jailbreak)
+  2. ✅ File logging works (sceKernelOpen/fchmod to AFR path)
+  3. ✅ Both open() hooks fire without 6th-call crash (Detour works)
+  4. ✅ Both resources.assets AND startmeup redirects work
+  5. ❌ CustomSong AssetBundle has wrong internal asset naming (game expects "startmeup" asset, bundle contains "$100 Bills" assets)
+- **Next step needed:** Create properly formatted Beat Saber PS4 song AssetBundles. The CustomSong bundle needs to contain assets named "startmeup" (matching the filename the game expects). This requires understanding the Beat Saber Unity AssetBundle schema and creating/modifying bundles with correct asset names and references.
