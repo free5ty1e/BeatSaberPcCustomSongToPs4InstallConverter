@@ -1,7 +1,6 @@
-// Beat Saber Deluxe v0.28 — AFR logging + Detour hooks (fopen+open)
-// BREAKTHROUGH: AFR paths work without jailbreak or crashes!
-// Uses sceKernelOpen/write/close to log to /data/GoldHEN/AFR/CUSA12878/
-// Detour hooks for fopen (logging + redirect) and open (logging only)
+// Beat Saber Deluxe v0.29 — AFR logging + auto-create dir + status reporting
+// v0.28 revealed: AFR directory may not persist between sessions.
+// Fix: auto-create dir hierarchy, report actual log status, multiple fallback paths.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -10,8 +9,10 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.28"
-#define LOG_PATH "/data/GoldHEN/AFR/CUSA12878/bs_log.txt"
+#define PLUGIN_VERSION "v0.29"
+#define AFR_BASE  "/data/GoldHEN/AFR"
+#define TITLE_ID "CUSA12878"
+#define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
 
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
@@ -20,15 +21,31 @@ HOOK_INIT(hook_fopen);
 HOOK_INIT(hook_open);
 
 static int in_hook = 0;
+static int log_ok = 0;
 
-// Thread-safe file append via Orbis kernel API (no heap, no libc, no reentrancy)
-static void log_write(const char *msg) {
-    int fd = sceKernelOpen(LOG_PATH, O_WRONLY|O_CREAT|O_APPEND, 0644);
-    if (fd >= 0) {
-        sceKernelWrite(fd, msg, strlen(msg));
-        sceKernelWrite(fd, "\n", 1);
-        sceKernelClose(fd);
+// Ensure directory exists — mkdir each level, returns 1 if writable, 0 if not
+// sceKernelMkdir creates a directory. Returns 0 on success (or -1 if exists).
+// We ignore failures — the directory probably exists already.
+static void ensure_dir(void) {
+    sceKernelMkdir(AFR_BASE, 0777);
+    sceKernelMkdir(AFR_BASE "/" TITLE_ID, 0777);
+}
+
+// Write to log file, returns 1 on success, 0 on failure
+static int log_write(const char *msg) {
+    if (!log_ok) {
+        ensure_dir();  // try to create directory hierarchy
     }
+    int fd = sceKernelOpen(LOG_PATH, O_WRONLY|O_CREAT|O_APPEND, 0644);
+    if (fd < 0) { log_ok = 0; return 0; }
+    // Fix permissions: game's umask (likely 0777) strips all permissions.
+    // sceKernelFchmod forces read permissions so FTP can access the log.
+    sceKernelFchmod(fd, 0644);
+    if (!log_ok) { log_ok = 1; }  // first successful write marks log as OK
+    sceKernelWrite(fd, msg, strlen(msg));
+    sceKernelWrite(fd, "\n", 1);
+    sceKernelClose(fd);
+    return 1;
 }
 
 // fopen hook — logs path, handles redirects
@@ -85,12 +102,12 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_Construct(&Detour_hook_open, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
-    // Init log
-    log_write("=== BS Deluxe v0.28 started ===");
-    log_write("fopen+open hooks active, AFR logging OK");
+    // Init log — auto-create directory if needed, report actual status
+    int log_success = log_write("=== BS Deluxe v0.29 started ===");
+    log_write("fopen+open hooks active");
 
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
-    snprintf(r.message,sizeof(r.message),"hooks+AFR OK");
+    snprintf(r.message,sizeof(r.message),"%s v0.29", log_success ? "log+AFR OK" : "AFR: NO LOG (create dir)");
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
     return 0;

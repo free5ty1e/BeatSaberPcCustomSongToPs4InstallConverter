@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🚀 v0.28 DEPLOYED — **MAJOR BREAKTHROUGH! AFR FILE LOGGING WORKS!** After 51 experiments struggling with jailbreak crashes and sandbox restrictions, we discovered GoldHEN's AFR (Application File Redirector) path `/data/GoldHEN/AFR/<TitleID>/` accepts writes without jailbreak. v0.28 combines AFR logging (`sceKernelOpen`/`sceKernelWrite`/`sceKernelClose`) with Detour hooks for fopen+open to capture all file operations. AWAITING TEST.
+**Current Status:** 🧪 v0.29 DEPLOYED — Permissions fix! v0.28's log was created but had `----------` permissions (game's `umask=0777` strips all bits from `sceKernelOpen`'s mode). Added `sceKernelFchmod(fd, 0644)` after open to force read permissions. Also auto-creates AFR dir hierarchy. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

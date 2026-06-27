@@ -590,10 +590,16 @@ BS Deluxe v0.27: AFR write OK!
   - AFR directory needed manual creation via FTP (GoldHEN doesn't auto-create it)
   - Copy of log: /workspace/screenshots/afr_log_v27.txt
 
-### Experiment 52 — AFR logging + Detour hooks (v0.28) [DEPLOYED — AWAITING TEST]
+### Experiment 52 — AFR logging + Detour hooks (v0.28) [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** Combined AFR path logging (sceKernelOpen to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`) with Detour hooks for fopen (logging + redirect) and open (logging only). No jailbreak. No notifications per-file. Only 2 status notifications.
-- **Key breakthrough:** AFR path writes work without jailbreak. Hook reentrancy handled by in_hook flag. log_write uses sceKernelOpen/write/close (no heap, no libc).
+- **Change:** Combined AFR path logging (sceKernelOpen to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`) with Detour hooks for fopen (logging + redirect) and open (logging only). No jailbreak, no notifications per-file.
+- **Result:** ⚠️ Game ran without crashes (2 notifications). Log file WAS created at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` (44 bytes) but with permissions `----------` (zero read/write/execute) due to game's `umask`. FTP server can see the file in directory listing but CANNOT read its contents (550 error). After FTP server restart, file still unreadable. Deleting and recreating via FTP fixed the listing but permissions issue remains.
+- **Log:** CREATED but UNREADABLE via FTP due to permissions
+- **File listing:** `---------- 1 1 0 44 Jun 27 2026 bs_log.txt`
+- **Analysis:** The file was created successfully by the game process (UID 1). The `0644` mode passed to `sceKernelOpen(O_CREAT)` had all permissions stripped by the game's `umask` (likely `0777` — common for PS4 game sandbox). The file exists with actual content (44 bytes of log entries) but neither the game (UID 1) nor root (UID 0, FTP server) can read it due to zero permissions. **This explains v0.27's success** — v0.27 was tested in the same session where the directory was created by FTP, and the FTP server's cached listing showed normal permissions. The actual permissions issue was always there but masked by FTP caching.
+
+### Experiment 53 — sceKernelFchmod to fix log permissions (v0.29) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Added `sceKernelFchmod(fd, 0644)` after `sceKernelOpen` in log_write. v0.28's log file was created at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` but with permissions `----------` (no read/write/execute for ANYONE). Root cause: game's `umask` (likely 0777) stripped all permissions from the `0644` mode passed to `sceKernelOpen`. FTP server (even running as root) can't read files with no permissions. Added auto-create directory logic (`sceKernelMkdir`) and accurate status reporting in notifications.
 - **Status:** ✅ DEPLOYED — awaiting test
-- **Expected:** Log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` captures all fopen() and open() calls by the game. Redirect triggers for "startmeup" and "resources.assets" paths.
-- **Next if successful:** Implement proper CustomSong file format + verify redirect
+- **Expected:** After launching Beat Saber: notification shows "log+AFR OK v0.29" if log write succeeds, or "AFR: NO LOG" if it fails. Log file at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` should have `-rw-r--r--` permissions (readable by FTP).
