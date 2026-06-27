@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🚀 v0.33 DEPLOYED — MOMENT OF TRUTH! Redirect startmeup → 100bills file. Control test (v0.32) proved redirect to AFR files works perfectly (song played normally). Now testing if the game accepts 100bills as a replacement for Start Me Up. If it plays $100 Bills, song replacement WORKS at file level! AWAITING TEST.
+**Current Status:** 🔍 v0.34 DEPLOYED — Option B Step 1: SEARCH for Unity AssetBundle functions via dlsym. v0.33 confirmed asset name mismatch (100bills has "100bills" named assets, game looks for "startmeup"). Binary patching not feasible — names encoded in Unity serialized format. Need to hook `AssetBundle.LoadAsset_Internal`. This version finds the exported symbol name. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

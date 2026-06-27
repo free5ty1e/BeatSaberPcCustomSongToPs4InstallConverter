@@ -700,3 +700,33 @@ BS Deluxe v0.27: AFR write OK!
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** If the game uses `LoadAllAssets<BeatmapLevelsData>()` (by type), it will find the BeatmapLevelsData in 100bills and PLAY $100 BILLS! If it uses `LoadAsset<BeatmapLevelsData>("startmeup")` (by name), it will NOT find the asset (named "100bills" internally) and show a black screen (same as v0.30).
 - **This is the moment of truth!** 🚀
+
+### Experiment 57 — Redirect startmeup to 100bills (v0.33) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Redirect startmeup → 100bills file (from local dump).
+- **Result:** ❌ **BLACK SCREEN → MENU.** Confirmed the game uses `LoadAsset<BeatmapLevelsData>("startmeup")` (by NAME, not by type). The 100bills AssetBundle is a valid UnityFS bundle with correct format, but its assets are named "100bills" internally. When the game calls `LoadAsset("startmeup")` on our bundle, Unity can't find it.
+- **File analysis performed:**
+  - Decompressed the AssetBundle header (LZ4 via liblz4 ctypes) — confirmed header contains only CAB IDs, not asset names
+  - `"100bills"` string NOT found anywhere in the raw file — asset names are deeply encoded in Unity serialized format
+  - Binary patching the asset name is NOT feasible without proper Unity tools
+- **Key insight from log comparison:**
+  - v0.30 (with redirect): mount point path opened (redirected) → game uses OUR file → fails (wrong asset name)
+  - v0.31 (without redirect): mount point tried, fails → app0 path used → original file → works
+  - The game does NOT fall back to app0 if the mount point file exists but has wrong content
+- **Next approach:** Option B — Hook Unity's `AssetBundle.LoadAsset_Internal` function to rename the asset lookup from "startmeup" to "100bills"
+
+### Experiment 58 — Find Unity functions via dlsym (v0.34) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Added dlsym/RTLD_DEFAULT + sys_dynlib_dlsym search for Unity AssetBundle function symbols. Tries 8 possible symbol names (il2cpp mangled variants) and reports which are found. Does NOT hook any function yet — this is just a diagnostic to find the correct symbol name.
+- **Approach:** Option B (hook Unity AssetBundle functions). Step 1 = find the function. Step 2 = hook with logging. Step 3 = add name replacement.
+- **Symbols searched:**
+  - `UnityEngine_AssetBundle_LoadAsset_Internal_string_Type`
+  - `UnityEngine_AssetBundle_LoadAsset_Internal`
+  - `UnityEngine_AssetBundle_LoadFromFile_string`
+  - `UnityEngine_AssetBundle_LoadFromFile`
+  - `AssetBundle_LoadAsset_Internal`
+  - `AssetBundle_LoadFromFile`
+  - `_ZN13UnityEngine6AssetBundle12LoadFromFileENS_6StringE` (C++ mangled)
+  - `_ZN13UnityEngine6AssetBundle22LoadAsset_InternalEPNS_6StringEPNS_4TypeE` (C++ mangled)
+- **Expected:** If any symbol is found, we'll see "Unity syms found: N" in the notification. The log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` will list which names were found and their addresses.
+- **Status:** ✅ DEPLOYED — awaiting test
