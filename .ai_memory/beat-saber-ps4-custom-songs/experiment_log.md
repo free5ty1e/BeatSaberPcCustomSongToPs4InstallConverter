@@ -524,10 +524,12 @@ open:/app0/media/boot.config
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** 3 notifications. No crash. Log at /data/bs_debug.txt captures fopen calls.
 
-### Experiment 45 — ULTIMATE BASELINE: no hooks, just jailbreak + file I/O (v0.21) [DEPLOYED]
+### Experiment 45 — ULTIMATE BASELINE: no hooks, just jailbreak + file I/O (v0.21) [COMPLETED]
 - **Date:** 2026-07-01
 - **Change:** ZERO hooks. ZERO code modifications. Just jailbreak + fopen + write log + fclose in module_start. If this crashes, jailbreak itself causes the crash. If it works, the issue is specifically with modifying function code after jailbreak.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Result:** ❌ HARD CRASH (CE-34878-0, required hard reset + re-jailbreak). User saw "BS Deluxe v0.21" and "JB OK" notifications, then crash at fopen call. No log file created.
+- **Log:** NOT CREATED — heap-based fopen crashed before write
+- **Analysis:** The crash is from `fopen()` in module_start. `fopen` allocates a `FILE*` on the heap, but the heap may not be initialized during early module_start on PS4. This confirms that libc FILE I/O functions cannot be used in module_start regardless of jailbreak status.
 
 ### Experiment 46 — Raw syscall logging (v0.22) [DEPLOYED]
 - **Date:** 2026-07-01
@@ -537,7 +539,7 @@ open:/app0/media/boot.config
 ### Experiment 46 — Raw syscall logging (v0.22) [COMPLETED]
 - **Date:** 2026-07-01
 - **Change:** Log via raw syscalls (orbis_syscall SYS_open/SYS_write/SYS_close) — no heap, no fopen.
-- **Result:** ⚠️ Log WRITTEN successfully (proof raw syscalls work!) but game crashed after module_start returned. Crash is from jailbreak destabilizing game initialization — NOT from our code.
+- **Result:** ⚠️ SOFT CRASH. User saw all 3 notifications ("BS Deluxe v0.22" + "JB OK" + "raw log: /data/bs_debug.txt"). Log file WAS written successfully! But game crashed (CE-34878-0, soft crash — PS4 recovered without hard reset) after module_start returned, during normal game initialization.
 - **Log captured:** /workspace/screenshots/bs_debug_v22_log.txt
 - **Log content:**
 ```
@@ -545,33 +547,53 @@ open:/app0/media/boot.config
 Jailbreak: active
 Raw syscall I/O works!
 ```
-- **Analysis:** The raw syscall open/write/close WORKS after jailbreak. The crash happens after module_start returns, during normal game initialization. v0.02 (jailbreak + 2x Detour) worked for 5 calls — the mprotect syscalls may have propagated jailbreak credential state. Without them, the game crashes.
+- **Analysis:** The raw syscall open/write/close WORKS after jailbreak. The crash is NOT from the log write (which succeeded). Crash happens later during game initialization, after module_start returns. v0.02 (jailbreak + 2x Detour) worked for 5 calls — the mprotect syscalls may have propagated jailbreak credential state through the VM subsystem. Without mprotect calls (or equivalent), the jailbreak credential changes don't propagate fully, and the game crashes when accessing various kernel resources during init.
 
-### Experiment 47 — sys_sdk_version() settling call after jailbreak (v0.23) [DEPLOYED]
+### Experiment 47 — sys_sdk_version() settling call after jailbreak (v0.23) [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** Added `sys_sdk_version()` call after raw syscall logging. Theory: v0.02's 2x Detour calls went through the kernel (mprotect syscall), which propagated jailbreak credential state. Without this, the game crashes during init. `sys_sdk_version()` makes an additional GoldHEN syscall (500) which may help propagate state through the GoldHEN module.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Change:** Added `sys_sdk_version()` call after raw syscall logging. Theory: v0.02's 2x Detour calls went through the kernel (mprotect syscall), which propagated jailbreak credential state. `sys_sdk_version()` makes an additional GoldHEN syscall (500) which may help propagate state.
+- **Result:** ❌ SOFT CRASH (CE-34878-0). User saw all 3 notifications ("BS Deluxe v0.23" + "JB OK" + "raw log: /data/bs_debug.txt"). Log written successfully (same as v0.22). Game crashed after module_start return.
+- **Analysis:** `sys_sdk_version()` (GOLDHEN_SDK_CMD_VERSION=0) goes through syscall 500 — the SAME syscall as the jailbreak (`sys_sdk_jailbreak` uses GOLDHEN_SDK_CMD_JAILBREAK=2 on syscall 500). Making another syscall 500 after jailbreak does NOT propagate the credential state. Need a DIFFERENT kernel path (not syscall 500).
 
-### Experiment 48 — sceKernelMprotect settling call after jailbreak (v0.24) [DEPLOYED]
+### Experiment 48 — sceKernelMprotect settling call after jailbreak (v0.24) [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** Replaced `sys_sdk_version()` (syscall 500) with `sceKernelMprotect` (syscall 74) after jailbreak + log write. Mprotect goes through a COMPLETELY DIFFERENT kernel path (VM subsystem) than syscall 500. This forces the VM subsystem to refresh its cached credentials from the kernel store, propagating the jailbreak changes. Without this, the VM still has old cached credentials and crashes the game during init.
-- **Theory:** v0.02's 2x Detour calls used mprotect, which triggered credential propagation through the VM subsystem. v0.22/v0.23 didn't use mprotect, so credentials weren't propagated → game crashed. v0.24 adds explicit mprotect.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Change:** Replaced `sys_sdk_version()` (syscall 500) with `sceKernelMprotect` (syscall 74) after jailbreak + log write. Mprotect goes through a COMPLETELY DIFFERENT kernel path (VM subsystem) than syscall 500. This forces the VM subsystem to refresh its cached credentials from the kernel store.
+- **Result:** ❌ SOFT CRASH (CE-34878-0). User saw all 3 notifications. Log written. Game crashed after module_start return.
+- **Analysis:** Single mprotect call on our PRX code page doesn't force a full TLB flush or VM subsystem credential refresh. The page protection change only affects our module's page, not the pages the game uses during initialization. v0.02's dual Detour calls modified TWO different libc pages (fopen + open), providing wider credential propagation.
 
-### Experiment 49 — sceKernelUsleep delay for jailbreak propagation (v0.25) [DEPLOYED]
+### Experiment 49 — sceKernelUsleep delay for jailbreak propagation (v0.25) [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** After jailbreak + raw log write, call `sceKernelUsleep(200000)` (200ms). Theory: v0.02 worked because its open_hook took time (fopen logging). Without enough time, jailbreak changes haven't propagated. v0.22-v0.24 completed too fast (microseconds). 200ms sleep gives kernel time to propagate credential changes.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Change:** After jailbreak + raw log write, call `sceKernelUsleep(500000)` (500ms). Theory: v0.02 worked because its open_hook took time (fopen logging). Without enough time, jailbreak changes haven't propagated.
+- **Result:** ❌ SOFT CRASH (CE-34878-0). User reported strange notification order: "saw notification 1, same soft crash happened, saw notification 3, then notification 6." The crash notification (CE-34878-0 dialog) appeared BEFORE later notifications, suggesting the crash triggers async notification delivery.
+- **Analysis:** Time delay alone doesn't propagate jailbreak credential changes. The credential propagation requires ACTIVE kernel operations on specific subsystems, not passive waiting. The 500ms usleep allowed other processes to run but didn't force the VM/credential subsystems to refresh.
 
-### Experiment 50 — NO jailbreak, Detour hooks + notification logging (v0.26) [DEPLOYED]
+### Experiment 50 — NO jailbreak, Detour hooks + notification logging (v0.26) [CANCELLED]
 - **Date:** 2026-07-01
-- **Change:** COMPLETE PIVOT. No jailbreak. No file writes. Detour hooks for fopen + open (like v0.02 but without jailbreak). Uses notifications for diagnostic output (limited to first 10 calls). Based on user research: jailbreak destabilizes game; proper approach is AFR or notification-based logging.
-- **Research applied:** GoldHEN Guide — sandbox kills fopen("/data/"); variadic wrappers cause stack corruption; thread isolation needed for file I/O.
-- **Theory:** v0.16 (fopen only, no jailbreak) was stable but fopen never fires early. Adding open hook via Detour should intercept the game's open() calls and show us paths via notifications. Since no jailbreak, no credential propagation issue = no crash.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Change:** COMPLETE PIVOT. No jailbreak. No file writes. Detour hooks for fopen + open. Uses notifications for diagnostic output (limited to first 10 calls).
+- **Result:** ❌ CANCELLED before test. User rejected notification-based logging approach based on prior experience with endless notification spam (from Experiment 25 era). User demanded file logging instead.
+- **Research applied:** User-provided GoldHEN guide — sandbox kills fopen("/data/"); variadic wrappers cause stack corruption; thread isolation needed for file I/O; AFR recommended.
 
-### Experiment 51 — AFR write test via sceKernelOpen (v0.27) [DEPLOYED]
+### Experiment 51 — AFR write test via sceKernelOpen (v0.27) [COMPLETED — MAJOR BREAKTHROUGH]
 - **Date:** 2026-07-01
 - **Change:** NO jailbreak, NO hooks. Writing to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` using `sceKernelOpen`/`sceKernelWrite`/`sceKernelClose` (Orbis kernel API, no heap). Tests if GoldHEN's AFR (Application File Redirector) intercepts the write and allows it through the sandbox. AFR directory created manually via FTP (`/data/GoldHEN/AFR/CUSA12878/` with 0777 perms).
-- **Research applied:** User-provided GoldHEN guide — AFR method uses built-in hooks. `sceKernelOpen`/`sceKernelWrite`/`sceKernelClose` are the proper Orbis API. No jailbreak needed if AFR handles sandbox bypass.
+- **Research applied:** User-provided GoldHEN guide — AFR method uses built-in hooks. "Leverage the Application File Redirector (AFR) Plugin natively included with GoldHEN. This plugin hooks system file calls and seamlessly redirects safe paths inside the sandbox out to /data/GoldHEN/AFR/Game_Title_ID/."
+- **Result:** ✅ **NO CRASH. FILE WRITTEN SUCCESSFULLY!** User saw "BS Deluxe v0.27" and "AFR: OK" notifications. Game ran without crashing. Log file verified at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` via FTP.
+- **Log captured:** /workspace/screenshots/afr_log_v27.txt
+- **Log content:**
+```
+BS Deluxe v0.27: AFR write OK!
+```
+- **Analysis:** This is the breakthrough we've been seeking for 51 experiments! GoldHEN's AFR DOES intercept file writes to `/data/GoldHEN/AFR/<TitleID>/` and allows them through the game sandbox WITHOUT jailbreak. The `sceKernelOpen`/`sceKernelWrite`/`sceKernelClose` functions (Orbis kernel API) work correctly with no heap allocation needed. This gives us a clean, stable file logging mechanism. No jailbreak = no credential propagation issues = no crashes. Key lessons:
+  - `sceKernelOpen` (Orbis API) works where `fopen` (libc) crashes — no heap allocation
+  - AFR path `/data/GoldHEN/AFR/<TitleID>/` accepts writes under normal game sandbox
+  - RB4DX uses the same pattern (`data:/GoldHEN/AFR/CUSA02084/...`) — proven approach
+  - AFR directory needed manual creation via FTP (GoldHEN doesn't auto-create it)
+  - Copy of log: /workspace/screenshots/afr_log_v27.txt
+
+### Experiment 52 — AFR logging + Detour hooks (v0.28) [DEPLOYED — AWAITING TEST]
+- **Date:** 2026-07-01
+- **Change:** Combined AFR path logging (sceKernelOpen to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`) with Detour hooks for fopen (logging + redirect) and open (logging only). No jailbreak. No notifications per-file. Only 2 status notifications.
+- **Key breakthrough:** AFR path writes work without jailbreak. Hook reentrancy handled by in_hook flag. log_write uses sceKernelOpen/write/close (no heap, no libc).
 - **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** Log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` captures all fopen() and open() calls by the game. Redirect triggers for "startmeup" and "resources.assets" paths.
+- **Next if successful:** Implement proper CustomSong file format + verify redirect

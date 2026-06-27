@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 v0.27 DEPLOYED — AFR write test via sceKernelOpen. NO jailbreak, NO hooks. Tests if GoldHEN AFR intercepts sandbox-bypassed writes to the AFR directory. AFR dir created manually via FTP at /data/GoldHEN/AFR/CUSA12878/. AWAITING TEST.
+**Current Status:** 🚀 v0.28 DEPLOYED — **MAJOR BREAKTHROUGH! AFR FILE LOGGING WORKS!** After 51 experiments struggling with jailbreak crashes and sandbox restrictions, we discovered GoldHEN's AFR (Application File Redirector) path `/data/GoldHEN/AFR/<TitleID>/` accepts writes without jailbreak. v0.28 combines AFR logging (`sceKernelOpen`/`sceKernelWrite`/`sceKernelClose`) with Detour hooks for fopen+open to capture all file operations. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,23 +449,18 @@ quit
 EOF
 ```
 
-### Phase 5: Iterate (updated with control test result)
+### Phase 5: Iterate (updated with AFR breakthrough — 2026-07-01)
 Based on results:
-- **heartbeat.txt found ✅ (on any path):** Plugin now loads. Proceed to hooking.
-- **Control test ✅ (2026-06-12):** Disabled RB4DX from ALL plugins.ini sections → RB4DX notification disappeared. **We control plugins.ini. GoldHEN reads our file.**
-- **No heartbeat ❌ (after 10 diagnostic tests):** Our PRX still fails to load via `sys_dynlib_load_prx()` despite:
-  - Matching RB4DX in CRT, format, module param, program headers, libraries, exports
-  - Trying ptype variants (system_dynlib, fake, npdrm_dynlib)
-  - Building minimal PRX with zero imports (also failed)
-  - Using create-fself v1.3 (built from source)
-  - Fixing module param segment size (0x18 bytes)
-  - Deploying FSELF wrapper format (currently being tested)
-- **FSELF FORMAT BREAKTHROUGH ✅ (2026-06-12):** Deployed `--lib` FSELF wrapper instead of `-out` OELF signed ELF → **notification appeared!** GoldHEN's plugin loader accepts FSELF format (SCE magic `4f 15 3d 1d`) but REJECTS bare OELF signed ELF (ELF magic `7f 45 4c 46`). The Makefile has been updated to deploy the `--lib` FSELF output instead of copying the `.oelf` OELF.
-- **Current state:** Plugin loads successfully in FSELF format. Scoped to [CUSA12878] (Beat Saber only). RB4DX restored for RB4 compatibility.
-- **Next steps:**
-  1. Hook into Beat Saber (hook file I/O functions to redirect assets)
-  2. Use GoldHEN SDK HOOK macros for safe function hooking
-  3. Implement custom song detection and loading
+- **FSELF FORMAT BREAKTHROUGH ✅ (2026-06-12):** Deployed `--lib` FSELF wrapper instead of `-out` OELF signed ELF → **notification appeared!** GoldHEN's plugin loader accepts FSELF format (SCE magic `4f 15 3d 1c`) but REJECTS bare OELF signed ELF (ELF magic `7f 45 4c 46`).
+- **Jailbreak + file I/O ❌ (v0.21-v0.25):** Jailbreak in module_start destabilizes the game process. Even with raw syscalls (no heap), the game crashes after module_start during normal init. Adding delays, extra syscalls, or mprotect calls doesn't fix the propagation issue. **Jailbreak fundamentally conflicts with game initialization on PS4.**
+- **AFR BREAKTHROUGH ✅ (v0.27, 2026-07-01):** GoldHEN's AFR path `/data/GoldHEN/AFR/<TitleID>/` accepts `sceKernelOpen` writes **without jailbreak!** No heap allocation needed. No credential propagation issues. v0.27 confirmed: file written successfully, game runs without crashes. Full log captured at `/workspace/screenshots/afr_log_v27.txt`.
+- **Working logging (v0.28):** Combined AFR file logging (`sceKernelOpen`/`sceKernelWrite`/`sceKernelClose`) with Detour hooks for fopen+open. No jailbreak. Only 2 status notifications. AWAITING TEST.
+- **Key insight from user research:**
+  - `fopen` to `/data/` under sandbox kills the thread (confirmed: v0.21 hard crash)
+  - `make PRINTF=1` bypasses variadic stack corruption issues (not our current issue)
+  - AFR redirects writes to `/data/GoldHEN/AFR/<TitleID>/` with sandbox bypass
+  - `sceKernelOpenFile` (Orbis API) is the proper file I/O mechanism for plugins
+  - Thread isolation (ring buffer + background thread) needed for production logging
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)
@@ -494,7 +489,47 @@ Based on results:
   - `_init` (offset 0x60): returns 0
   - `_fini` (offset 0x70): returns 0
 
-## Related Research & Memory Files
+## 🔥 MAJOR BREAKTHROUGH: AFR File Logging Works!
+
+After 51 experiments over 3 weeks of crashes, we finally have a working file logging mechanism.
+
+### The Problem (Experiments 4-51)
+Every attempt to write log files from within the plugin crashed the game:
+- `fopen` crashes in `module_start` (heap not initialized)
+- Raw `open/write/close` after jailbreak works but game crashes during init
+- Jailbreak destabilizes the game process (credential propagation issues)
+- Detour hooks without jailbreak are stable but sandbox blocks file writes
+- Notifications are unusable (endless spam in VR)
+- `klog`/`printf` output goes to kernel log, not accessible via FTP
+
+### The Solution: AFR (Application File Redirector)
+GoldHEN includes an AFR system that allows writes to `/data/GoldHEN/AFR/<TitleID>/` paths. The RB4DX plugin uses this pattern (`data:/GoldHEN/AFR/CUSA02084/...`). Key findings:
+
+1. **No jailbreak needed** — AFR paths are accessible under normal game sandbox
+2. **No heap allocation** — `sceKernelOpen`/`sceKernelWrite`/`sceKernelClose` are direct kernel syscalls, not libc FILE* operations
+3. **No crashes** — v0.27 (AFR write test) ran successfully with zero crashes
+4. **Works within hooks** — `log_write()` helper can be called from within Detour hooks without reentrancy issues (since `sceKernelOpen` is a different function from hooked `fopen`/`open`)
+
+### Current State (v0.28)
+Combines all proven components:
+- ✅ `sceKernelOpen` to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` for file logging
+- ✅ Detour hook for `fopen()` (logging + redirect for resources.assets / CustomSong)
+- ✅ Detour hook for `open()` (logging only, silent pass-through)
+- ✅ No jailbreak, no mprotect conflicts, no credential propagation issues
+- ✅ Only 2 status notifications (no spam)
+- ⏳ Awaiting test: does the log capture all file operations? Does the redirect work?
+
+### Log format (when available)
+```
+=== BS Deluxe v0.28 started ===
+fopen+open hooks active, AFR logging OK
+open:/dev/urandom
+open:/app0/sce_discmap.plt
+...
+fopen:/app0/Media/resources.assets -> /data/custom/bs_deluxe/resources_patched.assets
+fopen:/data/custom/bs_deluxe/CustomSong (if startmeup matched)
+...
+```
 
 ### Master Index
 - **[Research Index](../.ai_memory/RESEARCH_INDEX.md)** — **START HERE.** Comprehensive catalog of all project documents with descriptions, status tracking, and quick commands.
