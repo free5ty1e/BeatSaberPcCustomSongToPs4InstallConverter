@@ -557,3 +557,21 @@ Raw syscall I/O works!
 - **Change:** Replaced `sys_sdk_version()` (syscall 500) with `sceKernelMprotect` (syscall 74) after jailbreak + log write. Mprotect goes through a COMPLETELY DIFFERENT kernel path (VM subsystem) than syscall 500. This forces the VM subsystem to refresh its cached credentials from the kernel store, propagating the jailbreak changes. Without this, the VM still has old cached credentials and crashes the game during init.
 - **Theory:** v0.02's 2x Detour calls used mprotect, which triggered credential propagation through the VM subsystem. v0.22/v0.23 didn't use mprotect, so credentials weren't propagated → game crashed. v0.24 adds explicit mprotect.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 49 — sceKernelUsleep delay for jailbreak propagation (v0.25) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** After jailbreak + raw log write, call `sceKernelUsleep(200000)` (200ms). Theory: v0.02 worked because its open_hook took time (fopen logging). Without enough time, jailbreak changes haven't propagated. v0.22-v0.24 completed too fast (microseconds). 200ms sleep gives kernel time to propagate credential changes.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 50 — NO jailbreak, Detour hooks + notification logging (v0.26) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** COMPLETE PIVOT. No jailbreak. No file writes. Detour hooks for fopen + open (like v0.02 but without jailbreak). Uses notifications for diagnostic output (limited to first 10 calls). Based on user research: jailbreak destabilizes game; proper approach is AFR or notification-based logging.
+- **Research applied:** GoldHEN Guide — sandbox kills fopen("/data/"); variadic wrappers cause stack corruption; thread isolation needed for file I/O.
+- **Theory:** v0.16 (fopen only, no jailbreak) was stable but fopen never fires early. Adding open hook via Detour should intercept the game's open() calls and show us paths via notifications. Since no jailbreak, no credential propagation issue = no crash.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 51 — AFR write test via sceKernelOpen (v0.27) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** NO jailbreak, NO hooks. Writing to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` using `sceKernelOpen`/`sceKernelWrite`/`sceKernelClose` (Orbis kernel API, no heap). Tests if GoldHEN's AFR (Application File Redirector) intercepts the write and allows it through the sandbox. AFR directory created manually via FTP (`/data/GoldHEN/AFR/CUSA12878/` with 0777 perms).
+- **Research applied:** User-provided GoldHEN guide — AFR method uses built-in hooks. `sceKernelOpen`/`sceKernelWrite`/`sceKernelClose` are the proper Orbis API. No jailbreak needed if AFR handles sandbox bypass.
+- **Status:** ✅ DEPLOYED — awaiting test
