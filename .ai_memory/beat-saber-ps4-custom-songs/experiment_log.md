@@ -683,3 +683,20 @@ BS Deluxe v0.27: AFR write OK!
 - **Key discovery:** Local game dump found at `/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/` with ALL song files. Both `100bills` and `startmeup` files present. This gives us the original files to work with.
 - **Status:** ✅ DEPLOYED — awaiting test
 - **Expected:** Navigate to Start Me Up → song loads and plays normally (redirect goes to exact copy). If this works, next test: redirect to 100bills.
+
+### Experiment 56 — Redirect to original startmeup copy (v0.32) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Redirect startmeup to exact copy of original startmeup file (deployed to AFR directory).
+- **Result:** ✅ **CONTROL TEST PASSED!** Song played normally. The redirect mechanism is 100% verified.
+- **Analysis:** Confirmed that:
+  1. Redirecting to AFR directory files works correctly
+  2. An exact copy of the original file works the same as the original
+  3. The game loads the redirected file without issues
+- **Next:** v0.33 redirects startmeup to the 100bills file
+
+### Experiment 57 — Redirect startmeup to 100bills (v0.33) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Changed redirect target from startmeup_original to 100bills. resources.assets redirect still active.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Expected:** If the game uses `LoadAllAssets<BeatmapLevelsData>()` (by type), it will find the BeatmapLevelsData in 100bills and PLAY $100 BILLS! If it uses `LoadAsset<BeatmapLevelsData>("startmeup")` (by name), it will NOT find the asset (named "100bills" internally) and show a black screen (same as v0.30).
+- **This is the moment of truth!** 🚀

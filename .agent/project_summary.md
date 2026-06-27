@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎯 v0.32 DEPLOYED — CONTROL TEST: redirect startmeup to EXACT COPY of itself (from local dump). v0.31 confirmed: game opens `BeatmapLevelsData/startmeup` from both paths, audio is embedded in bundles. Local dump discovered at `/workspace/ps4_dump/` with ALL original song files. Resources_assets redirect also active. AWAITING TEST.
+**Current Status:** 🚀 v0.33 DEPLOYED — MOMENT OF TRUTH! Redirect startmeup → 100bills file. Control test (v0.32) proved redirect to AFR files works perfectly (song played normally). Now testing if the game accepts 100bills as a replacement for Start Me Up. If it plays $100 Bills, song replacement WORKS at file level! AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

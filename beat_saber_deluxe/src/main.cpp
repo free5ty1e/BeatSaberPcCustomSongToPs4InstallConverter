@@ -10,7 +10,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.32"
+#define PLUGIN_VERSION "v0.33"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -64,9 +64,9 @@ static int open_hook(const char *path, int flags, ...) {
         if (strstr(path, "resources.assets") && !strstr(path, "/AFR/"))
             np = AFR_BASE "/" TITLE_ID "/resources_patched.assets";
 
-        // Redirect song files - test with original startmeup copy first
+        // Redirect song files - test with 100bills replacement
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/startmeup_original";
+            np = AFR_BASE "/" TITLE_ID "/100bills";
     }
 
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
@@ -98,8 +98,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
     // Init log
-    int log_success = log_write("=== BS Deluxe v0.32 started ===");
-    log_write("fopen+open hooks active, redirect to startmeup_original");
+    int log_success = log_write("=== BS Deluxe v0.33 started ===");
+    log_write("fopen+open hooks active, redirect startmeup->100bills");
 
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
     snprintf(r.message,sizeof(r.message),"%s v0.30",
