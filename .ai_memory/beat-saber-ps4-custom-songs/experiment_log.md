@@ -766,9 +766,20 @@ Before building v0.35, I analyzed the difference between the original file and `
   ```
 - **Confirmed:** Asset name MUST match. Game uses `LoadAsset<BeatmapLevelsData>("startmeup")` by name, not by type.
 
-### Experiment 60 — Manifest levelId patch: startmeup→100bills (v0.36) [DEPLOYED]
+### Experiment 60 — Manifest levelId patch: startmeup→100bills (v0.36) [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** Created `resources_patched_v3.assets` with levelId changed from "StartMeUp\0" → "100bills\0\0" at offset 871180. Re-enabled resources.assets redirect (pointing to v3 patch). Keep startmeup→100bills redirect as fallback.
-- **Theory:** With levelId="100bills" in the manifest, the game opens `BeatmapLevelsData/100bills` instead of `BeatmapLevelsData/startmeup`. The original 100bills file at /app0/ has assets named "100bills" internally → LoadAsset matches!
-- **Expected:** Select Start Me Up → game looks for 100bills level data → opens original 100bills from /app0/ → PLAYS $100 BILLS!
+- **Change:** resources.assets v3 patch: changed "StartMeUp\0" → "100bills\0\0" at offset 871180.
+- **Result:** ❌ Same black screen. Log showed the game still opened `BeatmapLevelsData/startmeup` (NOT 100bills). The patched string at offset 871180 is the SONG NAME, not the levelId. The real levelId is at offset 793116 (first "StartMeUp" occurrence, length-prefixed with `09 00 00 00`). Can't change from 9 chars to 8 without shifting data.
+- **Analysis:** Manifest binary patching approach FAILED. Need to either hook LoadAsset or modify the AssetBundle file itself.
+
+### Experiment 61 — AssetBundle rename via UnityPy (v0.37) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Installed `lz4` (Python) and `UnityPy` libraries. Used UnityPy to:
+  1. Open the 100bills AssetBundle
+  2. Rename AssetBundle.m_Container[0] path from `.../100billsbeatmapleveldata.asset` → `.../startmeup/startmeupbeatmapleveldata.asset`
+  3. Rename BeatmapLevelData's m_Name from `100BillsBeatmapLevelData` → `StartMeUpBeatmapLevelData`
+  4. Save the modified bundle
+- **Result:** ✅ Bundle saved successfully (8,709,501 bytes). Verification confirmed BOTH paths renamed.
+- **Deployment:** Renamed bundle deployed to `/data/GoldHEN/AFR/CUSA12878/100bills_renamed`. Plugin v0.37 redirects startmeup → renamed bundle. NO resources.assets redirect.
+- **This is the moment of truth!** If the game uses m_Name OR container path filename for LoadAsset lookup, it should find "StartMeUpBeatmapLevelData" in our renamed bundle and PLAY $100 BILLS! 🚀
 - **Status:** ✅ DEPLOYED — awaiting test

@@ -101,7 +101,7 @@ RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/rel
 RUN opencode --version 2>&1 | grep -i "opencode" || echo "⚠️  OpenCode version check failed"
 
 # ── Python packages for Beat Saber PS4 Custom Songs ──────────────────────────
-RUN pip3 install --break-system-packages beautifulsoup4==4.14.3 lxml==6.1.0 requests==2.32.3 pycryptodome==3.23.0
+RUN pip3 install --break-system-packages beautifulsoup4==4.14.3 lxml==6.1.0 requests==2.32.3 pycryptodome==3.23.0 lz4==4.4.5 UnityPy==1.25.0
 
 # ── Non-root user (vscode convention) ────────────────────────────────────────
 ARG USERNAME=vscode

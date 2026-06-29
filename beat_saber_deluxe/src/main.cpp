@@ -12,7 +12,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.36"
+#define PLUGIN_VERSION "v0.37"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -57,16 +57,12 @@ static int open_hook(const char *path, int flags, ...) {
     in_hook = 1;
     const char *np = NULL;
     if (path) {
-        // Redirect resources.assets to patched version with levelId="100bills"
-        // Original: "StartMeUp\0" → changed to "100bills\0\0" at offset 871180
-        // This makes the game open BeatmapLevelsData/100bills instead of startmeup
-        // The 100bills file has assets named "100bills" internally → MATCH!
-        if (strstr(path, "resources.assets") && !strstr(path, "/AFR/"))
-            np = AFR_BASE "/" TITLE_ID "/resources_patched_v3.assets";
-
-        // Redirect song file: startmeup → 100bills (fallback)
+        // Redirect song file: startmeup → renamed 100bills bundle
+        // The renamed bundle has asset NAME changed to "StartMeUpBeatmapLevelData"
+        // and container path changed to ".../startmeup/startmeupbeatmapleveldata.asset"
+        // (via UnityPy: renamed m_Name + AssetBundle.m_Container)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/100bills";
+            np = AFR_BASE "/" TITLE_ID "/100bills_renamed";
     }
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
     if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
@@ -83,8 +79,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
 
-    log_write("=== BS Deluxe v0.36 started ===");
-    log_write("manifest levelId: startmeup->100bills + file redirect");
+    log_write("=== BS Deluxe v0.37 started ===");
+    log_write("AssetBundle renamed: m_Name+container now match startmeup");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 
@@ -100,7 +96,7 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     // Notification
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
-    snprintf(r.message,sizeof(r.message),"BS Deluxe v0.36");
+    snprintf(r.message,sizeof(r.message),"BS Deluxe v0.37");
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
     return 0;

@@ -57,7 +57,7 @@ RUN mkdir -p /opt/openorbis
 ENV ORBIS_SDK_PATH=/opt/openorbis
 
 # ── Python packages (Mirrored from main Dockerfile) ──────────────────────────────
-RUN pip3 install --break-system-packages beautifulsoup4==4.14.3 lxml==6.1.0 requests==2.32.3 pycryptodome==3.23.0
+RUN pip3 install --break-system-packages beautifulsoup4==4.14.3 lxml==6.1.0 requests==2.32.3 pycryptodome==3.23.0 lz4==4.4.5 UnityPy==1.25.0
 
 # ── Non-root user (vscode convention) ──────────────────────────────────────────
 ARG USERNAME=vscode
