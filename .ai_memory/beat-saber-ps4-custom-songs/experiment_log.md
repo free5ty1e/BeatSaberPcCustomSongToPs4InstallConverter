@@ -754,3 +754,21 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **This is the TRUE test of whether 100bills works as a replacement!** Previous tests (v0.30, v0.33) were corrupted by the patched manifest sending the game to "CustomSong" instead of "startmeup".
 - **Expected:** If the game uses `LoadAllAssets<BeatmapLevelsData>()` (by type), it will PLAY $100 BILLS! If it uses `LoadAsset<BeatmapLevelsData>("startmeup")` (by name), it will black screen.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 59 — TRUE 100bills replacement test (v0.35) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Removed resources.assets redirect (was corrupting levelId). KEPT startmeup→100bills redirect.
+- **Result:** ❌ **BLACK SCREEN → MENU.** The redirect fires (log shows it) but Unity LoadAsset can't find "startmeup" in the 100bills bundle. App0 opens are absent — game only uses mount point file.
+- **Log captured:** /workspace/screenshots/bs_log_v35.txt
+- **Log evidence:**
+  ```
+  open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/100bills
+  ```
+- **Confirmed:** Asset name MUST match. Game uses `LoadAsset<BeatmapLevelsData>("startmeup")` by name, not by type.
+
+### Experiment 60 — Manifest levelId patch: startmeup→100bills (v0.36) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Created `resources_patched_v3.assets` with levelId changed from "StartMeUp\0" → "100bills\0\0" at offset 871180. Re-enabled resources.assets redirect (pointing to v3 patch). Keep startmeup→100bills redirect as fallback.
+- **Theory:** With levelId="100bills" in the manifest, the game opens `BeatmapLevelsData/100bills` instead of `BeatmapLevelsData/startmeup`. The original 100bills file at /app0/ has assets named "100bills" internally → LoadAsset matches!
+- **Expected:** Select Start Me Up → game looks for 100bills level data → opens original 100bills from /app0/ → PLAYS $100 BILLS!
+- **Status:** ✅ DEPLOYED — awaiting test

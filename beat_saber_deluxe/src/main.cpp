@@ -12,7 +12,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.35"
+#define PLUGIN_VERSION "v0.36"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -57,19 +57,15 @@ static int open_hook(const char *path, int flags, ...) {
     in_hook = 1;
     const char *np = NULL;
     if (path) {
-        // NOTE: resources.assets redirect DISABLED (v0.35).
-        // Analysis of patched vs original resources.assets revealed that
-        // the patch ONLY changed "StartMeUp\0" → "CustomSong" (10 bytes at offset 871180).
-        // This was the ONLY difference! The patch doesn't add custom songs.
-        // So we use the ORIGINAL manifest with levelId="startmeup".
-        // Now we redirect startmeup's DATA FILE to 100bills instead.
+        // Redirect resources.assets to patched version with levelId="100bills"
+        // Original: "StartMeUp\0" → changed to "100bills\0\0" at offset 871180
+        // This makes the game open BeatmapLevelsData/100bills instead of startmeup
+        // The 100bills file has assets named "100bills" internally → MATCH!
+        if (strstr(path, "resources.assets") && !strstr(path, "/AFR/"))
+            np = AFR_BASE "/" TITLE_ID "/resources_patched_v3.assets";
 
-        // Redirect song file: startmeup → 100bills (PROPER TEST - no manifest corruption)
+        // Redirect song file: startmeup → 100bills (fallback)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/100bills";
-
-        // Safety net: also catch "CustomSong" if the patched manifest is somehow loaded
-        if (strstr(path, "BeatmapLevelsData/CustomSong"))
             np = AFR_BASE "/" TITLE_ID "/100bills";
     }
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
@@ -87,8 +83,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
 
-    log_write("=== BS Deluxe v0.35 started ===");
-    log_write("startmeup->100bills test (NO resources.assets redirect)");
+    log_write("=== BS Deluxe v0.36 started ===");
+    log_write("manifest levelId: startmeup->100bills + file redirect");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 
@@ -104,7 +100,7 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     // Notification
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
-    snprintf(r.message,sizeof(r.message),"BS Deluxe v0.35");
+    snprintf(r.message,sizeof(r.message),"BS Deluxe v0.36");
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
     return 0;

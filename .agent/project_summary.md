@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎯 v0.35 DEPLOYED — TRUE 100bills replacement test! CRITICAL DISCOVERY: resources_patched.assets ONLY changed "StartMeUp\0" → "CustomSong" (10 bytes). It was CORRUPTING the levelId! All prior tests were flawed. v0.35 removes that redirect. NOW we truly test if 100bills works as a startmeup replacement. AWAITING TEST.
+**Current Status:** 📝 v0.36 DEPLOYED — Manifest levelId patch. v0.35 confirmed asset name mismatch (game uses LoadAsset by name). New approach: modify resources.assets to change Start Me Up's levelId from "startmeup" to "100bills". Then when game opens BeatmapLevelsData/100bills, the ORIGINAL 100bills file from /app0/ provides assets named "100bills" — exact match! Re-enabled resources.assets redirect with new v3 patch. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
