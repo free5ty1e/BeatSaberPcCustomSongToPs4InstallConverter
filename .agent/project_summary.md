@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🚀 v0.37 DEPLOYED — AssetBundle RENAMED via UnityPy! Installed tools (lz4, UnityPy). Modified 100bills bundle: changed m_Name from "100BillsBeatmapLevelData" → "StartMeUpBeatmapLevelData" AND container path from ".../100billsbeatmapleveldata.asset" → ".../startmeup/startmeupbeatmapleveldata.asset". Game should now find the asset! AWAITING TEST.
+**Current Status:** 🏆 v0.37 **CONFIRMED — SONG REPLACEMENT WORKS!** Start Me Up now plays $100 Bills with correct level data. Other songs unaffected (targeted redirect). Full plugin infrastructure: no jailbreak, AFR logging, Detour hooks, file redirect + UnityPy AssetBundle rename. Next: create custom song AssetBundles for any song.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

@@ -783,3 +783,26 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Deployment:** Renamed bundle deployed to `/data/GoldHEN/AFR/CUSA12878/100bills_renamed`. Plugin v0.37 redirects startmeup → renamed bundle. NO resources.assets redirect.
 - **This is the moment of truth!** If the game uses m_Name OR container path filename for LoadAsset lookup, it should find "StartMeUpBeatmapLevelData" in our renamed bundle and PLAY $100 BILLS! 🚀
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 61 — AssetBundle rename via UnityPy (v0.37) [🎉 COMPLETED — SONG REPLACEMENT WORKS!]
+- **Date:** 2026-07-01
+- **Change:** Modified 100bills AssetBundle via UnityPy: renamed m_Name → "StartMeUpBeatmapLevelData" + container path → ".../startmeup/startmeupbeatmapleveldata.asset"
+- **Result:** ✅ **$100 BILLS PLAYED WHEN START ME UP WAS SELECTED!** 🎉 The user confirmed the correct level data displayed and the song played. They also tested another song (Paint It Black) to confirm interception only works on Start Me Up — that song played normally without interference.
+- **Log evidence:**
+  ```
+  open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/100bills_renamed
+  open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/paintitblack
+  ```
+- **Log captured:** /workspace/screenshots/bs_log_v37.txt
+- **Key achievements:**
+  1. ✅ GoldHEN plugin loads without crash (no jailbreak, AFR path)
+  2. ✅ File logging via sceKernelOpen to AFR directory
+  3. ✅ Detour hooks for open() without crash
+  4. ✅ File redirect at open() level works
+  5. ✅ AssetBundle internal rename via UnityPy (m_Name + container path)
+  6. ✅ **CROSS-SONG REDIRECT CONFIRMED!** Start Me Up → $100 Bills
+  7. ✅ Other songs unaffected (targeted redirect only)
+- **Tools installed:**
+  - `lz4` (Python) - LZ4 compression for AssetBundle manipulation
+  - `UnityPy` (Python) - Unity AssetBundle reader/writer
+- **Devcontainer updated:** Both Dockerfiles include lz4 and UnityPy in pip packages
