@@ -730,3 +730,27 @@ BS Deluxe v0.27: AFR write OK!
   - `_ZN13UnityEngine6AssetBundle22LoadAsset_InternalEPNS_6StringEPNS_4TypeE` (C++ mangled)
 - **Expected:** If any symbol is found, we'll see "Unity syms found: N" in the notification. The log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` will list which names were found and their addresses.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 58 — Find Unity functions via dlsym (v0.34) [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Searched for 8 symbol names across all loaded libraries using dlsym + sys_dynlib_dlsym.
+- **Result:** ❌ **NO UNITY SYMBOLS FOUND.** None of the 8 AssetBundle function names were exported. This confirms that Unity's il2cpp for PS4 strips all symbols from the engine binaries.
+- **Analysis:** Alternative approaches needed to hook AssetBundle functions. Options: hardcoded offsets (RB4DX approach), pattern scanning, or modifying the manifest instead.
+
+### 🔬 CRITICAL DISCOVERY: resources_patched.assets analysis
+Before building v0.35, I analyzed the difference between the original file and `resources_patched.assets`:
+- **Only 10 bytes differ** (at offset 871180): `"StartMeUp\0"` was changed to `"CustomSong"` (same length, 10 bytes)
+- **No other changes!** The patched file is otherwise IDENTICAL to the original
+- **Conclusion:** The patched resources.assets doesn't add any custom songs or modify anything useful. It just renames Start Me Up's levelId
+- **Impact:** All prior tests using the patched resources.assets were flawed — the game looked for `BeatmapLevelsData/CustomSong` (which we never redirect) instead of `BeatmapLevelsData/startmeup`
+- **Fix:** STOP redirecting resources.assets entirely. Use the ORIGINAL manifest with levelId="startmeup"
+
+### Experiment 59 — TRUE 100bills replacement test (v0.35) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** 
+  1. REMOVED the resources.assets redirect (broken — caused game to look for "CustomSong")
+  2. KEEP startmeup→100bills redirect
+  3. Added "CustomSong" safety net redirect (in case the patched manifest is somehow loaded)
+- **This is the TRUE test of whether 100bills works as a replacement!** Previous tests (v0.30, v0.33) were corrupted by the patched manifest sending the game to "CustomSong" instead of "startmeup".
+- **Expected:** If the game uses `LoadAllAssets<BeatmapLevelsData>()` (by type), it will PLAY $100 BILLS! If it uses `LoadAsset<BeatmapLevelsData>("startmeup")` (by name), it will black screen.
+- **Status:** ✅ DEPLOYED — awaiting test
