@@ -12,7 +12,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.37"
+#define PLUGIN_VERSION "v0.38"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -62,7 +62,7 @@ static int open_hook(const char *path, int flags, ...) {
         // and container path changed to ".../startmeup/startmeupbeatmapleveldata.asset"
         // (via UnityPy: renamed m_Name + AssetBundle.m_Container)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/100bills_renamed";
+            np = AFR_BASE "/" TITLE_ID "/startmeup_custom";
     }
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
     if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
@@ -79,8 +79,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
 
-    log_write("=== BS Deluxe v0.37 started ===");
-    log_write("AssetBundle renamed: m_Name+container now match startmeup");
+    log_write("=== BS Deluxe v0.38 started ===");
+    log_write("Custom song conversion: replaced beatmaps, startmeup redirect");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 

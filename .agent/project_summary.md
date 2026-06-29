@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🏆 v0.37 **CONFIRMED — SONG REPLACEMENT WORKS!** Start Me Up now plays $100 Bills with correct level data. Other songs unaffected (targeted redirect). Full plugin infrastructure: no jailbreak, AFR logging, Detour hooks, file redirect + UnityPy AssetBundle rename. Next: create custom song AssetBundles for any song.
+**Current Status:** 🧪 v0.38 DEPLOYED — Custom song conversion pipeline built! VOLUPTE (by Tare) beatmaps replacing Start Me Up. Audio still from original (needs FSB5 tools). AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
