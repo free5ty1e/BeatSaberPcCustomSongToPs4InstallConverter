@@ -851,7 +851,21 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **v2 deployed:** No AudioClip rename, BeatmapLevelData renamed, container path renamed.
 - **Status:** ✅ DEPLOYED — awaiting test
 
-### Experiment 65 — Diagnostic: unmodified UnityPy save (v0.39diag)
+### Experiment 65 — Diagnostic: unmodified UnityPy save [COMPLETED]
 - **Date:** 2026-07-01
-- **Change:** Saved startmeup template through UnityPy with ZERO modifications. Redirects startmeup → UnityPy-saved copy. If environment renders, UnityPy's save is fine. If blank, UnityPy save corrupts something.
+- **Change:** Saved startmeup template through UnityPy with ZERO modifications.
+- **Result:** ✅ Environment renders normally! UnityPy's save is fine. Beatmaps were original Start Me Up (expected since no modifications). Proves the blank background is from the BEATMAP DATA CONTENT, not UnityPy's save.
+
+### Experiment 66 — V2→V3 beatmap format conversion (v0.40) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Built V2→V3 beatmap converter. V2 format uses `_notes` array with inline properties, but PS4 expects V3 format with `colorNotes` + `colorNotesData` (deduplicated data arrays). The V3 data arrays store unique property combinations, and notes reference them by index (`i`). Without the `i` field, notes default to data[0] `{'x': 1, 'd': 1}`.
+- **Conversion process:**
+  1. Extract `_lineIndex`, `_lineLayer`, `_type`, `_cutDirection` from each V2 _note
+  2. Deduplicate into (x, y, c, d) tuples
+  3. Create `colorNotesData` array from unique tuples
+  4. Create `colorNotes` array: `b` (beat) + `i` (index, omitted if 0)
+  5. Convert obstacles similarly
+  6. Add empty arrays for chains, arcs, spawnRotations
+  7. Set version to "4.0.0"
+- **Deployed:** startmeup_v3 with VOLUPTE beatmaps in V3 format.
 - **Status:** ✅ DEPLOYED — awaiting test
