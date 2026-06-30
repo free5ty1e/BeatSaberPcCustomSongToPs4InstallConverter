@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🏗️ v0.43 DEPLOYED — V3 conversion + save_typetree! Combines V2→V3 beatmap format fix with proper serialization. All 11 objects verified. AWAITING TEST.
+**Current Status:** 🏗️ v0.43 DEPLOYED — Template-structure V3 + PRX rebuilt. Preserves exact V3 structure from template. Roadmap created. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

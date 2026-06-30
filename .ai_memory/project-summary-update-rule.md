@@ -33,7 +33,13 @@ metadata:
 - **Workflow sections** — keep deployment commands and test procedure current
 - **File Reference** — update if files/changes are made
 
-**3. `/workspace/.ai_memory/MEMORY.md`** (when new documents are created)
+**3. `/workspace/.agent/roadmap.md`** (after each significant result)
+
+- **Milestone checklists** — mark items as completed (✅), in progress (🚧), or pending (⬜)
+- Add new discoveries, tools, and investigations to appropriate sections
+- Keep the "Known Issues" section current with what we're actively investigating
+
+**4. `/workspace/.ai_memory/MEMORY.md`** (when new documents are created)
 
 - Add links to new memory files
 

@@ -79,7 +79,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
 
-    log_write("=== BS Deluxe v0.38 started ===");
+    log_write("=== BS Deluxe v0.43 started ===");
     log_write("v0.43: V3 conversion + save_typetree fix");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen

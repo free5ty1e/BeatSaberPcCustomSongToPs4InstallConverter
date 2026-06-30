@@ -885,3 +885,11 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Combined V2→V3 format conversion with `save_typetree` data setting. Converts V2 `_notes` → V3 `colorNotes` + `colorNotesData`. Uses `save_typetree` (not `set_raw_data` which had serialization bugs). Empty arrays for bombs/chains/arcs/spawn.
 - **Verified:** All 11 objects load correctly in UnityPy. 5 beatmaps have valid V3 format (version 4.0.0).
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 69 — Template-structure V3 + PRX rebuild (v0.43) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Now preserves template's EXACT V3 structure (bombNotes, chains, arcs from template NOT emptied). Replaces only `colorNotes`/`colorNotesData` and `obstacles`/`obstaclesData`. Fixes issue where custom V3 generation might have subtle format differences.
+- **Result:** All 11 objects verified. 
+- **PRX fix:** v0.43 PLUGIN_VERSION now properly deployed (was missing in previous test).
+- **Roadmap created:** `.agent/roadmap.md` with milestone checklists.
+- **Status:** ✅ DEPLOYED — awaiting test
