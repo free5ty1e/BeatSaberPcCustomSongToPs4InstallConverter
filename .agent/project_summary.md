@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 v0.41 DEPLOYED — `save_typetree` fix! Replaces `set_raw_data` for beatmap TextAssets. ALL 11 objects load correctly. AWAITING TEST.
+**Current Status:** 🧪 v0.42 DEPLOYED — `save_typetree` + surrogateescape fix. Latin-1 encoding corrupted bytes > 127 (doubled size via utf-8 encoding). Using surrogateescape preserves all bytes. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
