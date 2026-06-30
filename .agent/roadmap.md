@@ -14,31 +14,49 @@
 - [x] AFR directory auto-creation with permissions fix
 
 ## 🔧 Milestone 3: Custom Song Format Conversion 🚧 IN PROGRESS
+### Beatmap Data Replacement
 - [x] Beatmap gzip replacement via `set_raw_data` + `save_typetree`
 - [x] Compressed size fix (m_Script length = compressed size, not decompressed)
-- [x] V2→V3 format conversion (`_notes` → `colorNotes` + `colorNotesData`)
-- [x] V3 structure preservation (keep template's bombNotes, chains, arcs)
-- [x] Custom obstacles from song (`_obstacles` → `obstacles` + `obstaclesData`)
-- [ ] ⬅️ THIS IS THE NEXT TEST - v0.43 deployed with template-structure V3
-- [ ] Audio replacement (FSB5 format)
-- [ ] Cover art replacement
+- [x] `save_typetree` verified byte-perfect with original (v0.39diag)
+- [ ] **V3 note format conversion (CURRENT ISSUE)** — `_notes` → `colorNotes` + `colorNotesData`
+  - [x] Note properties deduplication (x, y, c, d) into data arrays
+  - [ ] Verify V3 field order matches game expectations
+  - [ ] Test: minimal beat change (5.5→5.0) to isolate save_typetree vs content issue
+- [ ] **Obstacles conversion** — `_obstacles` → `obstacles` + `obstaclesData` (custom song's data)
+- [ ] **Bomb notes conversion** — convert custom song's `_notes` with type=3 → `bombNotes`
+- [ ] **Chain conversion** — preserve/convert custom song's chain data
+- [ ] **Arc conversion** — preserve/convert custom song's arc data
+- [ ] Environment renders correctly with custom beatmaps
+- [ ] Beatmap events from song handled (lighting data)
+
+### Audio Replacement
+- [ ] Audio format analysis (FSB5 structure on PS4)
+- [ ] Install FSB5 creation tools (fsbank or similar)
+- [ ] Replace AudioClip with custom song audio
+- [ ] Update AudioClip metadata (length, sample rate, etc.)
+
+### Visual Data
+- [ ] Cover art injection into bundle
+- [ ] Cover art display in song selection menu
 
 ## 📋 Milestone 4: Add Custom Song to Album
 - [ ] Install UABEA via Wine for resources.assets editing
-- [ ] Modify resources.assets song database to add new song entries
-- [ ] Assign custom songs to existing packs
-- [ ] Create new custom packs
+- [ ] Analyze resources.assets song database structure
+- [ ] Add custom song entry to existing pack
+- [ ] Add custom song to "My Songs" / custom pack
+- [ ] Verify song appears in UI and is playable
 
 ## 🎨 Milestone 5: Full Custom Song Pipeline
 - [ ] End-to-end script: BeatSaver download → PS4 AssetBundle
 - [ ] Devcontainer tools persisted (lz4, UnityPy, fmod_toolkit)
-- [ ] Beatmap data conversion (notes + obstacles + events)
+- [ ] Convert ALL beatmap components (notes, obstacles, bombs, chains, arcs)
 - [ ] Audio conversion (FSB5 with custom audio)
 - [ ] Cover art injection
 - [ ] Resources.assets patching for new song entries
 
 ## 🔬 Known Issues & Investigations
-- [ ] Blank background with custom beatmaps (V3 format fix in progress)
+- [ ] `save_typetree` produces Byte-identical output but game fails to load
+- [ ] V2→V3 note conversion may produce wrong field order/format
 - [ ] `set_raw_data` serialization bug (workaround: use `save_typetree`)
 - [ ] Latin1 vs surrogateescape encoding for binary data
 - [ ] FSB5 audio needs FMOD tools (fsbank)
