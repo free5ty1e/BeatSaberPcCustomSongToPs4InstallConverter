@@ -856,7 +856,16 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Saved startmeup template through UnityPy with ZERO modifications.
 - **Result:** ✅ Environment renders normally! UnityPy's save is fine. Beatmaps were original Start Me Up (expected since no modifications). Proves the blank background is from the BEATMAP DATA CONTENT, not UnityPy's save.
 
-### Experiment 66 — V2→V3 beatmap format conversion (v0.40) [DEPLOYED]
+### Experiment 66 — V2→V3 beatmap format conversion (v0.40) [CRASHED]
+- **Change:** V2→V3 converter + `set_raw_data` on beatmaps
+- **Result:** ❌ CE-34878-0 crash. 3 beatmap objects had read_typetree failures (Normal/Expert/ExpertPlus).
+
+### Experiment 67 — save_typetree fix (v0.41) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Replaced `set_raw_data` with `save_typetree` for beatmap TextAssets. Root cause: `set_raw_data` causes internal serialization inconsistency for some objects (always the same 3 difficulties by position). `save_typetree` writes via UnityPy's proper typetree serialization, which handles ALL objects correctly.
+- **Result:** ✅ All 11 objects read correctly in UnityPy.
+- **Bundle:** Includes full V2 beatmap data WITH 13,825 events per difficulty (no stripping). Tests if crash was from `set_raw_data` or from events.
+- **Status:** ✅ DEPLOYED — awaiting test
 - **Date:** 2026-07-01
 - **Change:** Built V2→V3 beatmap converter. V2 format uses `_notes` array with inline properties, but PS4 expects V3 format with `colorNotes` + `colorNotesData` (deduplicated data arrays). The V3 data arrays store unique property combinations, and notes reference them by index (`i`). Without the `i` field, notes default to data[0] `{'x': 1, 'd': 1}`.
 - **Conversion process:**

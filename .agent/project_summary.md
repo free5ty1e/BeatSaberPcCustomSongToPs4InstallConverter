@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔄 v0.40 DEPLOYED — V2→V3 format conversion! All 5 VOLUPTE difficulties converted from `_notes` (V2) to `colorNotes`+`colorNotesData` (V3). PS4 expects V3 format with deduplicated data arrays. AWAITING TEST.
+**Current Status:** 🧪 v0.41 DEPLOYED — `save_typetree` fix! Replaces `set_raw_data` for beatmap TextAssets. ALL 11 objects load correctly. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
