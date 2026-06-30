@@ -831,3 +831,10 @@ Before building v0.35, I analyzed the difference between the original file and `
   1. Fix blank background (environment scene issue)
   2. Replace FSB5 audio with custom audio (needs FMOD tools)
   3. Add new song entry to an album via resources.assets manifest
+
+### Experiment 63 — Strip _events from beatmap data for environment fix [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Analysis of beatmap data format revealed VOLUPTE uses V2 format (with `_notes`, `_obstacles`, `_events`) while PS4 expects V3/V4 format (with `colorNotes`, `obstacles`, and separate lightshow data). The 13,825 `_events` per difficulty conflicted with PS4's separate lightshow system, causing blank background.
+- **Fix:** Strip `_events` and `_customData` from each difficulty's `.dat` file before gzip compression. Updated `convert_song_v3.py` with this fix.
+- **Result:** Bundles now have V2 format beatmaps with events removed. Beatmap sizes dropped from ~76KB to 1-5KB (events were the bulk). Rolled back to `startmeup` template lightshow. AWAITING TEST.
+- **Also noted:** `_obstacles` were 0 for all VOLUPTE difficulties — this custom song has no obstacles/walls.

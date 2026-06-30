@@ -143,6 +143,16 @@ def main():
                 # Check if custom song has this difficulty
                 if diff_name in custom_diffs:
                     custom_data = custom_diffs[diff_name]
+                    # Strip _events (PS4 uses separate lightshow data) and _customData
+                    try:
+                        beatmap_json = json.loads(custom_data)
+                        if '_events' in beatmap_json:
+                            del beatmap_json['_events']
+                        if '_customData' in beatmap_json:
+                            del beatmap_json['_customData']
+                        custom_data = json.dumps(beatmap_json).encode('utf-8')
+                    except:
+                        pass
                     compressed = gzip.compress(custom_data)
 
                     # Update filename part

@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🎉 v0.38 TESTED — CUSTOM BEATMAPS CONFIRMED WORKING! VOLUPTE note patterns rendered instead of Start Me Up. Blank background (environment issue) + original audio (FSB5 not replaced). Beatmap replacement pipeline proven: UnityPy + set_raw_data with compressed-size fix. Prepare for audio replacement.
+**Current Status:** 🔧 v0.38 FIX v2 DEPLOYED — Stripped 13,825 `_events` from VOLUPTE beatmaps (V2 format conflicts with PS4's separate lightshow). Beatmap sizes dropped from ~76KB to 1-5KB. Updated `convert_song_v3.py`. AWAITING ENVIRONMENT TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
