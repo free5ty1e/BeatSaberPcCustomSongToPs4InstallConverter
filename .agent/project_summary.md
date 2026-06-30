@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔧 v0.38 FIX v2 DEPLOYED — Stripped 13,825 `_events` from VOLUPTE beatmaps (V2 format conflicts with PS4's separate lightshow). Beatmap sizes dropped from ~76KB to 1-5KB. Updated `convert_song_v3.py`. AWAITING ENVIRONMENT TEST.
+**Current Status:** 🧪 v0.39 DEPLOYED — 100bills template test. Fixed notification bug (was hardcoded v0.37). Switched from startmeup to 100bills template to isolate blank background issue. 100bills has proven lightshow. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

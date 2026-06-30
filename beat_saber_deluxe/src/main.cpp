@@ -12,7 +12,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.38"
+#define PLUGIN_VERSION "v0.39"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -62,7 +62,7 @@ static int open_hook(const char *path, int flags, ...) {
         // and container path changed to ".../startmeup/startmeupbeatmapleveldata.asset"
         // (via UnityPy: renamed m_Name + AssetBundle.m_Container)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/startmeup_final";
+            np = AFR_BASE "/" TITLE_ID "/100bills_template";
     }
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
     if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
@@ -80,7 +80,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     OrbisNotificationRequest r;
 
     log_write("=== BS Deluxe v0.38 started ===");
-    log_write("Custom song conversion: replaced beatmaps, startmeup redirect");
+    log_write("v0.39: 100bills template + VOLUPTE beatmaps, env test");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 
@@ -96,7 +96,7 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     // Notification
     memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
-    snprintf(r.message,sizeof(r.message),"BS Deluxe v0.37");
+    snprintf(r.message,sizeof(r.message),"BS Deluxe %s", PLUGIN_VERSION);
     sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
 
     return 0;
