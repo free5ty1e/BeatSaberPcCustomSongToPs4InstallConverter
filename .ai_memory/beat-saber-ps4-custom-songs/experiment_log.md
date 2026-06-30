@@ -806,16 +806,14 @@ Before building v0.35, I analyzed the difference between the original file and `
   - `lz4` (Python) - LZ4 compression for AssetBundle manipulation
   - `UnityPy` (Python) - Unity AssetBundle reader/writer
 - **Devcontainer updated:** Both Dockerfiles include lz4 and UnityPy in pip packages
-### Experiment 62 — Custom song conversion pipeline + redirect (v0.38) [DEPLOYED]
+### Experiment 62 — Custom song conversion pipeline + redirect (v0.38) [COMPLETED — FIXED BUNDLE DEPLOYED]
 - **Date:** 2026-07-01
-- **Change:** Built `convert_song_v3.py` - converts BeatSaver custom songs to PS4 AssetBundles. Process:
-  1. Clones the startmeup AssetBundle as template
-  2. Replaces beatmap .gz data with custom song difficulty data (gzip-magic search method)
-  3. Replaces all 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus
-  4. Keeps original audio (FSB5 replacement needs separate tools)
-  5. Uses gzip magic (`0x1F 0x8B`) search to find correct offset for variable-length headers
+- **Change:** Built `convert_song_v3.py` - converts BeatSaver custom songs to PS4 AssetBundles. Replaces all 5 difficulty beatmaps with custom song data.
 - **Tested song:** VOLUPTE by Tare (from songs_repo/01ce5a3adc19e360ba0ffd8347f91b5dc974eb7c)
-- **Result:** All 5 beatmaps replaced. Bundle deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_custom`. Plugin redirects startmeup → custom bundle.
-- **Limitations:** Audio is still from Start Me Up (FSB5 format). Need FMOD tools for audio replacement. Song metadata (name, author) comes from the game's resources.assets manifest (not the bundle).
-- **Status:** ✅ DEPLOYED — awaiting test
-- **Next:** Add planning doc for "add new song to album" feature (created at `docs/ADD_SONG_TO_ALBUM_PLAN.md`)
+- **Result Part 1 (initial):** ❌ Quick black screen — beatmap TextAssets corrupted
+- **Root cause found (via UnityPy source code analysis):**
+  TextAsset type tree defines ONLY `m_Name` and `m_Script` (both strings). The beatmap format stores extra data: `[fn_len][fn_name][m_script_len][gzip_data]`. The `m_script_len` field is read by UnityPy as the string length for m_Script. Setting it to the decompressed data size (1.1MB) caused `read_str out of bounds` because the actual gzip data was only 76KB.
+- **Fix:** Changed "decomp_size" field from `len(decompressed_data)` to `len(compressed_gzip_data)`. The gzip container itself stores the original size internally, so decompression succeeds regardless.
+- **Result Part 2 (fixed):** ✅ **ALL 5 BEATMAPS VALID!** Bundle loads correctly. Easy, Normal, Hard, Expert, ExpertPlus all decompress to correct beatmap data.
+- **Deployed to:** `/data/GoldHEN/AFR/CUSA12878/startmeup_final`
+- **Limitations:** Audio is still from Start Me Up (FSB5 format — needs FMOD/fsbank tools). Song metadata from resources.assets manifest (not the bundle).

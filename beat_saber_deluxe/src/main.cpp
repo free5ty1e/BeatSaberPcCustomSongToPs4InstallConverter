@@ -62,7 +62,7 @@ static int open_hook(const char *path, int flags, ...) {
         // and container path changed to ".../startmeup/startmeupbeatmapleveldata.asset"
         // (via UnityPy: renamed m_Name + AssetBundle.m_Container)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/startmeup_custom";
+            np = AFR_BASE "/" TITLE_ID "/startmeup_final";
     }
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
     if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
