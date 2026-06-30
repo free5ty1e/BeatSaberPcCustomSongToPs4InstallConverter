@@ -62,7 +62,7 @@ static int open_hook(const char *path, int flags, ...) {
         // and container path changed to ".../startmeup/startmeupbeatmapleveldata.asset"
         // (via UnityPy: renamed m_Name + AssetBundle.m_Container)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/100bills_template";
+            np = AFR_BASE "/" TITLE_ID "/startmeup_unmodified";
     }
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
     if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
@@ -80,7 +80,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     OrbisNotificationRequest r;
 
     log_write("=== BS Deluxe v0.38 started ===");
-    log_write("v0.39: 100bills template + VOLUPTE beatmaps, env test");
+    log_write("v0.39diag: unmodified startmeup, UnityPy save only");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 

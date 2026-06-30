@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 v0.39 v2 DEPLOYED — 100bills template test w/o AudioClip rename. v1 crashed (AudioClip save_typetree corrupted m_Resource). v2 fixed: keep "$100Bills" name, use PPtr for audio. BeatmapLevelData + container renamed. AWAITING TEST.
+**Current Status:** 🔍 v0.39diag DEPLOYED — Diagnostic: UnityPy-saved startmeup WITHOUT modifications. Tests if UnityPy's save corrupts anything. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

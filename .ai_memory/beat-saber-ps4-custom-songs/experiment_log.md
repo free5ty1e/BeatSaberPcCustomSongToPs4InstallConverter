@@ -850,3 +850,8 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **v2 fix:** Removed AudioClip rename. Keep original "$100Bills" name. Game uses PPtr for audio lookup, not name.
 - **v2 deployed:** No AudioClip rename, BeatmapLevelData renamed, container path renamed.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 65 — Diagnostic: unmodified UnityPy save (v0.39diag)
+- **Date:** 2026-07-01
+- **Change:** Saved startmeup template through UnityPy with ZERO modifications. Redirects startmeup → UnityPy-saved copy. If environment renders, UnityPy's save is fine. If blank, UnityPy save corrupts something.
+- **Status:** ✅ DEPLOYED — awaiting test
