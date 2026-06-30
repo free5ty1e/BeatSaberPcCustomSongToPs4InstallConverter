@@ -879,3 +879,9 @@ Before building v0.35, I analyzed the difference between the original file and `
   7. Set version to "4.0.0"
 - **Deployed:** startmeup_v3 with VOLUPTE beatmaps in V3 format.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 68 — V3 conversion + save_typetree (v0.43) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Combined V2→V3 format conversion with `save_typetree` data setting. Converts V2 `_notes` → V3 `colorNotes` + `colorNotesData`. Uses `save_typetree` (not `set_raw_data` which had serialization bugs). Empty arrays for bombs/chains/arcs/spawn.
+- **Verified:** All 11 objects load correctly in UnityPy. 5 beatmaps have valid V3 format (version 4.0.0).
+- **Status:** ✅ DEPLOYED — awaiting test
