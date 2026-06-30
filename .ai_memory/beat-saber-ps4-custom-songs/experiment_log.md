@@ -839,9 +839,14 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Result:** Bundles now have V2 format beatmaps with events removed. Beatmap sizes dropped from ~76KB to 1-5KB (events were the bulk). Rolled back to `startmeup` template lightshow. AWAITING TEST.
 - **Also noted:** `_obstacles` were 0 for all VOLUPTE difficulties — this custom song has no obstacles/walls.
 
-### Experiment 64 — 100bills template + notification fix (v0.39) [DEPLOYED]
+### Experiment 64 — 100bills template + notification fix (v0.39) [DEPLOYED - v2]
 - **Date:** 2026-07-01
-- **Fix:** Discovered notification was HARDCODED as "BS Deluxe v0.37" instead of using `PLUGIN_VERSION` string! Fixed to `snprintf(r.message,...,"BS Deluxe %s", PLUGIN_VERSION)`.
-- **Change:** Switched template from startmeup to 100bills to isolate blank background issue. 100bills template has proven working lightshow (15KB vs startmeup's 849KB). Renamed all assets from "100Bills*" to "StartMeUp*" to match what game expects when opening startmeup. Replaced 5 Standard difficulties with VOLUPTE beatmaps (events stripped). Kept 7 other characteristics (NoArrows, OneSaber, etc.) original.
-- **Theory:** If background renders correctly with 100bills template, the issue is with startmeup's 849KB lightshow. If still blank, the issue is in the conversion pipeline itself.
+- **Change:** 
+  1. Fix notification: was hardcoded "v0.37", now uses PLUGIN_VERSION
+  2. Switch to 100bills template for env/lightshow comparison test
+  3. Rename BeatmapLevelData m_Name + container path (NOT AudioClip - caused crash)
+  4. Replace 5 Standard beatmaps with VOLUPTE (events stripped)
+- **v1 result:** ❌ CE-34878-0 CRASH. AudioClip rename via `save_typetree` corrupted `m_Resource` field (FSB5 external reference).
+- **v2 fix:** Removed AudioClip rename. Keep original "$100Bills" name. Game uses PPtr for audio lookup, not name.
+- **v2 deployed:** No AudioClip rename, BeatmapLevelData renamed, container path renamed.
 - **Status:** ✅ DEPLOYED — awaiting test
