@@ -817,3 +817,17 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Result Part 2 (fixed):** ✅ **ALL 5 BEATMAPS VALID!** Bundle loads correctly. Easy, Normal, Hard, Expert, ExpertPlus all decompress to correct beatmap data.
 - **Deployed to:** `/data/GoldHEN/AFR/CUSA12878/startmeup_final`
 - **Limitations:** Audio is still from Start Me Up (FSB5 format — needs FMOD/fsbank tools). Song metadata from resources.assets manifest (not the bundle).
+
+### Experiment 62 — Custom song conversion test result [🧪 TESTED - PARTIAL SUCCESS]
+- **Date:** 2026-07-01
+- **Test:** Navigated to Start Me Up with the fixed bundle (VOLUPTE beatmaps)
+- **Result:** ✅ **CUSTOM BEATMAPS LOAD!** The note boxes were from VOLUPTE (different pattern from Start Me Up). Song played with custom note patterns.
+- **Issues observed:**
+  1. ✅ Audio works (but it's still Start Me Up's original FSB5 audio - expected)
+  2. ❌ Background is blank (space/stars only - environment scene not loading)
+  3. ❌ Notification showed "v0.37" (fixed by rebuilding v0.38 PRX)
+- **Analysis:** The beatmap gzip replacement via `set_raw_data` + UnityPy works correctly. The game loads our modified bundle, finds the custom gzip data, decompresses it, and renders the custom note patterns. The blank background suggests the environment scene (Rolling Stones environment bundle) isn't being loaded or doesn't match expectations. The original audio plays because the FSB5 audio resource wasn't replaced (that's the next challenge).
+- **Next steps:**
+  1. Fix blank background (environment scene issue)
+  2. Replace FSB5 audio with custom audio (needs FMOD tools)
+  3. Add new song entry to an album via resources.assets manifest
