@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** ✅ **SUCCESS! Custom beatmaps render with full environment!** Root cause was the 4-byte decompressed_size prefix before gzip in m_Script — now removed. V3 format conversion + save_typetree works end-to-end. Next: audio replacement (FSB5).
+**Current Status:** 🧪 v0.44 PROTOTYPE — Bomb notes conversion added! MUSIC STAR deployed with 14-40 bombs per difficulty. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

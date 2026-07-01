@@ -68,7 +68,24 @@ metadata:
 - **Key findings** — document root causes discovered (e.g., m_Script is just gzip)
 - Keep the setup/build/test instructions current
 
-**5. Knowledge capture** (every time a root cause or breakthrough is discovered)
+**5. `/workspace/.agent/llm-wiki-knowledge-base/`** (EVERY test cycle — knowledge base maintenance)
+
+- **Mine findings for durable knowledge** — after each experiment result, ask: "What did we learn that will still be true in 6 months?"
+  - New root causes or bugs found → add as new page or update existing page
+  - Updated fix patterns (code snippets, workflows) → update relevant pages
+  - New tooling or commands discovered → add to toolchain page
+  - Superseded claims or stale info → revise or remove
+  - Cross-reference new findings with existing pages (add `[[links]]`)
+- **Pages to potentially update** based on experiment type:
+  - Finding a bug? → update [[m-script-gzip-format]] or [[unitypy-serialization]] or create new root-cause page
+  - Fixing a feature? → update [[beatmap-conversion-pipeline]] or [[assetbundle-structure]]
+  - Build system change? → update [[toolchain-and-build]]
+  - Workflow change? → update [[development-workflow]]
+- **Check for contradictions** — if new data contradicts an existing claim, flag it with a note on the relevant page
+- **Keep index.md current** — if you add a new page, add it to the index catalog
+- **Always add a log entry** — append to `log.md` describing what was updated and why
+
+**6. Knowledge capture** (every time a root cause or breakthrough is discovered)
 
 - **Check for existing memory**: before creating a new memory file, check if one already covers the topic
 - **Save findings as persistent memory**: write a `.md` file in `/workspace/.ai_memory/beat-saber-ps4-custom-songs/` with:
@@ -97,12 +114,17 @@ Before reporting to the user:
    - Count lines, check redirects, env loading, errors, PlayerData save
    - Include findings table in the experiment entry
 2. **Update `experiment_log.md`** with test result + log findings
-3. **Capture knowledge** — if a root cause or breakthrough was found, create a dedicated knowledge file
-4. **Update `project_summary.md`** status header
-5. **Update `roadmap.md`** — mark checklist items, add new tasks
-6. **Update `README.md`** — reflect current state, capabilities, findings
-7. **Update `MEMORY.md`** if new documents were created
-8. **Stage all changes in git** (`git add <file>` for specific files)
-9. Then report
+3. **Mine findings for knowledge base** — review what was learned and update `.agent/llm-wiki-knowledge-base/` pages:
+   - Add new root causes as new pages
+   - Update existing pages with new fix patterns or tooling
+   - Flag contradictions if new data supersedes old claims
+   - Append to `log.md` with what was updated and why
+4. **Capture knowledge** — if a root cause or breakthrough was found, create a dedicated memory file in `.ai_memory/beat-saber-ps4-custom-songs/`
+5. **Update `project_summary.md`** status header
+6. **Update `roadmap.md`** — mark checklist items, add new tasks
+7. **Update `README.md`** — reflect current state, capabilities, findings
+8. **Update `MEMORY.md`** if new documents or knowledge base pages were created
+9. **Stage all changes in git** (`git add <file>` for specific files)
+10. Then report
 
 **See also:** [[research-index-update]] for keeping RESEARCH_INDEX.md in sync.

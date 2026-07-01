@@ -72,8 +72,60 @@ def v2_to_v3_notes(v2_notes):
 ### Key rules:
 - If `_type == 3`, the note is a bomb → place in bombNotes, not colorNotes
 - Only store non-default values in data entries to match PS4 format
-- Default data[0] is `{"x": 1, "d": 1}` — notes with default properties omit `i`
+- Default colorNotesData[0] is `{"x": 1, "d": 1}` — notes with default properties omit `i`
+- Default bombNotesData[0] is `{"x": 3}` — bombs at column 3, row 0 (default)
 - `json.dumps(..., separators=(',',':'))` produces compact output matching the template
+
+## Bomb Notes Conversion
+
+Bombs in V2 are notes with `_type: 3`. They use the same fields as regular notes (`_time`, `_lineIndex`, `_lineLayer`, `_cutDirection`) but are stored in separate V3 arrays: `bombNotes` + `bombNotesData`.
+
+### V3 bombNotes Format
+```json
+"bombNotes": [{"b": <beat>, "i": <data_index>}],
+"bombNotesData": [{"x": <col>, "y": <row>}]
+```
+
+BombNotesData only stores position (x, y) — no color (`c`) or direction (`d`) since bombs aren't cut.
+
+### Conversion Algorithm
+
+```python
+def v2_to_v3_bombs(v2_notes):
+    """Separate type=3 notes into bombNotes + bombNotesData"""
+    bomb_v2 = [n for n in v2_notes if n.get('_type') == 3]
+    
+    data_map = {}; data_list = []; result = []
+    for n in bomb_v2:
+        key = (n.get('_lineIndex', 0), n.get('_lineLayer', 0))
+        if key not in data_map:
+            data_map[key] = len(data_list)
+            entry = {}
+            if key[0] != 0: entry['x'] = key[0]
+            if key[1] != 0: entry['y'] = key[1]
+            data_list.append(entry)
+        
+        note = {'b': n['_time']}
+        idx = data_map[key]
+        if idx != 0: note['i'] = idx
+        result.append(note)
+    
+    return result, data_list
+```
+
+### Key differences from colorNotes:
+- BombNotesData has only `x` and `y` fields (no `c` or `d`)
+- Bombs with `_cutDirection` V2 field — this field is DISCARDED (bombs don't have direction in V3)
+- Default bombNotesData[0] is `{"x": 3}` (column 3, row 0)
+- The deduplication is by (x, y) position only — bombs at the same position reuse the same data entry
+
+### Integration into pipeline
+The full conversion separates V2 notes at the start:
+```python
+v2_notes = v2_data.get('_notes', [])
+color_v2 = [n for n in v2_notes if n.get('_type', 0) in (0, 1)]   # Normal notes
+bomb_v2  = [n for n in v2_notes if n.get('_type', 0) == 3]         # Bombs
+```
 
 ## Obstacle Conversion
 

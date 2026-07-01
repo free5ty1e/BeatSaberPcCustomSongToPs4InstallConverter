@@ -23,7 +23,7 @@
   - [x] V3 field order matches game expectations (verified with working bundle)
 - [x] **Obstacles conversion** — `_obstacles` → `obstacles` + `obstaclesData` ✅
 - [x] Environment renders correctly with custom beatmaps ✅
-- [ ] **Bomb notes conversion** — `_notes` type=3 → `bombNotes` + `bombNotesData`
+- [x] **Bomb notes conversion** — `_notes` type=3 → `bombNotes` + `bombNotesData` ✅
 - [ ] **Chain conversion** — preserve/convert custom song's chain data
 - [ ] **Arc conversion** — preserve/convert custom song's arc data
 - [ ] Beatmap events from song handled (lighting data — separate from lightshow)
