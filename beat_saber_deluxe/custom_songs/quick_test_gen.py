@@ -11,6 +11,18 @@ Usage:
 
 The generated bundle is ~12MB due to template overhead (AudioClip,
 ScriptableObjects, lightshows). The actual beatmap data is ~340 bytes gzipped.
+
+Feature timing (beats):
+  1-5   9 notes (alternating red/blue, various positions)
+  1.75  3 bombs (at columns 3, 0, top row)
+  6-9   5 varied walls:
+          6.0  h:5 wide wall   → full duck
+          7.0  h:2 short left  → step over
+          8.0  h:5 tall right  → duck + dodge
+          9.0  h:3 mid center  → medium duck
+          11.0 h:1 very short  → barely duck
+  10-14 2 arc sliders (left→right, reverse)
+  18-20 2 chain bursts (right-moving, stationary)
 """
 import UnityPy, json, struct, gzip, sys, os
 
@@ -52,13 +64,20 @@ V3_DATA = {
         {"y": 2},
     ],
     "obstacles": [
-        {"b": 6.0, "i": 1},
-        {"b": 8.0},
+        # Wall types: full-height (h:5=duck), short (h:1-2=step), mid (h:3=medium duck)
+        {"b": 6.0, "i": 1},        # full-height wide wall → must duck
+        {"b": 7.0, "i": 2},        # short wall left → step over
+        {"b": 8.0, "i": 3},        # tall narrow right → duck + dodge right
+        {"b": 9.0, "i": 4},        # mid-height center → medium duck
+        {"b": 11.0, "i": 5},       # very short → barely duck
     ],
     "obstaclesData": [
-        {"d": 2.0, "w": 1, "h": 5},
-        {"d": 1.5, "w": 4, "h": 5},
-        {"d": 1.0, "w": 1, "h": 5},
+        {"d": 2.0, "w": 1, "h": 5},          # [0] default full-height
+        {"d": 0.5, "w": 4, "h": 5, "x": 0},  # [1] wide full-height → duck
+        {"d": 0.5, "w": 1, "h": 2, "x": 0},  # [2] short wall left → step
+        {"d": 0.5, "w": 1, "h": 5, "x": 3},  # [3] tall wall right → duck+dodge
+        {"d": 0.5, "w": 2, "h": 3, "x": 1},  # [4] mid-height center → medium duck
+        {"d": 0.5, "w": 1, "h": 1, "x": 2},  # [5] very short → barely duck
     ],
     "arcs": [
         {"hb": 10.0, "hi": 0, "tb": 12.0, "ti": 4, "ai": 0},

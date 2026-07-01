@@ -974,15 +974,15 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains. Replaced by quick_test.bundle for faster testing.
 - **Status:** Replaced by quick_test.bundle (12MB → much smaller, all features in ~20s)
 
-### Experiment 74b — Quick test bundle [FIXED & RE-DEPLOYED]
+### Experiment 74b — Quick test bundle [VARIED WALLS ADDED]
 - **Date:** 2026-07-01
-- **Change:** Hand-crafted minimal V3 beatmap with all 5 feature types at song start. Fixed chains data: added `c: 4` field to `chainsData` (required for chains to render). Generation script saved as `quick_test_gen.py` — bundle binary NOT committed to git (12MB template overhead).
-- **Content per difficulty:**
-  - 9 notes (alternating red/blue, various positions)
-  - 3 bombs (at columns 3, 0, and top row)
-  - 2 obstacles (wide wall at beat 6, narrow wall at beat 8)
-  - 2 arcs (left→right at beat 10, reverse at beat 14)
-  - 2 chains (burst sliders at beat 18, 20 — with `c:4` fix)
-- **Key format discovery:** In V3 chains, `i` references `colorNotesData` (head props), `ci` references `chainsData` (chain props). `c: 4` in `chainsData` appears required for rendering.
-- **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed)
-- **Status:** ✅ DEPLOYED — awaiting re-test of chains
+- **Change:** Added 5 varied wall types to quick_test_gen.py for comprehensive obstacle coverage. Source script committed, not the binary.
+- **Content per difficulty:** 9n + 3b + 5o (varied) + 2a + 2c
+- **Obstacle varieties:**
+  - `h:5, w:4, x:0` at beat 6 — full-height wide wall → duck
+  - `h:2, w:1, x:0` at beat 7 — short wall left → step over
+  - `h:5, w:1, x:3` at beat 8 — tall narrow right → duck + dodge
+  - `h:3, w:2, x:1` at beat 9 — mid-height center → medium duck
+  - `h:1, w:1, x:2` at beat 11 — very short → barely duck
+- **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed in git)
+- **Status:** ✅ DEPLOYED — awaiting test of varied obstacles
