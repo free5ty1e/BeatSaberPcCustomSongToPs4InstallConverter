@@ -974,15 +974,13 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains. Replaced by quick_test.bundle for faster testing.
 - **Status:** Replaced by quick_test.bundle (12MB → much smaller, all features in ~20s)
 
-### Experiment 74b — Quick test bundle [VARIED WALLS ADDED]
+### Experiment 74b — Quick test bundle [FLOATING WALLS ADDED]
 - **Date:** 2026-07-01
-- **Change:** Added 5 varied wall types to quick_test_gen.py for comprehensive obstacle coverage. Source script committed, not the binary.
-- **Content per difficulty:** 9n + 3b + 5o (varied) + 2a + 2c
-- **Obstacle varieties:**
-  - `h:5, w:4, x:0` at beat 6 — full-height wide wall → duck
-  - `h:2, w:1, x:0` at beat 7 — short wall left → step over
-  - `h:5, w:1, x:3` at beat 8 — tall narrow right → duck + dodge
-  - `h:3, w:2, x:1` at beat 9 — mid-height center → medium duck
-  - `h:1, w:1, x:2` at beat 11 — very short → barely duck
+- **Change:** Added 3 experimental floating walls with `y` (row offset) to quick_test_gen.py. These walls are offset from the floor so they float at head/mid/celing level, requiring ducking to avoid.
+- **Content per difficulty:** 9n + 3b + 8o (5 floor + 3 floating) + 2a + 2c
+- **Floating wall experiments:**
+  - `y:3, h:2, x:1` at beat 24 — floating at head level → duck under
+  - `y:2, h:2, x:0` at beat 26 — floating at mid level → medium duck
+  - `y:4, h:1, x:0` at beat 28 — floating at ceiling → barely duck
 - **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed in git)
-- **Status:** ✅ DEPLOYED — awaiting test of varied obstacles
+- **Status:** ✅ DEPLOYED — awaiting test (all 8 wall types visible at beats 6-28)
