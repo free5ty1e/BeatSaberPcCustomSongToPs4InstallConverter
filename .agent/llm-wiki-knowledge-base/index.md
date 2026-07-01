@@ -29,6 +29,9 @@ metadata:
 ## Audio & Future Work
 - [[ps4-fsb5-audio|PS4 FSB5 Audio Format]] — Audio format analysis, FSB5 structure (for future replacement)
 
+## Environment & Song Database
+- [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
+
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip
 - [[unitypy-serialization|save_typetree vs set_raw_data]] — set_raw_data causes serialization bugs for 3/5 objects

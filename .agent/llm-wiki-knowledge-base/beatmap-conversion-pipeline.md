@@ -133,8 +133,15 @@ bomb_v2  = [n for n in v2_notes if n.get('_type', 0) == 3]         # Bombs
 def v2_to_v3_obstacles(v2_obs):
     obs_map = {}; obs_list = []; v3_obs = []
     for o in v2_obs:
+        # V3 fields: x (column), y (row offset), d (duration), w (width), h (height)
         entry = {'d': o.get('_duration', 1.0), 'w': o.get('_width', 1), 'h': 5}
-        key = (entry['d'], entry['w'], entry['h'])
+        # x = column/lane position
+        if o.get('_lineIndex', 0) != 0: entry['x'] = o['_lineIndex']
+        # y = vertical offset (0=floor, higher=floating/ceiling walls)
+        if o.get('_type', 0) == 1: entry['y'] = 3  # ceiling wall → float at top
+        elif o.get('_lineLayer', 0) != 0: entry['y'] = o['_lineLayer']
+        
+        key = (entry['d'], entry['w'], entry['h'], entry.get('x', 0), entry.get('y', 0))
         if key not in obs_map:
             obs_map[key] = len(obs_list)
             obs_list.append(entry)
@@ -145,14 +152,17 @@ def v2_to_v3_obstacles(v2_obs):
     return v3_obs, obs_list
 ```
 
+Note: The mapping from V2 `_type: 1` (ceiling wall) to V3 `y: 3` is an approximation. The exact y value for ceiling walls may need adjustment based on game behavior.
+
 ### V2→V3 obstacle field mapping:
 | V2 field | V3 field | Notes |
 |----------|----------|-------|
 | `_time` | `b` | Beat time |
 | `_duration` | `d` | Duration |
 | `_width` | `w` | Width in columns |
-| `_lineIndex` | (implicit) | V3 doesn't store column position — obstacles span from closest lane |
-| `_type` | (implicit) | Always type 0 (wall) → height = 5 |
+| `_lineIndex` | `x` | Column/lane position (0-3) |
+| `_type` | `y` | 0=floor wall (y=0 default), 1=ceiling wall (y=3-4 for floating) |
+| `h` | | V3 `h` default is 5 (full height). Use `y` offset for ceiling/floating walls. |
 
 ## Arc Conversion (Sliders)
 

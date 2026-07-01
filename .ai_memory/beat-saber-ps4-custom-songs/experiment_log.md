@@ -974,7 +974,7 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains. Replaced by quick_test.bundle for faster testing.
 - **Status:** Replaced by quick_test.bundle (12MB → much smaller, all features in ~20s)
 
-### Experiment 74b — Quick test bundle [FLOATING WALLS ADDED]
+### Experiment 74b — Quick test bundle [FLOATING WALLS WORKING ✅]
 - **Date:** 2026-07-01
 - **Change:** Added 3 experimental floating walls with `y` (row offset) to quick_test_gen.py. These walls are offset from the floor so they float at head/mid/celing level, requiring ducking to avoid.
 - **Content per difficulty:** 9n + 3b + 8o (5 floor + 3 floating) + 2a + 2c
@@ -982,5 +982,6 @@ Before building v0.35, I analyzed the difference between the original file and `
   - `y:3, h:2, x:1` at beat 24 — floating at head level → duck under
   - `y:2, h:2, x:0` at beat 26 — floating at mid level → medium duck
   - `y:4, h:1, x:0` at beat 28 — floating at ceiling → barely duck
+- **Key discovery:** The V3 obstaclesData format DOES support `y` (row offset) field, even though the template doesn't use it. When `y` is omitted, it defaults to 0 (floor). Adding `y` enables floating/ceiling walls.
 - **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed in git)
-- **Status:** ✅ DEPLOYED — awaiting test (all 8 wall types visible at beats 6-28)
+- **Status:** ✅ SUCCESS! All wall types confirmed working including floating walls.

@@ -35,3 +35,14 @@ metadata:
 - Experiment 74: combined MUSIC STAR + Take Me to the Beach into one bundle
 - Notes, bombs, obstacles, arcs (sliders), and chains (burstSliders) all present
 - Knowledge base already updated with arcs and chains conversion in previous updates
+
+## [2026-07-01] update | Floating walls + obstacles y field documented
+- Experiment 74b confirmed: V3 obstaclesData supports `y` (row offset) field
+- Updated [[beatmap-format-v3.md]] obstacles section with `x`, `y`, and floating wall info
+- Updated [[beatmap-conversion-pipeline.md]] obstacle conversion with `y` handling and V2 type→V3 y mapping
+
+## [2026-07-01] create | PS4 Environment System documented
+- Environment is NOT stored in individual song AssetBundles
+- Environment is tied to song's album/pack via Addressable system
+- Full environment control requires resources.assets patching (Milestone 4)
+- Created [[ps4-environment-system.md]] knowledge page

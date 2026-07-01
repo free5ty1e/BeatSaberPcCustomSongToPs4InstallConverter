@@ -78,9 +78,13 @@ Note [2]: `b=9.5, i=2` → uses data[2] (blue, col 2, down-right)
 ### obstaclesData Array
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+| `x` | int | 0 | Starting column (lane) position |
+| `y` | int | 0 | Starting row (vertical offset). 0=floor. Higher values float the wall upward. |
 | `d` | float | 1.0 | Duration in beats |
 | `w` | int | 1 | Width in columns |
-| `h` | int | 5 | Height in rows (5 = full height wall) |
+| `h` | int | 5 | Height in rows. h=5 fills from y to y+5. h=2 with y=3 = floating at head level. |
+
+Floating walls use `y` to offset the obstacle upward, creating walls that require ducking under (y=3, h=2) or ceiling-level obstacles (y=4, h=1). When `y` is omitted it defaults to 0 (floor).
 
 ## Arcs: arcs + arcsData
 
