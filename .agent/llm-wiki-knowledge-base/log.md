@@ -23,3 +23,10 @@ metadata:
 - Experiment 72 confirmed: bomb notes visible in-game alongside custom notes
 - Knowledge base beatmap-conversion-pipeline.md already updated with bomb notes section
 - Log analysis: 751 lines, 2 redirects, 0 errors, clean PlayerData save
+
+## [2026-07-01] update | Slider/burstSlider conversion added
+- Implemented V2 sliders → V3 arcs and V2 burstSliders → V3 chains conversion
+- Updated [[beatmap-format-v3]] with arcs, chains, bombNotes sections
+- Updated [[beatmap-conversion-pipeline]] with arc/chain conversion algorithms
+- Verified: all 3 test songs (notes, bombs, sliders) pass UnityPy verification
+- Roadmap: arcs and chains marked as done

@@ -24,8 +24,8 @@
 - [x] **Obstacles conversion** — `_obstacles` → `obstacles` + `obstaclesData` ✅
 - [x] Environment renders correctly with custom beatmaps ✅
 - [x] **Bomb notes conversion** — `_notes` type=3 → `bombNotes` + `bombNotesData` ✅
-- [ ] **Chain conversion** — preserve/convert custom song's chain data
-- [ ] **Arc conversion** — preserve/convert custom song's arc data
+- [x] **Arc conversion (sliders → arcs)** ✅
+- [x] **Chain conversion (burstSliders → chains)** ✅
 - [ ] Beatmap events from song handled (lighting data — separate from lightshow)
 
 ### Audio Replacement

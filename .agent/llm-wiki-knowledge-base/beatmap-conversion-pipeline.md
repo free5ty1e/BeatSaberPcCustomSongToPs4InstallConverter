@@ -154,6 +154,65 @@ def v2_to_v3_obstacles(v2_obs):
 | `_lineIndex` | (implicit) | V3 doesn't store column position — obstacles span from closest lane |
 | `_type` | (implicit) | Always type 0 (wall) → height = 5 |
 
+## Arc Conversion (Sliders)
+
+V2 `sliders` map to V3 `arcs` + `arcsData`. Arc head/tail properties reference `colorNotesData` entries.
+
+### V2 Slider Format
+```json
+{"b": 8, "c": 1, "x": 1, "y": 0, "d": 6, "mu": 1, "tb": 10, "tx": 3, "ty": 1, "tc": 5, "tmu": 1, "m": 0}
+```
+Fields: `b` (start beat), `c` (color), `x`/`y` (head pos), `d` (head dir), `mu` (head mult), `tb` (tail beat), `tx`/`ty` (tail pos), `tc` (tail dir), `tmu` (tail mult), `m` (mid anchor)
+
+### Conversion Approach
+- Head properties (c, x, y, d) → lookup/index into `colorNotesData` → `hi`
+- Tail properties (tc, tx, ty) → lookup/index into `colorNotesData` → `ti`
+- `mu` → `arcsData[].m`, `tmu` → `arcsData[].tm`
+- `b` → `hb`, `tb` → `tb`
+
+The conversion reuses colorNotesData entries created during note conversion — same deduplication pattern. Default arcsData[0] = `{"m": 0.75, "tm": 0.5}`.
+
+## Chain Conversion (Burst Sliders)
+
+V2 `burstSliders` map to V3 `chains` + `chainsData`.
+
+### V2 BurstSlider Format
+```json
+{"b": 10, "c": 0, "x": 0, "y": 1, "d": 0, "tb": 10.031, "tx": 0, "ty": 2, "sc": 5, "s": 1}
+```
+Fields: `b` (start beat), `c` (color), `x`/`y` (head pos), `d` (head dir), `tb` (end beat), `tx`/`ty` (tail pos), `sc` (segment count), `s` (segment spacing)
+
+### Conversion Algorithm
+```python
+def v2_to_v3_chains(v2_burst_sliders):
+    data_map = {}; data_list = []; result = []
+    for bs in v2_burst_sliders:
+        # chainsData key: (tx, ty, c, s)
+        key = (bs.get('tx', 0), bs.get('ty', 0), bs.get('c', 0), bs.get('s', 1.0))
+        if key not in data_map:
+            data_map[key] = len(data_list)
+            entry = {}
+            if key[0] != 0: entry['tx'] = key[0]
+            if key[1] != 0: entry['ty'] = key[1]
+            entry['s'] = key[3]
+            data_list.append(entry)
+        
+        chain = {'hb': bs['b']}
+        if bs.get('tb', 0) > 0:
+            chain['tb'] = bs['tb']
+        else:
+            # Calculate tail beat from segment count and spacing
+            chain['tb'] = bs['b'] + bs.get('sc', 1) * bs.get('s', 1.0)
+        
+        idx = data_map[key]
+        if idx != 0: chain['i'] = idx
+        result.append(chain)
+    
+    return result, data_list
+```
+
+Default chainsData[0] = `{"s": 0.8}` (no tx/ty — same position as head).
+
 ## m_Script Storage (Critical!)
 
 The converted JSON is stored in the m_Script field of the TextAsset. **m_Script is JUST gzip data — no 4-byte decompressed_size prefix.**

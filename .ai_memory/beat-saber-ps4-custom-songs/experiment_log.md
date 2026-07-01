@@ -952,3 +952,11 @@ Before building v0.35, I analyzed the difference between the original file and `
 - [] Replace audio (FSB5 format) with custom song audio
 - [] Replace cover art in song selection
 - [] Add new song entries to album via resources.assets
+
+### Experiment 73 — Slider/BurstSlider → Arc/Chain conversion [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Added V2 `sliders` → V3 `arcs` + `arcsData` and V2 `burstSliders` → V3 `chains` + `chainsData` conversion.
+- **Song:** "Take Me to the Beach" (89-179 sliders + 2-5 burstSliders per difficulty, 0 regular notes — pure arc/chain map)
+- **Key discovery:** V2 songs store sliders/burstSliders as separate arrays (not `_chains`/`_arcs`). These map to V3 arc/chain structures with shared `colorNotesData` references.
+- **Also built:** VOLUPTE (notes) and MUSIC STAR (bombs) with same pipeline — both 11/11 OK. No regressions.
+- **Status:** ✅ DEPLOYED — awaiting test
