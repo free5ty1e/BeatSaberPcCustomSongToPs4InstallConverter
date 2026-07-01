@@ -30,3 +30,8 @@ metadata:
 - Updated [[beatmap-conversion-pipeline]] with arc/chain conversion algorithms
 - Verified: all 3 test songs (notes, bombs, sliders) pass UnityPy verification
 - Roadmap: arcs and chains marked as done
+
+## [2026-07-01] update | All features combined test
+- Experiment 74: combined MUSIC STAR + Take Me to the Beach into one bundle
+- Notes, bombs, obstacles, arcs (sliders), and chains (burstSliders) all present
+- Knowledge base already updated with arcs and chains conversion in previous updates

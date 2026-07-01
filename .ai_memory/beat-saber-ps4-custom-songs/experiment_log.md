@@ -953,10 +953,31 @@ Before building v0.35, I analyzed the difference between the original file and `
 - [] Replace cover art in song selection
 - [] Add new song entries to album via resources.assets
 
-### Experiment 73 — Slider/BurstSlider → Arc/Chain conversion [DEPLOYED]
+### Experiment 73 — Slider/BurstSlider → Arc/Chain conversion [SUCCESS! ✅]
 - **Date:** 2026-07-01
 - **Change:** Added V2 `sliders` → V3 `arcs` + `arcsData` and V2 `burstSliders` → V3 `chains` + `chainsData` conversion.
 - **Song:** "Take Me to the Beach" (89-179 sliders + 2-5 burstSliders per difficulty, 0 regular notes — pure arc/chain map)
 - **Key discovery:** V2 songs store sliders/burstSliders as separate arrays (not `_chains`/`_arcs`). These map to V3 arc/chain structures with shared `colorNotesData` references.
 - **Also built:** VOLUPTE (notes) and MUSIC STAR (bombs) with same pipeline — both 11/11 OK. No regressions.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Log analysis** (1502 lines, saved as `bs_log_v45_arcs.txt`):
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | Redirects | 4 | Game opened bundle 4x (longer load for arc-heavy) |
+  | PlayerData saved | Yes | Clean menu return |
+  | Error lines | 0 | No crashes or assertions |
+  | Env loaded | 20 | Rolling Stones environment loaded |
+- **Test result:** ✅ SUCCESS! Only arcs visible (no note boxes expected — song has 0 regular notes). Chains may have been visible too but hard to distinguish.
+- **Next step:** Find a song with ALL features (notes + bombs + obstacles + sliders + chains) and test end-to-end.
+
+### Experiment 74 — All features combined: notes + bombs + obstacles + arcs + chains [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains into a single V3 bundle. This tests ALL five feature types rendering simultaneously in-game.
+- **Song:** Combined dataset from two BeatSaver songs (MUSIC STAR notes + Beach arcs)
+- **Conversion breakdown:**
+  - Easy: 181n + 7b + 14o + 89a + 1c
+  - Normal: 284n + 21b + 12o + 98a + 1c
+  - Hard: 350n + 24b + 10o + 117a + 2c
+  - Expert: 517n + 24b + 3o + 172a + 2c
+  - ExpertPlus: 609n + 30b + 3o + 179a + 3c
+- **Verify:** 11/11 objects OK. V3 gzip decompresses correctly.
+- **Status:** ✅ DEPLOYED — awaiting test (all features in one play)
