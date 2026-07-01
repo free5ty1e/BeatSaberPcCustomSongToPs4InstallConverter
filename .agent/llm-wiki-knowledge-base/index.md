@@ -28,6 +28,7 @@ metadata:
 
 ## Audio & Future Work
 - [[ps4-fsb5-audio|PS4 FSB5 Audio Format]] — Audio format analysis, FSB5 structure (for future replacement)
+- [[ps4-hevag-fsb5-audio|PS4 HEVAG + FSB5 Audio Format]] — HEVAG ADPCM encoder, FSB5 container structure, audio replacement pipeline
 
 ## Environment & Song Database
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database

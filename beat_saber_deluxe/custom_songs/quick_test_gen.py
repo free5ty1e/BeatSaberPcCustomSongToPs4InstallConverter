@@ -25,10 +25,16 @@ Feature timing (beats):
 """
 import UnityPy, json, struct, gzip, sys, os, math, io
 
+# Add tools directory to path for hevag_encoder import
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+from hevag_encoder import (
+    pcm_to_hevag, build_fsb5, generate_test_tone_pcm,
+    parse_fsb5, DEFAULT_FSB5_TEMPLATE
+)
+
 OUTPUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
     os.path.dirname(__file__), "quick_test.bundle")
 TEMPLATE = "/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/startmeup"
-FSB5_TEMPLATE = "/workspace/ps4_dump/beatsaber_song_exports/CAB-0183cf5e66ff23724b3e1bc22e7ea951.resource"
 
 # ===== BEATMAP DATA (V3 format) =====
 V3_DATA = {
@@ -73,92 +79,19 @@ V3_DATA = {
     "spawnRotations": [], "spawnRotationsData": [],
 }
 
-# ===== HEVAG AUDIO ENCODER =====
-# HEVAG is PS4 ADPCM format used in FSB5 containers
-HEVAG_COEFFS = [[0, 0], [60, 0], [115, -52], [98, -55], [122, -60]]
+# ===== AUDIO: delegated to tools/hevag_encoder.py =====
+# hevag_encoder provides: pcm_to_hevag(), build_fsb5(), generate_test_tone_pcm()
 
-def _hevag_block(samples, h1, h2):
-    best_pred = best_shift = 0
-    best_err = float('inf')
-    for pred in range(len(HEVAG_COEFFS)):
-        c1, c2 = HEVAG_COEFFS[pred]
-        for shift in range(13):
-            err = eh1 = h1; eh2 = h2
-            for s in samples:
-                p = ((eh1 * c1 + eh2 * c2) + 32) >> 6
-                d = max(-32768, min(32767, s - p))
-                n = max(-8, d >> shift) & 0xF if d < 0 else min(7, d >> shift) & 0xF
-                err += (d - ((n | 0xF0) << shift if n & 0x8 else n << shift)) ** 2
-                eh2, eh1 = eh1, s
-            if err < best_err: best_err, best_pred, best_shift = err, pred, shift
-    c1, c2 = HEVAG_COEFFS[best_pred]
-    frame = bytearray(16)
-    struct.pack_into('<H', frame, 0, best_pred | (best_shift << 4))
-    for i in range(28):
-        p = ((h1 * c1 + h2 * c2) + 32) >> 6
-        d = max(-32768, min(32767, samples[i] - p))
-        n = max(-8, d >> best_shift) & 0xF if d < 0 else min(7, d >> best_shift) & 0xF
-        bi = 1 + (i // 2)
-        if i % 2 == 0: frame[bi] = (frame[bi] & 0xF0) | n
-        else: frame[bi] = (frame[bi] & 0x0F) | (n << 4)
-        h2, h1 = h1, samples[i]
-    return bytes(frame), h1, h2
-
-def pcm_to_hevag(pcm, channels=2):
-    samples = [struct.unpack_from('<h', pcm, i*2)[0] for i in range(len(pcm)//2)]
-    left = samples[0::2] if channels == 2 else samples
-    right = samples[1::2] if channels == 2 else []
-    result = bytearray()
-    frames = len(left) // 28
-    h1_l = h2_l = h1_r = h2_r = 0
-    for i in range(frames):
-        fl, h1_l, h2_l = _hevag_block(left[i*28:(i+1)*28], h1_l, h2_l)
-        result.extend(fl)
-        if right:
-            fr, h1_r, h2_r = _hevag_block(right[i*28:(i+1)*28], h1_r, h2_r)
-            result.extend(fr)
-    return bytes(result)
-
-def make_test_audio():
-    """Generate 3-second test audio: 440Hz -> 880Hz -> 660Hz tones"""
-    sr, ch, dur = 44100, 2, 3
-    pcm = bytearray()
-    for i in range(sr * dur):
-        t = i / sr
-        if t < 0.5: s = int(math.sin(2*math.pi*440*t) * 32767 * 0.4)
-        elif t < 1.0: s = int(math.sin(2*math.pi*880*t) * 32767 * 0.4)
-        elif t < 1.5: s = 0
-        elif t < 2.0: s = int(math.sin(2*math.pi*660*t) * 32767 * 0.4)
-        else: s = 0
-        pcm.extend(struct.pack('<h', s))
-        pcm.extend(struct.pack('<h', s))
-    return bytes(pcm), sr, ch, dur
-
-def build_fsb5(pcm_data, sample_rate, channels):
-    """Build an FSB5 file with HEVAG-encoded audio"""
-    existing = open(FSB5_TEMPLATE, "rb").read()
-    sample_hdr = bytearray(existing[16:16+900])
-    hevag = pcm_to_hevag(pcm_data, channels)
-    struct.pack_into('<I', sample_hdr, 4, len(hevag))
-    buf = io.BytesIO()
-    buf.write(b'FSB5')
-    buf.write(struct.pack('<I', 1)); buf.write(struct.pack('<I', 1))
-    buf.write(struct.pack('<I', 900)); buf.write(bytes(sample_hdr))
-    buf.write(hevag)
-    return buf.getvalue(), len(hevag)
 
 def main():
     if not os.path.isdir(os.path.dirname(TEMPLATE)):
         print(f"Error: template bundle not found at {TEMPLATE}")
         return 1
-    if not os.path.exists(FSB5_TEMPLATE):
-        print(f"Error: FSB5 template not found at {FSB5_TEMPLATE}")
-        return 1
-
     # Generate audio
-    pcm_data, sr, ch, dur = make_test_audio()
-    fsb5_bytes, hevag_size = build_fsb5(pcm_data, sr, ch)
-    print(f"Audio: {dur}s, PCM={len(pcm_data)}b, HEVAG={hevag_size}b, FSB5={len(fsb5_bytes)}b")
+    pcm_data = generate_test_tone_pcm(duration=3.0, sample_rate=44100, channels=2)
+    sr, ch, dur = 44100, 2, 3.0
+    fsb5_bytes = build_fsb5(pcm_to_hevag(pcm_data, channels=ch), sr, ch)
+    print(f"Audio: {dur}s, PCM={len(pcm_data)}b, FSB5={len(fsb5_bytes)}b")
 
     # Build V3 beatmap JSON
     json_bytes = json.dumps(V3_DATA, separators=(',', ':')).encode('utf-8')

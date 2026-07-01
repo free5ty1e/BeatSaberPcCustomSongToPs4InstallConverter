@@ -998,5 +998,7 @@ Before building v0.35, I analyzed the difference between the original file and `
   6. Update audio.gz TextAsset (sample count, frequency, bpm data)
 - **Result:** `quick_test.bundle` is now 216 KB (down from 12MB!)
 - **Content:** 9n + 3b + 8o + 2a + 2c + 3-second test audio
-- **Script:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` — generates everything
-- **Status:** ✅ READY FOR DEPLOY — PS4 unreachable during build, waiting for power-on
+- **HEVAG encoder extracted:** `beat_saber_deluxe/tools/hevag_encoder.py` — standalone CLI tool + importable module
+- **Script:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` — now imports from hevag_encoder
+- **Knowledge base:** `ps4-hevag-fsb5-audio.md` — full audio pipeline documented
+- **Status:** ✅ READY FOR DEPLOY — PS4 was powered on
