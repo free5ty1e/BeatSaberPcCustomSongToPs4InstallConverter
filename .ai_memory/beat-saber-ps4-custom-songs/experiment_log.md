@@ -901,6 +901,8 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Status:** ✅ DEPLOYED — awaiting test
 
 ### Experiment 71 — THE FIX: m_Script is just gzip, no decompressed_size prefix! (v0.43) [SUCCESS! ✅]
+- **Knowledge file:** [[m_script-gzip-only]]
+- **Related fixes:** [[save-typetree-over-set-raw-data]], [[surrogateescape-encoding]]
 - **Date:** 2026-07-01
 - **ROOT CAUSE FOUND:** The m_Script field in the beatmap TextAsset is JUST gzip data — NO 4-byte decompressed_size prefix! My conversion was adding `struct.pack('<I', len(json))` before the gzip stream, shifting the gzip by 4 bytes. The game saw `dc 06 00 00` instead of `1f 8b` gzip magic and rejected the beatmap.
 - **Fix:** Remove the decompressed_size prefix. m_Script = `gzip.compress(json_data)` only.

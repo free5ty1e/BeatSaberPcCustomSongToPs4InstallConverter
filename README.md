@@ -9,7 +9,21 @@ Pipeline to convert custom Beat Saber PC songs into installable PS4 packages com
 
 ## Status
 
-This is still in pre-alpha stages of development; the pipeline does not yet produce something playable.
+✅ **CUSTOM BEATMAPS WORKING!** The pipeline now produces playable bundles on PS4.
+
+**Latest:** v0.43 — First successful end-to-end test: custom VOLUPTE notes loaded with full Rolling Stones environment on PS4.
+
+### Current Capabilities
+- ✅ Plugin loads and redirects song files to custom AssetBundles
+- ✅ Beatmap data replacement with V3 format conversion (`_notes` → `colorNotes` + `colorNotesData`)
+- ✅ Custom obstacles from song (when present)
+- ✅ Full environment rendering (Rolling Stones pack environment tested)
+- ✅ Targeted redirect — only the modified song is affected
+
+### In Progress
+- 🔄 Audio replacement (FSB5 format — needs FMOD tools)
+- 🔄 Cover art injection
+- 🔄 Adding new songs to album list via resources.assets
 
 ## Getting Started
 
