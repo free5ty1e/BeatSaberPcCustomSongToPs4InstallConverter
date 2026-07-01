@@ -18,3 +18,8 @@ metadata:
 - New content: V2→V3 bomb notes algorithm, bombNotes format, V3 bombNotesData (position only)
 - Marked `Bomb notes conversion` as completed in roadmap
 - Experiment 72 deployed with MUSIC STAR test song (14-40 bombs per difficulty)
+
+## [2026-07-01] update | Bomb notes conversion SUCCESS
+- Experiment 72 confirmed: bomb notes visible in-game alongside custom notes
+- Knowledge base beatmap-conversion-pipeline.md already updated with bomb notes section
+- Log analysis: 751 lines, 2 redirects, 0 errors, clean PlayerData save

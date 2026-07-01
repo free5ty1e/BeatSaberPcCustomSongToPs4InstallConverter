@@ -918,7 +918,7 @@ Before building v0.35, I analyzed the difference between the original file and `
   - No error/exception/failure/crash lines found
   - Environment cascade: scenes → pack_assets → shaders → scripts → core_assets
 
-### Experiment 72 — Bomb notes conversion + MUSIC STAR test [DEPLOYED]
+### Experiment 72 — Bomb notes conversion + MUSIC STAR test [SUCCESS! ✅]
 - **Date:** 2026-07-01
 - **Change:** Added bomb note conversion to the V2→V3 pipeline. V2 `_notes` with `_type=3` are now separated from regular notes and placed in `bombNotes` + `bombNotesData` arrays. BombNotesData only stores position (x, y) — no color or direction. Uses the same deduplication pattern as colorNotes (default data[0] = `{"x": 3}`).
 - **Song:** MUSIC STAR (M.G.G. Original) — has 14-40 bombs across all difficulties plus 6-37 obstacles
@@ -929,7 +929,15 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Expert: 517n + 32b + 6o
   - ExpertPlus: 609n + 40b + 6o
 - **Verify:** All 11 objects pass UnityPy verification. Gzip decompresses correctly.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Log analysis** (751 lines, saved as `bs_log_v44_bombs.txt`):
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | Redirects | 2 | Game opened bundle twice |
+  | Env loaded | Yes | Rolling Stones environment (from template) |
+  | PlayerData saved | Yes | Clean menu return |
+  | Error lines | 0 | No crashes or assertions |
+- **Test result:** ✅ SUCCESS! Bombs confirmed visible alongside custom notes. MUSIC STAR's 14-40 bombs per difficulty appeared correctly.
+- **Next step:** Chains, arcs, or events conversion
 
 ### What's Working Now
 - ✅ Plugin loads without crash, shows correct version notification

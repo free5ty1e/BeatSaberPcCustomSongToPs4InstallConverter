@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 v0.44 PROTOTYPE — Bomb notes conversion added! MUSIC STAR deployed with 14-40 bombs per difficulty. AWAITING TEST.
+**Current Status:** ✅ **Bomb notes conversion SUCCESS!** MUSIC STAR's 14-40 bombs per difficulty confirmed visible in-game alongside custom notes. Full play cycle clean. Roadmap: bombs done, chains/arcs/events/audio remaining.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
