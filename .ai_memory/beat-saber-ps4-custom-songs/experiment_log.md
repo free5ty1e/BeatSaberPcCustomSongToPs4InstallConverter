@@ -1002,3 +1002,11 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Script:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` — now imports from hevag_encoder
 - **Knowledge base:** `ps4-hevag-fsb5-audio.md` — full audio pipeline documented
 - **Status:** ✅ READY FOR DEPLOY — PS4 was powered on
+
+### Experiment 75b — Audio freeze fix: correct FSB5 header + optimized encoder
+- **Date:** 2026-07-01
+- **Issue:** First audio replacement attempt (wrong FSB5 header template) caused the game to hang on audio start. The header was from a **different song's FSB5 export** (46.9% match with correct header).
+- **Fix 1—Correct template:** Now using Start Me Up's own FSB5 900-byte sample header (bytes 16-915 of the original CAB resource). Template saved to `fsb5_header_template.bin`.
+- **Fix 2—Hevag encoder optimization:** Added silence fast path (pre-computed zero frame), early termination on perfect encoding, and batch PCM reading via `struct.unpack` format string instead of per-sample loop.
+- **Encoder speed:** Silence frames: 211K/s, Tone frames: 229/s (brute-force over 5×13 parameters ×28 samples is the bottleneck)
+- **Status:** ✅ DEPLOYED AND READY FOR TEST — corrected 216KB bundle on PS4

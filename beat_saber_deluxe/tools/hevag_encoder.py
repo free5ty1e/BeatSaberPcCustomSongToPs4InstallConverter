@@ -38,8 +38,6 @@ DEFAULT_FSB5_TEMPLATE = os.path.join(
     os.path.dirname(__file__) or ".",
     "..", "custom_songs", "fsb5_header_template.bin"
 )
-# Fallback: try the extracted game file
-FALLBACK_TEMPLATE = "/workspace/ps4_dump/beatsaber_song_exports/CAB-0183cf5e66ff23724b3e1bc22e7ea951.resource"
 
 
 # ==============================================================================
@@ -63,6 +61,9 @@ HEVAG_FRAME_SIZE = 16          # bytes per encoded frame
 # HEVAG Encoding
 # ==============================================================================
 
+# Pre-computed silence frame: predictor=0, shift=0, all nibbles=0
+_SILENCE_FRAME = bytes(16)  # All zeros: header(0x0000) + 14 zero nibbles
+
 def hevag_encode_block(samples, h1=0, h2=0):
     """
     Encode 28 PCM16 samples into one HEVAG frame (16 bytes).
@@ -74,6 +75,10 @@ def hevag_encode_block(samples, h1=0, h2=0):
     Returns:
         (bytes of frame, new_h1, new_h2)
     """
+    # Fast path: silence / all-zero samples
+    if all(s == 0 for s in samples):
+        return _SILENCE_FRAME, 0, 0
+
     best_pred = best_shift = 0
     best_err = float('inf')
 
@@ -98,6 +103,10 @@ def hevag_encode_block(samples, h1=0, h2=0):
                 eh2, eh1 = eh1, s
             if err < best_err:
                 best_err, best_pred, best_shift = err, pred, shift
+            if best_err == 0:  # Perfect encoding found, early exit
+                break
+        if best_err == 0:
+            break
 
     # Encode with the best settings
     c1, c2 = HEVAG_COEFFS[best_pred]
@@ -126,6 +135,11 @@ def pcm_to_hevag(pcm_data, channels=2):
     """
     Convert PCM16 interleaved audio bytes to HEVAG ADPCM bytes.
 
+    Uses efficient batch conversion:
+    - Reads all PCM samples at once via struct.unpack
+    - Uses fast silence path (all-zero frames are instant)
+    - Pre-allocates result buffer
+
     Args:
         pcm_data: bytes of signed 16-bit PCM samples, interleaved
         channels: 1 (mono) or 2 (stereo)
@@ -133,25 +147,27 @@ def pcm_to_hevag(pcm_data, channels=2):
     Returns:
         bytes: HEVAG-encoded audio data
     """
-    samples = []
-    for i in range(len(pcm_data) // 2):
-        samples.append(struct.unpack_from('<h', pcm_data, i * 2)[0])
+    # Unpack all samples at once (much faster than per-sample loop)
+    samples = list(struct.unpack_from('<' + 'h' * (len(pcm_data) // 2), pcm_data))
+    per_ch = len(samples) // channels
+    result = bytearray((per_ch // HEVAG_SAMPLES_PER_FRAME) * HEVAG_FRAME_SIZE * channels)
+    offset = 0
 
     left = samples[0::2] if channels == 2 else samples
     right = samples[1::2] if channels == 2 else []
-
-    result = bytearray()
-    frames = len(left) // HEVAG_SAMPLES_PER_FRAME
+    frames = per_ch // HEVAG_SAMPLES_PER_FRAME
     h1_l = h2_l = h1_r = h2_r = 0
 
     for i in range(frames):
-        bl = left[i * HEVAG_SAMPLES_PER_FRAME:(i + 1) * HEVAG_SAMPLES_PER_FRAME]
-        fl, h1_l, h2_l = hevag_encode_block(bl, h1_l, h2_l)
-        result.extend(fl)
+        start = i * HEVAG_SAMPLES_PER_FRAME
+        end = start + HEVAG_SAMPLES_PER_FRAME
+        fl, h1_l, h2_l = hevag_encode_block(left[start:end], h1_l, h2_l)
+        result[offset:offset + HEVAG_FRAME_SIZE] = fl
+        offset += HEVAG_FRAME_SIZE
         if right:
-            br = right[i * HEVAG_SAMPLES_PER_FRAME:(i + 1) * HEVAG_SAMPLES_PER_FRAME]
-            fr, h1_r, h2_r = hevag_encode_block(br, h1_r, h2_r)
-            result.extend(fr)
+            fr, h1_r, h2_r = hevag_encode_block(right[start:end], h1_r, h2_r)
+            result[offset:offset + HEVAG_FRAME_SIZE] = fr
+            offset += HEVAG_FRAME_SIZE
 
     return bytes(result)
 
@@ -302,30 +318,30 @@ def read_raw_pcm(path, sample_rate=44100, channels=2, bits=16):
 def _load_fsb5_header_template(template_path=None):
     """
     Load the 900-byte sample header from an existing PS4 FSB5 file.
-    This preserves DSP state that the PS4 expects.
+
+    Accepts either:
+    - A full FSB5 file (starts with "FSB5") -> extracts bytes 16-915
+    - A raw 900-byte sample header file -> uses as-is
     """
-    paths_to_try = []
-
+    paths = []
     if template_path:
-        paths_to_try.append(template_path)
-    elif os.path.exists(DEFAULT_FSB5_TEMPLATE):
-        paths_to_try.append(DEFAULT_FSB5_TEMPLATE)
-    else:
-        paths_to_try.append(DEFAULT_FSB5_TEMPLATE)
+        paths.append(template_path)
+    if os.path.exists(DEFAULT_FSB5_TEMPLATE):
+        paths.append(DEFAULT_FSB5_TEMPLATE)
 
-    if os.path.exists(FALLBACK_TEMPLATE):
-        paths_to_try.append(FALLBACK_TEMPLATE)
-
-    for p in paths_to_try:
+    for p in paths:
         if os.path.exists(p):
             with open(p, 'rb') as f:
                 data = f.read()
             if data[:4] == b'FSB5':
                 return bytearray(data[16:16 + 900])
+            if len(data) == 900:
+                return bytearray(data)
 
     raise FileNotFoundError(
-        f"No FSB5 template found. Tried: {paths_to_try}\n"
-        "Create one by extracting from a game FSB5 or use --template-path."
+        f"No FSB5 template found. Tried: {paths}\n"
+        "Run quick_test_gen.py first to create the header template, "
+        "or specify --template-path."
     )
 
 

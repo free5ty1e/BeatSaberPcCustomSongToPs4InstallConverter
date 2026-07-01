@@ -29,7 +29,7 @@ import UnityPy, json, struct, gzip, sys, os, math, io
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
 from hevag_encoder import (
     pcm_to_hevag, build_fsb5, generate_test_tone_pcm,
-    parse_fsb5, DEFAULT_FSB5_TEMPLATE
+    parse_fsb5
 )
 
 OUTPUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(

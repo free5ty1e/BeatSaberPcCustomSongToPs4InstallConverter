@@ -53,3 +53,11 @@ metadata:
 - FSB5 container creation with proper PS4 format
 - Bundle size reduced from 12MB to 216KB
 - Script: quick_test_gen.py now generates everything (beatmaps + audio)
+
+## [2026-07-01] update | Audio pipeline: HEVAG encoder extracted + FSB5 fix
+- Extracted `tools/hevag_encoder.py` — standalone CLI tool + importable module
+- Created [[ps4-hevag-fsb5-audio.md]] documenting the full audio pipeline
+- Fixed: wrong FSB5 header template was causing game freeze (was using different song's DSP coefficients)
+- Corrected template now uses Start Me Up's own FSB5 header (bytes 16-915)
+- Optimized encoder: silence fast path (211K frames/s), early termination, batch PCM reading
+- Updated quick_test_gen.py to import from standalone module

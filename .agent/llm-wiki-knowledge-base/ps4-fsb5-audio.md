@@ -5,45 +5,52 @@ metadata:
   type: reference
 ---
 
-# PS4 FSB5 Audio Format
+# PS4 FSB5 Audio Format (Legacy Reference)
 
-> **Note:** Audio replacement is NOT yet implemented. This page documents what we know about the format for future work.
+> **⚠️ This page is superseded.** Audio replacement IS implemented. See the authoritative page: [[ps4-hevag-fsb5-audio]]
 
-## Audio File Location
+## Quick Summary
 
-Each song's audio is stored in the song's AssetBundle as a TextAsset:
-- Object class: 49 (TextAsset)
-- Name: `<LevelId>.audio.gz` (e.g., `StartMeUp.audio.gz`)
-- Contains: Gzip-compressed data with song metadata (checksum, sample count, frequency)
+The PS4 version of Beat Saber stores audio in **FSB5 containers** with **HEVAG ADPCM** encoding.
 
-The actual audio stream is stored externally in an **FSB5** file embedded in the resources.assets archive.
+### Components in the Bundle
 
-## FSB5 Format
+| Component | Class | Description |
+|-----------|-------|-------------|
+| AudioClip (e.g. `StartMeUp`) | 83 | References the FSB5 audio data via `m_Resource` |
+| CAB-xxx.resource | binary blob | Raw FSB5 file containing HEVAG-encoded audio |
+| audio.gz (TextAsset) | 49 | Gzip-compressed JSON with song metadata |
 
-FSB5 (FMOD Studio Bank v5) is a proprietary audio format by Firelight Technologies. It stores:
-- Multiple audio samples (compressed or uncompressed)
-- Sample metadata (frequency, channels, loop points)
-- Optional streaming data
+### Audio Replacement Pipeline
 
-## AudioClip Reference
+```python
+# 1. Encode PCM to HEVAG
+hevag = pcm_to_hevag(pcm_data, channels=2)
 
-The AudioClip object (class 83) in the bundle points to:
-- `m_Resource` → external resource file + offset
-- The resource file is part of the game's main assets archive (resources.assets or similar)
+# 2. Wrap in FSB5 container (uses song-specific header template)
+fsb5 = build_fsb5(hevag, sample_rate=44100)
 
-## Current State
+# 3. Replace CAB resource in bundle
+new_res = EndianBinaryReader(fsb5)
+bf.files['CAB-xxx.resource'] = new_res
 
-We are NOT replacing audio yet. The current pipeline:
-1. Replaces beatmap data (notes, obstacles) — ✅ Working
-2. Keeps template audio — ✅ Verified (Start Me Up audio plays)
-3. Audio replacement requires FSB5 creation tooling (fsbank or similar FMOD tools)
+# 4. Update AudioClip
+audio_clip['m_Resource']['m_Size'] = len(fsb5)
+audio_clip['m_Length'] = dur_sec
 
-## Future Approach
+# 5. Update audio.gz metadata
+audio_gz['m_Script'] = gzip.compress(json.dumps({...}).encode())
+```
 
-To replace audio, we would need to:
-1. Create FSB5-encoded audio from the custom song's audio file
-2. Replace the AudioClip's `m_Resource` reference to point to the new FSB5 data
-3. Update the AudioClip metadata (length, sample rate)
-4. Potentially modify the `.audio.gz` TextAsset with updated song metadata
+### ⚠️ Critical: Header Template Must Match the Song
 
-See also: [[assetbundle-structure]], [[beatmap-conversion-pipeline]]
+The 900-byte FSB5 sample header contains **song-specific DSP coefficients**. Using a header from a different song causes the game to **freeze/hang** when audio starts playing. Always use the header from the SAME song the bundle is based on.
+
+### Tool
+
+```bash
+python3 beat_saber_deluxe/tools/hevag_encoder.py --generate-tone --duration 3 -o audio.fsb5
+python3 beat_saber_deluxe/tools/hevag_encoder.py -i song.wav -o audio.fsb5
+```
+
+See [[ps4-hevag-fsb5-audio]] for full documentation.

@@ -36,13 +36,24 @@ The PS4 FSB5 files use the following structure:
 
 The 900-byte sample header contains:
 - **Bytes 0-3**: Name offset (0 = no name / default)
-- **Bytes 4-7**: Audio data size (bytes of HEVAG data)
+- **Bytes 4-7**: Audio data size (bytes of HEVAG data) — **must be updated when replacing audio**
 - **Bytes 8-11**: Offset (0 = start of audio data)
-- **Bytes 12-13**: Format code (1 = HEVAG)
+- **Bytes 12-13**: Format code (1 = HEVAG, 0 = PCM)
 - **Bytes 14-31**: Various DSP coefficients and state
 - **Bytes 32-899**: Additional DSP tables (reverb, filters, etc.)
 
 The full 900-byte structure is not fully understood. We use a **template approach**: copy the header from an existing working FSB5 and update only the data size field (bytes 4-7).
+
+### ⚠️ Critical: Header Template Must Match the Song
+
+The 900-byte sample header contains **song-specific DSP coefficients** (bytes 36-899). Using a header from a different song causes the game to **freeze/hang silently** when audio starts playing.
+
+- **Always use the header from the SAME song's FSB5** that the bundle is based on.
+- For the Start Me Up template, extract from `CAB-6c9e66546e3e23434517417298a18b91.resource` inside the template bundle.
+- A pre-extracted template is at `beat_saber_deluxe/custom_songs/fsb5_header_template.bin`.
+- The tool (`hevag_encoder.py`) uses this template by default. If missing, it falls back to loading from the Start Me Up bundle directly.
+
+Two different song's FSB5 headers can differ by **~47% of bytes** (478/900 bytes). The template is NOT interchangeable between songs.
 
 ## HEVAG ADPCM Encoding
 
@@ -134,9 +145,24 @@ from hevag_encoder import pcm_to_hevag, build_fsb5, generate_test_tone_pcm
 ## Known Limitations
 
 - The 900-byte FSB5 sample header is **copied from a template** (an existing game FSB5). We only modify the data size field. The exact header structure is undocumented.
-- HEVAG encoding is **computationally expensive** due to the brute-force search over 5 predictors × 13 shifts per frame. For real-time conversion of full-length songs, optimization may be needed.
+- HEVAG encoding is **computationally expensive** for non-silence audio:
+  - **Silence frames**: ~211,000 frames/s (fast path uses pre-computed zero frames)
+  - **Tone/real frames**: ~229 frames/s (due to brute-force search over 5 predictors × 13 shifts × 28 samples)
+  - Full-length song encoding (3 min) would take ~45 minutes for the tone portions
+  - Optimization idea: use numpy vectorization or decrease shift/predictor search granularity
 - Only **PCM16 WAV** input is supported. Other formats must be converted first (e.g., with FFmpeg).
+- The HEVAG encoder uses **history from original samples** (not reconstructed). The PS4 hardware decoder uses reconstructed history, which may cause slight drift on complex audio. For test tones this effect is negligible.
+
+## Encoder Optimizations
+
+The `hevag_encoder.py` tool includes these performance optimizations:
+
+1. **Silence fast path**: If all 28 samples in a block are zero, returns a pre-computed zero frame instantly (header=0x0000, all nibbles=0)
+2. **Early termination**: If a predictor+shift combination achieves zero error (perfect encoding), the search stops immediately
+3. **Batch PCM reading**: Uses `struct.unpack` with a single format string to read all samples at once instead of per-sample loops
+4. **Pre-allocated result buffer**: Allocates the exact output size upfront and uses slice assignment instead of repeated `.extend()` calls
 
 ## Related
 - [[ps4-environment-system]] — How songs are mapped to environments (separate from audio)
 - [[beatmap-conversion-pipeline]] — The full custom song conversion pipeline
+- [[ps4-fsb5-audio]] — Legacy overview page (now redirected here)
