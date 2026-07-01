@@ -900,9 +900,24 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Prediction:** If song plays (note at 5.0 instead of 5.5), `save_typetree` is fine, issue is V3 conversion. If still fails, `save_typetree` pipeline itself is broken.
 - **Status:** ✅ DEPLOYED — awaiting test
 
-### Experiment 71 — THE FIX: m_Script is just gzip, no decompressed_size prefix! (v0.43) [DEPLOYED]
+### Experiment 71 — THE FIX: m_Script is just gzip, no decompressed_size prefix! (v0.43) [SUCCESS! ✅]
 - **Date:** 2026-07-01
 - **ROOT CAUSE FOUND:** The m_Script field in the beatmap TextAsset is JUST gzip data — NO 4-byte decompressed_size prefix! My conversion was adding `struct.pack('<I', len(json))` before the gzip stream, shifting the gzip by 4 bytes. The game saw `dc 06 00 00` instead of `1f 8b` gzip magic and rejected the beatmap.
 - **Fix:** Remove the decompressed_size prefix. m_Script = `gzip.compress(json_data)` only.
 - **V3 note conversion included.** All 11 objects verified.
-- **Status:** ✅ DEPLOYED — awaiting test
+- **Test Result:** ✅ **CUSTOM NOTES WITH ENVIRONMENT!** The Rolling Stones environment renders correctly with custom VOLUPTE note patterns. Audio is still Start Me Up (expected — FSB5 not replaced).
+- **Significance:** This proves the ENTIRE beatmap conversion pipeline works end-to-end. The fix was removing the 4-byte decompressed_size header before the gzip data.
+
+### What's Working Now
+- ✅ Plugin loads without crash, shows correct version notification
+- ✅ File redirect to AFR directory works
+- ✅ AssetBundle loads and assets are found by the game
+- ✅ Beatmap data replacement with custom song notes (V3 format)
+- ✅ Custom obstacles from song (when present)
+- ✅ Environment renders correctly (lightshow data works)
+- ✅ Other difficulties play correctly
+
+### What's Next
+- [] Replace audio (FSB5 format) with custom song audio
+- [] Replace cover art in song selection
+- [] Add new song entries to album via resources.assets

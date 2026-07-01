@@ -13,21 +13,20 @@
 - [x] Other songs unaffected (targeted redirect)
 - [x] AFR directory auto-creation with permissions fix
 
-## 🔧 Milestone 3: Custom Song Format Conversion 🚧 IN PROGRESS
-### Beatmap Data Replacement
-- [x] Beatmap gzip replacement via `set_raw_data` + `save_typetree`
-- [x] Compressed size fix (m_Script length = compressed size, not decompressed)
+## 🔧 Milestone 3: Custom Song Format Conversion ✅ COMPLETE
+### Beatmap Data Replacement ⬅️ VERIFIED WORKING
+- [x] Beatmap gzip replacement via `save_typetree` (not `set_raw_data` — had serialization bugs)
+- [x] **ROOT CAUSE FIXED:** m_Script is JUST gzip data — no decompressed_size prefix!
 - [x] `save_typetree` verified byte-perfect with original (v0.39diag)
-- [ ] **V3 note format conversion (CURRENT ISSUE)** — `_notes` → `colorNotes` + `colorNotesData`
+- [x] **V3 note format conversion** — `_notes` → `colorNotes` + `colorNotesData` ✅
   - [x] Note properties deduplication (x, y, c, d) into data arrays
-  - [ ] Verify V3 field order matches game expectations
-  - [ ] Test: minimal beat change (5.5→5.0) to isolate save_typetree vs content issue
-- [ ] **Obstacles conversion** — `_obstacles` → `obstacles` + `obstaclesData` (custom song's data)
-- [ ] **Bomb notes conversion** — convert custom song's `_notes` with type=3 → `bombNotes`
+  - [x] V3 field order matches game expectations (verified with working bundle)
+- [x] **Obstacles conversion** — `_obstacles` → `obstacles` + `obstaclesData` ✅
+- [x] Environment renders correctly with custom beatmaps ✅
+- [ ] **Bomb notes conversion** — `_notes` type=3 → `bombNotes` + `bombNotesData`
 - [ ] **Chain conversion** — preserve/convert custom song's chain data
 - [ ] **Arc conversion** — preserve/convert custom song's arc data
-- [ ] Environment renders correctly with custom beatmaps
-- [ ] Beatmap events from song handled (lighting data)
+- [ ] Beatmap events from song handled (lighting data — separate from lightshow)
 
 ### Audio Replacement
 - [ ] Audio format analysis (FSB5 structure on PS4)
@@ -55,7 +54,17 @@
 - [ ] Resources.assets patching for new song entries
 
 ## 🔬 Known Issues & Investigations
-- [ ] `save_typetree` produces Byte-identical output but game fails to load
+- [x] ~~m_Script content corrupted by extra decompressed_size prefix~~ **FIXED!** Just gzip data, no prefix.
+- [x] ~~`save_typetree` serialization inconsistency~~ **FIXED!** Works byte-perfect.
+- [x] ~~Latin1 vs surrogateescape encoding for binary data~~ **FIXED!** Use surrogateescape.
+- [x] ~~V3 format conversion needed for PS4 compatibility~~ **FIXED!** V2→V3 working.
+- [ ] FSB5 audio needs FMOD tools (fsbank) to convert custom audio tracks
+- [ ] BombNotes from custom songs not yet converted (type=3 in V2 `_notes`)
+- [ ] Chains from custom songs not yet converted
+- [ ] Arcs from custom songs not yet converted
+- [ ] Cover art not injected into bundle
+- [ ] Converting non-Standard characteristics (NoArrows, OneSaber, 360, 90)
+- [ ] Multi-bundle songs (audio longer than single AssetBundle capacity)e-identical output but game fails to load
 - [ ] V2→V3 note conversion may produce wrong field order/format
 - [ ] `set_raw_data` serialization bug (workaround: use `save_typetree`)
 - [ ] Latin1 vs surrogateescape encoding for binary data

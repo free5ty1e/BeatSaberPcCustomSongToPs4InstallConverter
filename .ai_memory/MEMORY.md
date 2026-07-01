@@ -6,6 +6,7 @@
 ## 🎯 Project Context
 - [Project Goal](../.agent/goal.md) — Mission, three-tier approach, success criteria
 - [Project Summary](../.agent/project_summary.md) — Experiment timeline, build system, test procedures
+- [Roadmap](../.agent/roadmap.md) — Feature milestones, task checklists, known issues
 - [Agent Rules](../.agent/rules.md) — Operating conventions for AI agents
 
 ## 🔬 Key Technical Findings
