@@ -907,6 +907,14 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **V3 note conversion included.** All 11 objects verified.
 - **Test Result:** ✅ **CUSTOM NOTES WITH ENVIRONMENT!** The Rolling Stones environment renders correctly with custom VOLUPTE note patterns. Audio is still Start Me Up (expected — FSB5 not replaced).
 - **Significance:** This proves the ENTIRE beatmap conversion pipeline works end-to-end. The fix was removing the 4-byte decompressed_size header before the gzip data.
+- **Log analysis** (753 lines, saved as `bs_log_v43_success.txt`):
+  - 2 startmeup redirects ✅ (game opened bundle twice, standard for Beat Saber)
+  - Rolling Stones environment loaded AFTER redirect (scenes + assets bundles) ✅
+  - No other songs' BeatmapLevelData files accessed (redirect is targeted) ✅
+  - PlayerData.dat saved (game recorded play/song exit cleanly)
+  - 750 open calls total — full song play with menu return
+  - No error/exception/failure/crash lines found
+  - Environment cascade: scenes → pack_assets → shaders → scripts → core_assets
 
 ### What's Working Now
 - ✅ Plugin loads without crash, shows correct version notification
