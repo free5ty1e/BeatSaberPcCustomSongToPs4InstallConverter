@@ -128,8 +128,8 @@ V3 chains represent burst slider notes (a sequence of rapid linked notes).
 |-------|------|---------|-------------|
 | `hb` | float | required | Head beat (start beat) |
 | `tb` | float | required | Tail beat (end beat of last segment) |
-| `i` | int | 0 | Index into `chainsData` |
-| `ci` | int | 0 | Color note index (links to color note for properties) |
+| `i` | int | 0 | Index into `colorNotesData` for head position/color/direction |
+| `ci` | int | 0 | Index into `chainsData` for chain-specific properties |
 
 Example:
 ```json
@@ -142,9 +142,9 @@ chains: [
 ### chainsData Array
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `tx` | int | (head x) | Tail x position |
-| `ty` | int | (head y) | Tail y position |
-| `c` | int | 0 | Color variant (4 or 5 in template — encoding TBD) |
+| `tx` | int | (head x) | Tail x position offset from head |
+| `ty` | int | (head y) | Tail y position offset from head |
+| `c` | int | required | Must be present (4 or 5). If omitted, chain may not render. |
 | `s` | float | 1.0 | Segment spacing (time between burst elements) |
 
 ### V2 BurstSlider → V3 Chain Mapping
@@ -152,8 +152,12 @@ V2 `burstSliders` (found in BeatSaver V2 songs) map to V3 chains:
 - `b` → `hb` (head beat)
 - `sc` (segment count), `s` (spacing) → `tb = b + sc * s` (tail beat)
 - `tx`, `ty` → `chainsData[].tx`, `chainsData[].ty`
-- `c` (color) → `chainsData[].c`
+- `c` (color) → `chainsData[].c` (use value 4 if unknown — matches template)
 - `s` (spacing) → `chainsData[].s`
+- Head x/y/color/direction come from a colorNotesData entry referenced by `i`
+- The chain's `i` field indexes into `colorNotesData` (NOT `chainsData`)
+- The chain's `ci` field indexes into `chainsData` for tail offset/spacing
+- `c: 4` in chainsData appears to be required for chains to render
 
 ## Bomb Notes: bombNotes + bombNotesData
 Same structure as colorNotes but without color (c) or direction (d):

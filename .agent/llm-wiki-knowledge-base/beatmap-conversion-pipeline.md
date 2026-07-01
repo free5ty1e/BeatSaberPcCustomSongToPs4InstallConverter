@@ -184,34 +184,47 @@ Fields: `b` (start beat), `c` (color), `x`/`y` (head pos), `d` (head dir), `tb` 
 
 ### Conversion Algorithm
 ```python
-def v2_to_v3_chains(v2_burst_sliders):
-    data_map = {}; data_list = []; result = []
+def v2_to_v3_chains(v2_burst_sliders, color_data, color_notes):
+    """
+    Convert V2 burstSliders to V3 chains.
+    chain['i'] = colorNotesData index (head position/color/direction)
+    chain['ci'] = chainsData index (chain-specific: tx, ty, c, s)
+    chainsData['c: 4'] is REQUIRED for chains to render.
+    """
+    cdm = {}; cdl = []; chains = []
     for bs in v2_burst_sliders:
-        # chainsData key: (tx, ty, c, s)
+        # Build chainsData entry
         key = (bs.get('tx', 0), bs.get('ty', 0), bs.get('c', 0), bs.get('s', 1.0))
-        if key not in data_map:
-            data_map[key] = len(data_list)
-            entry = {}
+        if key not in cdm:
+            cdm[key] = len(cdl)
+            entry = {'c': 4}  # c:4 is required!
             if key[0] != 0: entry['tx'] = key[0]
             if key[1] != 0: entry['ty'] = key[1]
-            entry['s'] = key[3]
-            data_list.append(entry)
+            if key[3] != 1.0: entry['s'] = key[3]
+            cdl.append(entry)
         
-        chain = {'hb': bs['b']}
-        if bs.get('tb', 0) > 0:
-            chain['tb'] = bs['tb']
-        else:
-            # Calculate tail beat from segment count and spacing
-            chain['tb'] = bs['b'] + bs.get('sc', 1) * bs.get('s', 1.0)
+        # Head position = colorNotesData entry for (x, y, c, d)
+        head_key = (bs.get('x',0), bs.get('y',0), bs.get('c',0), bs.get('d',1))
+        if head_key not in color_data:
+            # Add to shared colorNotesData pool
+            color_data[head_key] = len(color_notes[1])
+            entry = {}
+            for idx, (v2k, v3k, dflt) in enumerate(FIELDS):
+                val = head_key[idx]
+                if val != dflt: entry[v3k] = val
+            color_notes[1].append(entry)
+        hi = color_data[head_key]
         
-        idx = data_map[key]
-        if idx != 0: chain['i'] = idx
-        result.append(chain)
+        tb = bs.get('tb', 0)
+        ch = {'hb': bs['b'], 'tb': tb if tb > 0 else bs['b'] + bs.get('sc',1) * bs.get('s',1.0)}
+        ch['i'] = hi           # i = colorNotesData index
+        ch['ci'] = cdm[key]    # ci = chainsData index
+        chains.append(ch)
     
-    return result, data_list
+    return chains, cdl
 ```
 
-Default chainsData[0] = `{"s": 0.8}` (no tx/ty — same position as head).
+Default chainsData[0] = `{"c": 4, "s": 0.8}` (no tx/ty — same position as head, but `c:4` is required).
 
 ## m_Script Storage (Critical!)
 

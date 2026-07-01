@@ -974,14 +974,15 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains. Replaced by quick_test.bundle for faster testing.
 - **Status:** Replaced by quick_test.bundle (12MB → much smaller, all features in ~20s)
 
-### Experiment 74b — Quick test bundle [DEPLOYED]
+### Experiment 74b — Quick test bundle [FIXED & RE-DEPLOYED]
 - **Date:** 2026-07-01
-- **Change:** Hand-crafted minimal V3 beatmap with all 5 feature types at song start. Beatmap data is only 807 bytes JSON / 316 bytes gzip. Template overhead makes bundle ~12MB, but gameplay test takes only ~20 seconds.
+- **Change:** Hand-crafted minimal V3 beatmap with all 5 feature types at song start. Fixed chains data: added `c: 4` field to `chainsData` (required for chains to render). Generation script saved as `quick_test_gen.py` — bundle binary NOT committed to git (12MB template overhead).
 - **Content per difficulty:**
   - 9 notes (alternating red/blue, various positions)
   - 3 bombs (at columns 3, 0, and top row)
   - 2 obstacles (wide wall at beat 6, narrow wall at beat 8)
   - 2 arcs (left→right at beat 10, reverse at beat 14)
-  - 2 chains (burst sliders at beat 18, 20)
-- **Verify:** 11/11 objects OK. All difficulties identical (same minimal data).
-- **Status:** ✅ DEPLOYED — awaiting test
+  - 2 chains (burst sliders at beat 18, 20 — with `c:4` fix)
+- **Key format discovery:** In V3 chains, `i` references `colorNotesData` (head props), `ci` references `chainsData` (chain props). `c: 4` in `chainsData` appears required for rendering.
+- **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed)
+- **Status:** ✅ DEPLOYED — awaiting re-test of chains
