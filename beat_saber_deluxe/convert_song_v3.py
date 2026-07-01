@@ -150,24 +150,49 @@ def main():
                             del beatmap_json['_events']
                         if '_customData' in beatmap_json:
                             del beatmap_json['_customData']
-                        custom_data = json.dumps(beatmap_json).encode('utf-8')
+                        # V2→V3 conversion: _notes → colorNotes + colorNotesData
+                        v3 = {'version': '4.0.0'}
+                        data_map = {}; data_list = []; notes = []
+                        for n in beatmap_json.get('_notes', []):
+                            key = (n.get('_lineIndex',0), n.get('_lineLayer',0), n.get('_type',0), n.get('_cutDirection',1))
+                            if key not in data_map:
+                                data_map[key] = len(data_list)
+                                entry = {}
+                                if key[0]!=0: entry['x']=key[0]
+                                if key[1]!=0: entry['y']=key[1]
+                                if key[2]!=0: entry['c']=key[2]
+                                if key[3]!=1: entry['d']=key[3]
+                                data_list.append(entry)
+                            note = {'b': n['_time']}
+                            idx = data_map[key]
+                            if idx != 0: note['i'] = idx
+                            notes.append(note)
+                        v3['colorNotes'], v3['colorNotesData'] = notes, data_list
+                        # Obstacles
+                        obs_map = {}; obs_list = []; v3_obs = []
+                        for o in beatmap_json.get('_obstacles', []):
+                            entry = {'d':o.get('_duration',1.0), 'w':o.get('_width',1), 'h':5}
+                            key = (entry['d'],entry['w'],entry['h'])
+                            if key not in obs_map:
+                                obs_map[key]=len(obs_list); obs_list.append(entry)
+                            idx = obs_map[key]
+                            ob = {'b': o['_time']}
+                            if idx != 0: ob['i'] = idx
+                            v3_obs.append(ob)
+                        v3['obstacles'], v3['obstaclesData'] = v3_obs, obs_list
+                        for t in ['bombNotes','bombNotesData','chains','chainsData','arcs','arcsData','spawnRotations','spawnRotationsData']:
+                            v3[t] = []
+                        custom_data = json.dumps(v3).encode('utf-8')
                     except:
                         pass
+
+                    # FIX: m_Script is JUST gzip data — no decompressed_size prefix!
                     compressed = gzip.compress(custom_data)
 
-                    # Update filename part
-                    new_fn = new_name = m_name
-                    new_fn_bytes = new_fn.encode('ascii')
-
-                    # Build new raw data
-                    new_raw = bytearray()
-                    new_raw += struct.pack('<I', len(new_fn_bytes))
-                    new_raw += new_fn_bytes
-                    new_raw += b'\x00'
-                    new_raw += struct.pack('<I', len(custom_data))
-                    new_raw += compressed
-
-                    reader.set_raw_data(bytes(new_raw))
+                    # Use save_typetree for proper serialization (avoids set_raw_data bugs)
+                    tt = reader.read_typetree()
+                    tt['m_Script'] = compressed.decode('utf-8', 'surrogateescape')
+                    reader.save_typetree(tt)
                     replaced += 1
                     print(f"  ✅ Replaced: {diff_name} ({orig_fn})")
 

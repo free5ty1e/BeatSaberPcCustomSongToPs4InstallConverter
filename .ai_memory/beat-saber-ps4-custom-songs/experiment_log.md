@@ -899,3 +899,10 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Change:** Template V3 beatmap with ONLY one modification: first note's `b` changed from 5.5 → 5.0. Uses `save_typetree`. All other data identical to template. Goal: isolate whether `save_typetree` itself breaks something or if the V3 conversion content is the issue.
 - **Prediction:** If song plays (note at 5.0 instead of 5.5), `save_typetree` is fine, issue is V3 conversion. If still fails, `save_typetree` pipeline itself is broken.
 - **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 71 — THE FIX: m_Script is just gzip, no decompressed_size prefix! (v0.43) [DEPLOYED]
+- **Date:** 2026-07-01
+- **ROOT CAUSE FOUND:** The m_Script field in the beatmap TextAsset is JUST gzip data — NO 4-byte decompressed_size prefix! My conversion was adding `struct.pack('<I', len(json))` before the gzip stream, shifting the gzip by 4 bytes. The game saw `dc 06 00 00` instead of `1f 8b` gzip magic and rejected the beatmap.
+- **Fix:** Remove the decompressed_size prefix. m_Script = `gzip.compress(json_data)` only.
+- **V3 note conversion included.** All 11 objects verified.
+- **Status:** ✅ DEPLOYED — awaiting test

@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🔬 v0.43 DIAGNOSTIC — Minimal test deployed. Changes ONE beat value (5.5->5.0) to isolate save_typetree vs content issue. Roadmap updated with granular tasks for bombs/chains/arcs.
+**Current Status:** 🔥 ROOT CAUSE FIXED! m_Script is just gzip — no decompressed_size prefix! Was adding 4 extra bytes, breaking gzip parsing. AWAITING TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
