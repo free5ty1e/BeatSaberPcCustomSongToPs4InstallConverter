@@ -969,15 +969,19 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Test result:** ✅ SUCCESS! Only arcs visible (no note boxes expected — song has 0 regular notes). Chains may have been visible too but hard to distinguish.
 - **Next step:** Find a song with ALL features (notes + bombs + obstacles + sliders + chains) and test end-to-end.
 
-### Experiment 74 — All features combined: notes + bombs + obstacles + arcs + chains [DEPLOYED]
+### Experiment 74a — Combined features bundle [REPLACED]
 - **Date:** 2026-07-01
-- **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains into a single V3 bundle. This tests ALL five feature types rendering simultaneously in-game.
-- **Song:** Combined dataset from two BeatSaver songs (MUSIC STAR notes + Beach arcs)
-- **Conversion breakdown:**
-  - Easy: 181n + 7b + 14o + 89a + 1c
-  - Normal: 284n + 21b + 12o + 98a + 1c
-  - Hard: 350n + 24b + 10o + 117a + 2c
-  - Expert: 517n + 24b + 3o + 172a + 2c
-  - ExpertPlus: 609n + 30b + 3o + 179a + 3c
-- **Verify:** 11/11 objects OK. V3 gzip decompresses correctly.
-- **Status:** ✅ DEPLOYED — awaiting test (all features in one play)
+- **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains. Replaced by quick_test.bundle for faster testing.
+- **Status:** Replaced by quick_test.bundle (12MB → much smaller, all features in ~20s)
+
+### Experiment 74b — Quick test bundle [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Hand-crafted minimal V3 beatmap with all 5 feature types at song start. Beatmap data is only 807 bytes JSON / 316 bytes gzip. Template overhead makes bundle ~12MB, but gameplay test takes only ~20 seconds.
+- **Content per difficulty:**
+  - 9 notes (alternating red/blue, various positions)
+  - 3 bombs (at columns 3, 0, and top row)
+  - 2 obstacles (wide wall at beat 6, narrow wall at beat 8)
+  - 2 arcs (left→right at beat 10, reverse at beat 14)
+  - 2 chains (burst sliders at beat 18, 20)
+- **Verify:** 11/11 objects OK. All difficulties identical (same minimal data).
+- **Status:** ✅ DEPLOYED — awaiting test

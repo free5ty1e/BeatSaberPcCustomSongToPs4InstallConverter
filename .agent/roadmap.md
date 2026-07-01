@@ -14,6 +14,9 @@
 - [x] AFR directory auto-creation with permissions fix
 
 ## 🔧 Milestone 3: Custom Song Format Conversion ✅ COMPLETE
+### 🧪 Test Assets
+- [x] **`quick_test.bundle`** — Minimal hand-crafted test song with all features right at song start. 9 notes + 3 bombs + 2 obstacles + 2 arcs + 2 chains within ~20 seconds of gameplay. Beatmap data = 316 bytes gzipped, template overhead = ~12MB. Used for rapid regression testing. Located at `beat_saber_deluxe/custom_songs/quick_test.bundle`.
+
 ### Beatmap Data Replacement ⬅️ VERIFIED WORKING
 - [x] Beatmap gzip replacement via `save_typetree` (not `set_raw_data` — had serialization bugs)
 - [x] **ROOT CAUSE FIXED:** m_Script is JUST gzip data — no decompressed_size prefix!
