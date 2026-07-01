@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-06-11
-**Current Status:** 🧪 v0.46 PROTOTYPE — ALL features combined! Notes+bombs+obstacles+arcs+chains deployed in single test bundle. AWAITING TEST.
+**Current Status:** 🧪 v0.46 PROTOTYPE — Audio replacement pipeline complete! Custom HEVAG encoder, FSB5 wrapping, full custom bundle at 216KB. AWAITING AUDIO TEST ON PS4.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

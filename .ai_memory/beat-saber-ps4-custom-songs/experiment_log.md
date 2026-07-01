@@ -985,3 +985,18 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Key discovery:** The V3 obstaclesData format DOES support `y` (row offset) field, even though the template doesn't use it. When `y` is omitted, it defaults to 0 (floor). Adding `y` enables floating/ceiling walls.
 - **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed in git)
 - **Status:** ✅ SUCCESS! All wall types confirmed working including floating walls.
+
+### Experiment 75 — Audio Replacement Milestone [READY FOR DEPLOY]
+- **Date:** 2026-07-01
+- **Change:** Complete custom audio replacement pipeline! HEVAG (PS4 ADPCM) encoder implemented in Python. FSB5 container created with custom test audio (3-second sine tones: 440Hz→880Hz→660Hz).
+- **Audio pipeline:**
+  1. Generate PCM16 test audio at 44.1kHz stereo
+  2. Encode to HEVAG (PS4 ADPCM) — 3.5:1 compression ratio
+  3. Wrap in FSB5 container (copies sample header from existing FSB5)
+  4. Replace CAB resource data in the AssetBundle
+  5. Update AudioClip metadata (length, resource size)
+  6. Update audio.gz TextAsset (sample count, frequency, bpm data)
+- **Result:** `quick_test.bundle` is now 216 KB (down from 12MB!)
+- **Content:** 9n + 3b + 8o + 2a + 2c + 3-second test audio
+- **Script:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` — generates everything
+- **Status:** ✅ READY FOR DEPLOY — PS4 unreachable during build, waiting for power-on

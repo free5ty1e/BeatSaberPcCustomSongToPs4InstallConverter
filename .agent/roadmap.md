@@ -32,7 +32,10 @@
 - [ ] Beatmap events from song handled (lighting data — separate from lightshow)
 
 ### Audio Replacement
-- [ ] Audio format analysis (FSB5 structure on PS4)
+- [x] Audio pipeline: HEVAG encoder + FSB5 wrapping ✅
+- [x] Custom audio in quick test bundle (216KB total) ✅
+- [ ] Test custom audio on PS4 (awaiting console)
+- [ ] Install FSB5 creation tools (fsbank or similar)
 - [ ] Install FSB5 creation tools (fsbank or similar)
 - [ ] Replace AudioClip with custom song audio
 - [ ] Update AudioClip metadata (length, sample rate, etc.)

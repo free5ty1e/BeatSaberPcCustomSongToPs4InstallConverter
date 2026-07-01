@@ -46,3 +46,10 @@ metadata:
 - Environment is tied to song's album/pack via Addressable system
 - Full environment control requires resources.assets patching (Milestone 4)
 - Created [[ps4-environment-system.md]] knowledge page
+
+## [2026-07-01] update | Audio replacement pipeline + HEVAG encoder
+- Experiment 75: Implemented full audio replacement pipeline
+- HEVAG (PS4 ADPCM) encoder in Python — 3.5:1 compression
+- FSB5 container creation with proper PS4 format
+- Bundle size reduced from 12MB to 216KB
+- Script: quick_test_gen.py now generates everything (beatmaps + audio)
