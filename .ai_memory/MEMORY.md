@@ -9,6 +9,9 @@
 - [Roadmap](../.agent/roadmap.md) — Feature milestones, task checklists, known issues
 - [Agent Rules](../.agent/rules.md) — Operating conventions for AI agents
 
+## 📚 LLM Wiki Knowledge Base
+- [Knowledge Base (Index)](../.agent/llm-wiki-knowledge-base/index.md) — **Compiled, durable knowledge wiki** with cross-referenced pages covering plugin architecture, AssetBundle structure, beatmap formats, conversion pipeline, root causes, and tooling. Self-contained for LLM consumption.
+
 ## 🔬 Key Technical Findings
 
 ### Experiment Log
