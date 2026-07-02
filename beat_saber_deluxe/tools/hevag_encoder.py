@@ -77,7 +77,7 @@ def hevag_encode_block(samples, h1=0, h2=0):
     """
     # Fast path: silence / all-zero samples
     if all(s == 0 for s in samples):
-        return _SILENCE_FRAME, 0, 0
+        return _SILENCE_FRAME, h1, h2
 
     best_pred = best_shift = 0
     best_err = float('inf')
