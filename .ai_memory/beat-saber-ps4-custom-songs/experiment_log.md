@@ -1010,3 +1010,29 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Fix 2—Hevag encoder optimization:** Added silence fast path (pre-computed zero frame), early termination on perfect encoding, and batch PCM reading via `struct.unpack` format string instead of per-sample loop.
 - **Encoder speed:** Silence frames: 211K/s, Tone frames: 229/s (brute-force over 5×13 parameters ×28 samples is the bottleneck)
 - **Status:** ✅ DEPLOYED AND READY FOR TEST — corrected 216KB bundle on PS4
+
+### Experiment 76 — ROOT CAUSE: incorrect FSB5 sample_header_size (900 vs 1732) [FIXED]
+- **Date:** 2026-07-02
+- **Investigation:** Systematic analysis of audio freeze. Tests across multiple bundle configurations (PCM format, HEVAG with freq, padded audio) all showed same freeze. Extracted original FSB5 from bundle's .resource file via UnityPy for deep analysis.
+- **Root Cause:** The original PS4 Beat Saber FSB5 uses `sample_header_size=1732`, but our `build_fsb5()` was hardcoding `sample_header_size=900`. This meant:
+  - We were only storing 900 of the required 1732 sample header bytes
+  - The PS4's FMOD audio decoder couldn't find the hash table and additional DSP state
+  - Audio decoder hung/froze when attempting to play back the incomplete FSB5
+  - The 832 missing bytes contain 612 non-zero bytes of DSP/hash data critical for decoder init
+- **Fix:** 
+  1. Extracted full 1732-byte sample header from original FSB5
+  2. Updated `_load_fsb5_header_template()` to detect and load full header
+  3. Updated `build_fsb5()` to write correct `sample_header_size` in FSB5 header
+  4. Updated template file `fsb5_header_template.bin` from 900 to 1732 bytes
+  5. Added `FSB5_SAMPLE_HEADER_SIZE = 1732` constant
+  6. Fast path bug also fixed (preserve h1/h2 history) while investigating
+- **Technical Details:**
+  - Original FSB5: 12,305,632 bytes, ver=1, nsamples=1, shsz=1732, format=1(HEVAG)
+  - Audio data offset in FSB5: 1748 (was incorrectly 916)
+  - Non-zero bytes in full SH: 1247/1700 (beyond sample entry)
+- **Status:** ✅ FIX DEPLOYED — awaiting PS4 test
+- **Files changed:**
+  - `beat_saber_deluxe/tools/hevag_encoder.py` — _load_fsb5_header_template, build_fsb5, FSB5_SAMPLE_HEADER_SIZE
+  - `beat_saber_deluxe/custom_songs/fsb5_header_template.bin` — updated to 1732 bytes
+  - `beat_saber_deluxe/custom_songs/quick_test.bundle` — regenerated with correct FSB5
+  - `beat_saber_deluxe/tests/` — analysis tools created

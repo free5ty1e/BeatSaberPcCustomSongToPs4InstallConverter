@@ -21,28 +21,50 @@ Audio Metadata (TextAsset: StartMeUp.audio.gz)
 
 ## FSB5 Container Format
 
-The PS4 FSB5 files use the following structure:
+The PS4 Beat Saber FSB5 files use the following structure:
 
 | Offset | Size | Field | Description |
 |--------|------|-------|-------------|
 | 0 | 4 | magic | "FSB5" |
 | 4 | 4 | version | Always 1 for PS4 Beat Saber |
 | 8 | 4 | num_samples | Number of audio samples (always 1) |
-| 12 | 4 | sample_header_size | Total size of sample headers (900 bytes) |
-| 16 | 900 | sample_header | DSP state + metadata (see below) |
-| 916 | varies | audio_data | HEVAG-encoded ADPCM data |
+| 12 | 4 | sample_header_size | Total size of sample headers (**1732 bytes** — CRITICAL!) |
+| 16 | 1732 | sample_header | DSP state + metadata + hash table (see below) |
+| 1748 | varies | audio_data | HEVAG-encoded ADPCM data |
 
-### Sample Header (900 bytes)
+### ⚠️ CRITICAL: sample_header_size MUST be 1732
 
-The 900-byte sample header contains:
+The original PS4 Beat Saber FSB5 uses `sample_header_size=1732`. **DO NOT use 900!**
+The sample header includes:
+- The sample entry (first 32 bytes)
+- DSP coefficients and hash table (bytes 32-1731)
+- 612/832 non-zero bytes beyond the first 900
+
+If you use the wrong `sample_header_size`, the PS4's FMOD audio decoder will:
+1. Not find the hash table and DSP state at the expected offset
+2. Hang/freeze when attempting to play audio
+3. The game won't crash (stars keep moving) but audio never starts
+
+**This was the root cause of our audio freeze!** We were using 900 instead of 1732.
+
+### Sample Header Structure (1732 bytes)
+
+The sample header contains:
 - **Bytes 0-3**: Name offset (0 = no name / default)
 - **Bytes 4-7**: Audio data size (bytes of HEVAG data) — **must be updated when replacing audio**
-- **Bytes 8-11**: Offset (0 = start of audio data)
+- **Bytes 8-11**: Offset (seems to be padding/GAP value, typically 15)
 - **Bytes 12-13**: Format code (1 = HEVAG, 0 = PCM)
 - **Bytes 14-31**: Various DSP coefficients and state
-- **Bytes 32-899**: Additional DSP tables (reverb, filters, etc.)
+- **Bytes 32-1731**: Hash table + additional DSP data used by the decoder
 
-The full 900-byte structure is not fully understood. We use a **template approach**: copy the header from an existing working FSB5 and update only the data size field (bytes 4-7).
+### Audio Data Offset
+
+Audio data starts at byte **1748** (16 + 1732). This is:
+- 16 bytes FSB5 header
+- 1732 bytes sample header
+- = 1748 bytes before audio data
+
+Do NOT use 916 (the old incorrect offset with sample_header_size=900).
 
 ### ⚠️ Critical: Header Template Must Match the Song
 

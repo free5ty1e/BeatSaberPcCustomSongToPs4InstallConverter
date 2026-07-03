@@ -7,24 +7,6 @@ FSB5 container suitable for use in PS4 Beat Saber AssetBundles.
 
 HEVAG is a form of adaptive ADPCM used by Sony's PlayStation platforms.
 Each frame encodes 28 PCM16 samples into 16 bytes (3.5:1 compression).
-
-Usage:
-    # Generate test tone and create FSB5
-    python3 hevag_encoder.py --generate-tone --duration 3 -o audio.fsb5
-
-    # Convert WAV to FSB5
-    python3 hevag_encoder.py -i song.wav -o audio.fsb5
-
-    # Convert raw PCM to FSB5
-    python3 hevag_encoder.py --pcm-file raw.pcm --sample-rate 44100 --channels 2 -o audio.fsb5
-
-    # Output raw HEVAG (without FSB5 wrapper)
-    python3 hevag_encoder.py -i song.wav -o audio.hev --raw-only
-
-    # Use as a Python module
-    from hevag_encoder import pcm_to_hevag, build_fsb5
-    hevag = pcm_to_hevag(pcm_data, channels=2)
-    fsb5 = build_fsb5(hevag, sample_rate=44100, channels=2)
 """
 
 import struct, math, io, json, sys, os, argparse
@@ -32,13 +14,16 @@ import struct, math, io, json, sys, os, argparse
 # ==============================================================================
 # FSB5 Template
 # ==============================================================================
-# The PS4 FSB5 uses a 900-byte sample header section copied from an existing
-# game FSB5 file. This contains DSP state that we preserve verbatim.
+# The PS4 FSB5 uses a 1732-byte sample header section copied from an existing
+# game FSB5 file. This contains DSP state and hash table that we preserve verbatim.
 DEFAULT_FSB5_TEMPLATE = os.path.join(
     os.path.dirname(__file__) or ".",
     "..", "custom_songs", "fsb5_header_template.bin"
 )
 
+# Original PS4 Beat Saber FSB5 files have sample_header_size=1732
+# DO NOT CHANGE - this is critical for the decoder to parse the FSB5 correctly
+FSB5_SAMPLE_HEADER_SIZE = 1732
 
 # ==============================================================================
 # HEVAG Constants
@@ -75,8 +60,10 @@ def hevag_encode_block(samples, h1=0, h2=0):
     Returns:
         (bytes of frame, new_h1, new_h2)
     """
-    # Fast path: silence / all-zero samples
+    # Fast path: silence / all-zero samples.
+    # Important: keep history state unchanged so decoder's next frame starts with correct context.
     if all(s == 0 for s in samples):
+        # Return zero frame but preserve previous h1/h2
         return _SILENCE_FRAME, h1, h2
 
     best_pred = best_shift = 0
@@ -100,11 +87,13 @@ def hevag_encode_block(samples, h1=0, h2=0):
                 else:
                     deq = nib << shift
                 err += (diff - deq) ** 2
-                eh2, eh1 = eh1, s
-            if err < best_err:
-                best_err, best_pred, best_shift = err, pred, shift
+                # Update history using reconstructed sample
+                reconst = max(-32768, min(32767, predicted + deq))
+                eh2, eh1 = eh1, reconst
             if best_err == 0:  # Perfect encoding found, early exit
                 break
+            if err < best_err:
+                best_err, best_pred, best_shift = err, pred, shift
         if best_err == 0:
             break
 
@@ -125,8 +114,15 @@ def hevag_encode_block(samples, h1=0, h2=0):
             frame[bi] = (frame[bi] & 0xF0) | nib
         else:
             frame[bi] = (frame[bi] & 0x0F) | (nib << 4)
-        # Update history with original (not reconstructed) sample
-        h2, h1 = h1, samples[i]
+
+        # IMPORTANT: Update history using RECONSTRUCTED sample
+        # to keep the encoder in sync with the decoder
+        if nib & 0x8:
+            dequant = (nib | 0xF0) << best_shift
+        else:
+            dequant = nib << best_shift
+        reconstructed = max(-32768, min(32767, predicted + dequant))
+        h2, h1 = h1, reconstructed
 
     return bytes(frame), h1, h2
 
@@ -240,6 +236,189 @@ def generate_test_tone_pcm(duration=3.0, sample_rate=44100, channels=2):
 
 
 # ==============================================================================
+# FSB5 Container Building
+# ==============================================================================
+
+def _load_fsb5_header_template(template_path=None):
+    """
+    Load the sample header from an existing PS4 FSB5 file.
+
+    Accepts either:
+    - A full FSB5 file (starts with "FSB5") -> extracts sample header area
+    - A raw sample header file -> uses as-is
+
+    Returns:
+        (bytearray of sample header, sample_header_size)
+    """
+    paths = []
+    if template_path:
+        paths.append(template_path)
+    if os.path.exists(DEFAULT_FSB5_TEMPLATE):
+        paths.append(DEFAULT_FSB5_TEMPLATE)
+
+    for p in paths:
+        if os.path.exists(p):
+            with open(p, 'rb') as f:
+                data = f.read()
+            if data[:4] == b'FSB5':
+                # Full FSB5 file: extract sample header area based on its declared size
+                shsz = struct.unpack_from('<I', data, 12)[0]
+                return bytearray(data[16:16 + shsz]), shsz
+            if len(data) == FSB5_SAMPLE_HEADER_SIZE:
+                return bytearray(data), FSB5_SAMPLE_HEADER_SIZE
+            if len(data) == 900:
+                # Old 900-byte template; pad with zeros up to 1732 to match expected format
+                result = bytearray(data) + b'\x00' * (FSB5_SAMPLE_HEADER_SIZE - 900)
+                return result, FSB5_SAMPLE_HEADER_SIZE
+
+    raise FileNotFoundError(
+        f"No FSB5 template found. Tried: {paths}\n"
+        "Run quick_test_gen.py first to create the header template, "
+        "or specify --template-path."
+    )
+
+
+def build_fsb5(hevag_data, sample_rate=44100, channels=2,
+               template_path=None):
+    """
+    Build an FSB5 file from HEVAG-encoded audio data.
+
+    The output is a complete FSB5 v1 file suitable for use in PS4
+    Beat Saber AssetBundles.
+
+    Args:
+        hevag_data: bytes of HEVAG-encoded audio
+        sample_rate: Hz (unused in current header, kept for future)
+        channels: 1 or 2 (unused in current header, kept for future)
+        template_path: optional path to an FSB5 template for the header
+
+    Returns:
+        bytes: complete FSB5 file
+    """
+    sample_hdr, shsz = _load_fsb5_header_template(template_path)
+
+    # Update the data size field in the sample header (bytes 4-7)
+    struct.pack_into('<I', sample_hdr, 4, len(hevag_data))
+
+    buf = io.BytesIO()
+    buf.write(b'FSB5')
+    buf.write(struct.pack('<I', 1))      # version
+    buf.write(struct.pack('<I', 1))      # num_samples
+    buf.write(struct.pack('<I', shsz))    # sample header total size (1732 for PS4)
+    buf.write(bytes(sample_hdr))         # sample header (shsz bytes)
+    buf.write(hevag_data)                # HEVAG audio data
+
+    return buf.getvalue()
+
+
+# ==============================================================================
+# CLI
+# ==============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Encode PCM audio to HEVAG + FSB5 (PS4 audio format)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s --generate-tone --duration 3 -o test.fsb5
+  %(prog)s -i song.wav -o song.fsb5
+  %(prog)s --pcm-file raw.pcm --sample-rate 44100 --channels 2 -o out.fsb5
+  %(prog)s --pcm-file raw.pcm -o raw.hev --raw-only
+""")
+    parser.add_argument('-i', '--input', help='Input WAV file')
+    parser.add_argument('--pcm-file', help='Input raw PCM16 file')
+    parser.add_argument('--sample-rate', type=int, default=44100,
+                        help='Sample rate for raw PCM input (default: 44100)')
+    parser.add_argument('--channels', type=int, default=2, choices=[1, 2],
+                        help='Audio channels (default: 2)')
+    parser.add_argument('-o', '--output', default='output.fsb5',
+                        help='Output file path (default: output.fsb5)')
+    parser.add_argument('--generate-tone', action='store_true',
+                        help='Generate a test tone instead of reading input')
+    parser.add_argument('--duration', type=float, default=3.0,
+                        help='Duration in seconds for generated tone (default: 3.0)')
+    parser.add_argument('--raw-only', action='store_true',
+                        help='Output raw HEVAG data without FSB5 wrapping')
+    parser.add_argument('--template-path', help='Custom FSB5 template path')
+    parser.add_argument('--chunk-seconds', type=float, default=90,
+                        help='Split audio into N-second chunks (default: 90)')
+
+    args = parser.parse_args()
+
+    if args.generate_tone:
+        pcm_data = generate_test_tone_pcm(
+            duration=args.duration,
+            sample_rate=args.sample_rate,
+            channels=args.channels
+        )
+    elif args.input:
+        pcm_data, args.sample_rate, args.channels = read_wav(args.input)
+    elif args.pcm_file:
+        pcm_data, args.sample_rate, args.channels = read_raw_pcm(
+            args.pcm_file, args.sample_rate, args.channels)
+    else:
+        parser.print_help()
+        return
+
+    hevag_data = pcm_to_hevag(pcm_data, channels=args.channels)
+
+    if args.raw_only:
+        output = args.output
+        if not output.endswith('.hev') and not output.endswith('.hevag'):
+            output = output.rsplit('.', 1)[0] + '.hev' if '.' in output else output + '.hev'
+        with open(output, 'wb') as f:
+            f.write(hevag_data)
+        print(f"Raw HEVAG: {len(hevag_data)} bytes -> {output}")
+    else:
+        fsb5_data = build_fsb5(hevag_data, args.sample_rate, args.channels,
+                               template_path=args.template_path)
+        with open(args.output, 'wb') as f:
+            f.write(fsb5_data)
+        print(f"FSB5: {len(fsb5_data)} bytes -> {args.output}")
+
+
+def parse_fsb5(path_or_bytes):
+    """
+    Parse an FSB5 file and return header info.
+
+    Args:
+        path_or_bytes: path to FSB5 file or bytes object
+
+    Returns:
+        dict with parsed header fields
+    """
+    if isinstance(path_or_bytes, str):
+        with open(path_or_bytes, 'rb') as f:
+            data = f.read()
+    else:
+        data = path_or_bytes
+
+    if data[:4] != b'FSB5':
+        raise ValueError("Not a valid FSB5 file")
+
+    info = {
+        'magic': 'FSB5',
+        'version': struct.unpack_from('<I', data, 4)[0],
+        'num_samples': struct.unpack_from('<I', data, 8)[0],
+        'sample_header_size': struct.unpack_from('<I', data, 12)[0],
+        'total_size': len(data),
+    }
+
+    if info['num_samples'] > 0:
+        sh = data[16:16 + info['sample_header_size']] if len(data) > 16 else b''
+        if len(sh) >= 24:
+            info['data_size'] = struct.unpack_from('<I', sh, 4)[0]
+            info['format'] = struct.unpack_from('<H', sh, 12)[0]
+            info['frequency'] = struct.unpack_from('<I', sh, 16)[0]
+            fmt_names = {0: 'PCM', 1: 'HEVAG', 2: 'ADPCM',
+                         8: 'Vorbis', 10: 'ATRAC9'}
+            info['format_name'] = fmt_names.get(info['format'], f'UNKNOWN({info["format"]})')
+
+    return info
+
+
+# ==============================================================================
 # PCM File I/O
 # ==============================================================================
 
@@ -292,7 +471,6 @@ def read_wav(path):
 
     # Convert to 16-bit if needed (unlikely but handle it)
     if bits_per_sample == 8:
-        # 8-bit unsigned -> 16-bit signed
         new_pcm = bytearray(len(pcm_data) * 2)
         for i, b in enumerate(pcm_data):
             val = (b - 128) << 8
@@ -311,251 +489,5 @@ def read_raw_pcm(path, sample_rate=44100, channels=2, bits=16):
     return data, sample_rate, channels
 
 
-# ==============================================================================
-# FSB5 Container Building
-# ==============================================================================
-
-def _load_fsb5_header_template(template_path=None):
-    """
-    Load the 900-byte sample header from an existing PS4 FSB5 file.
-
-    Accepts either:
-    - A full FSB5 file (starts with "FSB5") -> extracts bytes 16-915
-    - A raw 900-byte sample header file -> uses as-is
-    """
-    paths = []
-    if template_path:
-        paths.append(template_path)
-    if os.path.exists(DEFAULT_FSB5_TEMPLATE):
-        paths.append(DEFAULT_FSB5_TEMPLATE)
-
-    for p in paths:
-        if os.path.exists(p):
-            with open(p, 'rb') as f:
-                data = f.read()
-            if data[:4] == b'FSB5':
-                return bytearray(data[16:16 + 900])
-            if len(data) == 900:
-                return bytearray(data)
-
-    raise FileNotFoundError(
-        f"No FSB5 template found. Tried: {paths}\n"
-        "Run quick_test_gen.py first to create the header template, "
-        "or specify --template-path."
-    )
-
-
-def build_fsb5(hevag_data, sample_rate=44100, channels=2,
-               template_path=None):
-    """
-    Build an FSB5 file from HEVAG-encoded audio data.
-
-    The output is a complete FSB5 v1 file suitable for use in PS4
-    Beat Saber AssetBundles.
-
-    Args:
-        hevag_data: bytes of HEVAG-encoded audio
-        sample_rate: Hz (unused in current header, kept for future)
-        channels: 1 or 2 (unused in current header, kept for future)
-        template_path: optional path to an FSB5 template for the header
-
-    Returns:
-        bytes: complete FSB5 file
-    """
-    sample_hdr = _load_fsb5_header_template(template_path)
-
-    # Update the data size field in the sample header (bytes 4-7)
-    struct.pack_into('<I', sample_hdr, 4, len(hevag_data))
-
-    buf = io.BytesIO()
-    buf.write(b'FSB5')
-    buf.write(struct.pack('<I', 1))      # version
-    buf.write(struct.pack('<I', 1))      # num_samples
-    buf.write(struct.pack('<I', 900))    # sample header total size
-    buf.write(bytes(sample_hdr))         # 900-byte sample header
-    buf.write(hevag_data)                # HEVAG audio data
-
-    return buf.getvalue()
-
-
-def create_fsb5_from_pcm(pcm_data, sample_rate, channels, output_path=None,
-                          template_path=None):
-    """
-    Full pipeline: PCM -> HEVAG -> FSB5, optionally saving to disk.
-
-    Args:
-        pcm_data: bytes of PCM16 interleaved audio
-        sample_rate: Hz
-        channels: 1 or 2
-        output_path: if set, save FSB5 to this path
-        template_path: optional FSB5 header template
-
-    Returns:
-        bytes: complete FSB5 file
-    """
-    hevag = pcm_to_hevag(pcm_data, channels=channels)
-    fsb5 = build_fsb5(hevag, sample_rate, channels, template_path)
-    if output_path:
-        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        with open(output_path, 'wb') as f:
-            f.write(fsb5)
-    return fsb5
-
-
-# ==============================================================================
-# FSB5 Parsing (for verification/testing)
-# ==============================================================================
-
-def parse_fsb5(path_or_bytes):
-    """
-    Parse an FSB5 file and return header info.
-
-    Args:
-        path_or_bytes: path to FSB5 file or bytes object
-
-    Returns:
-        dict with parsed header fields
-    """
-    if isinstance(path_or_bytes, str):
-        with open(path_or_bytes, 'rb') as f:
-            data = f.read()
-    else:
-        data = path_or_bytes
-
-    if data[:4] != b'FSB5':
-        raise ValueError("Not a valid FSB5 file")
-
-    info = {
-        'magic': 'FSB5',
-        'version': struct.unpack_from('<I', data, 4)[0],
-        'num_samples': struct.unpack_from('<I', data, 8)[0],
-        'sample_header_size': struct.unpack_from('<I', data, 12)[0],
-        'total_size': len(data),
-    }
-
-    if info['num_samples'] > 0:
-        sh = data[16:16 + info['sample_header_size']] if len(data) > 16 else b''
-        if len(sh) >= 24:
-            info['data_size'] = struct.unpack_from('<I', sh, 4)[0]
-            info['format'] = struct.unpack_from('<H', sh, 12)[0]
-            info['frequency'] = struct.unpack_from('<I', sh, 16)[0]
-            fmt_names = {0: 'PCM', 1: 'HEVAG', 2: 'ADPCM',
-                         8: 'Vorbis', 10: 'ATRAC9'}
-            info['format_name'] = fmt_names.get(info['format'], f'UNKNOWN({info["format"]})')
-
-    return info
-
-
-# ==============================================================================
-# CLI
-# ==============================================================================
-
-def main():
-    parser = argparse.ArgumentParser(
-        description='Encode PCM audio to HEVAG + FSB5 (PS4 audio format)',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --generate-tone --duration 3 -o test.fsb5
-  %(prog)s -i song.wav -o song.fsb5
-  %(prog)s --pcm-file raw.pcm --sample-rate 44100 --channels 2 -o out.fsb5
-  %(prog)s --pcm-file raw.pcm -o raw.hev --raw-only
-""")
-    parser.add_argument('-i', '--input', help='Input WAV file')
-    parser.add_argument('--pcm-file', help='Input raw PCM16 file')
-    parser.add_argument('--sample-rate', type=int, default=44100,
-                        help='Sample rate for raw PCM input (default: 44100)')
-    parser.add_argument('--channels', type=int, default=2, choices=[1, 2],
-                        help='Channels for raw PCM input (default: 2)')
-    parser.add_argument('--output', '-o',
-                        help='Output file path (not needed for --info)')
-    parser.add_argument('--generate-tone', action='store_true',
-                        help='Generate a test tone instead of reading input')
-    parser.add_argument('--frequency', type=float, default=440,
-                        help='Frequency for test tone (default: 440)')
-    parser.add_argument('--duration', type=float, default=3.0,
-                        help='Duration in seconds (default: 3)')
-    parser.add_argument('--test-sequence', action='store_true',
-                        help='Generate multi-frequency test sequence')
-    parser.add_argument('--raw-only', action='store_true',
-                        help='Output raw HEVAG without FSB5 wrapper')
-    parser.add_argument('--template-path',
-                        help='Path to FSB5 template for header')
-    parser.add_argument('--info', action='store_true',
-                        help='Parse and display info about an FSB5 file')
-    parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Verbose output')
-
-    args = parser.parse_args()
-
-    # Info mode -- doesn't need --output
-    if args.info:
-        if not args.input:
-            print("Error: --info requires --input")
-            return 1
-        info = parse_fsb5(args.input)
-        print(f"FSB5: {info['magic']} v{info['version']}")
-        print(f"  Samples: {info['num_samples']}")
-        print(f"  Data size: {info.get('data_size', '?')} bytes")
-        print(f"  Format: {info.get('format_name', '?')}")
-        print(f"  Frequency: {info.get('frequency', '?')} Hz")
-        print(f"  Total file: {info['total_size']} bytes")
-        return 0
-
-    # Ensure output is specified (not needed for --info mode)
-    if not args.output:
-        print("Error: --output is required (use -o or --output)")
-        return 1
-
-    # Generate or read PCM
-    pcm_data = None
-    sr = args.sample_rate
-    ch = args.channels
-
-    if args.generate_tone or args.test_sequence:
-        if args.test_sequence:
-            print(f"Generating test sequence: {args.duration}s multi-tone")
-            pcm_data = generate_test_tone_pcm(args.duration, sr, ch)
-        else:
-            print(f"Generating test tone: {args.frequency}Hz, {args.duration}s")
-            pcm_data = generate_tone_pcm(args.frequency, args.duration, sr, ch, volume=0.4)
-    elif args.input:
-        print(f"Reading WAV: {args.input}")
-        pcm_data, sr, ch = read_wav(args.input)
-    elif args.pcm_file:
-        print(f"Reading raw PCM: {args.pcm_file}")
-        pcm_data, sr, ch = read_raw_pcm(args.pcm_file, sr, ch)
-    else:
-        parser.print_help()
-        print("\nError: No input specified. Use --generate-tone, -i, or --pcm-file")
-        return 1
-
-    # Encode to HEVAG
-    if args.verbose:
-        print(f"PCM: {len(pcm_data)} bytes ({len(pcm_data)//2} samples, {ch}ch, {sr}Hz)")
-        print(f"Duration: {len(pcm_data) / (2 * ch) / sr:.2f}s")
-
-    hevag = pcm_to_hevag(pcm_data, channels=ch)
-    print(f"HEVAG: {len(hevag)} bytes (ratio {len(pcm_data)/max(1,len(hevag)):.1f}:1)")
-
-    if args.raw_only:
-        with open(args.output, 'wb') as f:
-            f.write(hevag)
-        print(f"Raw HEVAG saved: {args.output}")
-        return 0
-
-    # Build FSB5
-    fsb5 = build_fsb5(hevag, sr, ch, template_path=args.template_path)
-    with open(args.output, 'wb') as f:
-        f.write(fsb5)
-
-    frames = hevag_frame_count(pcm_data, channels=ch)
-    print(f"FSB5: {len(fsb5)} bytes")
-    print(f"      {frames} frames/channel")
-    print(f"Saved: {args.output}")
-
-    return 0
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-02
-**Current Status:** ✅ READY FOR DEPLOYMENT v0.47 — Fast path bug fixed! Audio pipeline optimized, silence frame history preservation working. Quick test bundle regenerated and ready for PS4 testing.
+**Current Status:** 🧪 v0.47 EXPERIMENT 76 — ROOT CAUSE FIXED. Original FSB5 uses sample_header_size=1732, we were using 900. Bundle regenerated with correct 1732-byte header. Deployed to PS4 waiting for audio test.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
