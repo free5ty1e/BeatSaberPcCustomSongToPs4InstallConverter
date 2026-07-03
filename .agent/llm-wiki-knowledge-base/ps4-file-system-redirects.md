@@ -7,6 +7,31 @@ metadata:
 
 # PS4 File System & Redirects
 
+## Plugin Redirect Table (beat_saber_deluxe.prx v0.44)
+
+The redirect table is defined in `src/main.cpp` line 64-65:
+
+```cpp
+if (strstr(path, "BeatmapLevelsData/startmeup"))
+    np = AFR_BASE "/" TITLE_ID "/startmeup_v3";
+```
+
+### ⚠️ CRITICAL: Deploy Path Must Match Plugin Redirect
+
+| Plugin matches | Redirects to | Deploy absolute path |
+|---|---|---|
+| `BeatmapLevelsData/startmeup` | `startmeup_v3` | `/data/GoldHEN/AFR/CUSA12878/startmeup_v3` |
+
+**Deploying to `startmeup` instead of `startmeup_v3` will have NO EFFECT.**
+The bundle will sit on the PS4 but never be loaded by the game.
+
+### Current Active Redirects (v0.44)
+
+Only **one** redirect is active:
+- `BeatmapLevelsData/startmeup` → `startmeup_v3`
+
+To add more, modify `main.cpp` and add new `if (strstr(...))` clauses before the fallthrough.
+
 ## AFR (Application File Redirect)
 
 GoldHEN's AFR mechanism allows intercepting file reads from the game's archive partition and redirecting them to files on the console's internal storage. This is the foundation of the custom song system — without AFR, we couldn't modify any game files (the game directory is read-only via FTP).

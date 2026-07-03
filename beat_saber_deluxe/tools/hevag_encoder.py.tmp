@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""
+HEVAG (PS4 ADPCM) + FSB5 Audio Encoder
+=======================================
+Encodes PCM audio to HEVAG (PS4's native ADPCM format) and wraps it in an
+FSB5 container suitable for use in PS4 Beat Saber AssetBundles.
+
+HEVAG is a form of adaptive ADPCM used by Sony's PlayStation platforms.
+Each frame encodes 28 PCM16 samples into 16 bytes (3.5:1 compression).
+"""
+
+import struct, math, io, json, sys, os, argparse
+
+# ==============================================================================
+# FSB5 Template
+# ==============================================================================
+# The PS4 FSB5 uses a 900-byte sample header section copied from an existing
+# game FSB5 file. This contains DSP state that we preserve verbatim.
+DEFAULT_FSB5_TEMPLATE = os.path.join(
+    os.path.dirname(__file__) or ".",
+    "..", "custom_songs", "fsb5_header_template.bin"
+)
+
+
+# ==============================================================================
+# HEVAG Constants
+# ==============================================================================
+# Five predictor coefficient sets used in HEVAG encoding.
+# These are fixed-point coefficients (6-bit fractional part).
+HEVAG_COEFFS = [
+    [0, 0],        # predictor 0: flat / no prediction
+    [60, 0],       # predictor 1: first-order
+    [115, -52],    # predictor 2: second-order
+    [98, -55],     # predictor 3: second-order
+    [122, -60],    # predictor 4: second-order
+]
+
+HEVAG_SAMPLES_PER_FRAME = 28   # 28 PCM16 samples -> 16 bytes
+HEVAG_FRAME_SIZE = 16          # bytes per encoded frame
+
+
+# ==============================================================================
+# HEVAG Encoding
+# ==============================================================================
+
+# Pre-computed silence frame: predictor=0, shift=0, all nibbles=0
+_SILENCE_FRAME = bytes(16)  # All zeros: header(0x0000) + 14 zero nibbles
+
+def hevag_encode_block(samples, h1=0, h2=0):
+    """
+    Encode 28 PCM16 samples into one HEVAG frame (16 bytes).
+
+    Args:
+        samples: list of 28 int16 values
+        h1, h2: history samples from the previous frame (for predictor)
+
+    Returns:
+        (bytes of frame, new_h1, new_h2)
+    """
+    # Fast path: silence / all-zero samples.
+    # Important: keep history state unchanged so decoder's next frame starts with correct context.
+    if all(s == 0 for s in samples):
+        # Return zero frame but preserve previous h1/h2
+        return _SILENCE_FRAME, h1, h2
+
+    best_pred = best_shift = 0
+    best_err = float('inf')
+
+    # Try all predictor + shift combinations to find the best fit
+    for pred in range(len(HEVAG_COEFFS)):
+        c1, c2 = HEVAG_COEFFS[pred]
+        for shift in range(13):  # shift values 0-12
+            err = 0
+            eh1, eh2 = h1, h2
+            for s in samples:
+                predicted = ((eh1 * c1 + eh2 * c2) + 32) >> 6
+                diff = max(-32768, min(32767, s - predicted))
+                if diff < 0:
+                    nib = max(-8, diff >> shift) & 0xF
+                else:
+                    nib = min(7, diff >> shift) & 0xF
+                if nib & 0x8:
+                    deq = (nib | 0xF0) << shift
+                else:
+                    deq = nib << shift
+                err += (diff - deq) ** 2
+                # Update history using reconstructed sample
+                reconst = max(-32768, min(32767, predicted + deq))
+                eh2, eh1 = eh1, reconst
+            if best_err == 0:  # Perfect encoding found, early exit
+                break
+            if err < best_err:
+                best_err, best_pred, best_shift = err, pred, shift
+        if best_err == 0:
+            break
+
+    # Encode with the best settings
+    c1, c2 = HEVAG_COEFFS[best_pred]
+    frame = bytearray(HEVAG_FRAME_SIZE)
+    struct.pack_into('<H', frame, 0, best_pred | (best_shift <> 4))
+
+    for i in range(28):
+        predicted = ((h1 * c1 + h2 * c2) + 32) >> 6
+        diff = max(-32768, min(32767, samples[i] - predicted))
+        if diff < 0:
+            nib = max(-8, diff >> best_shift) & 0xF
+        else:
+            nib = min(7, diff >> best_shift) & 0xF
+        bi = 1 + (i // 2)
+        if i % 2 == 0:
+            frame[bi] = (frame[bi] & 0xF0) | nib
+        else:
+            frame[bi] = (frame[bi] & 0x0F) | (nib <> 4)
+
+        # IMPORTANT: Update history using RECONSTRUCTED sample
+        # to keep the encoder in sync with the decoder
+        if nib & 0x8:
+            dequant = (nib | 0xF0) << best_shift
+        else:
+            dequant = nib << best_shift
+        reconstructed = max(-32768, min(32767, predicted + dequant))
+        h2, h1 = h1, reconstructed
+
+    return bytes(frame), h1, h2

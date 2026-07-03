@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-02
-**Current Status:** 🧪 v0.47 EXPERIMENT 76 — ROOT CAUSE FIXED. Original FSB5 uses sample_header_size=1732, we were using 900. Bundle regenerated with correct 1732-byte header. Deployed to PS4 waiting for audio test.
+**Current Status:** 🧪 v0.48 EXPERIMENT 77 — ROOT CAUSE REDUX. Original audio uses predictors 0-15 and shifts 0-15. Our encoder only produces predictors 0-4/shifts 0-12. The decoder hangs when it receives limited-range frames. New tests created: silence, original audio snippet, predictor-0-only. AWAITING PS4 TEST.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -26,6 +26,7 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **Custom assets deployed:**
   - `resources_patched.assets` (modified manifest)
   - `CustomSong` (test AssetBundle, clone of $100 Bills)
+- **⚠️ Plugin deploy target:** The plugin (v0.44) redirects `BeatmapLevelsData/startmeup` → `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`. All test bundles MUST be deployed to `startmeup_v3`, NOT `startmeup`.
 
 ## Experiment Timeline
 

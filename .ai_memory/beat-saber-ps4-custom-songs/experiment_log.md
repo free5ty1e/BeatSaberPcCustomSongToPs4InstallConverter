@@ -1031,8 +1031,36 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Audio data offset in FSB5: 1748 (was incorrectly 916)
   - Non-zero bytes in full SH: 1247/1700 (beyond sample entry)
 - **Status:** ✅ FIX DEPLOYED — awaiting PS4 test
+- **⚠️ Operational Note — Deploy Path:** The plugin's open hook (v0.44, main.cpp line 65) redirects `BeatmapLevelsData/startmeup` → `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`. New test bundles MUST be deployed to `startmeup_v3`, NOT `startmeup`, or the plugin ignores them.
 - **Files changed:**
   - `beat_saber_deluxe/tools/hevag_encoder.py` — _load_fsb5_header_template, build_fsb5, FSB5_SAMPLE_HEADER_SIZE
   - `beat_saber_deluxe/custom_songs/fsb5_header_template.bin` — updated to 1732 bytes
   - `beat_saber_deluxe/custom_songs/quick_test.bundle` — regenerated with correct FSB5
   - `beat_saber_deluxe/tests/` — analysis tools created
+
+### Experiment 77 — Systematic Isolation: Silence Test + Predictor-0-Only [READY FOR TEST]
+- **Date:** 2026-07-03
+- **Previous tests:** All 6 attempts (different header templates, fast path fix, sample_header_size fix) resulted in same freeze.
+- **New Hypothesis:** Since the FSB5 structure (header size, sample header, AudioClip metadata) is all confirmed correct, the issue must be in our HEVAG-encoded audio CONTENT.
+- **New Tests Created:**
+
+  | # | Bundle | Audio Content | What It Tests |
+  |---|--------|---------------|---------------|
+  | 1 | `test_silence.bundle` | All-zero HEVAG frames (pred=0, shift=0, nibbles=0) | Is our FSB5 structure valid? |
+  | 2 | `test_original_audio_3s.bundle` | Original Start Me Up HEVAG frames (first 3s) | Is our FSB5 building process correct? |
+  | 3 | `test_p0_only.bundle` | Predictor 0 only, 440Hz sine wave, normal nibbles | Is the problem in predictors 1-4? |
+  | 4 | `test_p0_silence.bundle` | Predictor 0 silence (all zeros) | Baseline for predictor 0 |
+
+- **Testing Strategy (ordered):**
+  1. Deploy `test_silence.bundle` → if WORKS (no freeze), FSB5 structure is correct
+  2. Deploy `test_p0_only.bundle` → if WORKS, problem is in predictors 1-4 specifically
+  3. Deploy `test_original_audio_3s.bundle` → if WORKS, our FSB5 building process is correct
+  4. Based on results, focus on either encoding algorithm or FSB5 structure
+
+- **Key insight from AudioClip type tree:** Original has `m_LoadType: 1` (CompressedInMemory), `m_PreloadAudioData: false`, `m_LoadInBackground: true`, `m_Legacy3D: true`, `m_CompressionFormat: 1`. All preserved correctly in our bundles.
+- **Status:** 🧪 BUNDLES READY — awaiting PS4 test
+- **Deploy command:**
+  ```
+  lftp -u anonymous, -p 2121 192.168.100.117 -e "put test_silence.bundle -o /data/GoldHEN/AFR/CUSA12878/startmeup_v3; quit"
+  ``
+- **Quick deploy script:** `beat_saber_deluxe/custom_songs/quick_deploy.sh`
