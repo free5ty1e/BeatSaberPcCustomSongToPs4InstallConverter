@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-02
-**Current Status:** 🚀 v0.49 — NOVEL TEST DEPLOYED. 5-predictor optimized HEVAG encoder + 12MB padding + Expert/ExpertPlus beatmap fix. PRX v0.49 rebuilt with persistent toolchain path. Awaiting PS4 test.
+**Current Status:** 🧪 v0.49 — EXPERIMENT 84 DEPLOYED. Testing if metadata preservation (AudioClip + audio.gz left at original values) allows 5-predictor HEVAG audio to play. If so, our encoder is valid and metadata updates are the root cause. PRX v0.49 deployed. Toolchain path persisted. Awaiting PS4 test.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

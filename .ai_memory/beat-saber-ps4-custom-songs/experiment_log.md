@@ -1067,6 +1067,24 @@ Before building v0.35, I analyzed the difference between the original file and `
   - 5-predictor encoder + 12MB padding: user heard 1-2 audio samples before freeze, no beatmap objects (expected due to Expert/ExpertPlus bug)
   - Fixed Expert/ExpertPlus + same audio: NOVEL TEST — awaiting PS4 test
   - PRX v0.49 deployed with new toolchain persistence
+
+### Experiment 84 — Metadata Preservation Test [DEPLOYED, AWAITING TEST]
+- **Date:** 2026-07-04
+- **Bundle:** `metadata_test.bundle` (5.5MB, deployed to `startmeup_v3`)
+- **Theory:** The freeze at 1-2 audio samples may be caused by our AudioClip metadata updates (m_Length=146.1s, m_Frequency=48000) and/or audio.gz updates, rather than the HEVAG encoding quality. The silence test (Experiment 80) which preserved ORIGINAL metadata got notes moving for 1 second, while our 5-predictor test with custom metadata froze immediately.
+- **Changes:**
+  - Audio: 5-predictor optimized HEVAG (re-encoded from `tigerblood_jewel.wav`)
+  - 12MB padding to match original .resource size
+  - **AudioClip metadata: PRESERVED from original** (m_Length=213.7s, m_Frequency=44100)
+  - **audio.gz metadata: PRESERVED from original** (songSampleCount=9425915, original bpmData)
+  - Beatmaps: 5/5 correctly matched (Expert/ExpertPlus fix applied)
+  - PRX v0.49 deployed
+- **What this tests:**
+  - If this WORKS: Our HEVAG encoding IS valid. The metadata updates cause the freeze.
+  - If this FREEZES: Our HEVAG encoding itself is the root cause.
+- **Pipeline change:** Added `--preserve-metadata` flag to `full_custom_song_pipeline.py` for future tests.
+- **Toolchain fix:** `OO_PS4_TOOLCHAIN` path re-persisted to `~/.zshrc` (was lost on restart).
+- **Status:** 🚀 **DEPLOYED — AWAITING PS4 TEST**
 - **What makes this NOVEL:** 
   1. First test with CORRECTLY MATCHED beatmaps (Expert→ExpertStandard, ExpertPlus→ExpertPlusStandard)
   2. First test with rebuilt v0.49 PRX  

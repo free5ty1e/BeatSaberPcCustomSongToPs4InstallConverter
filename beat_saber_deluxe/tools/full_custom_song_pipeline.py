@@ -391,6 +391,8 @@ Examples:
                         help='PS4 IP address for FTP deployment')
     parser.add_argument('--no-pad', action='store_true',
                         help='Skip padding FSB5 to 12MB (will likely freeze on PS4)')
+    parser.add_argument('--preserve-metadata', action='store_true',
+                        help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
 
     args = parser.parse_args()
 
@@ -449,15 +451,18 @@ Examples:
     # -----------------------------------------------------------------------
     replace_resource(bf, fsb5_bytes)
 
-    # -----------------------------------------------------------------------
-    # Step 3: Update AudioClip
-    # -----------------------------------------------------------------------
-    update_audioclip(cab, fsb5_bytes, duration, actual_sample_rate)
+    if args.preserve_metadata:
+        log.info("  --preserve-metadata: Skipping AudioClip and audio.gz updates")
+    else:
+        # -----------------------------------------------------------------------
+        # Step 3: Update AudioClip
+        # -----------------------------------------------------------------------
+        update_audioclip(cab, fsb5_bytes, duration, actual_sample_rate)
 
-    # -----------------------------------------------------------------------
-    # Step 4: Update audio.gz
-    # -----------------------------------------------------------------------
-    update_audio_gz(cab, duration, actual_sample_rate)
+        # -----------------------------------------------------------------------
+        # Step 4: Update audio.gz
+        # -----------------------------------------------------------------------
+        update_audio_gz(cab, duration, actual_sample_rate)
 
     # -----------------------------------------------------------------------
     # Step 5: Replace beatmaps

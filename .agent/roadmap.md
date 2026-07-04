@@ -35,6 +35,7 @@
 - [x] PS4 toolchain path persisted for PRX builds ✅
 - [x] PRX rebuilt to v0.49 ✅
 - [ ] Implement PS4-compatible HEVAG encoder (Full 4-bit predictor/shift range) 🚧
+- [ ] Determine root cause: is it our HEVAG encoding or our metadata updates? (Exp 84 metadata preservation test deployed)
 - [x] Audio pipeline: HEVAG encoder + FSB5 wrapping ✅
 - [x] Custom audio in quick test bundle (216KB total) ✅
 - [x] AudioClip type tree exploration + metadata updates ✅
