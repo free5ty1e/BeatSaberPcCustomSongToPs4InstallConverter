@@ -32,6 +32,7 @@
 - [ ] Beatmap events from song handled (lighting data — separate from lightshow)
 
 ### Audio Replacement
+- [ ] Implement PS4-compatible HEVAG encoder (Full 4-bit predictor/shift range) 🚧
 - [x] Audio pipeline: HEVAG encoder + FSB5 wrapping ✅
 - [x] Custom audio in quick test bundle (216KB total) ✅
 - [x] AudioClip type tree exploration + metadata updates ✅
@@ -39,7 +40,6 @@
 - [ ] ❌ **ALL audio replacement tests freeze identically** — first frame renders, level freezes, stars move. 7+ different test bundles (silence, original audio snippets, predictor-0-only, LZ4 compressed, etc.) ALL freeze. FSB5 structure is byte-perfect (0 diff from original). AudioClip serialization identical. Root cause remains elusive.
 - [ ] Investigate: is the issue in UnityPy's save() function producing bundles the PS4 can't read?
 - [ ] Investigate: does the 12MB original-audio bundle (unchanged audio through pipeline) work? (Blocked by FTP timeout on large files)
-- [ ] Install FSB5 creation tools (fsbank or similar) — may be needed for proper PS4-compatible encoding
 
 ### Visual Data
 - [ ] Cover art injection into bundle

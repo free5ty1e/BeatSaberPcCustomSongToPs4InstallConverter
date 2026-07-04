@@ -1101,3 +1101,7 @@ Before building v0.35, I analyzed the difference between the original file and `
   3. If 12MB original bundle freezes → issue is in UnityPy's save function or bundle structure
   4. Try manually patching original bundle binary (replace .resource bytes in-place, bypassing UnityPy save entirely)
   5. Consider if the issue is in the CAB serialization (not .resource) — maybe save_typetree changes something beyond the 164 bytes we checked
+
+### Summary of Audio Experiments (v0.48 - v0.49)
+- **Conclusion:** The PS4 audio decoder hangs if the HEVAG data is 'too simple' (e.g. all-zero silence or limited predictors). The original audio uses the full 4-bit range (0-15) for both predictors and shifts. To avoid freezes, we must use an encoder that produces high-fidelity, wide-range HEVAG frames.
+- **Verification:** 12MB original audio in our bundle worked, proving the pipeline is correct.
