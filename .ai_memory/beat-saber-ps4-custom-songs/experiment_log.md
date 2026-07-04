@@ -1057,6 +1057,22 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Status:** 🚀 **DEPLOYED — AWAITING PS4 TEST**
 - **Deploy command:** `python3 tools/full_custom_song_pipeline.py --song-dir <dir> --target startmeup --deploy`
 
+### Experiment 83 — Expert/ExpertPlus matching bug fix + PRX v0.49 rebuild [NOVEL TEST]
+- **Date:** 2026-07-04
+- **Bundle:** `novel_test.bundle` (5.5MB, deployed to `startmeup_v3`)
+- **Change 1 — Expert/ExpertPlus fix:** Beatmap matching now excludes "ExpertPlus" when matching "Expert". Previous logic matched both `ExpertStandard.dat` and `ExpertPlusStandard.dat` to the same file.
+- **Change 2 — PRX v0.49 rebuild:** Found toolchain at `/opt/openorbis/OpenOrbis/PS4Toolchain` (variable was unset). Persisted to `~/.zshrc`. Rebuilt and deployed PRX showing v0.49 in notification.
+- **Change 3 — Toolchain persistence:** Added `export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain` to `~/.zshrc` so future PRX builds work without manual setup.
+- **Results so far:** 
+  - 5-predictor encoder + 12MB padding: user heard 1-2 audio samples before freeze, no beatmap objects (expected due to Expert/ExpertPlus bug)
+  - Fixed Expert/ExpertPlus + same audio: NOVEL TEST — awaiting PS4 test
+  - PRX v0.49 deployed with new toolchain persistence
+- **What makes this NOVEL:** 
+  1. First test with CORRECTLY MATCHED beatmaps (Expert→ExpertStandard, ExpertPlus→ExpertPlusStandard)
+  2. First test with rebuilt v0.49 PRX  
+  3. Toolchain build path is now permanent
+- **Status:** 🚀 **DEPLOYED — AWAITING PS4 TEST**
+
 ### Pipeline Files (committed 2026-07-04)
 - `tools/hevag_encoder.py` — `fast_encode_frame` (pred-0), `opt_encode_frame` (5-pred), `fast_pcm_to_hevag`, `pcm_to_hevag`
 - `tools/full_custom_song_pipeline.py` — End-to-end: `.wav`/`.ogg` → HEVAG → FSB5 → bundle → deploy

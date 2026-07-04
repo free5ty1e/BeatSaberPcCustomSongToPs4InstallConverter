@@ -32,6 +32,8 @@
 - [ ] Beatmap events from song handled (lighting data — separate from lightshow)
 
 ### Audio Replacement
+- [x] PS4 toolchain path persisted for PRX builds ✅
+- [x] PRX rebuilt to v0.49 ✅
 - [ ] Implement PS4-compatible HEVAG encoder (Full 4-bit predictor/shift range) 🚧
 - [x] Audio pipeline: HEVAG encoder + FSB5 wrapping ✅
 - [x] Custom audio in quick test bundle (216KB total) ✅
