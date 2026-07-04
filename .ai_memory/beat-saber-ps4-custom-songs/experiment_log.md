@@ -1064,3 +1064,40 @@ Before building v0.35, I analyzed the difference between the original file and `
   lftp -u anonymous, -p 2121 192.168.100.117 -e "put test_silence.bundle -o /data/GoldHEN/AFR/CUSA12878/startmeup_v3; quit"
   ``
 - **Quick deploy script:** `beat_saber_deluxe/custom_songs/quick_deploy.sh`
+
+### Experiment 78 — All Audio Tests Freeze: Every variant fails identically [ROOT CAUSE ELUSIVE]
+- **Date:** 2026-07-03
+- **Tests Performed (ALL froze with same symptom: first frame renders, level freezes, stars move, no audio):**
+
+  | # | Bundle | Packer | Audio Content | Result |
+  |---|--------|--------|---------------|--------|
+  | 1 | `test_silence.bundle` | none | All-zero HEVAG frames | ❌ FREEZE |
+  | 2 | `test_original_audio_3s.bundle` | none | Original Start Me Up frames (3s) | ❌ FREEZE |
+  | 3 | `test_p0_only.bundle` | none | Predictor 0 only, 440Hz sine | ❌ FREEZE |
+  | 4 | `test_p0_silence.bundle` | none | Predictor 0 silence | ❌ FREEZE |
+  | 5 | `test_silence_lz4.bundle` | lz4 | All-zero HEVAG frames (LZ4 compressed) | ❌ FREEZE |
+  | 6 | `test_fullsize_silence.bundle` | none | Full-size silence (12MB, matches original audio size) | ❌ NOT DEPLOYED (FTP timeout during 12MB transfer) |
+  | 7 | `test_original_12mb.bundle` | lz4 | Original 12MB FSB5 (audio unchanged), beatmaps changed | ❌ NOT DEPLOYED (PS4 went offline) |
+
+- **Key findings from analysis:**
+  1. **FSB5 structure is byte-perfect** — sample header matches original with 0 differences (excluding data_size field)
+  2. **AudioClip serialization is identical** — `save_typetree` produces identical raw bytes (164 bytes AudioClip)
+  3. **CAB save output is 67,656 bytes** — does NOT contain FSB5 data (correctly stored externally in .resource)
+  4. **Bundle UnityFS header is identical** — first 32 bytes match original exactly
+  5. **Original audio uses predictors 0-15 and shifts 0-15** — our encoder only uses predictors 0-4 and shifts 0-12, but all-zero silence frames (pred=0, shift=0) also freeze, ruling out encoding content
+  6. **Original bundle has no separate .resource file entry** in raw binary (likely compressed file table), but UnityPy shows 2 entries (CAB + .resource)
+  7. **Our saved bundles show 4 CAB string occurrences** in raw binary, indicating UnityPy writes .resource as separate file block
+
+- **Root cause STILL ELUSIVE.** All structural analysis shows the FSB5 and bundle are correctly formed. The AudioClip reference path `archive:/CAB-xxx/CAB-xxx.resource` should resolve correctly. Yet the PS4 freezes every time audio replacement is attempted.
+
+- **Unsolved questions:**
+  1. Does the 12MB original-audio bundle (where only beatmaps change, audio untouched) work? Couldn't deploy due to FTP timeout.
+  2. Why does ALL audio content (silence included) cause the same freeze? 
+  3. Is the PS4's Unity runtime expecting a specific bundle structure that UnityPy doesn't produce?
+
+- **Next steps needed when PS4 is online:**
+  1. Try deploying the full-size silence bundle or 12MB original bundle via alternative method (HTTP server, USB, etc.)
+  2. If 12MB original bundle works → issue is in our FSB5 content (size or structure)
+  3. If 12MB original bundle freezes → issue is in UnityPy's save function or bundle structure
+  4. Try manually patching original bundle binary (replace .resource bytes in-place, bypassing UnityPy save entirely)
+  5. Consider if the issue is in the CAB serialization (not .resource) — maybe save_typetree changes something beyond the 164 bytes we checked

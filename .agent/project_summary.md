@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-02
-**Current Status:** 🧪 v0.48 EXPERIMENT 77 — ROOT CAUSE REDUX. Original audio uses predictors 0-15 and shifts 0-15. Our encoder only produces predictors 0-4/shifts 0-12. The decoder hangs when it receives limited-range frames. New tests created: silence, original audio snippet, predictor-0-only. AWAITING PS4 TEST.
+**Current Status:** ❌ v0.48 EXPERIMENT 78 — ALL audio replacement tests freeze identically (first frame renders, level freezes, stars move). 7 different test bundles all same result. FSB5 structure byte-perfect. AudioClip serialization identical. Root cause still elusive. PS4 offline.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

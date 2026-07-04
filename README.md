@@ -22,7 +22,7 @@ Pipeline to convert custom Beat Saber PC songs into installable PS4 packages com
 - ✅ Targeted redirect — only the modified song is affected
 
 ### In Progress
-- 🔄 Audio replacement (FSB5 format — needs FMOD tools)
+- 🔄 Audio replacement (FSB5/HEVAG format — 7+ test variants all freeze with same symptom. FSB5 structure is byte-perfect. Root cause still elusive. See experiment_log.md for details.)
 - 🔄 Cover art injection
 - 🔄 Adding new songs to album list via resources.assets
 
