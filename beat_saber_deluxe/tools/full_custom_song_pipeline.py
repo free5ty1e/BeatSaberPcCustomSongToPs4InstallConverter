@@ -266,10 +266,18 @@ def replace_beatmaps(cab, beatmap_dir: str):
             for diff in DIFFICULTIES:
                 # Exact match: the TextAsset name contains the difficulty as a word
                 # e.g., "StartMeUpEasy.beatmap.gz" matches "Easy"
+                # IMPORTANT: exclude "ExpertPlus" when matching "Expert" (substring trap)
+                if diff == 'Expert' and 'ExpertPlus' in name:
+                    continue
                 if diff in name:
                     # Find matching custom file by difficulty
                     for f in beatmap_files:
-                        if diff in f and 'Info' not in f and 'Lightshow' not in f:
+                        if 'Info' in f or 'Lightshow' in f:
+                            continue
+                        # Exclude "ExpertPlus" files when matching "Expert"
+                        if diff == 'Expert' and 'ExpertPlus' in f:
+                            continue
+                        if diff in f:
                             matched_file = f
                             break
                     if matched_file:
