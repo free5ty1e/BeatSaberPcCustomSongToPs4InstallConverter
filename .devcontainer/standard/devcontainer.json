@@ -29,6 +29,9 @@
       }
     }
   },
+  "remoteEnv": {
+    "OO_PS4_TOOLCHAIN": "/opt/openorbis/OpenOrbis/PS4Toolchain"
+  },
   "forwardPorts": [
     3000
   ],
