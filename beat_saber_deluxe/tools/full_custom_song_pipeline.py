@@ -257,34 +257,41 @@ def replace_beatmaps(cab, beatmap_dir: str):
     for pid, reader in cab.objects.items():
         if reader.class_id == 49:
             name = reader.peek_name() or ''
+            # Only target .beatmap.gz files (NOT lightshow, NOT info, NOT audio.gz)
+            if '.beatmap.gz' not in name and 'Beatmap' not in name:
+                continue
+
             # Try to match this TextAsset to a custom beatmap by difficulty
+            matched_file = None
             for diff in DIFFICULTIES:
+                # Exact match: the TextAsset name contains the difficulty as a word
+                # e.g., "StartMeUpEasy.beatmap.gz" matches "Easy"
                 if diff in name:
-                    # Find matching custom file
-                    matched_file = None
+                    # Find matching custom file by difficulty
                     for f in beatmap_files:
-                        if diff in f:
+                        if diff in f and 'Info' not in f and 'Lightshow' not in f:
                             matched_file = f
                             break
-
                     if matched_file:
-                        path = os.path.join(beatmap_dir, matched_file)
-                        with open(path, 'r', encoding='utf-8') as fh:
-                            data = json.load(fh)
-
-                        # Encode as gzipped JSON
-                        json_bytes = json.dumps(data, separators=(',', ':')).encode('utf-8')
-                        compressed = gzip.compress(json_bytes)
-
-                        # Update the TextAsset
-                        tt = reader.read_typetree()
-                        tt['m_Script'] = compressed.decode('utf-8', 'surrogateescape')
-                        reader.save_typetree(tt)
-                        replaced += 1
-                        log.info(f"  Beatmap '{name}' <- '{matched_file}'")
                         break
-                    else:
-                        log.warning(f"  No match for '{name}' in {beatmap_files}")
+
+            if matched_file:
+                path = os.path.join(beatmap_dir, matched_file)
+                with open(path, 'r', encoding='utf-8') as fh:
+                    data = json.load(fh)
+
+                # Encode as gzipped JSON
+                json_bytes = json.dumps(data, separators=(',', ':')).encode('utf-8')
+                compressed = gzip.compress(json_bytes)
+
+                # Update the TextAsset
+                tt = reader.read_typetree()
+                tt['m_Script'] = compressed.decode('utf-8', 'surrogateescape')
+                reader.save_typetree(tt)
+                replaced += 1
+                log.info(f"  Beatmap '{name}' <- '{matched_file}'")
+            else:
+                log.debug(f"  Skipping '{name}' (no matching beatmap file)")
 
     return replaced
 

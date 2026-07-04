@@ -12,7 +12,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.44"
+#define PLUGIN_VERSION "v0.49"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -79,8 +79,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
 
-    log_write("=== BS Deluxe v0.44 started ===");
-    log_write("v0.44: bomb notes conversion added");
+    log_write("=== BS Deluxe v0.49 started ===");
+    log_write("v0.49: Custom song audio + beatmap pipeline");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 

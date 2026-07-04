@@ -475,6 +475,8 @@ Based on results:
 - `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to `/data/GoldHEN/plugins.ini` — root level, NOT `plugins/` subdirectory)
 - `/workspace/resources_patched.assets` - Modified manifest
 - `/workspace/CustomSong` - Test song AssetBundle
+- `/workspace/beat_saber_deluxe/tools/hevag_encoder.py` - HEVAG encoder + FSB5 builder (fast_encode_frame, opt_encode_frame, fast_pcm_to_hevag, build_fsb5)
+- `/workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py` - Full pipeline: .wav/.ogg → HEVAG → FSB5 → 12MB padded bundle → deploy
 - `/workspace/.devcontainer/openorbis/` - OpenOrbis SDK installation
 - `/workspace/.agent/project_summary.md` - This file
 - `/workspace/setup_claude_zen_devcontainer.sh` - Devcontainer setup script (includes memory symlink step)
