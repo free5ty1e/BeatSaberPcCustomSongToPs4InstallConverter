@@ -21,8 +21,8 @@ We have verified that the AssetBundle building process is correct. The "audio fr
 - ✅ AudioClip and audio.gz metadata automation
 
 ### In Progress
-- 🔄 **High-Fidelity Audio Conversion:** Implementing a PS4-compatible HEVAG/FSB5 encoder that supports the full 4-bit predictor/shift range.
-- 🔄 **Full Pipeline Automation:** End-to-end conversion from `.json`/`.wav` to deployed PS4 bundle.
+- 🔄 **Full Pipeline Automation:** End-to-end conversion from `.json`/`.ogg`/`.wav` to deployed PS4 bundle. Pipeline now supports `.ogg` audio (standard BeatSaver format) via `soundfile` integration.
+- 🔄 **PS4 Audio Compatibility:** Testing predictor-0 HEVAG encoder with 12MB padded FSB5 to ensure the decoder stays stable.
 
 ## Getting Started
 ...

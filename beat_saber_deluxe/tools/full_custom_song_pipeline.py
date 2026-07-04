@@ -49,6 +49,7 @@ sys.path.insert(0, TOOLS_DIR)
 # ---------------------------------------------------------------------------
 import UnityPy
 from UnityPy.streams import EndianBinaryReader
+import soundfile as sf
 
 try:
     from hevag_encoder import pcm_to_hevag, fast_pcm_to_hevag, build_fsb5
@@ -80,14 +81,15 @@ log = logging.getLogger('pipeline')
 
 
 # ============================================================================
-# Step 0: WAV -> PCM -> HEVAG -> FSB5 (with padding)
+# Step 0: Audio -> PCM -> HEVAG -> FSB5 (with padding)
+# Supports .wav AND .ogg via soundfile
 # ============================================================================
 
-def wav_to_fsb5(wav_path: str, pad_to_size: int = ORIGINAL_RESOURCE_SIZE) -> bytes:
+def audio_to_fsb5(audio_path: str, pad_to_size: int = ORIGINAL_RESOURCE_SIZE) -> bytes:
     """
-    Convert a .wav file to a PS4-compatible FSB5 file.
+    Convert an audio file (.wav or .ogg) to a PS4-compatible FSB5 file.
 
-    1. Read WAV parameters and PCM data
+    1. Read audio via soundfile (handles WAV, OGG, FLAC, etc.)
     2. Encode PCM to HEVAG frames
     3. Build FSB5 container
     4. Pad to match original .resource size (required by PS4 decoder)
@@ -95,17 +97,21 @@ def wav_to_fsb5(wav_path: str, pad_to_size: int = ORIGINAL_RESOURCE_SIZE) -> byt
     Returns:
         Complete FSB5 bytes (padded to pad_to_size if smaller)
     """
-    log.info(f"Reading WAV: {wav_path}")
+    log.info(f"Reading audio: {audio_path}")
 
-    with wave.open(wav_path, 'rb') as wf:
-        params = wf.getparams()
-        pcm_data = wf.readframes(params.nframes)
+    # soundfile returns numpy array, convert to list of ints
+    data, framerate = sf.read(audio_path, dtype='int16')
+    if data.ndim == 1:
+        # Mono -> convert to interleaved for encoder
+        pcm_data = data.tobytes()
+        nchannels = 1
+    else:
+        nchannels = data.shape[1]
+        pcm_data = data.tobytes()
 
-    framerate = params.framerate
-    nchannels = params.nchannels or CHANNELS
-    duration = params.nframes / framerate
+    duration = len(data) / framerate
 
-    log.info(f"  Frames: {params.nframes}, Rate: {framerate}Hz, "
+    log.info(f"  Frames: {len(data)}, Rate: {framerate}Hz, "
              f"Channels: {nchannels}, Duration: {duration:.1f}s")
 
     # Encode to HEVAG (using fast encoder for speed)
@@ -396,18 +402,19 @@ Examples:
         actual_sample_rate = freq if freq > 0 else SAMPLE_RATE
         duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
     else:
-        log.info("Searching for WAV file in song directory...")
-        wav_files = [f for f in os.listdir(args.song_dir) if f.endswith('.wav')]
-        if not wav_files:
-            log.error(f"No .wav files found in {args.song_dir}")
+        log.info("Searching for audio file in song directory (.wav, .ogg, ...)...")
+        audio_files = [f for f in os.listdir(args.song_dir)
+                      if f.endswith(('.wav', '.ogg', '.flac', '.mp3', '.aiff'))]
+        if not audio_files:
+            log.error(f"No audio files found in {args.song_dir}")
             sys.exit(1)
 
-        wav_path = os.path.join(args.song_dir, wav_files[0])
-        # Read WAV sample rate before conversion
-        with wave.open(wav_path, 'rb') as wf:
-            actual_sample_rate = wf.getparams().framerate
+        audio_path = os.path.join(args.song_dir, audio_files[0])
+        # Get sample rate via soundfile before full conversion
+        info = sf.info(audio_path)
+        actual_sample_rate = info.samplerate
         pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
-        fsb5_bytes = wav_to_fsb5(wav_path, pad_to_size=pad_to)
+        fsb5_bytes = audio_to_fsb5(audio_path, pad_to_size=pad_to)
         # Get data_size from FSB5 header (before padding)
         ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
         duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
