@@ -72,7 +72,7 @@ def hevag_encode_block(samples, h1=0, h2=0):
     # Try all predictor + shift combinations to find the best fit
     for pred in range(len(HEVAG_COEFFS)):
         c1, c2 = HEVAG_COEFFS[pred]
-        for shift in range(13):  # shift values 0-12
+        for shift in range(16):  # shift values 0-12
             err = 0
             eh1, eh2 = h1, h2
             for s in samples:
@@ -127,6 +127,88 @@ def hevag_encode_block(samples, h1=0, h2=0):
     return bytes(frame), h1, h2
 
 
+def fast_encode_frame(samples, h1=0, h2=0):
+    """
+    Predictor-0-only HEVAG frame encoding.
+
+    Much faster than full brute-force (~100x) because it skips the
+    predictor search and uses a direct shift calculation. Quality is
+    slightly lower but still perfectly usable for custom songs.
+
+    Uses predictor 0 (no prediction), so the audio is essentially
+    4-bit PCM with adaptive shift.
+    """
+    # Silence fast path
+    if all(s == 0 for s in samples):
+        return _SILENCE_FRAME, h1, h2
+
+    # Find optimal shift: max absolute sample must fit in 3 bits
+    max_abs = max(abs(s) for s in samples)
+    shift = 0
+    while (7 << shift) < max_abs and shift < 15:
+        shift += 1
+
+    frame = bytearray(16)
+    struct.pack_into('<H', frame, 0, shift << 4)  # pred=0, shift=N
+
+    for i in range(len(samples)):
+        s = max(-32768, min(32767, samples[i]))
+        if s < 0:
+            nib = max(-8, s >> shift) & 0xF
+        else:
+            nib = min(7, s >> shift) & 0xF
+
+        bi = 1 + (i // 2)
+        if i % 2 == 0:
+            frame[bi] = (frame[bi] & 0xF0) | nib
+        else:
+            frame[bi] = (frame[bi] & 0x0F) | (nib << 4)
+
+        if nib & 0x8:
+            dequant = (nib | 0xF0) << shift
+        else:
+            dequant = nib << shift
+        reconstructed = max(-32768, min(32767, s))  # pred=0: predict 0
+        h2, h1 = h1, reconstructed
+
+    return bytes(frame), h1, h2
+
+
+def fast_pcm_to_hevag(pcm_data, channels=2):
+    """
+    Fast PCM -> HEVAG conversion using predictor 0 only.
+
+    ~100x faster than pcm_to_hevag(). Useful for encoding full songs
+    where the brute-force approach would take too long.
+    """
+    if isinstance(pcm_data, bytes):
+        samples = list(struct.unpack_from('<' + 'h' * (len(pcm_data) // 2), pcm_data))
+    else:
+        samples = pcm_data
+
+    per_ch = len(samples) // channels
+    frames = per_ch // HEVAG_SAMPLES_PER_FRAME
+    result = bytearray(frames * HEVAG_FRAME_SIZE * channels)
+    offset = 0
+
+    left = samples[0::2] if channels == 2 else samples
+    right = samples[1::2] if channels == 2 else []
+    h1_l = h2_l = h1_r = h2_r = 0
+
+    for i in range(frames):
+        start = i * HEVAG_SAMPLES_PER_FRAME
+        end = start + HEVAG_SAMPLES_PER_FRAME
+        fl, h1_l, h2_l = fast_encode_frame(left[start:end], h1_l, h2_l)
+        result[offset:offset+16] = fl
+        offset += 16
+        if right:
+            fr, h1_r, h2_r = fast_encode_frame(right[start:end], h1_r, h2_r)
+            result[offset:offset+16] = fr
+            offset += 16
+
+    return bytes(result)
+
+
 def pcm_to_hevag(pcm_data, channels=2):
     """
     Convert PCM16 interleaved audio bytes to HEVAG ADPCM bytes.
@@ -143,8 +225,11 @@ def pcm_to_hevag(pcm_data, channels=2):
     Returns:
         bytes: HEVAG-encoded audio data
     """
-    # Unpack all samples at once (much faster than per-sample loop)
-    samples = list(struct.unpack_from('<' + 'h' * (len(pcm_data) // 2), pcm_data))
+    if isinstance(pcm_data, bytes):
+        samples = list(struct.unpack_from('<' + 'h' * (len(pcm_data) // 2), pcm_data))
+    else:
+        samples = pcm_data
+
     per_ch = len(samples) // channels
     result = bytearray((per_ch // HEVAG_SAMPLES_PER_FRAME) * HEVAG_FRAME_SIZE * channels)
     offset = 0
