@@ -1217,3 +1217,18 @@ Before building v0.35, I analyzed the difference between the original file and `
 ### Summary of Audio Experiments (v0.48 - v0.49)
 - **Conclusion:** The PS4 audio decoder hangs if the HEVAG data is 'too simple' (e.g. all-zero silence or limited predictors). The original audio uses the full 4-bit range (0-15) for both predictors and shifts. To avoid freezes, we must use an encoder that produces high-fidelity, wide-range HEVAG frames.
 - **Verification:** 12MB original audio in our bundle worked, proving the pipeline is correct.
+
+
+### Experiment 84b — Metadata Preservation Test Result [FROZE]
+- **Date:** 2026-07-04
+- **Bundle tested:** 
+- **Result:** ❌ Same freeze at 1-2 audio samples. No beatmap objects rendered.
+- **Log:** 2930 lines, 6 redirects, 0 errors, clean exit (7 PlayerData saves)
+- **Conclusion:** Preserving original AudioClip/audio.gz metadata does NOT fix the freeze.
+- **New theory:** Our HEVAG encoding itself is invalid. The PS4 decoder produces incorrect
+  output from our frames, causing the game to hang after 1-2 frames.
+- **Next:** Testing if re-encoded original audio (decode -> re-encode with our encoder) works.
+  If it works: encoder is valid, issue is elsewhere.
+  If it fails: encoder is fundamentally broken.
+- **Fallback plan:** PCM FSB5 (uncompressed format, no coefficient table dependency)
+
