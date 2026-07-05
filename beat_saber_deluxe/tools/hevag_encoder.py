@@ -436,7 +436,7 @@ def _load_fsb5_header_template(template_path=None):
 
 
 def build_fsb5(hevag_data, sample_rate=44100, channels=2,
-               template_path=None):
+               template_path=None, pcm_frames=0):
     """
     Build an FSB5 file from HEVAG-encoded audio data.
 
@@ -448,6 +448,7 @@ def build_fsb5(hevag_data, sample_rate=44100, channels=2,
         sample_rate: Hz (unused in current header, kept for future)
         channels: 1 or 2 (unused in current header, kept for future)
         template_path: optional path to an FSB5 template for the header
+        pcm_frames: number of PCM frames (for sample descriptor update)
 
     Returns:
         bytes: complete FSB5 file
@@ -456,6 +457,18 @@ def build_fsb5(hevag_data, sample_rate=44100, channels=2,
 
     # Update the data size field in the sample header (bytes 4-7)
     struct.pack_into('<I', sample_hdr, 4, len(hevag_data))
+
+    # Zero out hash/dummy/unknown fields at template offsets 12-43 (file offsets 28-59)
+    # These contain audio-content-dependent data that becomes invalid when we replace audio
+    for off in range(12, 44):
+        sample_hdr[off] = 0
+
+    # Update sample descriptor at template offset 44 (file offset 60) with PCM frame count
+    if pcm_frames > 0:
+        sd_raw = struct.unpack_from('<Q', sample_hdr, 44)[0]
+        CLEAR_SAMPLES = ((1 << 30) - 1) << 34
+        new_sd = (sd_raw & ~CLEAR_SAMPLES) | (min(pcm_frames, (1 << 30) - 1) << 34)
+        struct.pack_into('<Q', sample_hdr, 44, new_sd)
 
     buf = io.BytesIO()
     buf.write(b'FSB5')

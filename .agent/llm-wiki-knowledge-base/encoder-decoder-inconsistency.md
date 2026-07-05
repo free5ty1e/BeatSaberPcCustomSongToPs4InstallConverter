@@ -51,3 +51,11 @@ The silence test (all-zero HEVAG frames: pred=0, shift=0, nibbles=0) got notes m
 ## Related
 - [[fsb5-padding-required]]
 - [[ps4-audio-decoder-behavior]]
+
+
+## Update: The Vorbis Red Herring
+- The `fsb5` Python module reported mode=VORBIS (15) for the original FSB5
+- This was MISLEADING — on PS4 FMOD, mode=15 means HEVAG, not Vorbis
+- The fsb5 module's header struct (`4s 6I 8s 16s 8s` = 60 bytes) does not match
+  the PS4 FSB5 field layout at offsets 28-59
+- The audio data bytes at offset 1748 confirm HEVAG frame headers (0x5E = pred=14, shift=5)

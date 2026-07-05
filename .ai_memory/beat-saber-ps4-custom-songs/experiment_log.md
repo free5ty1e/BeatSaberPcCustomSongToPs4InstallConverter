@@ -1286,3 +1286,21 @@ Before building v0.35, I analyzed the difference between the original file and `
   `python3 full_custom_song_pipeline.py --song-dir <dir> --target startmeup --vorbis --deploy`
 - **Bundle:** `vorbis_v3.bundle` (568KB) — 30s custom OGG Vorbis with correct headers
 - **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 88 — HEVAG + Zeroed Hash: The Hash Theory [DEPLOYED]
+- **Date:** 2026-07-04
+- **Critical discovery:** The original audio IS HEVAG, not Vorbis. The fsb5 module
+  misinterpreted mode=15 at offset 24 as Vorbis. On PS4 FMOD, mode=15 means HEVAG.
+  The module's field layout doesn't match PS4 FSB5 format.
+- **Previous Vorbis tests (86-87):** Invalid approach — OGG data was decoded as HEVAG,
+  causing immediate rejection (0:00 freeze with no audio)
+- **New theory:** The 16-byte hash field at template offset 20-35 (file offset 36-51)
+  is an FMOD content hash of the audio data. When we replace the audio but keep the
+  original hash, FMOD rejects the FSB5. Zeroing the hash might bypass this check.
+- **Fix applied:** `build_fsb5()` in `hevag_encoder.py` now zeros out bytes 12-43 of
+  the template (hash + dummy + field_1 + field_2) and updates the sample descriptor
+  with the correct PCM frame count.
+- **Bundle:** `hevag_fixed_hash.bundle` — HEVAG audio (full 146.1s), zeroed hash,
+  mode=15 (HEVAG on PS4), metadata preserved, 5/5 beatmaps fixed.
+- **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST

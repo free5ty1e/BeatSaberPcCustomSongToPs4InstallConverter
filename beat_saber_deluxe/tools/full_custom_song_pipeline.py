@@ -123,7 +123,8 @@ def audio_to_fsb5(audio_path: str, pad_to_size: int = ORIGINAL_RESOURCE_SIZE) ->
 
     # Build FSB5
     log.info("Building FSB5 container...")
-    fsb5_bytes = build_fsb5(hevag_data, framerate, nchannels)
+    fsb5_bytes = build_fsb5(hevag_data, framerate, nchannels,
+                            pcm_frames=len(data))
     log.info(f"  FSB5 size: {len(fsb5_bytes)} bytes")
 
     # Pad to match original resource size (CRITICAL for PS4)
