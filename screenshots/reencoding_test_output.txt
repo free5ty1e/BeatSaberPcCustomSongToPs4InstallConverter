@@ -1,0 +1,22 @@
+Original FSB5: 12305632 bytes, magic=b'FSB5'
+Sample header: 1732 bytes
+Original audio data: 12303840 bytes
+Decoding 384495 stereo frames from original audio...
+Decoded PCM: 10765860 samples per channel
+Re-encoding with our encoder...
+Re-encoded HEVAG: 12303840 bytes
+✅ Saved: /workspace/beat_saber_deluxe/custom_songs/reencoded_orig.fsb5 (12305632 bytes)
+First 100 samples match (decode->encode->decode): False
+
+Original first 5 left samples: [192, 0, 8032, 224, 0]
+Re-encoded first 5 left samples: [0, 0, 0, 6144, 0]
+
+Original first 3 frame headers:
+  Frame 0: L[pred=14, shift=5] R[pred=14, shift=3]
+  Frame 1: L[pred=0, shift=1] R[pred=4, shift=14]
+  Frame 2: L[pred=14, shift=7] R[pred=11, shift=12]
+
+Our re-encoded first 3 frame headers:
+  Frame 0: L[pred=0, shift=11] R[pred=0, shift=9]
+  Frame 1: L[pred=0, shift=7] R[pred=1, shift=13]
+  Frame 2: L[pred=0, shift=13] R[pred=0, shift=13]

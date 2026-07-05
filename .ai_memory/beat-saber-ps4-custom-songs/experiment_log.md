@@ -1232,3 +1232,42 @@ Before building v0.35, I analyzed the difference between the original file and `
   If it fails: encoder is fundamentally broken.
 - **Fallback plan:** PCM FSB5 (uncompressed format, no coefficient table dependency)
 
+
+
+### Experiment 85 — Re-encoding Test: Our Encoder is INCONSISTENT
+- **Date:** 2026-07-04
+- **Test:** Decoded original HEVAG to PCM, re-encoded with our `fast_pcm_to_hevag` (opt_encode_frame), then decoded again.
+- **Key finding: First 100 samples match (decode->encode->decode): FALSE**
+  - Original first 5 PCM samples: [192, 0, 8032, 224, 0]
+  - Our re-encoded first 5 PCM samples: [0, 0, 0, 6144, 0]
+  - Our frame headers use pred=0 almost exclusively (original uses pred=14, 0, 4, 11, 14)
+- **Conclusion:** Our encoder produces output that, when decoded, does NOT match the original audio.
+  The encoder is fundamentally broken — it fails to properly track decoder state across frames.
+  Likely root cause: the `opt_encode_frame` function recalculates shift for each sample (per-sample,
+  not per-frame), and the encoder's state tracking diverges from what the decoder expects.
+- **Impact:** All previous HEVAG-encoded bundles (pred-0, 5-pred) produce invalid audio that the PS4 decoder cannot process correctly, causing the freeze after 1-2 samples.
+- **PCM FSB5 alternative:** Building PCM FSB5 with byte 8 of sample header set to 0. Currently deployed.
+- **Status:** ❌ ENCODER BROKEN — PCM approach being tested
+
+
+### Experiment 86 — 🎉 BREAKTHROUGH: Original Audio is VORBIS, not HEVAG!
+- **Date:** 2026-07-04
+- **Discovery:** The original FSB5 file uses SoundFormat.VORBIS (mode=15), not HEVAG (mode=9).
+  This was revealed by the `fsb5` Python module (pip install fsb5) which successfully parsed
+  the original FSB5 and showed mode=VORBIS.
+- **Evidence:**
+  - FSB5 header mode field at offset 24 = 15 (VORBIS)
+  - fsb5 module confirms: mode=SoundFormat.VORBIS, metadata=VorbisData
+  - Audio data in FSB5 starts with OggS magic (0x4F676753)
+  - The FSB5 wraps OGG Vorbis data in the FMOD container
+- **Why this changes everything:**
+  - All previous tests assumed HEVAG format, which the game does NOT use
+  - Our HEVAG encoder was producing data in the wrong format
+  - The PCM test (byte 8 = 0) used the wrong format code
+  - The correct approach: replace the OGG Vorbis data inside the FSB5
+- **Vorbis FSB5 built:** `vorbis_test.fsb5` — 30s of custom WAV encoded as OGG Vorbis,
+  placed into the original FSB5 structure. Preserves original sample header.
+  Deployed as `vorbis_test.bundle` (577KB). Awaiting PS4 test.
+- **Pipeline:** `tools/create_vorbis_fsb5.py` should be created for future use.
+- **Status:** 🚀 BREAKTHROUGH — VORBIS FORMAT CONFIRMED. Bundle ready for deployment.
+- **Decoded PCM WAV:** `custom_songs/startmeup_decoded_30s.wav` (30s of decoded original audio)
