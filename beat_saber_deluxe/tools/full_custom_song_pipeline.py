@@ -594,7 +594,7 @@ Examples:
     # Step 5: Replace beatmaps
     # -----------------------------------------------------------------------
     replaced = replace_beatmaps(cab, args.song_dir,
-                                  ignore_non_standard=args.ignore_non_standard)
+                                  ignore_non_standard=args.ignore_non_standard_beatmaps)
     log.info(f"Beatmaps replaced: {replaced}/5")
 
     # -----------------------------------------------------------------------
