@@ -79,3 +79,6 @@
 - [ ] `set_raw_data` serialization bug (workaround: use `save_typetree`)
 - [ ] Latin1 vs surrogateescape encoding for binary data
 - [ ] FSB5 audio needs FMOD tools (fsbank)
+
+## v0.62 — Song Menu Customization
+- [ ] Replace preview audio in song menu with custom song preview audio
