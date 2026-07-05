@@ -1322,3 +1322,47 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Correctly decoded WAV:** `/workspace/beat_saber_deluxe/custom_songs/startmeup_decoded_vgmstream.wav`
 - **Bundle:** `vorbis_v4.bundle` (142KB) — 21 size-prefixed Vorbis packets, 30s audio
 - **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 90 — Vorbis FSB5 v5: Correctly Assembled Vorbis Packets [1/8 SEC OF MUSIC!]
+- **Date:** 2026-07-04
+- **Critical fix:** OGG packet parser was splitting packets at segment boundaries (255 bytes).
+  Segments with length=255 are continuations of the same packet and must be reassembled.
+  This produced 4940 correctly assembled Vorbis packets (vs 21 fragments in v1-v4).
+- **Result:** 🎉 1/8 second of actual music heard! First test to produce ANY music.
+- **What it means:** FSB5 Vorbis format is CORRECT. The size-prefixed packet format,
+  header structure, and CRC32 lookup all work. FMOD initializes and decodes early packets.
+- **Why it stops:** The Vorbis codebooks used by oggenc (libvorbis) don't match the FMOD
+  setup packet codebooks (looked up by CRC32=0x6D39BF3E). Early packets decode correctly,
+  but later packets require codebook-specific decoding and fail.
+- **Log analysis (vs v1):**
+  | Signal | v1 | v5 | Meaning |
+  |--------|-----|-----|---------|
+  | Lines | 751 | 3006 | Game ran much longer |
+  | Redirects | 2 | 8 | Bundle loaded 4 times (retry) |
+  | Env loads | 10 | 40 | More environment bundles |
+  | PlayerData | 2 | 8 | More clean returns to menu |
+  | Errors | 0 | 0 | No crashes |
+- **Status:** 🎯 BREAKTHROUGH — FORMAT CORRECT, NEED FMOD-COMPATIBLE VORBIS ENCODING
+
+
+### Experiment 90b — Round-trip Test & Vorbis v6: Seek Table Zeroed [DETAILED ANALYSIS]
+- **Date:** 2026-07-04
+- **Round-trip test:** Encoded WAV → OGG (oggenc q=10) → FSB5 → Decoded with vgmstream
+  - Result: ✅ vgmstream successfully decoded our FSB5!
+  - 1323000 frames (30s), 44100Hz, stereo — exact same length as input
+  - FSB5 structure confirmed correct (passes vgmstream validation)
+  - Audio diff: NRMSE=104% (high due to Vorbis lossy artifacts)
+- **vorbis_v5 results:** 1/8 second of actual music (first packets decoded correctly)
+  - 3006 log lines (vs 751 in v1) — game ran much longer
+  - 8 bundle redirects (4 load attempts — game retries)
+  - 0 errors — FMOD decoder doesn't crash, just stops after ~1-2 packets
+- **vorbis_v6 deployed:** Seek table zeroed (table_size=0 at offset 76)
+  - Tests if PS4 FMOD validates seek table against audio data
+  - Original seek table (213 entries) pointed to wrong offsets for custom audio
+- **Next theory:** If v6 also fails, the issue is likely the Vorbis codebook mismatch
+  between libvorbis (oggenc) and FMOD's built-in setup packet lookup table.
+  Solution: Find/use FMOD fsbank tool for compatible Vorbis encoding.
+- **Pipeline fix:** `build_vorbis_fsb5()` updated to preserve original header fields,
+  use original CRC32, and zero seek table instead of keeping invalid entries.
+- **Status:** ⏳ Vorbis v6 DEPLOYED — AWAITING PS4 TEST

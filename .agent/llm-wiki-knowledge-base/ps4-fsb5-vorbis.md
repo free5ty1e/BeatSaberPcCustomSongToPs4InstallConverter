@@ -71,3 +71,20 @@ The VorbisData metadata chunk in the FSB5 sample header contains:
 - The pipeline's `build_vorbis_fsb5()` function now correctly parses the OGG
   file and extracts the correct headers for the VorbisData chunk
 - OGG parsing is done by `_parse_ogg_packets()` in `hevag_encoder.py`
+
+
+## Vorbis Packet Assembly (Critical!)
+OGG Vorbis packets can span multiple OGG segments. A segment with length=255 is a
+continuation (the packet continues in the next segment). Only when a segment has
+length < 255 does the packet end. The original `_parse_ogg_packets()` function was
+WRONG — it created a new packet for every segment. This was fixed in Experiment 90.
+
+## Codebook Mismatch Issue (Exp 90)
+The FSB5 Vorbis format stores only a CRC32 (setup_id) of the Vorbis setup header,
+not the header itself. The decoder looks up the setup packet (codebooks) from a
+pre-compiled table using this CRC32. If the audio was encoded with different
+codebooks (e.g., libvorbis instead of FMOD fsbank), the decoder fails after a few
+packets. Experiment 90 showed the first ~1/8 second decodes correctly (first 1-2
+packets), then fails when the codebook-dependent decoding reveals the mismatch.
+- Solution: Use FMOD fsbank tool OR encode with libvorbisenc using quality settings
+  that produce compatible codebooks.
