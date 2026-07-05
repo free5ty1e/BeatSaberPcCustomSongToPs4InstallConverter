@@ -691,10 +691,14 @@ def build_pcm16_fsb5(audio_path, sample_rate=None,
                        capture_output=True)
         data, sr = sf.read(tmp_out, dtype='int16')
 
-    # Calculate max frames that fit in the FSB5 (12MB padded limit)
+    # Calculate max frames that fit in the FSB5 (pad_to_size limit)
     header_overhead = 125  # 81 header + 44 alignment
-    max_data = pad_to_size - header_overhead
-    max_frames = int(max_data / 4)  # 4 bytes per frame (2ch * 16bit)
+    if pad_to_size and pad_to_size > header_overhead:
+        max_data = pad_to_size - header_overhead
+        max_frames = int(max_data / 4)  # 4 bytes per frame (2ch * 16bit)
+    else:
+        # --no-pad: use the full audio with no size limit
+        max_frames = len(data)
 
     if clip_seconds:
         clip_frames = int(clip_seconds * sr)

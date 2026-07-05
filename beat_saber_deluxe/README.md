@@ -161,10 +161,12 @@ python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py \
 | Sample rate | 44100 Hz |
 | Channels | 2 (stereo) |
 | Quality | Lossless (bit-identical) |
-| Max duration | ~70 seconds (12MB limit) |
+| Max duration | No hard limit! With `--no-pad`, full song fits (tested: 146s, 25.8MB) |
 | Pipeline flag | `--pcm16` |
 
 PCM16 is the reliable format — it's simple, lossless, and the PS4's FMOD handles it natively.
+
+> **Important:** When using PCM16 with `--no-pad`, the bundle size increases beyond the original 12MB. The pipeline updates the AudioClip metadata accordingly. A 146-second song produces a 25.8MB FSB5 (LZ4 bundle: 25.4MB), which deployed successfully on PS4.
 
 ### Vorbis (Experimental) ⚠️
 
@@ -268,13 +270,100 @@ The `--target` parameter specifies which game song to replace. Here are common t
 
 > Full list available in the game's `BeatmapLevelsData` directory.
 
+## Targeting a Specific Song
+
+### Do I need the decrypted game dump?
+
+**Yes.** The pipeline works by **replacing the .resource** inside an existing game bundle. To do this, we need a copy of the bundle file from the game's decrypted PS4 dump.
+
+You need:
+1. **A decrypted dump of your Beat Saber game** (CUSA12878) — dumped from your own PS4 using a tool like FTP or a PS4 dumper payload
+2. **The specific bundle file** for the song you want to replace, located at:
+   ```
+   Media/StreamingAssets/BeatmapLevelsData/<song_id>
+   ```
+   Example: `Media/StreamingAssets/BeatmapLevelsData/startmeup`
+
+### How to get the game dump
+
+The process:
+1. Use GoldHEN's built-in FTP to browse the game's decrypted install directory:
+   ```
+   /mnt/sandbox/CUSA12878_<random>/app0/Media/StreamingAssets/BeatmapLevelsData/
+   ```
+   Or dump the game PKG to your PC and extract with a PS4 PKG tool
+2. Copy the entire `BeatmapLevelsData` directory to your workspace
+3. The pipeline defaults to looking for bundles at:
+   ```
+   /workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/<song_id>
+   ```
+   Configure this with `--template` if your dump is at a different location
+
+### Finding the file size limit
+
+The original game bundles have a **fixed resource size** baked into their header. This is the original audio file's size. When we replace it, **we can make it larger or smaller** — the bundle format supports variable resource sizes.
+
+There is **no hard 12MB limit**. The 12MB figure was just the size of the original Start Me Up resource file. If your custom audio is larger:
+- Use `--no-pad` to skip padding to the original size
+- The pipeline updates the AudioClip metadata (`m_Resource.m_Size`) to match your new audio
+- The bundle is saved with LZ4 compression
+
+**Successful test:** A 25.8MB PCM16 FSB5 (146 seconds of stereo audio) was deployed and loaded correctly on PS4. Larger files work.
+
+### Step-by-step: Targeting a new song
+
+1. **Identify the song ID** from the game's `BeatmapLevelsData` directory. The directory contains files named by the song ID (e.g., `startmeup`, `breezer`, `angelties`). See the Song ID Reference table above.
+
+2. **Copy the template bundle** to your workspace:
+   ```bash
+   cp /path/to/dump/Media/StreamingAssets/BeatmapLevelsData/<song_id> /workspace/beat_saber_deluxe/tests/reference/<song_id>
+   ```
+
+3. **Set up your song directory** with audio + beatmaps:
+   ```
+   songs/my_song/
+   ├── song.wav
+   ├── EasyStandard.dat
+   ├── NormalStandard.dat
+   ├── HardStandard.dat
+   ├── ExpertStandard.dat
+   └── ExpertPlusStandard.dat
+   ```
+
+4. **Run the pipeline** with the target:
+   ```bash
+   python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py \
+     --song-dir /workspace/songs/my_song \
+     --pcm16 \
+     --target <song_id> \
+     --deploy
+   ```
+
+5. **Play the song** in Beat Saber — select the original song from the menu. Your custom audio and beatmaps will play.
+
+### Advanced: Custom template path
+
+If your game dump is in a different location:
+
+```bash
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir /workspace/songs/my_song \
+  --pcm16 \
+  --template /custom/path/BeatmapLevelsData/startmeup \
+  --target startmeup \
+  --deploy
+```
+
 ## Troubleshooting
 
 ### "Audio stops early / level freezes"
 
-The 12MB FSB5 resource limit is the constraint. PCM16 at 44100Hz stereo fits ~70 seconds. Solutions:
-- Use shorter songs (under 70 seconds)
-- The game freezes after audio ends because the AudioClip metadata expects full duration. Use `--preserve-metadata` to skip AudioClip updates, or update it manually.
+**This should be fixed in the latest version.** The pipeline now:
+- Builds a full-length PCM16 FSB5 with no clipping (use `--no-pad`)
+- Updates AudioClip metadata (`m_Length`, `m_Frequency`, `m_Resource.m_Size`) to match your audio
+- Updates audio.gz metadata with the correct sample count
+
+If the audio still freezes after playing through, it may be a timing sync issue between the beatmaps and the audio. Try using beatmaps that match the song's length.
 
 ### "Plugin not loading"
 
