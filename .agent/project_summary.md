@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-02
-**Current Status:** 🎯 v0.49 — Vorbis v6 deployed (seek table zeroed). Round-trip test: FSB5 structure CONFIRMED correct (vgmstream decodes it). 1/8 sec of music played in v5. If seek table isn't the issue, next step is FMOD-compatible Vorbis encoding.
+**Current Status:** 🏆 **v0.50 ALPHA** — CUSTOM SONG PLAYED ON PS4! PCM16 FSB5 (codec=2) works. Bit-identical round-trip confirmed. Full song + AudioClip update still in progress. End-to-end README being written.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

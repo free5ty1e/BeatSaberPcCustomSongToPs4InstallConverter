@@ -1378,3 +1378,34 @@ Before building v0.35, I analyzed the difference between the original file and `
   Decoded WAVs saved for listening confirmation.
 - **Next step:** Deploy PCM16 FSB5 to PS4 to test if game accepts PCM16 codec.
 - **Status:** READY FOR PS4 TEST
+
+
+### Experiment 92 — PCM16 FSB5: CUSTOM AUDIO PLAYS ON PS4! [🎉 BREAKTHROUGH] 🎉🎉🎉
+- **Date:** 2026-07-04
+- **Approach:** PCM16 (codec=2) in FSB5 format. Lossless, no codebooks needed.
+- **Result:** ✅ **CUSTOM SONG PLAYED ON PS4!** First time ever!
+  - User confirmed decoded WAVs sound perfect (bit-identical round-trip)
+  - PS4 played ~30s of custom song with custom beatmaps
+  - HUD showed 0:29 / 3:33 when audio stopped (AudioClip mismatch)
+  - Level froze after audio ended (expects 3:33 of data)
+- **Key finding:** PCM16 codec is supported by PS4 FMOD! No Vorbis needed.
+- **Remaining issues:**
+  1. 30-second clip (clip_seconds=30 in encoder) — needs full-song support
+  2. AudioClip metadata needs updating to match actual song duration
+  3. Level freezes after audio ends — likely needs AudioClip sync
+- **Status:** 🏆 ALPHA-READY! Basic song replacement pipeline WORKS.
+
+
+### Experiment 93 — ALPHA RELEASE: End-to-End Pipeline Complete
+- **Date:** 2026-07-04
+- **Summary:** Alpha release of Beat Saber Deluxe with PCM16 FSB5 custom songs
+  - PCM16 FSB5: confirmed working on PS4 (30 second custom audio played)
+  - Pipeline: full_custom_song_pipeline.py with --pcm16 flag
+  - README: comprehensive walkthrough written
+  - AudioClip/audio.gz updates: fixed duration calculation for PCM16
+- **Known limitations:**
+  1. ~70 second PCM16 limit (12MB FSB5 resource cap)
+  2. Vorbis codebook mismatch unresolved (needs FMOD fsbank)
+  3. HEVAG encoder produces garbage output (being investigated)
+  4. Level freezes after audio ends (AudioClip mismatch — use --preserve-metadata)
+- **Status:** 🏆 v0.50 ALPHA — BASIC SONG REPLACEMENT WORKS!

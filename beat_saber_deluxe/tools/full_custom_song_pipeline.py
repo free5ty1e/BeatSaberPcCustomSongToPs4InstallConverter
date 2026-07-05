@@ -420,13 +420,13 @@ Examples:
         if fsb5_bytes[:4] != b'FSB5':
             log.error("File does not start with FSB5 magic!")
             sys.exit(1)
-        # Extract duration from FSB5 header
-        shsz = struct.unpack_from('<I', fsb5_bytes, 12)[0]
-        ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
-        # Try to get sample rate from FSB5 sample header
-        freq = struct.unpack_from('<I', fsb5_bytes[16:], 16)[0]
-        actual_sample_rate = freq if freq > 0 else SAMPLE_RATE
-        duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
+        # Extract duration from sample descriptor (works for all codecs)
+        sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
+        total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
+        # Try to get sample rate from FREQUENCY metadata chunk (offset 77)
+        freq = struct.unpack_from('<I', fsb5_bytes, 77)[0]
+        actual_sample_rate = freq if 8000 < freq < 192000 else SAMPLE_RATE
+        duration = total_frames / float(actual_sample_rate) if actual_sample_rate > 0 else 0
     else:
         log.info("Searching for audio file in song directory (.wav, .ogg, ...)...")
         audio_files = [f for f in os.listdir(args.song_dir)

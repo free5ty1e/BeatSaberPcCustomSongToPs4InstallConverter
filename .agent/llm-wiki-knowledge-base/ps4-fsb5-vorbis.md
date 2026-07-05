@@ -88,3 +88,16 @@ packets. Experiment 90 showed the first ~1/8 second decodes correctly (first 1-2
 packets), then fails when the codebook-dependent decoding reveals the mismatch.
 - Solution: Use FMOD fsbank tool OR encode with libvorbisenc using quality settings
   that produce compatible codebooks.
+
+
+## PCM16 FSB5 Success (Exp 92, July 2026)
+PCM16 (codec=2) is the winning approach. Key details:
+- FSB5 codec=2 = PCM16LE, interleaved, 2-byte interleave blocks
+- Build FSB5 from scratch (not using template) with sample_header_size=65
+- Audio must be at offset 60+sampleHeaderSize in the file
+- 44 bytes of alignment padding between header body (81 bytes) and PCM data
+- Metadata chunks: CHANNELS (type 1) + FREQUENCY (type 2) instead of VORBISDATA
+- Sample descriptor: next_chunk=1, freq_idx=8(44100), channels bit=1(stereo)
+- Round-trip verified bit-identical via vgmstream
+- PS4 FMOD accepts PCM16 FSB5 without issues
+- No codebooks, no FMOD-specific encoding, no Vorbis complexity needed
