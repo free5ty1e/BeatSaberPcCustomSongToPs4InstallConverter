@@ -661,6 +661,76 @@ def build_vorbis_fsb5(audio_path, sample_rate=None,
 
 
 # ==============================================================================
+# PCM16 FSB5 Builder (lossless, no codebook issues)
+# ==============================================================================
+
+def build_pcm16_fsb5(audio_path, sample_rate=None,
+                      pad_to_size=12305632, clip_seconds=30):
+    """
+    Build a PCM16-format FSB5 file from a WAV audio file.
+
+    PCM16 (codec=2) is uncompressed audio stored directly in the FSB5.
+    No codebooks, no FMOD-specific encoding required. Bit-identical
+    round-trip verified with vgmstream.
+
+    Uses 44 bytes of alignment padding to match vgmstream's expected
+    audio offset (base_header_size + sampleHeaderSize).
+    """
+    import subprocess
+
+    data, sr = sf.read(audio_path, dtype='int16')
+    if data.ndim == 1:
+        data = np.column_stack((data, data))
+
+    if sr != 44100:
+        tmp_in = '/tmp/_pcm16_resample_in.wav'
+        tmp_out = '/tmp/_pcm16_resample_out.wav'
+        sf.write(tmp_in, data, sr)
+        subprocess.run(['sox', tmp_in, '-r', '44100', tmp_out,
+                        'trim', '0', str(clip_seconds)], capture_output=True)
+        data, sr = sf.read(tmp_out, dtype='int16')
+    else:
+        data = data[:min(len(data), clip_seconds * sr)]
+
+    total_frames = len(data)
+    pcm_bytes = data.tobytes()
+    shs = 65  # sample_header_size
+
+    header = bytearray(128)
+    header[0:4] = b'FSB5'
+    struct.pack_into('<I', header, 4, 1)
+    struct.pack_into('<I', header, 8, 1)
+    struct.pack_into('<I', header, 12, shs)
+    struct.pack_into('<I', header, 16, 0)               # nameTableSize
+    struct.pack_into('<I', header, 20, len(pcm_bytes))  # dataSize
+    struct.pack_into('<I', header, 24, 2)               # codec = PCM16
+    struct.pack_into('<I', header, 28, 1)
+    struct.pack_into('<I', header, 32, 0)
+
+    sd = (1 | (8 & 0xF) << 1 | (1 & 1) << 5 |
+          (0 & 0xFFFFFFF) << 6 | (total_frames & 0x3FFFFFFF) << 34)
+    struct.pack_into('<Q', header, 60, sd)
+
+    # CHANNELS (type 1, size 1, next=1)
+    struct.pack_into('<I', header, 68, 1 | (1 << 1) | (1 << 25))
+    header[72] = 2
+
+    # FREQUENCY (type 2, size 4, next=0)
+    struct.pack_into('<I', header, 73, 0 | (4 << 1) | (2 << 25))
+    struct.pack_into('<I', header, 77, 44100)
+
+    # Headers end at offset 81, audio must be at 60+shs=125
+    result = bytearray()
+    result.extend(header[:81])
+    result.extend(b'\x00' * (60 + shs - 81))  # 44-byte alignment
+    result.extend(pcm_bytes)
+
+    if len(result) < pad_to_size:
+        result.extend(bytes(pad_to_size - len(result)))
+    return bytes(result)
+
+
+# ==============================================================================
 # CLI
 # ==============================================================================
 

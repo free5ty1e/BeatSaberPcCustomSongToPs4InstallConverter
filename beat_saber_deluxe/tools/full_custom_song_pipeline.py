@@ -53,12 +53,14 @@ import soundfile as sf
 
 try:
     from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
-                                build_fsb5, build_vorbis_fsb5)
+                                build_fsb5, build_vorbis_fsb5,
+                                build_pcm16_fsb5)
 except ImportError:
     # Fallback: try to import directly
     sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
     from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
-                                build_fsb5, build_vorbis_fsb5)
+                                build_fsb5, build_vorbis_fsb5,
+                                build_pcm16_fsb5)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -398,6 +400,8 @@ Examples:
                         help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
     parser.add_argument('--vorbis', action='store_true',
                         help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
+    parser.add_argument('--pcm16', action='store_true',
+                        help='Use PCM16 format (codec=2) instead of HEVAG for the FSB5 audio (lossless)')
 
     args = parser.parse_args()
 
@@ -445,6 +449,16 @@ Examples:
             total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
             duration = total_frames / float(actual_sample_rate) if actual_sample_rate > 0 else 0
             log.info(f"  Vorbis FSB5: {len(fsb5_bytes)} bytes, {duration:.1f}s")
+        elif args.pcm16:
+            log.info("Using PCM16 format (codec=2) for FSB5 (lossless)")
+            actual_sample_rate = min(info.samplerate, 44100)
+            pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
+            fsb5_bytes = build_pcm16_fsb5(audio_path, pad_to_size=pad_to)
+            # Get frame count from FSB5 sample descriptor
+            sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
+            total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
+            duration = total_frames / float(actual_sample_rate) if actual_sample_rate > 0 else 0
+            log.info(f"  PCM16 FSB5: {len(fsb5_bytes)} bytes, {duration:.1f}s")
         else:
             actual_sample_rate = info.samplerate
             pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE

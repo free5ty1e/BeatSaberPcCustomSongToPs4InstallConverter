@@ -1366,3 +1366,15 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Pipeline fix:** `build_vorbis_fsb5()` updated to preserve original header fields,
   use original CRC32, and zero seek table instead of keeping invalid entries.
 - **Status:** ⏳ Vorbis v6 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 91 — PCM16 FSB5: BIT-IDENTICAL Round-Trip Achieved! [BREAKTHROUGH]
+- **Date:** 2026-07-04
+- **Approach:** Use PCM16 (codec=2) instead of Vorbis in FSB5.
+  PCM is lossless, no codebooks needed, no FMOD-specific encoding.
+- **Key insight:** vgmstream expects audio at base_header_size+sampleHeaderSize.
+  44 bytes of alignment padding required between header body and PCM data.
+- **Result:** 100% BIT-IDENTICAL round-trip for both original and custom audio
+  Decoded WAVs saved for listening confirmation.
+- **Next step:** Deploy PCM16 FSB5 to PS4 to test if game accepts PCM16 codec.
+- **Status:** READY FOR PS4 TEST
