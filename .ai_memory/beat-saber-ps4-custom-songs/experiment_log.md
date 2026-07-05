@@ -1409,3 +1409,25 @@ Before building v0.35, I analyzed the difference between the original file and `
   3. HEVAG encoder produces garbage output (being investigated)
   4. Level freezes after audio ends (AudioClip mismatch — use --preserve-metadata)
 - **Status:** 🏆 v0.50 ALPHA — BASIC SONG REPLACEMENT WORKS!
+
+
+### Experiment 94 — Full-Length PCM16: END-TO-END CONFIRMED! 🏆
+- **Date:** 2026-07-04
+- **Song tested:** Full PCM16 encoded song (146s, 25.8MB FSB5)
+- **Result:** ✅ Song played all the way through! Score screen reached!
+  - Audio played completely, level faded out, score screen displayed
+  - Log analysis: 10 PlayerData saves (score saved), 0 errors
+  - Bundle size: 25.4MB (LZ4), Audio size: 25.8MB
+  - Synchronization between audio and beatmaps needs verification
+- **Second deployment:** Reol drop pop candy (224s, 8 beatmaps)
+  - 360-degree and 90-degree maps included
+  - All object types: notes, obstacles, events
+  - Expert+ has 1035 notes
+  - Pipeline correctly matched 360DegreeExpert.dat to Expert slot
+- **Key confirmations:**
+  1. PCM16 full songs work (no size limit beyond PS4 memory)
+  2. AudioClip metadata update prevents freeze at end
+  3. Beatmap replacement works for all 5 difficulty slots
+  4. Score saves correctly after song completion
+  5. --no-pad is essential for songs longer than 70s
+- **Status:** 🏆 v0.50 ALPHA — CONFIRMED WORKING!

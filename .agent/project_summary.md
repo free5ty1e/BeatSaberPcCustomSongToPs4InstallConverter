@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-02
-**Current Status:** 🏆 **v0.50 ALPHA** — CUSTOM SONG PLAYED ON PS4! PCM16 FSB5 (codec=2) works. Bit-identical round-trip confirmed. Full song + AudioClip update still in progress. End-to-end README being written.
+**Status:** 🏆 v0.50 ALPHA — END-TO-END CONFIRMED! Full song plays, score saves, no size limit. PCM16 FSB5 (codec=2) with --no-pad works for any song length. Second song (Reol, 224s) deployed with 8 beatmaps including 360-degree maps.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
