@@ -42,7 +42,51 @@ import logging
 # ---------------------------------------------------------------------------
 TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(TOOLS_DIR)
+DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, 'ps4_config.json')
 sys.path.insert(0, TOOLS_DIR)
+
+
+# ---------------------------------------------------------------------------
+# Config loading
+# ---------------------------------------------------------------------------
+def load_config(config_path: str) -> dict:
+    """
+    Load PS4 configuration from a JSON file.
+    Falls back to a sensible default if file is missing.
+    """
+    default_config = {
+        "ps4": {"ip": "192.168.100.117", "ftp_port": 2121,
+                "ftp_user": "anonymous", "ftp_password": ""},
+        "title": {"id": "CUSA12878", "patch_suffix": "-patch"},
+        "paths": {
+            "afr_base": "/data/GoldHEN/AFR",
+            "afr_target_suffix": "_v3",
+            "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+            "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
+            "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
+        },
+        "pipeline": {"default_target": "startmeup", "sample_rate": 44100}
+    }
+    if config_path and os.path.isfile(config_path):
+        try:
+            with open(config_path) as f:
+                user_config = json.load(f)
+            # Deep-merge user config over defaults
+            def deep_merge(base, override):
+                result = base.copy()
+                for k, v in override.items():
+                    if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+                        result[k] = deep_merge(result[k], v)
+                    else:
+                        result[k] = v
+                return result
+            merged = deep_merge(default_config, user_config)
+            log.info(f"Loaded config from {config_path}")
+            return merged
+        except Exception as e:
+            log.warning(f"Failed to load config {config_path}: {e}")
+            return default_config
+    return default_config
 
 # ---------------------------------------------------------------------------
 # Imports from our toolchain
@@ -243,13 +287,19 @@ def update_audio_gz(cab, duration: float, sample_rate: int = SAMPLE_RATE):
 # Step 5: Replace beatmaps
 # ============================================================================
 
-def replace_beatmaps(cab, beatmap_dir: str):
+def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
     """
     Replace all 5 difficulty beatmaps with custom ones.
 
     Matches difficulty by name (Easy, Normal, Hard, Expert, ExpertPlus).
     Custom .dat or .json files are loaded, re-encoded as gzipped V3 JSON,
     and written to the corresponding TextAsset in the CAB.
+
+    Args:
+        cab: Unity CAB bundle
+        beatmap_dir: Directory containing .dat beatmap files
+        ignore_non_standard: If True, only match files containing "Standard"
+                             in their name (ignores 360Degree, 90Degree, OneSaber, etc.)
     """
     beatmap_files = [f for f in os.listdir(beatmap_dir)
                      if f.endswith(('.json', '.dat'))]
@@ -281,6 +331,10 @@ def replace_beatmaps(cab, beatmap_dir: str):
                             continue
                         # Exclude "ExpertPlus" files when matching "Expert"
                         if diff == 'Expert' and 'ExpertPlus' in f:
+                            continue
+                        # If --ignore-non-standard-beatmaps, only match files
+                        # containing "Standard" (skip 360Degree, 90Degree, OneSaber, etc.)
+                        if ignore_non_standard and 'Standard' not in f:
                             continue
                         if diff in f:
                             matched_file = f
@@ -335,17 +389,34 @@ def save_bundle(bf, output_path: str):
 # Step 7: Deploy to PS4
 # ============================================================================
 
-def deploy_to_ps4(bundle_path: str, target_name: str):
+def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     """
     Upload the bundle to the PS4 via FTP.
-    Target path: /data/GoldHEN/AFR/CUSA12878/{target_name}_v3
+    Target path: {afr_base}/{title_id}/{target_name}{suffix}
+    All paths read from config.
     """
     import subprocess as sp
 
-    remote_path = f"/data/GoldHEN/AFR/CUSA12878/{target_name}_v3"
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+    paths_cfg = config.get('paths', {})
+
+    afr_base = paths_cfg.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = title_cfg.get('id', 'CUSA12878')
+    suffix = paths_cfg.get('afr_target_suffix', '_v3')
+    ftp_host = ps4_cfg.get('ip', '192.168.100.117')
+    ftp_port = ps4_cfg.get('ftp_port', 2121)
+    ftp_user = ps4_cfg.get('ftp_user', 'anonymous')
+    ftp_pass = ps4_cfg.get('ftp_password', '')
+
+    # The bundle replaces the original file at: {afr_base}/{title_id}/{target_name}{suffix}
+    # This is a FILE path, not a directory — the PRX redirects the original path to this file.
+    remote_path = f"{afr_base}/{title_id}/{target_name}{suffix}"
+
+    user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
     cmd = [
-        "lftp", "-u", "anonymous,", "-p", "2121",
-        "192.168.100.117",
+        "lftp", "-u", user_part, "-p", str(ftp_port),
+        ftp_host,
         "-e", f"put {bundle_path} -o {remote_path}; quit"
     ]
 
@@ -382,28 +453,52 @@ Examples:
                         help='Folder containing the custom song (WAV + .dat/.json beatmaps)')
     parser.add_argument('--audio', default=None,
                         help='Pre-encoded FSB5 file (optional: skips WAV->FSB5 conversion)')
-    parser.add_argument('--target', default='startmeup',
-                        help='Target song name (default: startmeup)')
-    parser.add_argument('--template',
-                        default='/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/startmeup',
-                        help='Path to the target song template bundle')
-    parser.add_argument('--output',
-                        default='/workspace/beat_saber_deluxe/custom_songs/custom_song.bundle',
-                        help='Output bundle path')
+    parser.add_argument('--config', default=DEFAULT_CONFIG_PATH,
+                        help='Path to PS4 config JSON (default: ./ps4_config.json)')
+    parser.add_argument('--target', default=None,
+                        help='Target song name (default from config: startmeup)')
+    parser.add_argument('--template', default=None,
+                        help='Path to the target song template bundle (default from config)')
+    parser.add_argument('--output', default=None,
+                        help='Output bundle path (default from config)')
     parser.add_argument('--deploy', action='store_true',
                         help='Deploy to PS4 via FTP after building')
-    parser.add_argument('--target-ip', default='192.168.100.117',
-                        help='PS4 IP address for FTP deployment')
+    parser.add_argument('--target-ip', default=None,
+                        help='PS4 IP address for FTP deployment (overrides config)')
     parser.add_argument('--no-pad', action='store_true',
-                        help='Skip padding FSB5 to 12MB (will likely freeze on PS4)')
+                        help='Skip padding FSB5 to 12MB')
     parser.add_argument('--preserve-metadata', action='store_true',
                         help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
+    parser.add_argument('--ignore-non-standard-beatmaps', action='store_true',
+                        help='Only match beatmap files containing "Standard" in name '
+                             '(ignores 360Degree, 90Degree, OneSaber variants)')
     parser.add_argument('--vorbis', action='store_true',
                         help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
     parser.add_argument('--pcm16', action='store_true',
                         help='Use PCM16 format (codec=2) instead of HEVAG for the FSB5 audio (lossless)')
 
     args = parser.parse_args()
+
+    # Load PS4 config and fill argument defaults from it
+    config = load_config(args.config)
+    cfg_ps4 = config.get('ps4', {})
+    cfg_title = config.get('title', {})
+    cfg_paths = config.get('paths', {})
+    cfg_pipe = config.get('pipeline', {})
+
+    if args.target is None:
+        args.target = cfg_pipe.get('default_target', 'startmeup')
+    if args.template is None:
+        game_dump = cfg_paths.get('game_dump_dir', '/workspace/ps4_dump/CUSA12878-patch')
+        tmpl_dir = cfg_paths.get('template_dir', 'Media/StreamingAssets/BeatmapLevelsData')
+        args.template = f"{game_dump}/{tmpl_dir}/{args.target}"
+    if args.output is None:
+        out_dir = cfg_paths.get('output_dir', '/workspace/beat_saber_deluxe/custom_songs')
+        args.output = f"{out_dir}/{args.target}_custom.bundle"
+    if args.target_ip is None:
+        args.target_ip = cfg_ps4.get('ip', '192.168.100.117')
+    # Override config IP with --target-ip if explicitly provided
+    cfg_ps4['ip'] = args.target_ip
 
     if not os.path.isdir(args.song_dir):
         log.error(f"Song directory not found: {args.song_dir}")
@@ -498,7 +593,8 @@ Examples:
     # -----------------------------------------------------------------------
     # Step 5: Replace beatmaps
     # -----------------------------------------------------------------------
-    replaced = replace_beatmaps(cab, args.song_dir)
+    replaced = replace_beatmaps(cab, args.song_dir,
+                                  ignore_non_standard=args.ignore_non_standard)
     log.info(f"Beatmaps replaced: {replaced}/5")
 
     # -----------------------------------------------------------------------
@@ -511,7 +607,7 @@ Examples:
     # Step 7: Deploy to PS4
     # -----------------------------------------------------------------------
     if args.deploy:
-        deploy_to_ps4(args.output, args.target)
+        deploy_to_ps4(args.output, args.target, config)
 
     log.info("Pipeline complete!")
     log.info(f"  Bundle: {args.output}")

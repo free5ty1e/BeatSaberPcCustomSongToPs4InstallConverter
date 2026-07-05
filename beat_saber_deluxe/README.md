@@ -194,19 +194,66 @@ usage: full_custom_song_pipeline.py [-h] --song-dir SONG_DIR [--audio AUDIO]
                                      [--target TARGET] [--output OUTPUT]
                                      [--deploy] [--target-ip TARGET_IP]
                                      [--no-pad] [--preserve-metadata]
+                                     [--ignore-non-standard-beatmaps]
+                                     [--config CONFIG]
 
 Options:
-  --song-dir SONG_DIR       Song directory with .wav/.ogg and .dat files
-  --audio FSB5              Use pre-encoded FSB5 file (skip encoding)
-  --pcm16                   Use PCM16 format (lossless, codec=2)
-  --vorbis                  Use Vorbis format (experimental, codec=15)
-  --target TARGET           Game bundle target (default: startmeup)
-  --output OUTPUT           Save bundle locally (default: auto)
-  --deploy                  Upload bundle to PS4 via FTP
-  --target-ip TARGET_IP     PS4 IP address (default: 192.168.100.117)
-  --no-pad                  Skip 12MB padding (may freeze on PS4)
-  --preserve-metadata       Don't update AudioClip/audio.gz metadata
+  --song-dir SONG_DIR            Song directory with .wav/.ogg and .dat files
+  --audio FSB5                   Use pre-encoded FSB5 file (skip encoding)
+  --pcm16                        Use PCM16 format (lossless, codec=2)
+  --vorbis                       Use Vorbis format (experimental, codec=15)
+  --target TARGET                Game bundle target (default from config)
+  --template TEMPLATE            Path to template bundle (default from config)
+  --output OUTPUT                Save bundle locally (default from config)
+  --deploy                       Upload bundle to PS4 via FTP
+  --target-ip TARGET_IP          PS4 IP address (overrides config)
+  --no-pad                       Skip padding FSB5 to original resource size
+  --preserve-metadata            Don't update AudioClip/audio.gz metadata
+  --ignore-non-standard-beatmaps Only match "Standard" beatmaps (skip 360/90/OneSaber)
+  --config CONFIG                Path to PS4 config JSON (default: ./ps4_config.json)
 ```
+
+## PS4 Configuration
+
+The pipeline uses a JSON config file (`ps4_config.json`) for PS4-specific settings. 
+Create your own by copying the example:
+
+```bash
+cp ps4_config.example.json ps4_config.json
+```
+
+Then edit `ps4_config.json` with your PS4 details:
+
+```json
+{
+    "ps4": {
+        "ip": "192.168.100.117",
+        "ftp_port": 2121,
+        "ftp_user": "anonymous",
+        "ftp_password": ""
+    },
+    "title": {
+        "id": "CUSA12878",
+        "patch_suffix": "-patch"
+    },
+    "paths": {
+        "afr_base": "/data/GoldHEN/AFR",
+        "afr_target_suffix": "_v3",
+        "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+        "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
+        "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
+    },
+    "pipeline": {
+        "default_target": "startmeup",
+        "sample_rate": 44100
+    }
+}
+```
+
+**Config is optional.** The pipeline works with CLI flags alone. If a config file
+exists, its values are used as defaults, and CLI flags override them.
+
+**`ps4_config.json` is gitignored** — your PS4 IP and paths are never committed.
 
 ## Plugin Installation Details
 
@@ -341,9 +388,11 @@ There is **no hard 12MB limit**. The 12MB figure was just the size of the origin
 
 5. **Play the song** in Beat Saber — select the original song from the menu. Your custom audio and beatmaps will play.
 
-### Advanced: Custom template path
+### Advanced: Custom paths
 
-If your game dump is in a different location:
+If your game dump is in a different location, you have two options:
+
+**Option A: Use `--template` (per-command):**
 
 ```bash
 python3 tools/full_custom_song_pipeline.py \
@@ -352,6 +401,17 @@ python3 tools/full_custom_song_pipeline.py \
   --template /custom/path/BeatmapLevelsData/startmeup \
   --target startmeup \
   --deploy
+```
+
+**Option B: Edit `ps4_config.json` (persistent):**
+
+```json
+{
+    "paths": {
+        "game_dump_dir": "/custom/path/to/dump",
+        "output_dir": "/custom/path/output"
+    }
+}
 ```
 
 ## Troubleshooting
@@ -418,6 +478,8 @@ beat_saber_deluxe/
 ├── beat_saber_deluxe.prx      # Plugin (release build)
 ├── beat_saber_deluxe_minimal.prx  # Plugin (minimal build)
 ├── README.md                  # This file
+├── ps4_config.example.json    # Example PS4 configuration
+├── ps4_config.json            # Your PS4 configuration (gitignored)
 ├── tools/
 │   ├── full_custom_song_pipeline.py  # Main pipeline (use this!)
 │   ├── hevag_encoder.py            # Audio encoder

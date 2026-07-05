@@ -1431,3 +1431,18 @@ Before building v0.35, I analyzed the difference between the original file and `
   4. Score saves correctly after song completion
   5. --no-pad is essential for songs longer than 70s
 - **Status:** 🏆 v0.50 ALPHA — CONFIRMED WORKING!
+
+
+### Experiment 94b — PCM16 Quality Verified; Config System Created
+- **Date:** 2026-07-05
+- **Key finding:** PCM16 LE encoding is correct. First song (high-quality WAV)
+  sounds CLEAR on PS4. Crackling in Reol song was due to OGG source quality.
+- **Config system:** ps4_config.json created. Pipeline reads IP, port, title ID,
+  AFR paths from config. --config flag added. CLI args override config values.
+- **Beatmap matching:** --ignore-non-standard-beatmaps flag added. When set,
+  only matches files containing "Standard" in the name (ignores 360Degree,
+  90Degree, OneSaber variants). Default behavior (no flag) keeps current
+  substring matching which can match non-standard variants first.
+- **Big Endian test:** PS4 does NOT expect big-endian PCM16. BE version was
+  loud static/noise — much worse than LE version. Confirms LE is correct.
+- **Status:** Pipeline configurable, beatmap matching improved, quality verified.
