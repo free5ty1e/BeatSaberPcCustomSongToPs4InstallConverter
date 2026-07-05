@@ -549,12 +549,17 @@ def build_vorbis_fsb5(audio_path, sample_rate=None,
     """
     Build a Vorbis-format FSB5 file from a WAV/OGG audio file.
 
-    Uses the original game's FSB5 as a template but replaces the OGG Vorbis
-    audio data with custom audio encoded from the input file.
+    The FSB5 audio data format is: [packet_size:uint16][Vorbis_packet]...
+    terminated with packet_size=0. The first 3 packets are the Vorbis codec
+    headers (ident, comment, setup), followed by audio data packets.
+
+    The VorbisData metadata chunk stores a CRC32 (used to look up the Vorbis
+    configuration in the fsb5 module's lookup table) and an FMOD-specific
+    seek table (which we can reuse from the template).
 
     Args:
         audio_path: Path to audio file (.wav, .ogg, etc.)
-        sample_rate: Target sample rate (None = use original, auto-resamples to 44100)
+        sample_rate: Target sample rate (auto-resamples to 44100)
         template_path: Path to FSB5 template (uses original_audio.fsb5 by default)
         pad_to_size: Target file size for padding (default: 12,305,632)
         clip_seconds: Number of seconds of audio to use (default: 30)
@@ -589,24 +594,43 @@ def build_vorbis_fsb5(audio_path, sample_rate=None,
     sf.write(ogg_buf, data, sr, format='OGG', subtype='VORBIS')
     ogg_data = ogg_buf.getvalue()
 
-    # Parse OGG to extract Vorbis headers (first 3 packets)
+    # Parse OGG to extract raw Vorbis packets (without OGG framing)
+    # First 3 packets = Vorbis headers (ident, comment, setup)
+    # Remaining packets = Vorbis audio data
     packets = _parse_ogg_packets(ogg_data)
-    vorbis_headers = b''.join(packets[:3]) if len(packets) >= 3 else b''
+    if len(packets) < 4:
+        log.error("OGG data produced fewer than 4 Vorbis packets (need headers + audio)")
+        return None
 
-    # Calculate CRC32 of the entire OGG data
-    ogg_crc32 = zlib.crc32(ogg_data) & 0xFFFFFFFF
+    # FSB5 Vorbis audio data: size-prefixed raw Vorbis AUDIO packets only
+    # (header packets are stored in the VorbisData metadata / lookup table)
+    # Format: [uint16 size][packet bytes]... terminated with uint16(0)
+    vorbis_audio_packets = packets[3:]     # audio data only (skip headers)
+    print(f"  Vorbis packets: {len(packets)} total ({len(packets)-3} audio)")
+
+    audio_data = io.BytesIO()
+    for pkt in vorbis_audio_packets:
+        audio_data.write(struct.pack('<H', len(pkt)))
+        audio_data.write(pkt)
+    audio_data.write(b'\x00\x00')  # terminator
+    fsb5_audio = audio_data.getvalue()
 
     # Build from template
     result = bytearray()
 
-    # Copy the entire template header (bytes 0 to audio data start)
     # Audio starts at 16 + sample_header_size (1732) = 1748
     audio_offset = 16 + struct.unpack_from('<I', template, 12)[0]
     result.extend(template[:audio_offset])
 
     # Update header fields
-    struct.pack_into('<I', result, 20, len(ogg_data))   # data_size at offset 20
-    struct.pack_into('<I', result, 24, 15)               # mode = VORBIS at offset 24
+    struct.pack_into('<I', result, 20, len(fsb5_audio))  # data_size
+    struct.pack_into('<I', result, 24, 15)                # mode = VORBIS
+
+    # Zero out hash/dummy fields at template offsets 12-43 (file offsets 28-59)
+    # These contain audio-content-dependent data from the original
+    for off in range(28, 60):
+        if off < len(result):
+            result[off] = 0
 
     # Update sample descriptor at offset 60 with new sample count
     sd_raw = struct.unpack_from('<Q', template, 60)[0]
@@ -614,28 +638,14 @@ def build_vorbis_fsb5(audio_path, sample_rate=None,
     new_sd = (sd_raw & ~CLEAR_SAMPLES) | (total_frames << 34)
     struct.pack_into('<Q', result, 60, new_sd)
 
-    # Update VorbisData CRC32 in the metadata chunk (at offset 68+4)
-    # The chunk has: raw(4) = next_chunk:1 + chunk_size:24 + chunk_type:7
-    # Then crc32 at chunk_start + 4
-    chunk_pos = 68  # After 60-byte header + 8-byte sample descriptor
-    struct.pack_into('<I', result, chunk_pos + 4, ogg_crc32)
+    # Use the fsb5 module's Vorbis header CRC32 for compatibility
+    # quality=55, ch=2, rate=44100 -> CRC32=0x6C87A72F
+    chunk_pos = 68
+    known_crc32 = 0x6C87A72F  # Best quality (55) for stereo 44100Hz
+    struct.pack_into('<I', result, chunk_pos + 4, known_crc32)
 
-    # Update VorbisData extra data (the Vorbis headers that follow the CRC32)
-    # Original extra data size = chunk_size - 4 (minus crc32)
-    if vorbis_headers:
-        chunk_raw = struct.unpack_from('<I', result, chunk_pos)[0]
-        orig_chunk_size = (chunk_raw >> 1) & 0xFFFFFF
-        new_extra_size = len(vorbis_headers)
-
-        # If new headers fit, use them; otherwise we'd need to resize the chunk
-        if new_extra_size <= orig_chunk_size - 4:
-            result[chunk_pos + 8:chunk_pos + 8 + new_extra_size] = vorbis_headers
-            # Zero out remaining
-            if new_extra_size < orig_chunk_size - 4:
-                result[chunk_pos + 8 + new_extra_size:chunk_pos + 4 + orig_chunk_size] = b'\x00' * (orig_chunk_size - 4 - new_extra_size)
-
-    # Append OGG audio data
-    result.extend(ogg_data)
+    # Append the size-prefixed Vorbis packets as audio data
+    result.extend(fsb5_audio)
 
     # Pad to target size
     if len(result) < pad_to_size:

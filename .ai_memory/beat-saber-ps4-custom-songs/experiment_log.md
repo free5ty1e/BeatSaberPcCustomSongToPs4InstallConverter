@@ -1304,3 +1304,21 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Bundle:** `hevag_fixed_hash.bundle` — HEVAG audio (full 146.1s), zeroed hash,
   mode=15 (HEVAG on PS4), metadata preserved, 5/5 beatmaps fixed.
 - **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 89 — Vorbis FSB5 v4: Size-Prefixed Raw Vorbis Packets [DEPLOYED]
+- **Date:** 2026-07-04
+- **Key breakthrough:** vgmstream installed and correctly decoded the original FSB5
+  to PCM WAV. Confirmed encoding is "Custom Vorbis" (FMOD's FSB5 Vorbis variant).
+  vgmstream pre-built binary downloaded from GitHub releases r2117.
+- **FSB5 Vorbis format:**
+  1. Audio data = size-prefixed raw Vorbis packets: [uint16 size][packet_bytes]...
+  2. Terminated with uint16(0). No OGG framing.
+  3. The Vorbis header packets (ident, comment, setup) are NOT in audio data.
+  4. VorbisData chunk contains CRC32 (for lookup) + FMOD-specific seek table.
+  5. The CRC32 lookup table in the fsb5 module (vorbis_headers.py) is NOT reliable
+     for PS4 FSB5 files — it's a generic table that doesn't match PS4 FMOD.
+- **Tools installed:** vgmstream-cli (statically linked, no deps), persisted in devcontainer
+- **Correctly decoded WAV:** `/workspace/beat_saber_deluxe/custom_songs/startmeup_decoded_vgmstream.wav`
+- **Bundle:** `vorbis_v4.bundle` (142KB) — 21 size-prefixed Vorbis packets, 30s audio
+- **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST

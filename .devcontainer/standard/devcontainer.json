@@ -41,6 +41,6 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "pip3 install --break-system-packages soundfile pydub 2>/dev/null; apt-get install -y -qq libsndfile1 2>/dev/null || true",
+  "postCreateCommand": "pip3 install --break-system-packages soundfile pydub 2>/dev/null; apt-get install -y -qq libsndfile1 2>/dev/null || true; mkdir -p ~/.local/bin && cp -n /workspace/vgmstream-bin/vgmstream-cli ~/.local/bin/vgmstream-cli 2>/dev/null; echo 'tools ready'",
   "remoteUser": "vscode"
 }
