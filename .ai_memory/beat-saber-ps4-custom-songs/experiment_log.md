@@ -1271,3 +1271,18 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Pipeline:** `tools/create_vorbis_fsb5.py` should be created for future use.
 - **Status:** 🚀 BREAKTHROUGH — VORBIS FORMAT CONFIRMED. Bundle ready for deployment.
 - **Decoded PCM WAV:** `custom_songs/startmeup_decoded_30s.wav` (30s of decoded original audio)
+
+
+### Experiment 87 — Vorbis FSB5 v3: Pipeline Integration + VorbisData Headers [VORBIS FIXED]
+- **Date:** 2026-07-04
+- **Fix:** The VorbisData chunk's extra data (1708 bytes in original) was being copied verbatim
+  from the original FSB5. This data contains the OGG Vorbis codec setup headers (identification,
+  comment, setup packets). When we replaced the OGG data but kept the original headers, FMOD
+  rejected the sample because the setup headers didn't match the audio data.
+- **Fix applied:** Vorbis FSB5 builder now parses our OGG file and extracts the 3 Vorbis header
+  packets, then updates the VorbisData chunk with the correct headers from our custom audio.
+- **Pipeline change:** New `build_vorbis_fsb5()` function added to `hevag_encoder.py`.
+  New `--vorbis` flag added to `full_custom_song_pipeline.py`. Use:
+  `python3 full_custom_song_pipeline.py --song-dir <dir> --target startmeup --vorbis --deploy`
+- **Bundle:** `vorbis_v3.bundle` (568KB) — 30s custom OGG Vorbis with correct headers
+- **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST

@@ -61,3 +61,13 @@ Original Start Me Up audio decoded from FSB5 → PCM16:
 - [[encoder-decoder-inconsistency]]
 - [[fsb5-padding-required]]
 - [[ps4-audio-decoder-behavior]]
+
+
+## VorbisData Chunk
+The VorbisData metadata chunk in the FSB5 sample header contains:
+- CRC32 (4 bytes): CRC32 of the entire OGG data
+- Extra data: The 3 raw Vorbis header packets (identification, comment, setup)
+- These headers MUST match the OGG audio data, or FMOD will reject the sample
+- The pipeline's `build_vorbis_fsb5()` function now correctly parses the OGG
+  file and extracts the correct headers for the VorbisData chunk
+- OGG parsing is done by `_parse_ogg_packets()` in `hevag_encoder.py`

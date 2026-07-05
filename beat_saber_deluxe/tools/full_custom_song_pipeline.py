@@ -52,11 +52,13 @@ from UnityPy.streams import EndianBinaryReader
 import soundfile as sf
 
 try:
-    from hevag_encoder import pcm_to_hevag, fast_pcm_to_hevag, build_fsb5
+    from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
+                                build_fsb5, build_vorbis_fsb5)
 except ImportError:
     # Fallback: try to import directly
     sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
-    from hevag_encoder import pcm_to_hevag, fast_pcm_to_hevag, build_fsb5
+    from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
+                                build_fsb5, build_vorbis_fsb5)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -393,6 +395,8 @@ Examples:
                         help='Skip padding FSB5 to 12MB (will likely freeze on PS4)')
     parser.add_argument('--preserve-metadata', action='store_true',
                         help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
+    parser.add_argument('--vorbis', action='store_true',
+                        help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
 
     args = parser.parse_args()
 
@@ -429,12 +433,24 @@ Examples:
         audio_path = os.path.join(args.song_dir, audio_files[0])
         # Get sample rate via soundfile before full conversion
         info = sf.info(audio_path)
-        actual_sample_rate = info.samplerate
-        pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
-        fsb5_bytes = audio_to_fsb5(audio_path, pad_to_size=pad_to)
-        # Get data_size from FSB5 header (before padding)
-        ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
-        duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
+        if args.vorbis:
+            log.info("Using VORBIS format (mode=15) for FSB5")
+            actual_sample_rate = min(info.samplerate, 44100)
+            fsb5_bytes = build_vorbis_fsb5(audio_path,
+                                            clip_seconds=30,
+                                            pad_to_size=ORIGINAL_RESOURCE_SIZE)
+            # Get PCM frame count from FSB5 sample descriptor
+            sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
+            total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
+            duration = total_frames / float(actual_sample_rate) if actual_sample_rate > 0 else 0
+            log.info(f"  Vorbis FSB5: {len(fsb5_bytes)} bytes, {duration:.1f}s")
+        else:
+            actual_sample_rate = info.samplerate
+            pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
+            fsb5_bytes = audio_to_fsb5(audio_path, pad_to_size=pad_to)
+            # Get data_size from FSB5 header (before padding)
+            ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
+            duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
 
     # -----------------------------------------------------------------------
     # Step 1: Load template bundle

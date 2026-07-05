@@ -469,6 +469,169 @@ def build_fsb5(hevag_data, sample_rate=44100, channels=2,
 
 
 # ==============================================================================
+# Vorbis FSB5 Builder (replaces the original FSB5's OGG data with custom audio)
+# ==============================================================================
+
+import zlib
+import soundfile as sf
+import numpy as np
+
+ORIGINAL_FSB5_PATH = os.path.join(os.path.dirname(__file__) or ".",
+    "..", "tests", "reference", "original_audio.fsb5")
+
+
+def _parse_ogg_packets(ogg_data):
+    """
+    Parse an OGG file and extract all packets.
+
+    Returns:
+        list of bytes: packets in order (first 3 are Vorbis headers)
+    """
+    packets = []
+    pos = 0
+    while pos < len(ogg_data):
+        if ogg_data[pos:pos+4] != b'OggS':
+            break
+        # Skip capture (4) + version (1) + header_type (1) + granule_pos (8)
+        # + serial (4) + page_seq (4) + crc (4) = 22 bytes from pos
+        num_segments = ogg_data[pos + 26]
+        segment_table_start = pos + 27
+        segment_table = ogg_data[segment_table_start:segment_table_start + num_segments]
+
+        data_start = segment_table_start + num_segments
+        for seg_len in segment_table:
+            packet = ogg_data[data_start:data_start + seg_len]
+            if packets or packet[0] in (1, 3, 5):  # Only collect header packets + first audio
+                if len(packets) < 3 or packet[0] in (0,):
+                    packets.append(packet)
+            data_start += seg_len
+
+        pos = data_start
+        if len(packets) >= 50:  # Safety limit
+            break
+
+    return packets
+
+
+def _resample_to_44100(data, sr):
+    """Resample stereo int16 audio to 44100Hz using linear interpolation."""
+    if sr == 44100:
+        return data
+    ratio = 44100 / sr
+    new_len = int(len(data) * ratio)
+    out = np.zeros((new_len, data.shape[1]), dtype=np.int16)
+    src_indices = np.arange(new_len) / ratio
+    idx0 = src_indices.astype(np.int64)
+    idx1 = np.minimum(idx0 + 1, len(data) - 1)
+    frac = (src_indices - idx0).astype(np.float64)
+    for ch in range(data.shape[1]):
+        ch_data = data[:, ch].astype(np.float64)
+        out[:, ch] = (ch_data[idx0] * (1 - frac) + ch_data[idx1] * frac).astype(np.int16)
+    return out
+
+
+def build_vorbis_fsb5(audio_path, sample_rate=None,
+                       template_path=None, pad_to_size=12305632,
+                       clip_seconds=30):
+    """
+    Build a Vorbis-format FSB5 file from a WAV/OGG audio file.
+
+    Uses the original game's FSB5 as a template but replaces the OGG Vorbis
+    audio data with custom audio encoded from the input file.
+
+    Args:
+        audio_path: Path to audio file (.wav, .ogg, etc.)
+        sample_rate: Target sample rate (None = use original, auto-resamples to 44100)
+        template_path: Path to FSB5 template (uses original_audio.fsb5 by default)
+        pad_to_size: Target file size for padding (default: 12,305,632)
+        clip_seconds: Number of seconds of audio to use (default: 30)
+
+    Returns:
+        bytes: Complete FSB5 file (padded to pad_to_size)
+    """
+    if template_path is None:
+        template_path = ORIGINAL_FSB5_PATH
+
+    # Load the original FSB5 as template
+    with open(template_path, 'rb') as f:
+        template = bytearray(f.read())
+
+    # Read and encode custom audio
+    data, sr = sf.read(audio_path, dtype='int16')
+    if data.ndim == 1:
+        data = np.column_stack((data, data))  # mono -> stereo
+
+    # Resample to 44100Hz to match original
+    data = _resample_to_44100(data, sr)
+    sr = 44100
+
+    # Clip to requested duration
+    max_frames = clip_seconds * sr
+    if len(data) > max_frames:
+        data = data[:max_frames]
+    total_frames = len(data)
+
+    # Encode to OGG Vorbis
+    ogg_buf = io.BytesIO()
+    sf.write(ogg_buf, data, sr, format='OGG', subtype='VORBIS')
+    ogg_data = ogg_buf.getvalue()
+
+    # Parse OGG to extract Vorbis headers (first 3 packets)
+    packets = _parse_ogg_packets(ogg_data)
+    vorbis_headers = b''.join(packets[:3]) if len(packets) >= 3 else b''
+
+    # Calculate CRC32 of the entire OGG data
+    ogg_crc32 = zlib.crc32(ogg_data) & 0xFFFFFFFF
+
+    # Build from template
+    result = bytearray()
+
+    # Copy the entire template header (bytes 0 to audio data start)
+    # Audio starts at 16 + sample_header_size (1732) = 1748
+    audio_offset = 16 + struct.unpack_from('<I', template, 12)[0]
+    result.extend(template[:audio_offset])
+
+    # Update header fields
+    struct.pack_into('<I', result, 20, len(ogg_data))   # data_size at offset 20
+    struct.pack_into('<I', result, 24, 15)               # mode = VORBIS at offset 24
+
+    # Update sample descriptor at offset 60 with new sample count
+    sd_raw = struct.unpack_from('<Q', template, 60)[0]
+    CLEAR_SAMPLES = ((1 << 30) - 1) << 34
+    new_sd = (sd_raw & ~CLEAR_SAMPLES) | (total_frames << 34)
+    struct.pack_into('<Q', result, 60, new_sd)
+
+    # Update VorbisData CRC32 in the metadata chunk (at offset 68+4)
+    # The chunk has: raw(4) = next_chunk:1 + chunk_size:24 + chunk_type:7
+    # Then crc32 at chunk_start + 4
+    chunk_pos = 68  # After 60-byte header + 8-byte sample descriptor
+    struct.pack_into('<I', result, chunk_pos + 4, ogg_crc32)
+
+    # Update VorbisData extra data (the Vorbis headers that follow the CRC32)
+    # Original extra data size = chunk_size - 4 (minus crc32)
+    if vorbis_headers:
+        chunk_raw = struct.unpack_from('<I', result, chunk_pos)[0]
+        orig_chunk_size = (chunk_raw >> 1) & 0xFFFFFF
+        new_extra_size = len(vorbis_headers)
+
+        # If new headers fit, use them; otherwise we'd need to resize the chunk
+        if new_extra_size <= orig_chunk_size - 4:
+            result[chunk_pos + 8:chunk_pos + 8 + new_extra_size] = vorbis_headers
+            # Zero out remaining
+            if new_extra_size < orig_chunk_size - 4:
+                result[chunk_pos + 8 + new_extra_size:chunk_pos + 4 + orig_chunk_size] = b'\x00' * (orig_chunk_size - 4 - new_extra_size)
+
+    # Append OGG audio data
+    result.extend(ogg_data)
+
+    # Pad to target size
+    if len(result) < pad_to_size:
+        result.extend(bytes(pad_to_size - len(result)))
+
+    return bytes(result)
+
+
+# ==============================================================================
 # CLI
 # ==============================================================================
 
