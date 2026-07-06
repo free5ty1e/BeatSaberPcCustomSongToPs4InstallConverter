@@ -31,9 +31,60 @@ log = logging.getLogger('lapped_audio')
 LAP_THRESHOLD = 1.3  # max_note_time / audio_duration ratio to trigger lapping
 
 
-def get_beatmap_event_times(beatmap_dir: str) -> dict:
-    """Load all beatmap .dat files and return per-difficulty event times."""
+def load_bpm(beatmap_dir: str) -> float:
+    """Load BPM from info.dat, falling back to 120."""
+    info_path = os.path.join(beatmap_dir, 'info.dat')
+    if os.path.isfile(info_path):
+        try:
+            info = json.load(open(info_path))
+            bpm = info.get('_beatsPerMinute')
+            if bpm and bpm > 0:
+                return float(bpm)
+        except Exception:
+            pass
+    # Fallback: try reading a beatmap file
     import glob
+    for path in sorted(glob.glob(os.path.join(beatmap_dir, '*.dat'))):
+        if path.endswith('info.dat'):
+            continue
+        try:
+            data = json.load(open(path))
+            bpm = data.get('_beatsPerMinute')
+            if bpm and bpm > 0:
+                return float(bpm)
+        except Exception:
+            continue
+    return 120.0
+
+
+def is_v2_beatmap(beatmap_dir: str) -> bool:
+    """Check if beatmaps are V2 format (_time in beats)."""
+    import glob
+    for path in sorted(glob.glob(os.path.join(beatmap_dir, '*.dat'))):
+        if path.endswith('info.dat'):
+            continue
+        try:
+            data = json.load(open(path))
+            ver = data.get('_version', '')
+            if ver.startswith('3'):
+                return False
+            if ver.startswith('2') or ver == '':
+                return True
+        except Exception:
+            continue
+    return True  # assume V2 if unknown
+
+
+def get_beatmap_event_times(beatmap_dir: str) -> dict:
+    """Load all beatmap .dat files and return per-difficulty event times.
+
+    For V2 beatmaps (_version 2.x), _time is in BEATS.
+    This function converts beats to seconds using the BPM from info.dat.
+    """
+    import glob
+
+    bpm = load_bpm(beatmap_dir)
+    v2 = is_v2_beatmap(beatmap_dir)
 
     dat_files = sorted(glob.glob(os.path.join(beatmap_dir, '*.dat')))
     infos = {}
@@ -45,19 +96,22 @@ def get_beatmap_event_times(beatmap_dir: str) -> dict:
         except Exception:
             continue
         name = os.path.basename(path)
-        times = set()
+        times_sec = set()
         for key in ('_notes', '_obstacles', '_bombs', '_sliders', '_burstSliders'):
             for item in data.get(key, []):
                 t = item.get('_time', 0)
                 if isinstance(t, (int, float)):
-                    times.add(t)
+                    if v2:
+                        t = t / bpm * 60  # beats → seconds
+                    times_sec.add(t)
+        # Bookmarks: in the beatmap they match the _time unit (beats or secs)
         bookmarks = [b.get('_time', 0) for b in data.get('_customData', {}).get('_bookmarks', [])]
-        cd_time = data.get('_customData', {}).get('_time', 0)
+        if v2:
+            bookmarks = [b / bpm * 60 for b in bookmarks]
         infos[name] = {
-            'times': sorted(times),
-            'max_time': max(times) if times else 0,
+            'times': sorted(times_sec),
+            'max_time': max(times_sec) if times_sec else 0,
             'bookmarks': sorted(set(bookmarks)),
-            'cd_time': cd_time,
         }
 
     return infos
@@ -74,7 +128,7 @@ def detect_lapped(beatmap_dir: str, audio_duration: float) -> dict:
 
     Returns dict with keys:
         is_lapped: bool
-        max_note_time: float (max event time across all diffs)
+        max_note_time: float (max event time in SECONDS across all diffs)
         loop_start: float (start of loop section in original audio)
         loop_end: float (end of loop section in original audio)
         loop_duration: float
