@@ -106,6 +106,12 @@ except ImportError:
                                 build_fsb5, build_vorbis_fsb5,
                                 build_pcm16_fsb5)
 
+try:
+    from lapped_audio import lap_audio_if_needed, detect_lapped, lap_audio
+except ImportError:
+    sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
+    from lapped_audio import lap_audio_if_needed, detect_lapped, lap_audio
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -421,7 +427,7 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     ]
 
     log.info(f"Deploying to PS4: {remote_path}")
-    result = sp.run(cmd, capture_output=True, text=True, timeout=120)
+    result = sp.run(cmd, capture_output=True, text=True, timeout=600)
 
     if result.returncode == 0:
         log.info("  ✅ Deployment successful")
@@ -533,6 +539,15 @@ Examples:
         audio_path = os.path.join(args.song_dir, audio_files[0])
         # Get sample rate via soundfile before full conversion
         info = sf.info(audio_path)
+
+        # -------------------------------------------------------------------
+        # Step 0b: Detect & handle lapped-up audio
+        # -------------------------------------------------------------------
+        lap_info = detect_lapped(args.song_dir, info.duration)
+        if lap_info['is_lapped']:
+            audio_path = lap_audio(audio_path, lap_info)
+            info = sf.info(audio_path)
+
         if args.vorbis:
             log.info("Using VORBIS format (mode=15) for FSB5")
             actual_sample_rate = min(info.samplerate, 44100)

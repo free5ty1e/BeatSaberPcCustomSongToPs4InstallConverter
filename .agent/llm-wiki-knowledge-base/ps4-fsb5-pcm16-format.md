@@ -37,3 +37,11 @@ Lossless, bit-identical round-trip, no codebook issues.
 vgmstream uses `base_header_size = 60` for version 1 FSB5.
 Audio offset = base_header_size + sampleHeaderSize = 60 + 65 = 125.
 The actual header body ends at offset 81, requiring 44 bytes of alignment padding.
+
+
+## Lapped-up Beatmaps and Audio
+Lapped-up beatmaps are a modded feature where certain sections of the song are repeated.
+In the beatmap JSON, this is indicated by lapped-up metadata in `_customData` (e.g., `_laps` array).
+The official PS4 game does NOT support this natively. To sync lapped-up beatmaps with audio on PS4,
+the audio file must be manually edited (lapped-up) to repeat the corresponding sections,
+so that the audio duration matches the lapped-up beatmap duration.

@@ -82,3 +82,6 @@
 
 ## v0.62 — Song Menu Customization
 - [ ] Replace preview audio in song menu with custom song preview audio
+
+## v0.60 — Alpha Polish
+- [ ] Implement lapt-up audio support (repeat audio segments to match lapped-up beatmaps)
