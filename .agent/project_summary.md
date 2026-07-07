@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-02
-**Status:** 🏆 v0.50 ALPHA — END-TO-END CONFIRMED! Full song plays, score saves, no size limit. PCM16 FSB5 (codec=2) with --no-pad works for any song length. Second song (Reol, 224s) deployed with 8 beatmaps including 360-degree maps.
+**Last Updated:** 2026-07-06
+**Status:** 🏆 v0.50 ALPHA — Full song plays, score saves. 306 official songs cataloged in beat_saber_song_ids.json (22 with full names/artists). Song metadata storage fully documented (resources.assets, bundles, addressables). Next test: "360" by Charli XCX (V3.3.0, 10 diffs, arcs on all).
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

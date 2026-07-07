@@ -1,0 +1,28 @@
+# Song Testing Log
+
+Records which custom songs have been tested on PS4, their sync status, and any issues.
+
+## Status Legend
+- ✅ **Perfect** — Sync is correct, full song plays without issues, score saves
+- ⚠️ **Minor Issues** — Sync slightly off, but playable
+- ❌ **Broken** — Major desync, crashes, or doesn't load
+
+## Next Test Candidate
+
+| Song | Artist | BPM | Duration | Beatmap Format | Modes | Notes |
+|------|--------|-----|----------|---------------|-------|-------|
+| 360 | Charli XCX | 120 | ~147s | V3.3.0 | Standard (ENH+Exp+Exp+), 360Degree (ENH+Exp+Exp+) | 10 diffs, arcs on all, bombs, obstacles. Mapper: Lekrkoekj & Scorefam. **Ready for build test.** |
+
+## Test Results
+
+| Date | Song | Artist | BPM | Duration | Audio Format | Sync | Score Saves | Notes |
+|------|------|--------|-----|----------|-------------|------|-------------|-------|
+| 2026-06-28 | Drop Pop Candy | Reol | 130 | 224s | PCM16 FSB5 | ✅ | ✅ | v0.50 alpha — first working custom song. 8 beatmaps including 360-degree. |
+| 2026-06-28 | Bruises | Fox Stevenson | 174 | 224.8s | PCM16 FSB5 | ❌ | N/A | Desynced — beatmap appears poorly authored. 645 beats at 174 BPM = 222.7s, audio = 224.8s. Not a lapping issue. |
+| 2026-06-28 | Bruises (lapped) | Fox Stevenson | 174 | 678.6s | PCM16 FSB5 | ❌ | N/A | Lapped version — wrongfully extended audio due to bug: `_time` in beats was compared to `audio_duration` in seconds. Fixed in lapped_audio.py. |
+
+## Pipeline Notes
+- Use `--pcm16` flag for lossless audio (PCM16 FSB5, codec=2)
+- V2 beatmaps use `_time` in BEATS — pipeline converts to seconds using BPM from `info.dat`
+- Lapped detection: triggers when `max_note_time_in_seconds > audio_duration * 1.3`
+- BEATS→seconds conversion: `time_seconds = time_beats * (60.0 / bpm)`

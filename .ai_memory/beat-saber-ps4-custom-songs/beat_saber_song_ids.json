@@ -1,0 +1,1648 @@
+{
+  "generated": "Beat Saber PS4 CUSA12878 song database",
+  "totalSongs": 306,
+  "baseGameSongsWithMetadata": 22,
+  "notes": "Names/artists only available for the 22 base songs in resources.assets. DLC songs need to be extracted from addressables packs.",
+  "songs": {
+    "100bills": {
+      "songID": "100bills",
+      "bundlePath": "BeatmapLevelsData/100bills",
+      "internalName": "100Bills",
+      "songName": "$100 Bills",
+      "songAuthor": "Jaroslav Beck",
+      "levelAuthor": "DefaultEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "100billsremix": {
+      "songID": "100billsremix",
+      "bundlePath": "BeatmapLevelsData/100billsremix",
+      "metadataSource": "bundle_only"
+    },
+    "2beloved": {
+      "songID": "2beloved",
+      "bundlePath": "BeatmapLevelsData/2beloved",
+      "metadataSource": "bundle_only"
+    },
+    "aboutdamntime": {
+      "songID": "aboutdamntime",
+      "bundlePath": "BeatmapLevelsData/aboutdamntime",
+      "metadataSource": "bundle_only"
+    },
+    "abracadabra": {
+      "songID": "abracadabra",
+      "bundlePath": "BeatmapLevelsData/abracadabra",
+      "metadataSource": "bundle_only"
+    },
+    "accelerate": {
+      "songID": "accelerate",
+      "bundlePath": "BeatmapLevelsData/accelerate",
+      "metadataSource": "bundle_only"
+    },
+    "alejandro": {
+      "songID": "alejandro",
+      "bundlePath": "BeatmapLevelsData/alejandro",
+      "metadataSource": "bundle_only"
+    },
+    "alleyezonme": {
+      "songID": "alleyezonme",
+      "bundlePath": "BeatmapLevelsData/alleyezonme",
+      "metadataSource": "bundle_only"
+    },
+    "allthegoodgirlsgotohell": {
+      "songID": "allthegoodgirlsgotohell",
+      "bundlePath": "BeatmapLevelsData/allthegoodgirlsgotohell",
+      "metadataSource": "bundle_only"
+    },
+    "alone": {
+      "songID": "alone",
+      "bundlePath": "BeatmapLevelsData/alone",
+      "metadataSource": "bundle_only"
+    },
+    "alreadyover": {
+      "songID": "alreadyover",
+      "bundlePath": "BeatmapLevelsData/alreadyover",
+      "internalName": "AlreadyOver",
+      "songName": "Already Over",
+      "songAuthor": "Mike Shinoda",
+      "levelAuthor": "Kolezan",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "americanidiot": {
+      "songID": "americanidiot",
+      "bundlePath": "BeatmapLevelsData/americanidiot",
+      "internalName": "AmericanIdiot",
+      "songName": "American Idiot",
+      "songAuthor": "Green Day",
+      "levelAuthor": "GreenDayGrenadeEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "anaconda": {
+      "songID": "anaconda",
+      "bundlePath": "BeatmapLevelsData/anaconda",
+      "metadataSource": "bundle_only"
+    },
+    "angelvoices": {
+      "songID": "angelvoices",
+      "bundlePath": "BeatmapLevelsData/angelvoices",
+      "metadataSource": "bundle_only"
+    },
+    "angry": {
+      "songID": "angry",
+      "bundlePath": "BeatmapLevelsData/angry",
+      "metadataSource": "bundle_only"
+    },
+    "animals": {
+      "songID": "animals",
+      "bundlePath": "BeatmapLevelsData/animals",
+      "metadataSource": "bundle_only"
+    },
+    "anotheronebitesthedust": {
+      "songID": "anotheronebitesthedust",
+      "bundlePath": "BeatmapLevelsData/anotheronebitesthedust",
+      "metadataSource": "bundle_only"
+    },
+    "aroundtheworld": {
+      "songID": "aroundtheworld",
+      "bundlePath": "BeatmapLevelsData/aroundtheworld",
+      "metadataSource": "bundle_only"
+    },
+    "aroundtheworldharderbetterfasterstronger": {
+      "songID": "aroundtheworldharderbetterfasterstronger",
+      "bundlePath": "BeatmapLevelsData/aroundtheworldharderbetterfasterstronger",
+      "metadataSource": "bundle_only"
+    },
+    "artteamtest": {
+      "songID": "artteamtest",
+      "bundlePath": "BeatmapLevelsData/artteamtest",
+      "metadataSource": "bundle_only"
+    },
+    "atlasrise": {
+      "songID": "atlasrise",
+      "bundlePath": "BeatmapLevelsData/atlasrise",
+      "metadataSource": "bundle_only"
+    },
+    "babyonemoretime": {
+      "songID": "babyonemoretime",
+      "bundlePath": "BeatmapLevelsData/babyonemoretime",
+      "metadataSource": "bundle_only"
+    },
+    "badguy": {
+      "songID": "badguy",
+      "bundlePath": "BeatmapLevelsData/badguy",
+      "metadataSource": "bundle_only"
+    },
+    "badliar": {
+      "songID": "badliar",
+      "bundlePath": "BeatmapLevelsData/badliar",
+      "metadataSource": "bundle_only"
+    },
+    "badromance": {
+      "songID": "badromance",
+      "bundlePath": "BeatmapLevelsData/badromance",
+      "metadataSource": "bundle_only"
+    },
+    "balearicpumping": {
+      "songID": "balearicpumping",
+      "bundlePath": "BeatmapLevelsData/balearicpumping",
+      "metadataSource": "bundle_only"
+    },
+    "bangarang": {
+      "songID": "bangarang",
+      "bundlePath": "BeatmapLevelsData/bangarang",
+      "internalName": "Bangarang",
+      "songName": "Bangarang",
+      "songAuthor": "feat. Sirah",
+      "levelAuthor": "Skrillex",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "battery": {
+      "songID": "battery",
+      "bundlePath": "BeatmapLevelsData/battery",
+      "metadataSource": "bundle_only"
+    },
+    "beatsaber": {
+      "songID": "beatsaber",
+      "bundlePath": "BeatmapLevelsData/beatsaber",
+      "internalName": "BeatSaber",
+      "songName": "Beat Saber",
+      "songAuthor": "Jaroslav Beck",
+      "levelAuthor": "DefaultEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "believer": {
+      "songID": "believer",
+      "bundlePath": "BeatmapLevelsData/believer",
+      "metadataSource": "bundle_only"
+    },
+    "bellyache": {
+      "songID": "bellyache",
+      "bundlePath": "BeatmapLevelsData/bellyache",
+      "metadataSource": "bundle_only"
+    },
+    "bethereforyou": {
+      "songID": "bethereforyou",
+      "bundlePath": "BeatmapLevelsData/bethereforyou",
+      "metadataSource": "bundle_only"
+    },
+    "bitemyheadoff": {
+      "songID": "bitemyheadoff",
+      "bundlePath": "BeatmapLevelsData/bitemyheadoff",
+      "metadataSource": "bundle_only"
+    },
+    "blackened": {
+      "songID": "blackened",
+      "bundlePath": "BeatmapLevelsData/blackened",
+      "metadataSource": "bundle_only"
+    },
+    "bleeditout": {
+      "songID": "bleeditout",
+      "bundlePath": "BeatmapLevelsData/bleeditout",
+      "internalName": "BleedItOut",
+      "songName": "Bleed It Out",
+      "songAuthor": "Linkin Park",
+      "levelAuthor": "Freeek (Narwall, Freeek, ETAN & altrewin Remaster)",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "blindinglights": {
+      "songID": "blindinglights",
+      "bundlePath": "BeatmapLevelsData/blindinglights",
+      "metadataSource": "bundle_only"
+    },
+    "bloodsweatandtears": {
+      "songID": "bloodsweatandtears",
+      "bundlePath": "BeatmapLevelsData/bloodsweatandtears",
+      "metadataSource": "bundle_only"
+    },
+    "bohemianrhapsody": {
+      "songID": "bohemianrhapsody",
+      "bundlePath": "BeatmapLevelsData/bohemianrhapsody",
+      "metadataSource": "bundle_only"
+    },
+    "bones": {
+      "songID": "bones",
+      "bundlePath": "BeatmapLevelsData/bones",
+      "metadataSource": "bundle_only"
+    },
+    "bornthisway": {
+      "songID": "bornthisway",
+      "bundlePath": "BeatmapLevelsData/bornthisway",
+      "metadataSource": "bundle_only"
+    },
+    "borntobewild": {
+      "songID": "borntobewild",
+      "bundlePath": "BeatmapLevelsData/borntobewild",
+      "metadataSource": "bundle_only"
+    },
+    "boulevardofbrokendreams": {
+      "songID": "boulevardofbrokendreams",
+      "bundlePath": "BeatmapLevelsData/boulevardofbrokendreams",
+      "metadataSource": "bundle_only"
+    },
+    "boundless": {
+      "songID": "boundless",
+      "bundlePath": "BeatmapLevelsData/boundless",
+      "internalName": "Boundless",
+      "songName": "Boundless",
+      "songAuthor": "Aero Chord",
+      "levelAuthor": "MonstercatEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "boywithluv": {
+      "songID": "boywithluv",
+      "bundlePath": "BeatmapLevelsData/boywithluv",
+      "metadataSource": "bundle_only"
+    },
+    "breakingthehabit": {
+      "songID": "breakingthehabit",
+      "bundlePath": "BeatmapLevelsData/breakingthehabit",
+      "metadataSource": "bundle_only"
+    },
+    "breezer": {
+      "songID": "breezer",
+      "bundlePath": "BeatmapLevelsData/breezer",
+      "metadataSource": "bundle_only"
+    },
+    "burningsands": {
+      "songID": "burningsands",
+      "bundlePath": "BeatmapLevelsData/burningsands",
+      "metadataSource": "bundle_only"
+    },
+    "burningup": {
+      "songID": "burningup",
+      "bundlePath": "BeatmapLevelsData/burningup",
+      "metadataSource": "bundle_only"
+    },
+    "buryafriend": {
+      "songID": "buryafriend",
+      "bundlePath": "BeatmapLevelsData/buryafriend",
+      "metadataSource": "bundle_only"
+    },
+    "butterflies": {
+      "songID": "butterflies",
+      "bundlePath": "BeatmapLevelsData/butterflies",
+      "metadataSource": "bundle_only"
+    },
+    "cantfeelmyface": {
+      "songID": "cantfeelmyface",
+      "bundlePath": "BeatmapLevelsData/cantfeelmyface",
+      "metadataSource": "bundle_only"
+    },
+    "cantyouhearmeknocking": {
+      "songID": "cantyouhearmeknocking",
+      "bundlePath": "BeatmapLevelsData/cantyouhearmeknocking",
+      "metadataSource": "bundle_only"
+    },
+    "cathedral": {
+      "songID": "cathedral",
+      "bundlePath": "BeatmapLevelsData/cathedral",
+      "metadataSource": "bundle_only"
+    },
+    "centuries": {
+      "songID": "centuries",
+      "bundlePath": "BeatmapLevelsData/centuries",
+      "metadataSource": "bundle_only"
+    },
+    "circus": {
+      "songID": "circus",
+      "bundlePath": "BeatmapLevelsData/circus",
+      "internalName": "Circus",
+      "songName": "Circus",
+      "songAuthor": "Britney Spears",
+      "levelAuthor": "BritneyEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "commercialpumping": {
+      "songID": "commercialpumping",
+      "bundlePath": "BeatmapLevelsData/commercialpumping",
+      "metadataSource": "bundle_only"
+    },
+    "countingstars": {
+      "songID": "countingstars",
+      "bundlePath": "BeatmapLevelsData/countingstars",
+      "metadataSource": "bundle_only"
+    },
+    "countryrounds": {
+      "songID": "countryrounds",
+      "bundlePath": "BeatmapLevelsData/countryrounds",
+      "metadataSource": "bundle_only"
+    },
+    "crabrave": {
+      "songID": "crabrave",
+      "bundlePath": "BeatmapLevelsData/crabrave",
+      "metadataSource": "bundle_only"
+    },
+    "crawling": {
+      "songID": "crawling",
+      "bundlePath": "BeatmapLevelsData/crawling",
+      "metadataSource": "bundle_only"
+    },
+    "crazygenius": {
+      "songID": "crazygenius",
+      "bundlePath": "BeatmapLevelsData/crazygenius",
+      "metadataSource": "bundle_only"
+    },
+    "crazylittlethingcalledlove": {
+      "songID": "crazylittlethingcalledlove",
+      "bundlePath": "BeatmapLevelsData/crazylittlethingcalledlove",
+      "metadataSource": "bundle_only"
+    },
+    "creepingdeath": {
+      "songID": "creepingdeath",
+      "bundlePath": "BeatmapLevelsData/creepingdeath",
+      "metadataSource": "bundle_only"
+    },
+    "crystallized": {
+      "songID": "crystallized",
+      "bundlePath": "BeatmapLevelsData/crystallized",
+      "metadataSource": "bundle_only"
+    },
+    "curtainsallnightlong": {
+      "songID": "curtainsallnightlong",
+      "bundlePath": "BeatmapLevelsData/curtainsallnightlong",
+      "metadataSource": "bundle_only"
+    },
+    "cuziloveyou": {
+      "songID": "cuziloveyou",
+      "bundlePath": "BeatmapLevelsData/cuziloveyou",
+      "metadataSource": "bundle_only"
+    },
+    "cyclehit": {
+      "songID": "cyclehit",
+      "bundlePath": "BeatmapLevelsData/cyclehit",
+      "metadataSource": "bundle_only"
+    },
+    "dabadabadabadaba": {
+      "songID": "dabadabadabadaba",
+      "bundlePath": "BeatmapLevelsData/dabadabadabadaba",
+      "metadataSource": "bundle_only"
+    },
+    "dafunkdaftendirekt": {
+      "songID": "dafunkdaftendirekt",
+      "bundlePath": "BeatmapLevelsData/dafunkdaftendirekt",
+      "metadataSource": "bundle_only"
+    },
+    "damage": {
+      "songID": "damage",
+      "bundlePath": "BeatmapLevelsData/damage",
+      "metadataSource": "bundle_only"
+    },
+    "dancedance": {
+      "songID": "dancedance",
+      "bundlePath": "BeatmapLevelsData/dancedance",
+      "metadataSource": "bundle_only"
+    },
+    "dancingsnotacrime": {
+      "songID": "dancingsnotacrime",
+      "bundlePath": "BeatmapLevelsData/dancingsnotacrime",
+      "metadataSource": "bundle_only"
+    },
+    "danger": {
+      "songID": "danger",
+      "bundlePath": "BeatmapLevelsData/danger",
+      "metadataSource": "bundle_only"
+    },
+    "deadmanwalking": {
+      "songID": "deadmanwalking",
+      "bundlePath": "BeatmapLevelsData/deadmanwalking",
+      "metadataSource": "bundle_only"
+    },
+    "dieforyou": {
+      "songID": "dieforyou",
+      "bundlePath": "BeatmapLevelsData/dieforyou",
+      "internalName": "DieForYou",
+      "songName": "Die For You (Remix)",
+      "songAuthor": "The Weeknd & Ariana Grande",
+      "levelAuthor": "Zakka",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "digital": {
+      "songID": "digital",
+      "bundlePath": "BeatmapLevelsData/digital",
+      "metadataSource": "bundle_only"
+    },
+    "dionysus": {
+      "songID": "dionysus",
+      "bundlePath": "BeatmapLevelsData/dionysus",
+      "metadataSource": "bundle_only"
+    },
+    "dna": {
+      "songID": "dna",
+      "bundlePath": "BeatmapLevelsData/dna",
+      "metadataSource": "bundle_only"
+    },
+    "dnalamar": {
+      "songID": "dnalamar",
+      "bundlePath": "BeatmapLevelsData/dnalamar",
+      "metadataSource": "bundle_only"
+    },
+    "dollarseventyeight": {
+      "songID": "dollarseventyeight",
+      "bundlePath": "BeatmapLevelsData/dollarseventyeight",
+      "metadataSource": "bundle_only"
+    },
+    "dontcha": {
+      "songID": "dontcha",
+      "bundlePath": "BeatmapLevelsData/dontcha",
+      "metadataSource": "bundle_only"
+    },
+    "dontgo": {
+      "songID": "dontgo",
+      "bundlePath": "BeatmapLevelsData/dontgo",
+      "metadataSource": "bundle_only"
+    },
+    "dontstopmenow": {
+      "songID": "dontstopmenow",
+      "bundlePath": "BeatmapLevelsData/dontstopmenow",
+      "metadataSource": "bundle_only"
+    },
+    "dope": {
+      "songID": "dope",
+      "bundlePath": "BeatmapLevelsData/dope",
+      "metadataSource": "bundle_only"
+    },
+    "dumbthingz": {
+      "songID": "dumbthingz",
+      "bundlePath": "BeatmapLevelsData/dumbthingz",
+      "metadataSource": "bundle_only"
+    },
+    "dynamite": {
+      "songID": "dynamite",
+      "bundlePath": "BeatmapLevelsData/dynamite",
+      "metadataSource": "bundle_only"
+    },
+    "elixia": {
+      "songID": "elixia",
+      "bundlePath": "BeatmapLevelsData/elixia",
+      "metadataSource": "bundle_only"
+    },
+    "emojivip": {
+      "songID": "emojivip",
+      "bundlePath": "BeatmapLevelsData/emojivip",
+      "metadataSource": "bundle_only"
+    },
+    "emperorsnewclothes": {
+      "songID": "emperorsnewclothes",
+      "bundlePath": "BeatmapLevelsData/emperorsnewclothes",
+      "metadataSource": "bundle_only"
+    },
+    "endgame": {
+      "songID": "endgame",
+      "bundlePath": "BeatmapLevelsData/endgame",
+      "metadataSource": "bundle_only"
+    },
+    "enemy": {
+      "songID": "enemy",
+      "bundlePath": "BeatmapLevelsData/enemy",
+      "metadataSource": "bundle_only"
+    },
+    "entersandman": {
+      "songID": "entersandman",
+      "bundlePath": "BeatmapLevelsData/entersandman",
+      "metadataSource": "bundle_only"
+    },
+    "epic": {
+      "songID": "epic",
+      "bundlePath": "BeatmapLevelsData/epic",
+      "metadataSource": "bundle_only"
+    },
+    "escape": {
+      "songID": "escape",
+      "bundlePath": "BeatmapLevelsData/escape",
+      "metadataSource": "bundle_only"
+    },
+    "escaperemix": {
+      "songID": "escaperemix",
+      "bundlePath": "BeatmapLevelsData/escaperemix",
+      "metadataSource": "bundle_only"
+    },
+    "everybodysgay": {
+      "songID": "everybodysgay",
+      "bundlePath": "BeatmapLevelsData/everybodysgay",
+      "metadataSource": "bundle_only"
+    },
+    "exitthisearthsatomosphere": {
+      "songID": "exitthisearthsatomosphere",
+      "bundlePath": "BeatmapLevelsData/exitthisearthsatomosphere",
+      "metadataSource": "bundle_only"
+    },
+    "eyeofthetiger": {
+      "songID": "eyeofthetiger",
+      "bundlePath": "BeatmapLevelsData/eyeofthetiger",
+      "metadataSource": "bundle_only"
+    },
+    "fadetoblack": {
+      "songID": "fadetoblack",
+      "bundlePath": "BeatmapLevelsData/fadetoblack",
+      "metadataSource": "bundle_only"
+    },
+    "faint": {
+      "songID": "faint",
+      "bundlePath": "BeatmapLevelsData/faint",
+      "metadataSource": "bundle_only"
+    },
+    "fakelove": {
+      "songID": "fakelove",
+      "bundlePath": "BeatmapLevelsData/fakelove",
+      "metadataSource": "bundle_only"
+    },
+    "famous": {
+      "songID": "famous",
+      "bundlePath": "BeatmapLevelsData/famous",
+      "metadataSource": "bundle_only"
+    },
+    "fatherofall": {
+      "songID": "fatherofall",
+      "bundlePath": "BeatmapLevelsData/fatherofall",
+      "metadataSource": "bundle_only"
+    },
+    "feelingstronger": {
+      "songID": "feelingstronger",
+      "bundlePath": "BeatmapLevelsData/feelingstronger",
+      "metadataSource": "bundle_only"
+    },
+    "fightingmyself": {
+      "songID": "fightingmyself",
+      "bundlePath": "BeatmapLevelsData/fightingmyself",
+      "metadataSource": "bundle_only"
+    },
+    "finalboss": {
+      "songID": "finalboss",
+      "bundlePath": "BeatmapLevelsData/finalboss",
+      "metadataSource": "bundle_only"
+    },
+    "finalbosschan": {
+      "songID": "finalbosschan",
+      "bundlePath": "BeatmapLevelsData/finalbosschan",
+      "metadataSource": "bundle_only"
+    },
+    "firereadyaim": {
+      "songID": "firereadyaim",
+      "bundlePath": "BeatmapLevelsData/firereadyaim",
+      "metadataSource": "bundle_only"
+    },
+    "firestarter": {
+      "songID": "firestarter",
+      "bundlePath": "BeatmapLevelsData/firestarter",
+      "internalName": "Firestarter",
+      "songName": "Firestarter",
+      "songAuthor": "Tanger",
+      "levelAuthor": "ETAN",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "firstoftheyear": {
+      "songID": "firstoftheyear",
+      "bundlePath": "BeatmapLevelsData/firstoftheyear",
+      "metadataSource": "bundle_only"
+    },
+    "fitbeat": {
+      "songID": "fitbeat",
+      "bundlePath": "BeatmapLevelsData/fitbeat",
+      "metadataSource": "bundle_only"
+    },
+    "forwhomthebelltolls": {
+      "songID": "forwhomthebelltolls",
+      "bundlePath": "BeatmapLevelsData/forwhomthebelltolls",
+      "metadataSource": "bundle_only"
+    },
+    "freebird": {
+      "songID": "freebird",
+      "bundlePath": "BeatmapLevelsData/freebird",
+      "metadataSource": "bundle_only"
+    },
+    "freestyler": {
+      "songID": "freestyler",
+      "bundlePath": "BeatmapLevelsData/freestyler",
+      "metadataSource": "bundle_only"
+    },
+    "fuel": {
+      "songID": "fuel",
+      "bundlePath": "BeatmapLevelsData/fuel",
+      "metadataSource": "bundle_only"
+    },
+    "fullcharge": {
+      "songID": "fullcharge",
+      "bundlePath": "BeatmapLevelsData/fullcharge",
+      "metadataSource": "bundle_only"
+    },
+    "getlucky": {
+      "songID": "getlucky",
+      "bundlePath": "BeatmapLevelsData/getlucky",
+      "metadataSource": "bundle_only"
+    },
+    "ghost": {
+      "songID": "ghost",
+      "bundlePath": "BeatmapLevelsData/ghost",
+      "metadataSource": "bundle_only"
+    },
+    "ghostsnstuff": {
+      "songID": "ghostsnstuff",
+      "bundlePath": "BeatmapLevelsData/ghostsnstuff",
+      "metadataSource": "bundle_only"
+    },
+    "gimmemore": {
+      "songID": "gimmemore",
+      "bundlePath": "BeatmapLevelsData/gimmemore",
+      "metadataSource": "bundle_only"
+    },
+    "gimmeshelter": {
+      "songID": "gimmeshelter",
+      "bundlePath": "BeatmapLevelsData/gimmeshelter",
+      "metadataSource": "bundle_only"
+    },
+    "ginandjuice": {
+      "songID": "ginandjuice",
+      "bundlePath": "BeatmapLevelsData/ginandjuice",
+      "metadataSource": "bundle_only"
+    },
+    "givealittlelove": {
+      "songID": "givealittlelove",
+      "bundlePath": "BeatmapLevelsData/givealittlelove",
+      "metadataSource": "bundle_only"
+    },
+    "givenup": {
+      "songID": "givenup",
+      "bundlePath": "BeatmapLevelsData/givenup",
+      "metadataSource": "bundle_only"
+    },
+    "glide": {
+      "songID": "glide",
+      "bundlePath": "BeatmapLevelsData/glide",
+      "internalName": "Glide",
+      "songName": "Glide",
+      "songAuthor": "Stephen Walking",
+      "levelAuthor": "RocketEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "godzilla": {
+      "songID": "godzilla",
+      "bundlePath": "BeatmapLevelsData/godzilla",
+      "metadataSource": "bundle_only"
+    },
+    "goodashell": {
+      "songID": "goodashell",
+      "bundlePath": "BeatmapLevelsData/goodashell",
+      "metadataSource": "bundle_only"
+    },
+    "happierthanever": {
+      "songID": "happierthanever",
+      "bundlePath": "BeatmapLevelsData/happierthanever",
+      "metadataSource": "bundle_only"
+    },
+    "harderbetterfasterstronger": {
+      "songID": "harderbetterfasterstronger",
+      "bundlePath": "BeatmapLevelsData/harderbetterfasterstronger",
+      "internalName": "HarderBetterFasterStronger",
+      "songName": "Harder, Better, Faster, Stronger",
+      "songAuthor": "Daft Punk",
+      "levelAuthor": "ETAN",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "hasameaning": {
+      "songID": "hasameaning",
+      "bundlePath": "BeatmapLevelsData/hasameaning",
+      "metadataSource": "bundle_only"
+    },
+    "heavyweight": {
+      "songID": "heavyweight",
+      "bundlePath": "BeatmapLevelsData/heavyweight",
+      "metadataSource": "bundle_only"
+    },
+    "heylookmaimadeit": {
+      "songID": "heylookmaimadeit",
+      "bundlePath": "BeatmapLevelsData/heylookmaimadeit",
+      "metadataSource": "bundle_only"
+    },
+    "heyya": {
+      "songID": "heyya",
+      "bundlePath": "BeatmapLevelsData/heyya",
+      "metadataSource": "bundle_only"
+    },
+    "highhopes": {
+      "songID": "highhopes",
+      "bundlePath": "BeatmapLevelsData/highhopes",
+      "metadataSource": "bundle_only"
+    },
+    "hitthelights": {
+      "songID": "hitthelights",
+      "bundlePath": "BeatmapLevelsData/hitthelights",
+      "metadataSource": "bundle_only"
+    },
+    "holiday": {
+      "songID": "holiday",
+      "bundlePath": "BeatmapLevelsData/holiday",
+      "internalName": "Holiday",
+      "songName": "Holiday",
+      "songAuthor": "Green Day",
+      "levelAuthor": "GreenDayGrenadeEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "houdini": {
+      "songID": "houdini",
+      "bundlePath": "BeatmapLevelsData/houdini",
+      "metadataSource": "bundle_only"
+    },
+    "howdoimakeyouloveme": {
+      "songID": "howdoimakeyouloveme",
+      "bundlePath": "BeatmapLevelsData/howdoimakeyouloveme",
+      "metadataSource": "bundle_only"
+    },
+    "hypnotize": {
+      "songID": "hypnotize",
+      "bundlePath": "BeatmapLevelsData/hypnotize",
+      "metadataSource": "bundle_only"
+    },
+    "icantgetnosatisfaction": {
+      "songID": "icantgetnosatisfaction",
+      "bundlePath": "BeatmapLevelsData/icantgetnosatisfaction",
+      "metadataSource": "bundle_only"
+    },
+    "icarus": {
+      "songID": "icarus",
+      "bundlePath": "BeatmapLevelsData/icarus",
+      "metadataSource": "bundle_only"
+    },
+    "ididntchangemynumber": {
+      "songID": "ididntchangemynumber",
+      "bundlePath": "BeatmapLevelsData/ididntchangemynumber",
+      "metadataSource": "bundle_only"
+    },
+    "idol": {
+      "songID": "idol",
+      "bundlePath": "BeatmapLevelsData/idol",
+      "metadataSource": "bundle_only"
+    },
+    "idontcare": {
+      "songID": "idontcare",
+      "bundlePath": "BeatmapLevelsData/idontcare",
+      "metadataSource": "bundle_only"
+    },
+    "ifeelitcoming": {
+      "songID": "ifeelitcoming",
+      "bundlePath": "BeatmapLevelsData/ifeelitcoming",
+      "metadataSource": "bundle_only"
+    },
+    "imaslave4u": {
+      "songID": "imaslave4u",
+      "bundlePath": "BeatmapLevelsData/imaslave4u",
+      "metadataSource": "bundle_only"
+    },
+    "immortal": {
+      "songID": "immortal",
+      "bundlePath": "BeatmapLevelsData/immortal",
+      "metadataSource": "bundle_only"
+    },
+    "immortals": {
+      "songID": "immortals",
+      "bundlePath": "BeatmapLevelsData/immortals",
+      "metadataSource": "bundle_only"
+    },
+    "ineedyou": {
+      "songID": "ineedyou",
+      "bundlePath": "BeatmapLevelsData/ineedyou",
+      "internalName": "INeedYou",
+      "songName": "I Need You",
+      "songAuthor": "Megaphonix",
+      "levelAuthor": "Purphoros & Split",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "inmyhead": {
+      "songID": "inmyhead",
+      "bundlePath": "BeatmapLevelsData/inmyhead",
+      "metadataSource": "bundle_only"
+    },
+    "intheend": {
+      "songID": "intheend",
+      "bundlePath": "BeatmapLevelsData/intheend",
+      "metadataSource": "bundle_only"
+    },
+    "intothedream": {
+      "songID": "intothedream",
+      "bundlePath": "BeatmapLevelsData/intothedream",
+      "metadataSource": "bundle_only"
+    },
+    "irresistible": {
+      "songID": "irresistible",
+      "bundlePath": "BeatmapLevelsData/irresistible",
+      "metadataSource": "bundle_only"
+    },
+    "itstime": {
+      "songID": "itstime",
+      "bundlePath": "BeatmapLevelsData/itstime",
+      "metadataSource": "bundle_only"
+    },
+    "ittakesme": {
+      "songID": "ittakesme",
+      "bundlePath": "BeatmapLevelsData/ittakesme",
+      "metadataSource": "bundle_only"
+    },
+    "iwannabeamachine": {
+      "songID": "iwannabeamachine",
+      "bundlePath": "BeatmapLevelsData/iwannabeamachine",
+      "metadataSource": "bundle_only"
+    },
+    "iwantitall": {
+      "songID": "iwantitall",
+      "bundlePath": "BeatmapLevelsData/iwantitall",
+      "metadataSource": "bundle_only"
+    },
+    "iwasmadelovingyou": {
+      "songID": "iwasmadelovingyou",
+      "bundlePath": "BeatmapLevelsData/iwasmadelovingyou",
+      "metadataSource": "bundle_only"
+    },
+    "juice": {
+      "songID": "juice",
+      "bundlePath": "BeatmapLevelsData/juice",
+      "metadataSource": "bundle_only"
+    },
+    "justdance": {
+      "songID": "justdance",
+      "bundlePath": "BeatmapLevelsData/justdance",
+      "metadataSource": "bundle_only"
+    },
+    "killerqueen": {
+      "songID": "killerqueen",
+      "bundlePath": "BeatmapLevelsData/killerqueen",
+      "metadataSource": "bundle_only"
+    },
+    "kingnothing": {
+      "songID": "kingnothing",
+      "bundlePath": "BeatmapLevelsData/kingnothing",
+      "metadataSource": "bundle_only"
+    },
+    "legend": {
+      "songID": "legend",
+      "bundlePath": "BeatmapLevelsData/legend",
+      "metadataSource": "bundle_only"
+    },
+    "lessthanzero": {
+      "songID": "lessthanzero",
+      "bundlePath": "BeatmapLevelsData/lessthanzero",
+      "metadataSource": "bundle_only"
+    },
+    "liftoff": {
+      "songID": "liftoff",
+      "bundlePath": "BeatmapLevelsData/liftoff",
+      "metadataSource": "bundle_only"
+    },
+    "lightitup": {
+      "songID": "lightitup",
+      "bundlePath": "BeatmapLevelsData/lightitup",
+      "metadataSource": "bundle_only"
+    },
+    "livebythesword": {
+      "songID": "livebythesword",
+      "bundlePath": "BeatmapLevelsData/livebythesword",
+      "metadataSource": "bundle_only"
+    },
+    "loseyourselftodance": {
+      "songID": "loseyourselftodance",
+      "bundlePath": "BeatmapLevelsData/loseyourselftodance",
+      "metadataSource": "bundle_only"
+    },
+    "lost": {
+      "songID": "lost",
+      "bundlePath": "BeatmapLevelsData/lost",
+      "internalName": "Lost",
+      "songName": "Lost",
+      "songAuthor": "Linkin Park",
+      "levelAuthor": "Narwall & ETAN",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "ludicrousplus": {
+      "songID": "ludicrousplus",
+      "bundlePath": "BeatmapLevelsData/ludicrousplus",
+      "metadataSource": "bundle_only"
+    },
+    "lustre": {
+      "songID": "lustre",
+      "bundlePath": "BeatmapLevelsData/lustre",
+      "metadataSource": "bundle_only"
+    },
+    "luvuneedu": {
+      "songID": "luvuneedu",
+      "bundlePath": "BeatmapLevelsData/luvuneedu",
+      "metadataSource": "bundle_only"
+    },
+    "luxaeterna": {
+      "songID": "luxaeterna",
+      "bundlePath": "BeatmapLevelsData/luxaeterna",
+      "metadataSource": "bundle_only"
+    },
+    "lvlinsane": {
+      "songID": "lvlinsane",
+      "bundlePath": "BeatmapLevelsData/lvlinsane",
+      "metadataSource": "bundle_only"
+    },
+    "machine": {
+      "songID": "machine",
+      "bundlePath": "BeatmapLevelsData/machine",
+      "metadataSource": "bundle_only"
+    },
+    "magic": {
+      "songID": "magic",
+      "bundlePath": "BeatmapLevelsData/magic",
+      "metadataSource": "bundle_only"
+    },
+    "masterofpuppets": {
+      "songID": "masterofpuppets",
+      "bundlePath": "BeatmapLevelsData/masterofpuppets",
+      "metadataSource": "bundle_only"
+    },
+    "meagainstthemusic": {
+      "songID": "meagainstthemusic",
+      "bundlePath": "BeatmapLevelsData/meagainstthemusic",
+      "metadataSource": "bundle_only"
+    },
+    "memorybank": {
+      "songID": "memorybank",
+      "bundlePath": "BeatmapLevelsData/memorybank",
+      "metadataSource": "bundle_only"
+    },
+    "mercenary": {
+      "songID": "mercenary",
+      "bundlePath": "BeatmapLevelsData/mercenary",
+      "metadataSource": "bundle_only"
+    },
+    "messitup": {
+      "songID": "messitup",
+      "bundlePath": "BeatmapLevelsData/messitup",
+      "metadataSource": "bundle_only"
+    },
+    "metronome": {
+      "songID": "metronome",
+      "bundlePath": "BeatmapLevelsData/metronome",
+      "metadataSource": "bundle_only"
+    },
+    "micdrop": {
+      "songID": "micdrop",
+      "bundlePath": "BeatmapLevelsData/micdrop",
+      "metadataSource": "bundle_only"
+    },
+    "minority": {
+      "songID": "minority",
+      "bundlePath": "BeatmapLevelsData/minority",
+      "metadataSource": "bundle_only"
+    },
+    "morethevictim": {
+      "songID": "morethevictim",
+      "bundlePath": "BeatmapLevelsData/morethevictim",
+      "metadataSource": "bundle_only"
+    },
+    "mysongsknow": {
+      "songID": "mysongsknow",
+      "bundlePath": "BeatmapLevelsData/mysongsknow",
+      "metadataSource": "bundle_only"
+    },
+    "natural": {
+      "songID": "natural",
+      "bundlePath": "BeatmapLevelsData/natural",
+      "metadataSource": "bundle_only"
+    },
+    "nda": {
+      "songID": "nda",
+      "bundlePath": "BeatmapLevelsData/nda",
+      "metadataSource": "bundle_only"
+    },
+    "newdivide": {
+      "songID": "newdivide",
+      "bundlePath": "BeatmapLevelsData/newdivide",
+      "metadataSource": "bundle_only"
+    },
+    "nothingelsematters": {
+      "songID": "nothingelsematters",
+      "bundlePath": "BeatmapLevelsData/nothingelsematters",
+      "metadataSource": "bundle_only"
+    },
+    "notlikeus": {
+      "songID": "notlikeus",
+      "bundlePath": "BeatmapLevelsData/notlikeus",
+      "metadataSource": "bundle_only"
+    },
+    "nottoday": {
+      "songID": "nottoday",
+      "bundlePath": "BeatmapLevelsData/nottoday",
+      "metadataSource": "bundle_only"
+    },
+    "numb": {
+      "songID": "numb",
+      "bundlePath": "BeatmapLevelsData/numb",
+      "metadataSource": "bundle_only"
+    },
+    "numbencore": {
+      "songID": "numbencore",
+      "bundlePath": "BeatmapLevelsData/numbencore",
+      "metadataSource": "bundle_only"
+    },
+    "nuthinbutagthang": {
+      "songID": "nuthinbutagthang",
+      "bundlePath": "BeatmapLevelsData/nuthinbutagthang",
+      "metadataSource": "bundle_only"
+    },
+    "one": {
+      "songID": "one",
+      "bundlePath": "BeatmapLevelsData/one",
+      "metadataSource": "bundle_only"
+    },
+    "onehope": {
+      "songID": "onehope",
+      "bundlePath": "BeatmapLevelsData/onehope",
+      "metadataSource": "bundle_only"
+    },
+    "onemoretime": {
+      "songID": "onemoretime",
+      "bundlePath": "BeatmapLevelsData/onemoretime",
+      "metadataSource": "bundle_only"
+    },
+    "onestepcloser": {
+      "songID": "onestepcloser",
+      "bundlePath": "BeatmapLevelsData/onestepcloser",
+      "metadataSource": "bundle_only"
+    },
+    "onevision": {
+      "songID": "onevision",
+      "bundlePath": "BeatmapLevelsData/onevision",
+      "metadataSource": "bundle_only"
+    },
+    "oopsididitagain": {
+      "songID": "oopsididitagain",
+      "bundlePath": "BeatmapLevelsData/oopsididitagain",
+      "metadataSource": "bundle_only"
+    },
+    "origins": {
+      "songID": "origins",
+      "bundlePath": "BeatmapLevelsData/origins",
+      "metadataSource": "bundle_only"
+    },
+    "overkill": {
+      "songID": "overkill",
+      "bundlePath": "BeatmapLevelsData/overkill",
+      "internalName": "Overkill",
+      "songName": "Overkill",
+      "songAuthor": "RIOT",
+      "levelAuthor": "MonstercatEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "overprotected": {
+      "songID": "overprotected",
+      "bundlePath": "BeatmapLevelsData/overprotected",
+      "metadataSource": "bundle_only"
+    },
+    "oxytocin": {
+      "songID": "oxytocin",
+      "bundlePath": "BeatmapLevelsData/oxytocin",
+      "metadataSource": "bundle_only"
+    },
+    "paintitblack": {
+      "songID": "paintitblack",
+      "bundlePath": "BeatmapLevelsData/paintitblack",
+      "metadataSource": "bundle_only"
+    },
+    "paparazzi": {
+      "songID": "paparazzi",
+      "bundlePath": "BeatmapLevelsData/paparazzi",
+      "metadataSource": "bundle_only"
+    },
+    "papercut": {
+      "songID": "papercut",
+      "bundlePath": "BeatmapLevelsData/papercut",
+      "metadataSource": "bundle_only"
+    },
+    "partyrockanthem": {
+      "songID": "partyrockanthem",
+      "bundlePath": "BeatmapLevelsData/partyrockanthem",
+      "metadataSource": "bundle_only"
+    },
+    "performancetest": {
+      "songID": "performancetest",
+      "bundlePath": "BeatmapLevelsData/performancetest",
+      "metadataSource": "bundle_only"
+    },
+    "play": {
+      "songID": "play",
+      "bundlePath": "BeatmapLevelsData/play",
+      "metadataSource": "bundle_only"
+    },
+    "pokerface": {
+      "songID": "pokerface",
+      "bundlePath": "BeatmapLevelsData/pokerface",
+      "metadataSource": "bundle_only"
+    },
+    "popstars": {
+      "songID": "popstars",
+      "bundlePath": "BeatmapLevelsData/popstars",
+      "metadataSource": "bundle_only"
+    },
+    "powerofthesaberblade": {
+      "songID": "powerofthesaberblade",
+      "bundlePath": "BeatmapLevelsData/powerofthesaberblade",
+      "metadataSource": "bundle_only"
+    },
+    "prayforme": {
+      "songID": "prayforme",
+      "bundlePath": "BeatmapLevelsData/prayforme",
+      "internalName": "PrayForMe",
+      "songName": "Pray For Me",
+      "songAuthor": "The Weeknd, Kendrick Lamar",
+      "levelAuthor": "altrewin",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "primetimeofyourlifebrainwasherrollinalivelive2007": {
+      "songID": "primetimeofyourlifebrainwasherrollinalivelive2007",
+      "bundlePath": "BeatmapLevelsData/primetimeofyourlifebrainwasherrollinalivelive2007",
+      "internalName": "PrimeTimeOfYourLifeBrainwasherRollinAliveLive2007",
+      "songName": "Prime Time of Your Life",
+      "songAuthor": "(Live 2007)",
+      "levelAuthor": "Daft Punk",
+      "defaultEnvironment": "DaftPunkEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "pump": {
+      "songID": "pump",
+      "bundlePath": "BeatmapLevelsData/pump",
+      "metadataSource": "bundle_only"
+    },
+    "rad": {
+      "songID": "rad",
+      "bundlePath": "BeatmapLevelsData/rad",
+      "metadataSource": "bundle_only"
+    },
+    "radioactive": {
+      "songID": "radioactive",
+      "bundlePath": "BeatmapLevelsData/radioactive",
+      "metadataSource": "bundle_only"
+    },
+    "raggabomb": {
+      "songID": "raggabomb",
+      "bundlePath": "BeatmapLevelsData/raggabomb",
+      "internalName": "RaggaBomb",
+      "songName": "Ragga Bomb",
+      "songAuthor": "feat. Ragga Twins",
+      "levelAuthor": "Skrillex",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "rainonme": {
+      "songID": "rainonme",
+      "bundlePath": "BeatmapLevelsData/rainonme",
+      "metadataSource": "bundle_only"
+    },
+    "rattlesnake": {
+      "songID": "rattlesnake",
+      "bundlePath": "BeatmapLevelsData/rattlesnake",
+      "metadataSource": "bundle_only"
+    },
+    "reasonforliving": {
+      "songID": "reasonforliving",
+      "bundlePath": "BeatmapLevelsData/reasonforliving",
+      "metadataSource": "bundle_only"
+    },
+    "rememberthename": {
+      "songID": "rememberthename",
+      "bundlePath": "BeatmapLevelsData/rememberthename",
+      "metadataSource": "bundle_only"
+    },
+    "riot": {
+      "songID": "riot",
+      "bundlePath": "BeatmapLevelsData/riot",
+      "metadataSource": "bundle_only"
+    },
+    "rockit": {
+      "songID": "rockit",
+      "bundlePath": "BeatmapLevelsData/rockit",
+      "internalName": "RockIt",
+      "songName": "Rock It",
+      "songAuthor": "Tokyo Machine",
+      "levelAuthor": "RocketEnvironment",
+      "defaultEnvironment": "",
+      "metadataSource": "resources.assets"
+    },
+    "rocknroll": {
+      "songID": "rocknroll",
+      "bundlePath": "BeatmapLevelsData/rocknroll",
+      "metadataSource": "bundle_only"
+    },
+    "rollin": {
+      "songID": "rollin",
+      "bundlePath": "BeatmapLevelsData/rollin",
+      "metadataSource": "bundle_only"
+    },
+    "rumnbass": {
+      "songID": "rumnbass",
+      "bundlePath": "BeatmapLevelsData/rumnbass",
+      "internalName": "RumNBass",
+      "songName": "Rum n' Bass",
+      "songAuthor": "Boom Kitty",
+      "levelAuthor": "Freek & Split",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "sacrifice": {
+      "songID": "sacrifice",
+      "bundlePath": "BeatmapLevelsData/sacrifice",
+      "metadataSource": "bundle_only"
+    },
+    "sadbuttrue": {
+      "songID": "sadbuttrue",
+      "bundlePath": "BeatmapLevelsData/sadbuttrue",
+      "metadataSource": "bundle_only"
+    },
+    "sandstorm": {
+      "songID": "sandstorm",
+      "bundlePath": "BeatmapLevelsData/sandstorm",
+      "metadataSource": "bundle_only"
+    },
+    "saveyourtears": {
+      "songID": "saveyourtears",
+      "bundlePath": "BeatmapLevelsData/saveyourtears",
+      "metadataSource": "bundle_only"
+    },
+    "sayamen": {
+      "songID": "sayamen",
+      "bundlePath": "BeatmapLevelsData/sayamen",
+      "metadataSource": "bundle_only"
+    },
+    "scarymonstersandnicesprites": {
+      "songID": "scarymonstersandnicesprites",
+      "bundlePath": "BeatmapLevelsData/scarymonstersandnicesprites",
+      "metadataSource": "bundle_only"
+    },
+    "scream&shout": {
+      "songID": "scream&shout",
+      "bundlePath": "BeatmapLevelsData/scream&shout",
+      "metadataSource": "bundle_only"
+    },
+    "seekanddestroy": {
+      "songID": "seekanddestroy",
+      "bundlePath": "BeatmapLevelsData/seekanddestroy",
+      "metadataSource": "bundle_only"
+    },
+    "sevennationarmy": {
+      "songID": "sevennationarmy",
+      "bundlePath": "BeatmapLevelsData/sevennationarmy",
+      "metadataSource": "bundle_only"
+    },
+    "shiawase": {
+      "songID": "shiawase",
+      "bundlePath": "BeatmapLevelsData/shiawase",
+      "metadataSource": "bundle_only"
+    },
+    "smellsliketeenspirit": {
+      "songID": "smellsliketeenspirit",
+      "bundlePath": "BeatmapLevelsData/smellsliketeenspirit",
+      "metadataSource": "bundle_only"
+    },
+    "somebodytolove": {
+      "songID": "somebodytolove",
+      "bundlePath": "BeatmapLevelsData/somebodytolove",
+      "metadataSource": "bundle_only"
+    },
+    "somewhereibelong": {
+      "songID": "somewhereibelong",
+      "bundlePath": "BeatmapLevelsData/somewhereibelong",
+      "internalName": "SomewhereIBelong",
+      "songName": "Somewhere I Belong",
+      "songAuthor": "Linkin Park",
+      "levelAuthor": "Kolezan (Remaster)",
+      "defaultEnvironment": "GlassDesertEnvironment",
+      "metadataSource": "resources.assets"
+    },
+    "spineternally": {
+      "songID": "spineternally",
+      "bundlePath": "BeatmapLevelsData/spineternally",
+      "metadataSource": "bundle_only"
+    },
+    "spookybeat": {
+      "songID": "spookybeat",
+      "bundlePath": "BeatmapLevelsData/spookybeat",
+      "metadataSource": "bundle_only"
+    },
+    "starboy": {
+      "songID": "starboy",
+      "bundlePath": "BeatmapLevelsData/starboy",
+      "metadataSource": "bundle_only"
+    },
+    "startmeup": {
+      "songID": "startmeup",
+      "bundlePath": "BeatmapLevelsData/startmeup",
+      "metadataSource": "bundle_only"
+    },
+    "staythenight": {
+      "songID": "staythenight",
+      "bundlePath": "BeatmapLevelsData/staythenight",
+      "metadataSource": "bundle_only"
+    },
+    "stonecoldcrazy": {
+      "songID": "stonecoldcrazy",
+      "bundlePath": "BeatmapLevelsData/stonecoldcrazy",
+      "metadataSource": "bundle_only"
+    },
+    "stronger": {
+      "songID": "stronger",
+      "bundlePath": "BeatmapLevelsData/stronger",
+      "metadataSource": "bundle_only"
+    },
+    "stupidlove": {
+      "songID": "stupidlove",
+      "bundlePath": "BeatmapLevelsData/stupidlove",
+      "metadataSource": "bundle_only"
+    },
+    "sugar": {
+      "songID": "sugar",
+      "bundlePath": "BeatmapLevelsData/sugar",
+      "metadataSource": "bundle_only"
+    },
+    "sugarsoaker": {
+      "songID": "sugarsoaker",
+      "bundlePath": "BeatmapLevelsData/sugarsoaker",
+      "metadataSource": "bundle_only"
+    },
+    "sweetchildomine": {
+      "songID": "sweetchildomine",
+      "bundlePath": "BeatmapLevelsData/sweetchildomine",
+      "metadataSource": "bundle_only"
+    },
+    "sympathyforthedevil": {
+      "songID": "sympathyforthedevil",
+      "bundlePath": "BeatmapLevelsData/sympathyforthedevil",
+      "metadataSource": "bundle_only"
+    },
+    "takemybreath": {
+      "songID": "takemybreath",
+      "bundlePath": "BeatmapLevelsData/takemybreath",
+      "metadataSource": "bundle_only"
+    },
+    "technologic": {
+      "songID": "technologic",
+      "bundlePath": "BeatmapLevelsData/technologic",
+      "metadataSource": "bundle_only"
+    },
+    "telephone": {
+      "songID": "telephone",
+      "bundlePath": "BeatmapLevelsData/telephone",
+      "metadataSource": "bundle_only"
+    },
+    "tempo": {
+      "songID": "tempo",
+      "bundlePath": "BeatmapLevelsData/tempo",
+      "metadataSource": "bundle_only"
+    },
+    "tempokatana": {
+      "songID": "tempokatana",
+      "bundlePath": "BeatmapLevelsData/tempokatana",
+      "metadataSource": "bundle_only"
+    },
+    "testlevel": {
+      "songID": "testlevel",
+      "bundlePath": "BeatmapLevelsData/testlevel",
+      "metadataSource": "bundle_only"
+    },
+    "testme": {
+      "songID": "testme",
+      "bundlePath": "BeatmapLevelsData/testme",
+      "metadataSource": "bundle_only"
+    },
+    "thedevilsden": {
+      "songID": "thedevilsden",
+      "bundlePath": "BeatmapLevelsData/thedevilsden",
+      "metadataSource": "bundle_only"
+    },
+    "theedgeofglory": {
+      "songID": "theedgeofglory",
+      "bundlePath": "BeatmapLevelsData/theedgeofglory",
+      "metadataSource": "bundle_only"
+    },
+    "thegreatestshow": {
+      "songID": "thegreatestshow",
+      "bundlePath": "BeatmapLevelsData/thegreatestshow",
+      "metadataSource": "bundle_only"
+    },
+    "thehills": {
+      "songID": "thehills",
+      "bundlePath": "BeatmapLevelsData/thehills",
+      "metadataSource": "bundle_only"
+    },
+    "themaster": {
+      "songID": "themaster",
+      "bundlePath": "BeatmapLevelsData/themaster",
+      "metadataSource": "bundle_only"
+    },
+    "themessage": {
+      "songID": "themessage",
+      "bundlePath": "BeatmapLevelsData/themessage",
+      "metadataSource": "bundle_only"
+    },
+    "thepretender": {
+      "songID": "thepretender",
+      "bundlePath": "BeatmapLevelsData/thepretender",
+      "metadataSource": "bundle_only"
+    },
+    "thereforeiam": {
+      "songID": "thereforeiam",
+      "bundlePath": "BeatmapLevelsData/thereforeiam",
+      "metadataSource": "bundle_only"
+    },
+    "therockafellerskank": {
+      "songID": "therockafellerskank",
+      "bundlePath": "BeatmapLevelsData/therockafellerskank",
+      "metadataSource": "bundle_only"
+    },
+    "thesweetescape": {
+      "songID": "thesweetescape",
+      "bundlePath": "BeatmapLevelsData/thesweetescape",
+      "metadataSource": "bundle_only"
+    },
+    "theunforgiven": {
+      "songID": "theunforgiven",
+      "bundlePath": "BeatmapLevelsData/theunforgiven",
+      "metadataSource": "bundle_only"
+    },
+    "thewoo": {
+      "songID": "thewoo",
+      "bundlePath": "BeatmapLevelsData/thewoo",
+      "metadataSource": "bundle_only"
+    },
+    "thisaintascene": {
+      "songID": "thisaintascene",
+      "bundlePath": "BeatmapLevelsData/thisaintascene",
+      "metadataSource": "bundle_only"
+    },
+    "thistime": {
+      "songID": "thistime",
+      "bundlePath": "BeatmapLevelsData/thistime",
+      "metadataSource": "bundle_only"
+    },
+    "thnksfrthmmrs": {
+      "songID": "thnksfrthmmrs",
+      "bundlePath": "BeatmapLevelsData/thnksfrthmmrs",
+      "metadataSource": "bundle_only"
+    },
+    "thronesofblood": {
+      "songID": "thronesofblood",
+      "bundlePath": "BeatmapLevelsData/thronesofblood",
+      "metadataSource": "bundle_only"
+    },
+    "thunder": {
+      "songID": "thunder",
+      "bundlePath": "BeatmapLevelsData/thunder",
+      "metadataSource": "bundle_only"
+    },
+    "tillitsover": {
+      "songID": "tillitsover",
+      "bundlePath": "BeatmapLevelsData/tillitsover",
+      "metadataSource": "bundle_only"
+    },
+    "tilltheworldends": {
+      "songID": "tilltheworldends",
+      "bundlePath": "BeatmapLevelsData/tilltheworldends",
+      "metadataSource": "bundle_only"
+    },
+    "toxic": {
+      "songID": "toxic",
+      "bundlePath": "BeatmapLevelsData/toxic",
+      "metadataSource": "bundle_only"
+    },
+    "truthhurts": {
+      "songID": "truthhurts",
+      "bundlePath": "BeatmapLevelsData/truthhurts",
+      "metadataSource": "bundle_only"
+    },
+    "turnmeon": {
+      "songID": "turnmeon",
+      "bundlePath": "BeatmapLevelsData/turnmeon",
+      "metadataSource": "bundle_only"
+    },
+    "ugh": {
+      "songID": "ugh",
+      "bundlePath": "BeatmapLevelsData/ugh",
+      "metadataSource": "bundle_only"
+    },
+    "unlimitedpower": {
+      "songID": "unlimitedpower",
+      "bundlePath": "BeatmapLevelsData/unlimitedpower",
+      "metadataSource": "bundle_only"
+    },
+    "untamed": {
+      "songID": "untamed",
+      "bundlePath": "BeatmapLevelsData/untamed",
+      "metadataSource": "bundle_only"
+    },
+    "veridisquo": {
+      "songID": "veridisquo",
+      "bundlePath": "BeatmapLevelsData/veridisquo",
+      "metadataSource": "bundle_only"
+    },
+    "victorious": {
+      "songID": "victorious",
+      "bundlePath": "BeatmapLevelsData/victorious",
+      "metadataSource": "bundle_only"
+    },
+    "vivalasvengeance": {
+      "songID": "vivalasvengeance",
+      "bundlePath": "BeatmapLevelsData/vivalasvengeance",
+      "metadataSource": "bundle_only"
+    },
+    "waitingallnight": {
+      "songID": "waitingallnight",
+      "bundlePath": "BeatmapLevelsData/waitingallnight",
+      "metadataSource": "bundle_only"
+    },
+    "wakeup": {
+      "songID": "wakeup",
+      "bundlePath": "BeatmapLevelsData/wakeup",
+      "metadataSource": "bundle_only"
+    },
+    "warriors": {
+      "songID": "warriors",
+      "bundlePath": "BeatmapLevelsData/warriors",
+      "metadataSource": "bundle_only"
+    },
+    "wearethechampions": {
+      "songID": "wearethechampions",
+      "bundlePath": "BeatmapLevelsData/wearethechampions",
+      "metadataSource": "bundle_only"
+    },
+    "wewillrockyou": {
+      "songID": "wewillrockyou",
+      "bundlePath": "BeatmapLevelsData/wewillrockyou",
+      "metadataSource": "bundle_only"
+    },
+    "wewontbealone": {
+      "songID": "wewontbealone",
+      "bundlePath": "BeatmapLevelsData/wewontbealone",
+      "metadataSource": "bundle_only"
+    },
+    "whateverittakes": {
+      "songID": "whateverittakes",
+      "bundlePath": "BeatmapLevelsData/whateverittakes",
+      "metadataSource": "bundle_only"
+    },
+    "whatilike": {
+      "songID": "whatilike",
+      "bundlePath": "BeatmapLevelsData/whatilike",
+      "metadataSource": "bundle_only"
+    },
+    "whativedone": {
+      "songID": "whativedone",
+      "bundlePath": "BeatmapLevelsData/whativedone",
+      "metadataSource": "bundle_only"
+    },
+    "whatthecat": {
+      "songID": "whatthecat",
+      "bundlePath": "BeatmapLevelsData/whatthecat",
+      "metadataSource": "bundle_only"
+    },
+    "whilewereyoung": {
+      "songID": "whilewereyoung",
+      "bundlePath": "BeatmapLevelsData/whilewereyoung",
+      "metadataSource": "bundle_only"
+    },
+    "wholewideworld": {
+      "songID": "wholewideworld",
+      "bundlePath": "BeatmapLevelsData/wholewideworld",
+      "metadataSource": "bundle_only"
+    },
+    "witchcraft": {
+      "songID": "witchcraft",
+      "bundlePath": "BeatmapLevelsData/witchcraft",
+      "metadataSource": "bundle_only"
+    },
+    "womanizer": {
+      "songID": "womanizer",
+      "bundlePath": "BeatmapLevelsData/womanizer",
+      "metadataSource": "bundle_only"
+    },
+    "worldwideweb": {
+      "songID": "worldwideweb",
+      "bundlePath": "BeatmapLevelsData/worldwideweb",
+      "metadataSource": "bundle_only"
+    },
+    "worship": {
+      "songID": "worship",
+      "bundlePath": "BeatmapLevelsData/worship",
+      "metadataSource": "bundle_only"
+    },
+    "youshouldseemeinacrown": {
+      "songID": "youshouldseemeinacrown",
+      "bundlePath": "BeatmapLevelsData/youshouldseemeinacrown",
+      "metadataSource": "bundle_only"
+    }
+  }
+}

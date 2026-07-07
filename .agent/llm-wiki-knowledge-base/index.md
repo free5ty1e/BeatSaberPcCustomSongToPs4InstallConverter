@@ -30,7 +30,8 @@ metadata:
 - [[ps4-fsb5-audio|PS4 FSB5 Audio Format]] — Legacy overview (superseded by HEVAG audio format page)
 - [[ps4-hevag-fsb5-audio|PS4 HEVAG + FSB5 Audio Format]] — Audio replacement pipeline: HEVAG encoder, FSB5 container structure, header template gotchas
 
-## Environment & Song Database
+## Song Metadata & Database
+- [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
 
 ## Key Root Causes Found

@@ -61,6 +61,16 @@ metadata:
 - Add new discoveries, tools, and investigations to appropriate sections
 - Keep the "Known Issues" section current with what we're actively investigating
 
+**3.5 `/workspace/.ai_memory/beat-saber-ps4-custom-songs/song_testing_log.md`** (after each PS4 test)
+
+- Add entry for each deployed song with sync result, audio format, and issues
+- Keep the "Next Test Candidate" section updated
+
+**3.6 `/workspace/.ai_memory/beat-saber-ps4-custom-songs/beat_saber_song_ids.json`** (when new songs are discovered or metadata changes)
+
+- Regenerate when new official bundles are analyzed
+- Update when DLC song names become available from addressables
+
 **4. `/workspace/README.md`** (after each significant result)
 
 - **Status header** — update the one-line project status description

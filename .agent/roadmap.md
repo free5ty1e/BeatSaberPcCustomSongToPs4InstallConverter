@@ -1,87 +1,37 @@
-# Beat Saber PS4 Custom Song Support — Roadmap
+# Roadmap
 
-## 🏆 Milestone 1: Plugin Infrastructure ✅
-- [x] GoldHEN plugin loads without crash (AFR path, no jailbreak)
-- [x] File logging via sceKernelOpen/Write to AFR directory
-- [x] Detour hooks for open() without jailbreak
-- [x] AssetBundle internal rename via UnityPy (m_Name + container path)
-- [x] Notification fixed (was hardcoded v0.37, now uses PLUGIN_VERSION)
+## M0 — Proof of Concept (Complete)
+- [x] Custom FSB5 audio (PCM16) injected via AssetBundle redirection
+- [x] Full song plays, score saves
+- [x] GoldHEN PRX plugin hooks `open()`, logs to AFR
 
-## 🎯 Milestone 2: File Redirect & Asset Loading ✅
-- [x] open() hook redirects BeatmapLevelData files to custom bundles
-- [x] Cross-song redirect confirmed (Start Me Up → $100 Bills)
-- [x] Other songs unaffected (targeted redirect)
-- [x] AFR directory auto-creation with permissions fix
+## M1 — Pipeline Automation (Complete)
+- [x] `full_custom_song_pipeline.py` with `--pcm16` flag
+- [x] BeatSaver downloader
+- [x] Beatmap conversion V2→V3 (notes, obstacles, bombs, arcs, chains, 360-degree)
+- [x] Lapped audio detection and generation
 
-## 🔧 Milestone 3: Custom Song Format Conversion ✅ COMPLETE
-### 🧪 Test Assets
-- [x] **`quick_test_gen.py (run to generate)`** — Minimal hand-crafted test song with all features right at song start. 9 notes + 3 bombs + 2 obstacles + 2 arcs + 2 chains within ~20 seconds of gameplay. Beatmap data ~340 bytes gzipped, template overhead = ~12MB. Used for rapid regression testing. Located at `beat_saber_deluxe/custom_songs/quick_test.bundle`.
+## M2 — Song Metadata & Database (In Progress)
+- [x] `beat_saber_song_ids.json` — 306 official songs cataloged
+- [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)
+- [ ] Difficulty metadata extraction from all 306 bundles
+- [ ] DLC song name extraction from addressables packs
+- [ ] Song testing log document
 
-### Beatmap Data Replacement ⬅️ VERIFIED WORKING
-- [x] Beatmap gzip replacement via `save_typetree` (not `set_raw_data` — had serialization bugs)
-- [x] **ROOT CAUSE FIXED:** m_Script is JUST gzip data — no decompressed_size prefix!
-- [x] `save_typetree` verified byte-perfect with original (v0.39diag)
-- [x] **V3 note format conversion** — `_notes` → `colorNotes` + `colorNotesData` ✅
-  - [x] Note properties deduplication (x, y, c, d) into data arrays
-  - [x] V3 field order matches game expectations (verified with working bundle)
-- [x] **Obstacles conversion** — `_obstacles` → `obstacles` + `obstaclesData` ✅
-- [x] Environment renders correctly with custom beatmaps ✅
-- [x] **Bomb notes conversion** — `_notes` type=3 → `bombNotes` + `bombNotesData` ✅
-- [x] **Arc conversion (sliders → arcs)** ✅
-- [x] **Chain conversion (burstSliders → chains)** ✅
-- [ ] Beatmap events from song handled (lighting data — separate from lightshow)
+## M3 — Note Color Customization (NEW)
+- [ ] Research how BeatmapLevel defines left/right note box colors
+- [ ] Check `BeatmapLevelColorSchemeSaveData` in globalgamemanagers.assets
+- [ ] Add `--left-color R G B` / `--right-color R G B` flags to pipeline
+- [ ] Inject custom color scheme into the song's data structures
+- [ ] Test color injection on PS4
 
-### Audio Replacement
-- [x] PS4 toolchain path persisted for PRX builds ✅
-- [x] PRX rebuilt to v0.49 ✅
-- [ ] Implement PS4-compatible HEVAG encoder (Full 4-bit predictor/shift range) 🚧
-- [ ] Determine root cause: is it our HEVAG encoding or our metadata updates? (Exp 84 metadata preservation test deployed)
-- [x] Audio pipeline: HEVAG encoder + FSB5 wrapping ✅
-- [x] Custom audio in quick test bundle (216KB total) ✅
-- [x] AudioClip type tree exploration + metadata updates ✅
-- [x] FSB5 sample_header_size fix: 900→1732 ✅
-- [ ] ❌ **ALL audio replacement tests freeze identically** — first frame renders, level freezes, stars move. 7+ different test bundles (silence, original audio snippets, predictor-0-only, LZ4 compressed, etc.) ALL freeze. FSB5 structure is byte-perfect (0 diff from original). AudioClip serialization identical. Root cause remains elusive.
-- [ ] Investigate: is the issue in UnityPy's save() function producing bundles the PS4 can't read?
-- [ ] Investigate: does the 12MB original-audio bundle (unchanged audio through pipeline) work? (Blocked by FTP timeout on large files)
+## M4 — Advanced Song Manipulation (Planned)
+- [ ] Modify existing song entries in the in-game song list
+- [ ] Add new songs to existing album packs
+- [ ] Create custom album pack definition
+- [ ] Modify beatmap characteristics (OneSaber, 90-degree, 360-degree, NoArrows)
 
-### Visual Data
-- [ ] Cover art injection into bundle
-- [ ] Cover art display in song selection menu
-
-## 📋 Milestone 4: Add Custom Song to Album
-- [ ] Install UABEA via Wine for resources.assets editing
-- [ ] Analyze resources.assets song database structure
-- [ ] Add custom song entry to existing pack
-- [ ] Add custom song to "My Songs" / custom pack
-- [ ] Verify song appears in UI and is playable
-
-## 🎨 Milestone 5: Full Custom Song Pipeline
-- [ ] End-to-end script: BeatSaver download → PS4 AssetBundle
-- [ ] Devcontainer tools persisted (lz4, UnityPy, fmod_toolkit)
-- [ ] Convert ALL beatmap components (notes, obstacles, bombs, chains, arcs)
-- [ ] Audio conversion (FSB5 with custom audio)
-- [ ] Cover art injection
-- [ ] Resources.assets patching for new song entries
-
-## 🔬 Known Issues & Investigations
-- [x] ~~m_Script content corrupted by extra decompressed_size prefix~~ **FIXED!** Just gzip data, no prefix.
-- [x] ~~`save_typetree` serialization inconsistency~~ **FIXED!** Works byte-perfect.
-- [x] ~~Latin1 vs surrogateescape encoding for binary data~~ **FIXED!** Use surrogateescape.
-- [x] ~~V3 format conversion needed for PS4 compatibility~~ **FIXED!** V2→V3 working.
-- [ ] FSB5 audio needs FMOD tools (fsbank) to convert custom audio tracks
-- [ ] BombNotes from custom songs not yet converted (type=3 in V2 `_notes`)
-- [ ] Chains from custom songs not yet converted
-- [ ] Arcs from custom songs not yet converted
-- [ ] Cover art not injected into bundle
-- [ ] Converting non-Standard characteristics (NoArrows, OneSaber, 360, 90)
-- [ ] Multi-bundle songs (audio longer than single AssetBundle capacity)e-identical output but game fails to load
-- [ ] V2→V3 note conversion may produce wrong field order/format
-- [ ] `set_raw_data` serialization bug (workaround: use `save_typetree`)
-- [ ] Latin1 vs surrogateescape encoding for binary data
-- [ ] FSB5 audio needs FMOD tools (fsbank)
-
-## v0.62 — Song Menu Customization
-- [ ] Replace preview audio in song menu with custom song preview audio
-
-## v0.60 — Alpha Polish
-- [ ] Implement lapt-up audio support (repeat audio segments to match lapped-up beatmaps)
+## M5 — Polishing (Future)
+- [ ] GUI for song management
+- [ ] Batch deployment
+- [ ] HEVAG/Vorbis encoder workaround for compressed audio
