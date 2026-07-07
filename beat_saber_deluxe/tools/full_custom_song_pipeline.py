@@ -153,8 +153,9 @@ def audio_to_fsb5(audio_path: str, pad_to_size: int = ORIGINAL_RESOURCE_SIZE) ->
     """
     log.info(f"Reading audio: {audio_path}")
 
-    # soundfile returns numpy array, convert to list of ints
-    data, framerate = sf.read(audio_path, dtype='int16')
+    # soundfile returns numpy array, convert to list of ints (normalized)
+    from hevag_encoder import read_audio_normalized
+    data, framerate = read_audio_normalized(audio_path)
     if data.ndim == 1:
         # Mono -> convert to interleaved for encoder
         pcm_data = data.tobytes()
@@ -531,7 +532,7 @@ Examples:
     else:
         log.info("Searching for audio file in song directory (.wav, .ogg, ...)...")
         audio_files = [f for f in os.listdir(args.song_dir)
-                      if f.endswith(('.wav', '.ogg', '.flac', '.mp3', '.aiff'))]
+                       if f.endswith(('.wav', '.ogg', '.flac', '.mp3', '.aiff', '.egg'))]
         if not audio_files:
             log.error(f"No audio files found in {args.song_dir}")
             sys.exit(1)

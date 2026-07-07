@@ -59,15 +59,31 @@ lftp -u anonymous, -p 2121 192.168.100.117 -e "
 | 750+ total lines | Full song play cycle |
 | `v0.NN` version log line | Confirms which plugin version loaded |
 
-## Bundle Build Process
+## Pipeline Usage
 
+### From song directory (including .egg audio files)
+```bash
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir ./my_song \
+  --target startmeup \
+  --pcm16 \
+  [--no-pad] \
+  [--deploy]
+```
+
+- `.egg` files are auto-detected as audio (renamed OGG Vorbis from BeatSaver)
+- Audio is automatically normalized (OGG overshoot samples outside [-1,1] are scaled down)
+- `--no-pad`: required for songs longer than the target's original resource (~70s for startmeup)
+
+### Pipeline Steps
 1. Load template bundle from PS4 dump: `/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/startmeup`
-2. Load custom song from BeatSaver directory
-3. Convert V2 notes → V3 format (colorNotes + colorNotesData)
-4. Insert into template (preserving structure)
-5. Gzip compress and write via save_typetree with surrogateescape
-6. Save to `custom_songs/<name>.bundle`
-7. FTP to PS4
+2. Load custom song from BeatSaver directory (auto-detects .egg/.wav/.ogg audio)
+3. Normalize audio (float32 read → scale to 0.99 peak → int16 conversion)
+4. Convert V2 notes → V3 format (colorNotes + colorNotesData)
+5. Insert into template (preserving structure)
+6. Gzip compress and write via save_typetree with surrogateescape
+7. Save to `custom_songs/<name>.bundle`
+8. FTP to PS4
 
 ## PS4 Test Procedure
 

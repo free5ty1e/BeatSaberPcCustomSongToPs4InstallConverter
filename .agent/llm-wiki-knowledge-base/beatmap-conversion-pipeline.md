@@ -266,4 +266,32 @@ template_bm['obstaclesData'] = v3_obs_data
 # Keep everything else from template (bombNotes, chains, arcs, etc.)
 ```
 
-See also: [[beatmap-format-v3]], [[m-script-gzip-format]], [[unitypy-serialization]], [[assetbundle-structure]]
+## Audio File Handling: .egg (OGG) and Normalization
+
+### .egg Files
+BeatSaver songs ship audio as `.egg` files — a renamed OGG Vorbis container. The pipeline now auto-detects `.egg` alongside `.wav`, `.ogg`, `.flac`, `.mp3`, `.aiff` in the song directory (see `full_custom_song_pipeline.py:534`).
+
+### Audio Normalization
+Some OGG Vorbis files (especially those encoded at high volume) can have decoded float samples slightly outside [-1.0, 1.0] due to encoder overshoot. Direct `int16` conversion via `sf.read(path, dtype='int16')` clips these values, causing audible crackling.
+
+**Fix**: Read as `float32`, normalize peak to 0.99 if exceeding 0.99, then convert to `int16`:
+```python
+data, sr = sf.read(path, dtype='float32')
+if np.abs(data).max() > 0.99:
+    data *= (0.99 / np.abs(data).max())
+data_int16 = (data * 32767).astype(np.int16)
+```
+
+This is implemented in `hevag_encoder.py` as `read_audio_normalized()` and used by all FSB5 builders (PCM16, Vorbis, HEVAG), as well as the pipeline's `audio_to_fsb5()`.
+
+### --no-pad for Long Songs
+For songs longer than the original target's resource size (e.g., `startmeup` has a 12,305,632-byte resource = ~70s of PCM16 stereo at 44100Hz), use `--no-pad`:
+```bash
+python3 full_custom_song_pipeline.py --song-dir ./song --target startmeup --pcm16 --no-pad --deploy
+```
+This removes the size cap, allowing full-length audio (verified up to 224s+).
+
+## Full Workflow Reference
+See [[development-workflow]] for the complete cycle.
+
+See also: [[beatmap-format-v3]], [[m-script-gzip-format]], [[unitypy-serialization]], [[assetbundle-structure]], [[development-workflow]]

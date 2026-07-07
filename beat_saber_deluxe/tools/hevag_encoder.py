@@ -489,6 +489,22 @@ import zlib
 import soundfile as sf
 import numpy as np
 
+
+def read_audio_normalized(path: str) -> tuple:
+    """
+    Read audio file, normalize to prevent clipping from over-range samples,
+    and return as int16 numpy array with sample rate.
+    
+    Some audio files (especially OGG Vorbis) can have samples slightly outside
+    [-1.0, 1.0] due to encoder overshoot, which causes crackling when converted
+    directly to int16. This function normalizes such files.
+    """
+    data, sr = sf.read(path, dtype='float32')
+    max_val = np.abs(data).max()
+    if max_val > 0.99:
+        data *= (0.99 / max_val)
+    return (data * 32767).astype(np.int16), sr
+
 ORIGINAL_FSB5_PATH = os.path.join(os.path.dirname(__file__) or ".",
     "..", "tests", "reference", "original_audio.fsb5")
 
@@ -588,8 +604,8 @@ def build_vorbis_fsb5(audio_path, sample_rate=None,
     with open(template_path, 'rb') as f:
         template = bytearray(f.read())
 
-    # Read and encode custom audio
-    data, sr = sf.read(audio_path, dtype='int16')
+    # Read and encode custom audio (normalized to prevent clipping)
+    data, sr = read_audio_normalized(audio_path)
     if data.ndim == 1:
         data = np.column_stack((data, data))  # mono -> stereo
 
@@ -678,7 +694,7 @@ def build_pcm16_fsb5(audio_path, sample_rate=None,
     """
     import subprocess
 
-    data, sr = sf.read(audio_path, dtype='int16')
+    data, sr = read_audio_normalized(audio_path)
     if data.ndim == 1:
         data = np.column_stack((data, data))
 

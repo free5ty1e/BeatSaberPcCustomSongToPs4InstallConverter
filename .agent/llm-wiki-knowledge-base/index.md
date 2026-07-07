@@ -20,15 +20,17 @@ metadata:
 
 ## Beatmap Formats & Conversion
 - [[beatmap-format-v3|PS4 Beatmap Format (V3)]] — colorNotes + colorNotesData, obstaclesData, all V3 structures
-- [[beatmap-conversion-pipeline|Beatmap Conversion Pipeline]] — V2→V3 conversion process for notes, obstacles, bombs, chains, arcs
+- [[beatmap-conversion-pipeline|Beatmap Conversion Pipeline]] — V2→V3 conversion, .egg (OGG) handling, audio normalization, --no-pad for long songs
 
 ## Tooling & Workflow
 - [[toolchain-and-build|PS4 Toolchain & Build System]] — OpenOrbis toolchain, make, create-fself
 - [[development-workflow|Development Workflow]] — Deploy cycle, log analysis, FTP, experiment iteration
 
 ## Audio & Future Work
-- [[ps4-fsb5-audio|PS4 FSB5 Audio Format]] — Legacy overview (superseded by HEVAG audio format page)
-- [[ps4-hevag-fsb5-audio|PS4 HEVAG + FSB5 Audio Format]] — Audio replacement pipeline: HEVAG encoder, FSB5 container structure, header template gotchas
+- [[ps4-fsb5-audio|PS4 FSB5 Audio Format]] — Legacy overview (superseded by PCM16 page)
+- [[ps4-fsb5-pcm16-format|PS4 FSB5 PCM16 Format]] — Recommended audio format (codec=2, lossless, lapped-up beatmaps)
+- [[ps4-hevag-fsb5-audio|PS4 HEVAG + FSB5 Audio Format]] — Legacy ADPCM encoder (blocked: Sony proprietary coefficient table)
+- [[ps4-fsb5-vorbis|PS4 FSB5 Vorbis]] — Vorbis codec in FSB5 (blocked: FMOD/libvorbis codebook incompatibility)
 
 ## Song Metadata & Database
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
