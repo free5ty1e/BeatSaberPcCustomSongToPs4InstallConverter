@@ -1,56 +1,41 @@
 ---
 name: ps4-fsb5-audio
-description: "PS4 FSB5 audio format for Beat Saber song audio, structure and replacement approach"
+description: "Landing page redirecting to the correct audio format documentation"
 metadata:
-  type: reference
+  type: redirect
 ---
 
-# PS4 FSB5 Audio Format (Legacy Reference)
+# PS4 FSB5 Audio Format
 
-> **⚠️ This page is superseded.** Audio replacement IS implemented. See the authoritative page: [[ps4-hevag-fsb5-audio]]
+> ⚠️ **This page is a redirect hub.** The audio replacement landscape:
 
-## Quick Summary
+| Format | Status | Reference |
+|--------|--------|-----------|
+| **PCM16 (codec=2)** | ✅ **WORKING — use this** | [[ps4-fsb5-pcm16-format]] |
+| Vorbis (mode=15) | ❌ Blocked (codebook mismatch) | [[ps4-fsb5-vorbis]] |
+| HEVAG (mode=9) | ❌ Blocked (Sony proprietary coefficients) | [[ps4-hevag-fsb5-audio]] |
 
-The PS4 version of Beat Saber stores audio in **FSB5 containers** with **HEVAG ADPCM** encoding.
+## Key Facts
 
-### Components in the Bundle
+- Original PS4 Beat Saber audio: **Vorbis** in FSB5 containers
+- Custom replacement: **PCM16** FSB5 (codec=2) — lossless, no padding required
+- HEVAG was a dead end (no access to Sony's full 16-predictor coefficient table)
+
+## In the Bundle
 
 | Component | Class | Description |
 |-----------|-------|-------------|
-| AudioClip (e.g. `StartMeUp`) | 83 | References the FSB5 audio data via `m_Resource` |
-| CAB-xxx.resource | binary blob | Raw FSB5 file containing HEVAG-encoded audio |
-| audio.gz (TextAsset) | 49 | Gzip-compressed JSON with song metadata |
+| AudioClip (e.g. `StartMeUp`) | 83 | References FSB5 via `m_Resource` |
+| CAB-xxx.resource | binary | FSB5 audio data (PCM16 for custom songs) |
+| audio.gz (TextAsset) | 49 | Gzip JSON: sample count, frequency, BPM |
 
-### Audio Replacement Pipeline
-
+### Replacement Pattern
 ```python
-# 1. Encode PCM to HEVAG
-hevag = pcm_to_hevag(pcm_data, channels=2)
-
-# 2. Wrap in FSB5 container (uses song-specific header template)
-fsb5 = build_fsb5(hevag, sample_rate=44100)
-
-# 3. Replace CAB resource in bundle
-new_res = EndianBinaryReader(fsb5)
-bf.files['CAB-xxx.resource'] = new_res
-
-# 4. Update AudioClip
-audio_clip['m_Resource']['m_Size'] = len(fsb5)
+# Replace CAB resource
+bf.files['CAB-xxx.resource'] = EndianBinaryReader(fsb5_bytes)
+# Update AudioClip
+audio_clip['m_Resource']['m_Size'] = len(fsb5_bytes)
 audio_clip['m_Length'] = dur_sec
-
-# 5. Update audio.gz metadata
-audio_gz['m_Script'] = gzip.compress(json.dumps({...}).encode())
+# Update audio.gz metadata
+audio_gz['m_Script'] = gzip.compress(json.dumps({...}).encode()).decode('utf-8', 'surrogateescape')
 ```
-
-### ⚠️ Critical: Header Template Must Match the Song
-
-The 900-byte FSB5 sample header contains **song-specific DSP coefficients**. Using a header from a different song causes the game to **freeze/hang** when audio starts playing. Always use the header from the SAME song the bundle is based on.
-
-### Tool
-
-```bash
-python3 beat_saber_deluxe/tools/hevag_encoder.py --generate-tone --duration 3 -o audio.fsb5
-python3 beat_saber_deluxe/tools/hevag_encoder.py -i song.wav -o audio.fsb5
-```
-
-See [[ps4-hevag-fsb5-audio]] for full documentation.

@@ -1,34 +1,34 @@
 ---
 name: fsb5-padding-required
-description: "PS4 audio decoder requires FSB5 padded to 12MB to avoid immediate freeze"
+description: "⚠️ HISTORICAL — Padding is NOT required with PCM16. This page documents a resolved HEVAG-era issue."
 metadata:
   type: reference
+  status: historical
 ---
 
-# FSB5 12MB Padding Fix
+# ⚠️ HISTORICAL: FSB5 12MB Padding Fix
 
-## The Problem
-When the FSB5 .resource file is smaller than the original (e.g., 152KB silence instead of 12MB original audio), the PS4's audio decoder freezes immediately on the first frame. The game shows the initial level frame but no audio plays and the game logic hangs.
+## This page is OBSOLETE
 
-## The Fix
-Pad the FSB5 to exactly 12,305,632 bytes (matching the original Start Me Up .resource file size) using trailing zero bytes:
+The 12MB padding "requirement" was a symptom of the HEVAG codec experiments, NOT a real constraint. With **PCM16 (codec=2)** audio, the FSB5 file can be **any size** — no padding needed.
 
-```python
-if len(fsb5_bytes) < ORIGINAL_RESOURCE_SIZE:
-    padding = bytes(ORIGINAL_RESOURCE_SIZE - len(fsb5_bytes))
-    fsb5_bytes = fsb5_bytes + padding
+## Working Approach
+
+Use `--no-pad` in the pipeline for full-length songs:
+
+```bash
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir ./song --target startmeup \
+  --pcm16 --no-pad --deploy
 ```
 
-This is implemented in `audio_to_fsb5()` in `full_custom_song_pipeline.py`.
+See [[ps4-fsb5-pcm16-format]] for the working audio format.
 
-## Why It Works
-The PS4's Unity runtime pre-allocates a fixed-size buffer for audio resource data based on the original .resource size. If the new FSB5 is smaller than this buffer, Unity may read beyond the end of the data or the decoder may fail to initialize properly. Padding ensures the buffer is fully populated with valid (or at least non-fatal) data.
+## What This Page Used To Say (for historical reference)
 
-## Limitations
-- Padding alone is NOT sufficient — the audio content must be valid HEVAG (not all zeros)
-- All-zero silence with 12MB padding allowed notes to move for ~1 second before freezing (Experiment 80)
-- The decoder requires real audio content using at least the 5 standard HEVAG predictors
-- Optimal: 5-predictor encoder (opt_encode_frame) + 12MB padding
+The original claim was that FSB5 files must be padded to 12,305,632 bytes (the original Start Me Up `.resource` size) to avoid an audio decoder freeze. This was observed during HEVAG experiments where:
 
-## Related
-- [[ps4-audio-decoder-behavior]]
+- A 152KB silence FSB5 with padding → notes moved ~1s then froze (Experiment 80)
+- Padding alone was NOT sufficient — HEVAG content also needed 5+ predictors
+
+**The actual root cause was HEVAG encoding quality, not file size.** Once we switched to PCM16, the PS4 FMOD decoder accepted files of any size without padding.

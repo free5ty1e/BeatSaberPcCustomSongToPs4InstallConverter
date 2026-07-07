@@ -1,61 +1,54 @@
 ---
 name: encoder-decoder-inconsistency
-description: "Our HEVAG encoder produces output that doesn't match the decoder, causing PS4 audio decoder to hang"
+description: "HISTORICAL — HEVAG encoder/decoder inconsistency analysis. Resolved — PCM16 works."
 metadata:
   type: reference
+  status: historical
 ---
 
-# HEVAG Encoder/Decoder Inconsistency
+# HEVAG Encoder/Decoder Inconsistency (HISTORICAL)
 
-## The Problem
-When decoding the original working FSB5 (professionally encoded HEVAG) to PCM, then re-encoding with our `fast_pcm_to_hevag()` (which uses `opt_encode_frame()`), the resulting HEVAG produces DIFFERENT PCM output when decoded again.
+> ⚠️ **This issue is resolved.** HEVAG has been abandoned in favor of PCM16 (codec=2), which works perfectly. This page is kept for historical reference.
 
-**Test result: First 100 samples match (decode->encode->decode): FALSE**
+## The Problem (HEVAG Era)
+When decoding the original working FSB5 (professionally encoded HEVAG) to PCM, then re-encoding with our `fast_pcm_to_hevag()` using `opt_encode_frame()`, the resulting HEVAG produced DIFFERENT PCM output when decoded again.
 
-- Original first 5 PCM samples: [192, 0, 8032, 224, 0]
-- Our re-encoded first 5: [0, 0, 0, 6144, 0]
-- Original uses pred=14, 0, 4, 11, 14 across frames
-- Our encoder uses pred=0 almost exclusively
+**Original first 5 PCM samples:** [192, 0, 8032, 224, 0]
+**Our re-encoded first 5:** [0, 0, 0, 6144, 0]
 
-## Root Cause
-The `opt_encode_frame()` function in `hevag_encoder.py` has a fundamental flaw in its shift calculation:
-- It recalculates the `shift` value **for each sample** in the 28-sample frame
-- The final shift used for encoding is only the value calculated for the **last sample**
-- This means the first 27 samples are encoded with a shift that doesn't match the error calculation
+Original used predictors 14, 0, 4, 11, 14 across frames; our encoder used pred=0 almost exclusively.
 
-Additionally, the per-frame state tracking between the encoder's optimization pass (`opt_encode_frame`) and the final encoding pass (`_encode_with`) may diverge because `_encode_with` starts from fresh history (`h1`, `h2`) but `opt_encode_frame` used modified history (`hh1`, `hh2`) during its search.
+## Root Cause: Missing Sony Coefficients
 
-## Symptoms on PS4
-- Audio decoder plays 1-2 samples then freezes
-- No beatmap objects rendered (game logic hangs on audio decode thread)
-- Clean exit (PlayerData saves work, game doesn't crash)
-- Reproducible across ALL our HEVAG-encoded bundles (pred-0, 5-pred, with/without metadata changes)
+The core issue wasn't our encoder implementation per se — it was the **incomplete predictor coefficient table**. Sony's professional HEVAG encoder uses 16 predictors (0-15), with predictors 5-15 using proprietary coefficients that were never publicly documented.
+
+Our encoder's 5-predictor set (0-4) could never produce matching output.
 
 ## Why Silence Worked
-The silence test (all-zero HEVAG frames: pred=0, shift=0, nibbles=0) got notes moving for 1 second because:
-- pred=0 with coeffs (0,0) produces predicted=0 regardless of the coefficient table
-- All-zero nibbles means dequant=0, reconstructed=0
-- The state doesn't diverge because all values are 0
+All-zero HEVAG frames (pred=0, shift=0, nibbles=0) produced matching decode output because pred=0 with coefficients (0,0) always produces predicted=0 regardless.
 
-## Attempted Fixes (none worked)
+## Resolution: PCM16 FSB5
+
+The fix was to abandon HEVAG entirely and use **PCM16 (codec=2)** FSB5:
+
+- No codec dependency — raw PCM16 samples stored directly in FSB5
+- Bit-identical round-trip verified with vgmstream
+- PS4 FMOD decoder accepts without any issues
+- No codebooks, no coefficient tables, no compression artifacts
+- Works at any file size (`--no-pad`)
+
+## What Was Attempted (HEVAG Fixes, None Worked)
+
 1. Predictor-0-only encoding (fast_encode_frame)
-2. 5-predictor optimized encoding (opt_encode_frame) 
+2. 5-predictor optimized encoding (opt_encode_frame)
 3. 12MB padding to match original .resource size
 4. Preserving original AudioClip/audio.gz metadata
 
-## Next Approaches
-1. **PCM FSB5** — Set byte 8 of sample header to 0, use raw PCM16 data. Needs investigation of correct format byte.
-2. **External encoder** — Find a working PS4 HEVAG encoder (Sony SDK tools, FMOD fsbank, etc.)
-3. **FSB5 template patching** — Keep original FSB5 structure, only replace audio data in-place
+All failed because the PS4 decoder requires the full 16-predictor coefficient set.
 
 ## Related
-- [[fsb5-padding-required]]
-- [[ps4-audio-decoder-behavior]]
 
-
-## Update: The Vorbis Red Herring
-- The `fsb5` Python module reported mode=VORBIS (15) for the original FSB5
-- This was MISLEADING — on PS4 FMOD, mode=15 means HEVAG, not Vorbis
-- The fsb5 module's header struct (`4s 6I 8s 16s 8s` = 60 bytes) does not match
-  the PS4 FSB5 field layout at offsets 28-59
-- The audio data bytes at offset 1748 confirm HEVAG frame headers (0x5E = pred=14, shift=5)
+- [[ps4-fsb5-pcm16-format]] — **The working solution**
+- [[ps4-hevag-fsb5-audio]] — HEVAG is blocked
+- [[fsb5-padding-required]] — Historical note (padding was a HEVAG-era artifact)
+- [[ps4-audio-decoder-behavior]] — Decoder freeze analysis

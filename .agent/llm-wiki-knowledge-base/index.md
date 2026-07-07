@@ -26,11 +26,16 @@ metadata:
 - [[toolchain-and-build|PS4 Toolchain & Build System]] — OpenOrbis toolchain, make, create-fself
 - [[development-workflow|Development Workflow]] — Deploy cycle, log analysis, FTP, experiment iteration
 
-## Audio & Future Work
-- [[ps4-fsb5-audio|PS4 FSB5 Audio Format]] — Legacy overview (superseded by PCM16 page)
-- [[ps4-fsb5-pcm16-format|PS4 FSB5 PCM16 Format]] — Recommended audio format (codec=2, lossless, lapped-up beatmaps)
-- [[ps4-hevag-fsb5-audio|PS4 HEVAG + FSB5 Audio Format]] — Legacy ADPCM encoder (blocked: Sony proprietary coefficient table)
-- [[ps4-fsb5-vorbis|PS4 FSB5 Vorbis]] — Vorbis codec in FSB5 (blocked: FMOD/libvorbis codebook incompatibility)
+## Audio — Working Format
+- [[ps4-fsb5-pcm16-format|PS4 FSB5 PCM16 Format]] — ✅ **WORKING** — Recommended audio format (codec=2, lossless, no padding required)
+
+## Audio — Blocked/Historical Approaches
+- [[ps4-fsb5-vorbis|PS4 FSB5 Vorbis]] — ❌ Blocked (FMOD/libvorbis codebook mismatch)
+- [[ps4-hevag-fsb5-audio|PS4 HEVAG + FSB5 Audio Format]] — ❌ Blocked (Sony proprietary coefficient table for predictors 5-15)
+- [[ps4-fsb5-audio|PS4 FSB5 Audio Format (Hub)]] — Hub page redirecting to correct format
+- [[ps4-audio-decoder-behavior|PS4 Audio Decoder Behavior]] — 📜 Historical: HEVAG-era freeze analysis (resolved by PCM16)
+- [[encoder-decoder-inconsistency|HEVAG Encoder/Decoder Inconsistency]] — 📜 Historical: HEVAG bug analysis (resolved by PCM16)
+- [[fsb5-padding-required|FSB5 Padding Required]] — 📜 Historical: 12MB padding "requirement" (was HEVAG artifact)
 
 ## Song Metadata & Database
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
