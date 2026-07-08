@@ -46,7 +46,9 @@ static int log_write(const char *msg) {
 static FILE *fh(const char *p, const char *m) {
     if (in_hook) return HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), p, m);
     in_hook = 1;
+#ifdef VERBOSE_LOG
     char lb[512]; snprintf(lb,sizeof(lb),"fopen:%s",p?: "NULL"); log_write(lb);
+#endif
     FILE *r = HOOK_CONTINUE(hook_fopen, FILE* (*)(const char*, const char*), p, m);
     in_hook = 0;
     return r;
@@ -57,16 +59,14 @@ static int open_hook(const char *path, int flags, ...) {
     in_hook = 1;
     const char *np = NULL;
     if (path) {
-        // Redirect song file: startmeup → renamed 100bills bundle
-        // The renamed bundle has asset NAME changed to "StartMeUpBeatmapLevelData"
-        // and container path changed to ".../startmeup/startmeupbeatmapleveldata.asset"
-        // (via UnityPy: renamed m_Name + AssetBundle.m_Container)
         if (strstr(path, "BeatmapLevelsData/startmeup"))
             np = AFR_BASE "/" TITLE_ID "/startmeup_v3";
     }
+#ifdef VERBOSE_LOG
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
     if (np) { char r[512]; snprintf(r,sizeof(r)," -> %s",np); strncat(lb,r,sizeof(lb)-strlen(lb)-1); }
     log_write(lb);
+#endif
     int r = np ? HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), np, flags, 0)
                : HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 0;

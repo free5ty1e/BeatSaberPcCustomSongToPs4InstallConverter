@@ -456,8 +456,6 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     ftp_user = ps4_cfg.get('ftp_user', 'anonymous')
     ftp_pass = ps4_cfg.get('ftp_password', '')
 
-    # The bundle replaces the original file at: {afr_base}/{title_id}/{target_name}{suffix}
-    # This is a FILE path, not a directory — the PRX redirects the original path to this file.
     remote_path = f"{afr_base}/{title_id}/{target_name}{suffix}"
 
     user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
@@ -467,13 +465,179 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         "-e", f"put {bundle_path} -o {remote_path}; quit"
     ]
 
-    log.info(f"Deploying to PS4: {remote_path}")
+    log.info(f"Deploying bundle to PS4: {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
 
     if result.returncode == 0:
-        log.info("  ✅ Deployment successful")
+        log.info("  ✅ Bundle deployment successful")
     else:
-        log.warning(f"  ⚠️ Deploy failed (PS4 offline?): {result.stderr}")
+        log.warning(f"  ⚠️ Bundle deploy failed (PS4 offline?): {result.stderr}")
+
+
+def build_plugin(project_root: str, debug: bool = False) -> str:
+    """
+    Build the GoldHEN plugin.
+    
+    Args:
+        project_root: Path to the plugin project root (contains Makefile)
+        debug: If True, builds with VERBOSE_LOG enabled
+        
+    Returns:
+        Path to the built .prx file
+        
+    Raises:
+        RuntimeError: If the build fails
+    """
+    import subprocess as sp
+
+    log.info(f"Building plugin (debug={'yes' if debug else 'no'})...")
+    env = os.environ.copy()
+    if debug:
+        env['DEBUG'] = '1'
+
+    result = sp.run(['make', 'clean'], capture_output=True, text=True, timeout=120, cwd=project_root, env=env)
+    result = sp.run(['make', '-B'], capture_output=True, text=True, timeout=300, cwd=project_root, env=env)
+
+    if result.returncode != 0:
+        log.error(f"Plugin build failed:\n{result.stdout}\n{result.stderr}")
+        raise RuntimeError("Plugin build failed")
+
+    # Determine output filename based on debug flag
+    prx_name = "beat_saber_deluxe_debug.prx" if debug else "beat_saber_deluxe.prx"
+    prx_path = os.path.join(project_root, prx_name)
+
+    if not os.path.isfile(prx_path):
+        log.error(f"Build succeeded but {prx_path} not found")
+        raise RuntimeError(f"Plugin binary not found: {prx_path}")
+
+    log.info(f"  ✅ Plugin built: {prx_path} ({os.path.getsize(prx_path)} bytes)")
+    return prx_path
+
+
+def _ftp_run(host: str, port: int, user: str, password: str, commands: list, timeout: int = 120):
+    """
+    Run a series of lftp commands and return (returncode, stdout, stderr).
+    """
+    import subprocess as sp
+    user_part = f"{user},{password}" if password else f"{user},"
+    # Build a single -e script with ; between commands
+    script = "; ".join(commands) + "; quit"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host, "-e", script]
+    result = sp.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return result.returncode, result.stdout, result.stderr
+
+
+def ensure_plugins_ini(config: dict, plugin_remote_path: str):
+    """
+    Read the existing plugins.ini from PS4, ensure our plugin entry exists
+    under [CUSA12878], then re-upload. Idempotent — preserves other plugins.
+    """
+    import subprocess as sp
+    import tempfile
+
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+    title_id = title_cfg.get('id', 'CUSA12878')
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    ini_remote = "/data/GoldHEN/plugins.ini"
+    log.info(f"Ensuring plugin entry in {ini_remote}...")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_ini = os.path.join(tmpdir, "plugins.ini")
+
+        # Try to download existing plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"get {ini_remote} -o {local_ini}"],
+                                timeout=30)
+        if rc != 0:
+            log.info("  No existing plugins.ini found — creating new one")
+            lines = []
+        else:
+            with open(local_ini) as f:
+                lines = f.read().splitlines()
+            log.info(f"  Downloaded plugins.ini ({len(lines)} lines)")
+
+        # Parse and rebuild
+        # Format: section header [TITLE_ID], followed by plugin paths
+        sections = {}  # title_id -> list of plugin paths
+        current_section = None
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#'):
+                continue
+            if stripped.startswith('[') and stripped.endswith(']'):
+                current_section = stripped[1:-1]
+                if current_section not in sections:
+                    sections[current_section] = []
+            elif current_section and stripped:
+                sections.setdefault(current_section, []).append(stripped)
+
+        # Ensure our section exists with our plugin
+        current_plugins = sections.setdefault(title_id, [])
+        if plugin_remote_path not in current_plugins:
+            current_plugins.append(plugin_remote_path)
+            log.info(f"  Added plugin to [{title_id}]: {plugin_remote_path}")
+        else:
+            log.info(f"  Plugin already registered in [{title_id}]")
+
+        # Rebuild the ini content
+        new_lines = []
+        for sid, plugins in sections.items():
+            new_lines.append(f"[{sid}]")
+            for p in plugins:
+                new_lines.append(p)
+            new_lines.append("")
+
+        with open(local_ini, 'w') as f:
+            f.write('\n'.join(new_lines) + '\n')
+
+        # Upload the updated plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"put {local_ini} -o {ini_remote}"],
+                                timeout=30)
+        if rc == 0:
+            log.info("  ✅ plugins.ini updated")
+        else:
+            log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
+
+
+def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
+    """
+    Upload the plugin .prx to PS4 and ensure plugins.ini has our entry.
+    """
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+    title_id = title_cfg.get('id', 'CUSA12878')
+
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    # Plugin remote path — name matches the binary type
+    prx_name = os.path.basename(prx_path)
+    plugin_remote = f"/data/GoldHEN/plugins/{prx_name}"
+
+    log.info(f"Deploying plugin to PS4: {plugin_remote}")
+
+    # Upload the .prx
+    rc, out, err = _ftp_run(host, port, user, password,
+                            [f"put {prx_path} -o {plugin_remote}"],
+                            timeout=120)
+    if rc != 0:
+        log.warning(f"  ⚠️ Plugin deploy failed (PS4 offline?): {err}")
+        return
+
+    log.info("  ✅ Plugin uploaded")
+
+    # Now ensure plugins.ini has our entry
+    ensure_plugins_ini(config, plugin_remote)
 
 
 # ============================================================================
@@ -494,6 +658,15 @@ Examples:
 
   # Use pre-encoded FSB5 (skip audio conversion):
   python3 full_custom_song_pipeline.py --audio custom.fsb5 --song-dir ./my_song --target startmeup
+
+  # Build & deploy plugin (release — no verbose logging on PS4):
+  python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy-plugin
+
+  # Build & deploy plugin (debug — verbose PS4 logging for development):
+  python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy-plugin --debug-logging
+
+  # Just build & deploy plugin (song-dir still required for config):
+  python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy-plugin --preserve-metadata --no-pad
         """
     )
     parser.add_argument('--song-dir', required=True,
@@ -523,6 +696,11 @@ Examples:
                         help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
     parser.add_argument('--pcm16', action='store_true',
                         help='Use PCM16 format (codec=2) instead of HEVAG for the FSB5 audio (lossless)')
+    parser.add_argument('--deploy-plugin', action='store_true',
+                        help='Build and deploy the GoldHEN plugin to PS4')
+    parser.add_argument('--debug-logging', action='store_true',
+                        help='Build plugin with verbose logging (VERBOSE_LOG define). '
+                             'Only meaningful with --deploy-plugin.')
 
     args = parser.parse_args()
 
@@ -662,10 +840,17 @@ Examples:
     save_bundle(bf, args.output)
 
     # -----------------------------------------------------------------------
-    # Step 7: Deploy to PS4
+    # Step 7: Deploy bundle to PS4
     # -----------------------------------------------------------------------
     if args.deploy:
         deploy_to_ps4(args.output, args.target, config)
+
+    # -----------------------------------------------------------------------
+    # Step 8: Build & deploy plugin to PS4
+    # -----------------------------------------------------------------------
+    if args.deploy_plugin:
+        prx_path = build_plugin(PROJECT_ROOT, debug=args.debug_logging)
+        deploy_plugin(prx_path, config, debug=args.debug_logging)
 
     log.info("Pipeline complete!")
     log.info(f"  Bundle: {args.output}")

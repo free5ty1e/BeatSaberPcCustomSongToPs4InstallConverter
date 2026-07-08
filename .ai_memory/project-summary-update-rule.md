@@ -95,7 +95,11 @@ metadata:
 - **Keep index.md current** — if you add a new page, add it to the index catalog
 - **Always add a log entry** — append to `log.md` describing what was updated and why
 
-**6. Knowledge capture** (every time a root cause or breakthrough is discovered)
+**6. Song selection criteria** (before choosing a new song for deployment)
+
+Song criteria (documented from user preference): songs must have Easy/Normal/Hard difficulties as Standard, 90Degree, or OneSaber beatmaps. 360Degree maps load but are unplayable on PS4 VR (single-camera ~90-degree tracking arc can't handle behind-player notes). See `song_testing_log.md` for the testing table.
+
+**7. Knowledge capture** (every time a root cause or breakthrough is discovered)
 
 - **Check for existing memory**: before creating a new memory file, check if one already covers the topic
 - **Save findings as persistent memory**: write a `.md` file in `/workspace/.ai_memory/beat-saber-ps4-custom-songs/` with:
@@ -107,7 +111,7 @@ metadata:
 - **Update MEMORY.md** with a pointer to the new knowledge file
 - **Stage in git** along with experiment log and other docs
 
-**6. `/workspace/.ai_memory/MEMORY.md`** (when new documents are created)
+**8. `/workspace/.ai_memory/MEMORY.md`** (when new documents are created)
 
 - Add links to new memory files
 
