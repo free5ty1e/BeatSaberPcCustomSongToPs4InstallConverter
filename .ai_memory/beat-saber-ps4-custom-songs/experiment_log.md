@@ -1446,3 +1446,40 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Big Endian test:** PS4 does NOT expect big-endian PCM16. BE version was
   loud static/noise — much worse than LE version. Confirms LE is correct.
 - **Status:** Pipeline configurable, beatmap matching improved, quality verified.
+
+
+### Experiment 95 — bpmData Sync Fixed; Espresso Tested ✅ PERFECT
+- **Date:** 2026-07-08
+- **Root cause found:** `bpmData` `eb` field was set to `duration` (in **seconds**)
+  instead of **beats**. At 120 BPM, this gave half the correct value, making the
+  game think the tempo was 60 BPM instead of 120 BPM. Notes mapped to double
+  their correct time position.
+- **Fix:** `load_bpm_regions()` reads BPMInfo.dat (preferred, from BeatSaver) or
+  computes `total_beats = duration * bpm / 60.0` from Info.dat. `update_audio_gz()`
+  now accepts `bpm_regions` parameter with proper beat values.
+- **Test song:** "Espresso" by Sabrina Carpenter (104 BPM, 177.5s, Standard
+  E/N/H/Ex/Ex+, PCM16 FSB5, `--no-pad`)
+- **Result:** ✅ **PERFECT SYNC** — audio matches beatmaps flawlessly. All note
+  types visible: arrows, chains, arcs, walls, dots. No bombs in this map but
+  previously confirmed.
+- **Score saves:** ✅
+- **KB page:** `beatmap-audio-sync.md` created with bpmData structure
+  documentation, root cause explanation, BPMInfo.dat format.
+- **Version:** v0.50 — "Fixed bpmData sync (beats not seconds)"
+
+### Experiment 96 — Debug/Release Plugin Build System
+- **Date:** 2026-07-08
+- **What:** Added `#ifdef VERBOSE_LOG` guard around per-file logging in plugin.
+  `make` = release (no verbose PS4 logging, faster gameplay).
+  `make DEBUG=1` = debug build with `-DVERBOSE_LOG` (every file access logged).
+- **Pipeline flags:** `--deploy-plugin` builds + deploys plugin.
+  `--debug-logging` enables verbose mode. `ensure_plugins_ini()` handles
+  `plugins.ini` idempotently (downloads, parses, adds/updates entry, uploads).
+- **Status:** ✅ Both build variants verified (FSELF magic 4f 15 3d 1d confirmed).
+
+### Experiment 97 — CI/CD Workflow + gh Installation
+- **Date:** 2026-07-08
+- **What:** Installed GitHub CLI (`gh`) via apt, added to Dockerfile for
+  persistence. Created `.github/workflows/plugin-build.yml` for automated
+  PRX builds and release artifacts.
+- **Status:** 🚧 Awaiting user GitHub auth login for PR operations.

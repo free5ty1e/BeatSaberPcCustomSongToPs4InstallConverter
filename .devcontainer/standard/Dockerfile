@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     cifs-utils \
     git \
+    gh \
     zsh \
     p7zip-full \
     less \
