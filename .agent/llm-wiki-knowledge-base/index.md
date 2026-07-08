@@ -18,9 +18,10 @@ metadata:
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The critical format of beatmap data storage (no decompressed_size prefix!)
 - [[unitypy-serialization|UnityPy Serialization]] — save_typetree vs set_raw_data, surrogateescape encoding
 
-## Beatmap Formats & Conversion
+## Beatmap Formats, Conversion & Sync
 - [[beatmap-format-v3|PS4 Beatmap Format (V3)]] — colorNotes + colorNotesData, obstaclesData, all V3 structures
 - [[beatmap-conversion-pipeline|Beatmap Conversion Pipeline]] — V2→V3 conversion, .egg (OGG) handling, audio normalization, --no-pad for long songs
+- [[beatmap-audio-sync|Beatmap ↔ Audio Sync]] — bpmData structure, eb must be in beats not seconds, BPMInfo.dat, sync root cause
 
 ## Tooling & Workflow
 - [[toolchain-and-build|PS4 Toolchain & Build System]] — OpenOrbis toolchain, make, create-fself

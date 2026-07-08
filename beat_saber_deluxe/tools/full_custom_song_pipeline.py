@@ -258,20 +258,60 @@ def update_audioclip(cab, fsb5_bytes: bytes, duration: float, sample_rate: int =
 # Step 4: Update audio.gz metadata
 # ============================================================================
 
-def update_audio_gz(cab, duration: float, sample_rate: int = SAMPLE_RATE):
+def load_bpm_regions(song_dir: str, sample_count: int) -> list:
+    """
+    Load BPM region data from BPMInfo.dat (preferred) or compute from Info.dat.
+
+    The bpmData maps sample ranges to beat ranges. This is CRITICAL for sync:
+    the game converts beatmap 'b' values (in beats) to time positions using
+    these regions. If eb is in seconds instead of beats, the tempo is halved
+    at 120 BPM, causing progressive desync.
+
+    Returns list of {"si": startSampleIndex, "ei": endSampleIndex,
+                     "sb": startBeat, "eb": endBeat} dicts.
+    """
+    bpm_path = os.path.join(song_dir, "BPMInfo.dat")
+    if os.path.exists(bpm_path):
+        with open(bpm_path) as f:
+            bpm_data = json.load(f)
+        regions = bpm_data.get("_regions", [])
+        if regions:
+            return [
+                {"si": r["_startSampleIndex"], "ei": r["_endSampleIndex"],
+                 "sb": r["_startBeat"], "eb": r["_endBeat"]}
+                for r in regions
+            ]
+
+    # Fallback: compute from Info.dat BPM
+    info_path = os.path.join(song_dir, "Info.dat")
+    bpm = 120.0
+    if os.path.exists(info_path):
+        with open(info_path) as f:
+            info = json.load(f)
+        bpm = float(info.get("_beatsPerMinute", 120.0))
+
+    duration = sample_count / SAMPLE_RATE
+    total_beats = duration * bpm / 60.0
+    return [{"si": 0, "ei": sample_count, "sb": 0.0, "eb": total_beats}]
+
+
+def update_audio_gz(cab, duration: float, sample_rate: int = SAMPLE_RATE,
+                    bpm_regions: list = None):
     """
     Update the audio.gz TextAsset to reflect new audio duration/sample count.
     """
     sample_count = int(duration * sample_rate)
+
+    if bpm_regions is None:
+        bpm_regions = [{"si": 0, "ei": sample_count, "sb": 0.0,
+                         "eb": duration * 2.0}]  # fallback: assume 120 BPM
 
     meta = {
         "version": "4.0.0",
         "songChecksum": "custom",
         "songSampleCount": sample_count,
         "songFrequency": sample_rate,
-        "bpmData": [
-            {"si": 0, "ei": sample_count, "sb": 0.0, "eb": duration}
-        ]
+        "bpmData": bpm_regions
     }
 
     meta_json = json.dumps(meta, separators=(',', ':'))
@@ -602,9 +642,11 @@ Examples:
         update_audioclip(cab, fsb5_bytes, duration, actual_sample_rate)
 
         # -----------------------------------------------------------------------
-        # Step 4: Update audio.gz
+        # Step 4: Update audio.gz (with correct BPM region data)
         # -----------------------------------------------------------------------
-        update_audio_gz(cab, duration, actual_sample_rate)
+        sample_count = int(duration * actual_sample_rate)
+        bpm_regions = load_bpm_regions(args.song_dir, sample_count)
+        update_audio_gz(cab, duration, actual_sample_rate, bpm_regions)
 
     # -----------------------------------------------------------------------
     # Step 5: Replace beatmaps
