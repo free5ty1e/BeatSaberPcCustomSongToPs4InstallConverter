@@ -61,3 +61,14 @@ metadata:
 - Corrected template now uses Start Me Up's own FSB5 header (bytes 16-915)
 - Optimized encoder: silence fast path (211K frames/s), early termination, batch PCM reading
 - Updated quick_test_gen.py to import from standalone module
+
+## [2026-07-08] update | v0.51 — beatmap filename conventions documented
+- Created [[beatmap-filename-conventions.md]] — documents all BeatSaver naming patterns
+  found across 96 songs in the repo (Standard, bare, .beatmap.dat, 90Degree, OneSaber,
+  NoArrows, Legacy, SingleSaber, Lawless, 360Degree)
+- Documents the 5-tier selection priority used by `_select_beatmap_file()` in pipeline
+- Documents the ExpertPlus guard and 360Degree last-resort behaviour
+- Updated [[index.md]] — added beatmap-filename-conventions to Beatmap section
+- Updated [[beatmap-conversion-pipeline.md]] — cross-reference added (see also)
+- Plugin version bumped to v0.51 (12-song redirect table + beatmap fallback fix)
+

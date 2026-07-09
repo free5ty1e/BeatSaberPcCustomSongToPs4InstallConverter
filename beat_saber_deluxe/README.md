@@ -8,7 +8,7 @@ Replace any song's audio and beatmaps with your own content, all through a conve
 
 ✅ **Confirmed working:** PCM16 FSB5 (codec=2) custom audio plays on PS4. Custom beatmaps display and interact correctly. Tested with CUSA12878 patched (v1.29).
 
-**Status:** 🏆 **v0.50 Alpha** — Basic song replacement pipeline operational!
+**Status:** 🏆 **v0.51** — 12-song redirect table (all Rolling Stones slots) + priority-based beatmap fallback!
 
 ## How It Works
 

@@ -1483,3 +1483,56 @@ Before building v0.35, I analyzed the difference between the original file and `
   persistence. Created `.github/workflows/plugin-build.yml` for automated
   PRX builds and release artifacts.
 - **Status:** 🚧 Awaiting user GitHub auth login for PR operations.
+
+
+### Experiment 98 — 12-Song Rolling Stones Batch Deploy
+- **Date:** 2026-07-08
+- **What:** Deployed all 12 Rolling Stones song slots with custom community songs.
+  Plugin updated with full redirect table (12 entries). Pipeline updated with
+  auto-detecting CAB hash per target bundle (each Rolling Stones song has a unique hash).
+  Removed `--ignore-non-standard-beatmaps` from the batch deploy commands — the
+  flag was filtering out bare-named beatmaps (e.g. `Easy.dat`) that have no
+  "Standard" in the filename.
+- **Slot assignments:**
+  | Bundle ID | Custom Song | BPM | Diffs |
+  |-----------|-------------|-----|-------|
+  | startmeup | Espresso (Sabrina Carpenter) | 104 | All 5 ✅ tested |
+  | angry | We All Lift Together | 134 | E/N/H |
+  | bitemyheadoff | Escaping the Ruins | 160 | E/N/H/Ex |
+  | cantyouhearmeknocking | Spectre | 128 | All 5 |
+  | deadmanwalking | Finesse (Remix) | 105 | All 5 |
+  | gimmeshelter | How You Like That | 130 | All 5 |
+  | icantgetnosatisfaction | Dreams Come True | 99 | All 5 |
+  | messitup | Powersnake | 175 | All 5 |
+  | paintitblack | Time Lapse | 127 | All 5 |
+  | sugarsoaker | Venom of Venus | 164 | All 5 |
+  | sympathyforthedevil | LIT | 99 | All 5 |
+  | wholewideworld | VOLUPTE | 128 | All 5 |
+- **Issue found:** Plugin version was not incremented despite redirect table change.
+  User noted this should have been v0.51.
+- **Status:** 🚧 Bundles deployed, plugin still at v0.50 (version not bumped).
+
+
+### Experiment 99 — v0.51: Plugin Version Bump + Beatmap Filename Fallback Fix
+- **Date:** 2026-07-08
+- **What:** Two changes:
+  1. **Plugin version bumped to v0.51** — `main.cpp` version string + log message updated.
+     The 12-song redirect table was added during the v0.50 batch deploy but the version
+     was never incremented; v0.51 corrects this.
+  2. **Beatmap filename fallback logic rewritten** — `full_custom_song_pipeline.py`
+     `replace_beatmaps()` now uses a 5-tier priority selection via `_select_beatmap_file()`:
+     - Tier 1: `<Diff>Standard.dat` (e.g. `ExpertPlusStandard.dat`)
+     - Tier 2: `<Diff>.dat` (bare name, e.g. `ExpertPlus.dat`)
+     - Tier 3: `<Diff>.beatmap.dat` (BeatSaver .beatmap.dat format)
+     - Tier 4: Other modes — `90Degree`, `OneSaber`, `NoArrows`, `Legacy`, etc.
+     - Tier 5: `360Degree` (absolute last resort — unplayable in PS4 VR but better than nothing)
+     `--ignore-non-standard-beatmaps` now suppresses only tiers 4 and 5 (bare files in
+     tier 2 are always included since they have no mode suffix).
+- **Why:** The old logic used a single `for f in beatmap_files` loop that broke when
+  `--ignore-non-standard-beatmaps` was set and the song only had bare filenames (no
+  "Standard" in the name). The new tiered approach is deterministic and handles all
+  known BeatSaver naming conventions found in the 96-song repo.
+- **KB:** New wiki page `beatmap-filename-conventions.md` added documenting all
+  filename patterns and the selection priority.
+- **Status:** ✅ Code complete, ready to build + deploy.
+

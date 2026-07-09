@@ -1,9 +1,7 @@
-// Beat Saber Deluxe v0.35 — TRUE test: redirect startmeup→100bills
-// Key discovery: the patched resources.assets ONLY changed "StartMeUp\0"→"CustomSong"
-// (10 bytes at offset 871180). It doesn't add any custom songs.
-// So we DON'T redirect resources.assets anymore — use the ORIGINAL manifest.
-// The only redirect is BeatmapLevelsData/startmeup → 100bills file.
-// This tests if the 100bills file works as a replacement (whether asset name matters).
+// Beat Saber Deluxe v0.51 — All 12 Rolling Stones redirects + fixed beatmap filename fallback
+// v0.51: plugin version bump to reflect 12-song redirect table added in v0.50 batch deploy.
+// Key architecture: open() hook redirects BeatmapLevelsData/<id> → AFR custom bundle.
+// No jailbreak needed — AFR handles writes via sceKernelOpen.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -12,7 +10,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.50"
+#define PLUGIN_VERSION "v0.51"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -101,9 +99,9 @@ static int open_hook(const char *path, int flags, ...) {
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
-    log_write("=== BS Deluxe v0.50 started ===");
+    log_write("=== BS Deluxe v0.51 started ===");
 
-    log_write("v0.50: bpmData sync fix + 12-song Rolling Stones redirect table");
+    log_write("v0.51: 12-song Rolling Stones redirect table + improved beatmap filename fallback");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 

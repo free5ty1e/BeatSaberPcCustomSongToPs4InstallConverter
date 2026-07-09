@@ -22,6 +22,7 @@ metadata:
 - [[beatmap-format-v3|PS4 Beatmap Format (V3)]] — colorNotes + colorNotesData, obstaclesData, all V3 structures
 - [[beatmap-conversion-pipeline|Beatmap Conversion Pipeline]] — V2→V3 conversion, .egg (OGG) handling, audio normalization, --no-pad for long songs
 - [[beatmap-audio-sync|Beatmap ↔ Audio Sync]] — bpmData structure, eb must be in beats not seconds, BPMInfo.dat, sync root cause
+- [[beatmap-filename-conventions|Beatmap Filename Conventions]] — All BeatSaver naming patterns (Standard, bare, .beatmap.dat, 90Degree, OneSaber, 360Degree) and 5-tier pipeline selection priority
 
 ## Tooling & Workflow
 - [[toolchain-and-build|PS4 Toolchain & Build System]] — OpenOrbis toolchain, make, create-fself

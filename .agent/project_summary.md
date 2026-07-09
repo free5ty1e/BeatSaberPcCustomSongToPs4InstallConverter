@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-08
-**Status:** 🏆 v0.50 ALPHA — Full song plays, score saves. **bpmData sync fixed** (root cause: eb was in seconds instead of beats). PCM16 FSB5 confirmed lossless working. Next test: "Espresso" by Sabrina Carpenter (104 BPM, Standard E/N/H/Ex/Ex+). Plugin now supports `DEBUG=1` build for verbose logging on PS4. Pipeline has `--deploy-plugin` + `--debug-logging` for full iteration cycle.
+**Status:** 🏆 v0.51 — All 12 Rolling Stones songs replaced with custom songs. bpmData sync ✅. PCM16 FSB5 ✅. **Next action:** deploy v0.51 plugin to PS4 and test all 12 songs. Pipeline beatmap filename fallback now handles all BeatSaver naming conventions (Standard > bare > .beatmap.dat > 90Degree/OneSaber > 360Degree last resort).
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -25,7 +25,7 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **GoldHEN plugin config:** `/data/GoldHEN/plugins.ini` (⚠️ root level, NOT `plugins/` subdirectory)
 - **Custom assets deployed:**
   - `startmeup_v3` at `/data/GoldHEN/AFR/CUSA12878/` (Espresso bundle, 30.6MB)
-- **⚠️ Plugin deploy target:** The plugin (v0.50) redirects `BeatmapLevelsData/startmeup` → `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`. All test bundles MUST be deployed to `startmeup_v3`, NOT `startmeup`.
+- **⚠️ Plugin deploy target:** The plugin (v0.51) redirects `BeatmapLevelsData/startmeup` → `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`. All test bundles MUST be deployed to `startmeup_v3`, NOT `startmeup`.
 
 ## Experiment Timeline
 
@@ -432,7 +432,7 @@ The pipeline handles:
 1. Launch Beat Saber (CUSA12878)
 2. Play "Start Me Up" (now hijacked to custom song)
 3. Report:
-   - Notification text: "BS Deluxe v0.50"
+   - Notification text: "BS Deluxe v0.51"
    - Did the game crash?
    - Sync quality (audio matching beatmap notes)
    - Any visual issues (missing notes, walls, arcs, chains)
@@ -441,10 +441,10 @@ The pipeline handles:
 Download and examine the log:
 ```bash
 lftp -u anonymous, -p 2121 192.168.100.117 \
-  -e "get /data/GoldHEN/AFR/CUSA12878/bs_log.txt -o /tmp/bs_log_v0.50.txt; quit"
+  -e "get /data/GoldHEN/AFR/CUSA12878/bs_log.txt -o /tmp/bs_log_v0.51.txt; quit"
 ```
 Check for: redirect count, error lines, PlayerData save, notification confirmation.
-Save to `/workspace/screenshots/bs_log_v0.50.txt`.
+Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.

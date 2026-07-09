@@ -340,6 +340,61 @@ def update_audio_gz(cab, duration: float, sample_rate: int = SAMPLE_RATE,
 # Step 5: Replace beatmaps
 # ============================================================================
 
+def _select_beatmap_file(diff: str, beatmap_files: list, ignore_non_standard: bool = False) -> str | None:
+    """
+    Select the best beatmap file for a given difficulty using a priority fallback chain.
+
+    Priority order (highest to lowest):
+      1. Standard mode:  <Diff>Standard.dat    (e.g. ExpertPlusStandard.dat)
+      2. Bare difficulty: <Diff>.dat            (e.g. ExpertPlus.dat)
+      3. Beatmap-dot:    <Diff>.beatmap.dat     (e.g. ExpertPlus.beatmap.dat)
+      4. Other modes:    <Diff>90Degree.dat, <Diff>OneSaber.dat, <Diff>NoArrows.dat, etc.
+                         (limited gameplay but functional on PS4)
+      5. 360Degree:      <Diff>360Degree.dat    (absolute last resort — notes behind
+                         the player are unplayable in PS4 VR, but better than nothing)
+
+    The ignore_non_standard flag suppresses tiers 4 and 5 (alternate modes).
+    Bare files (tier 2) are always included — they have no mode suffix.
+    """
+    # Tiers: 1=Standard, 2=bare, 3=.beatmap.dat, 4=other modes, 5=360Degree
+    tier1, tier2, tier3, tier4, tier5 = [], [], [], [], []
+
+    for f in beatmap_files:
+        base = f
+        if 'Info' in base or 'Lightshow' in base or 'AudioData' in base:
+            continue
+        if not base.endswith(('.dat', '.json')):
+            continue
+        # Must contain the difficulty name
+        if diff not in base:
+            continue
+        # ExpertPlus guard: when matching "Expert" never pick an "ExpertPlus" file
+        if diff == 'Expert' and 'ExpertPlus' in base:
+            continue
+
+        stem = base  # e.g. "ExpertPlusStandard.dat" or "ExpertPlus.dat"
+
+        if f'{diff}Standard' in stem:
+            tier1.append(f)
+        elif stem == f'{diff}.dat' or stem == f'{diff}.json':
+            tier2.append(f)
+        elif f'{diff}.beatmap' in stem:
+            tier3.append(f)
+        elif '360Degree' in stem:
+            # Absolute last resort — only if ignore_non_standard not set
+            if not ignore_non_standard:
+                tier5.append(f)
+        else:
+            # 90Degree, OneSaber, NoArrows, Legacy, etc.
+            if not ignore_non_standard:
+                tier4.append(f)
+
+    for tier in (tier1, tier2, tier3, tier4, tier5):
+        if tier:
+            return tier[0]
+    return None
+
+
 def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
     """
     Replace all 5 difficulty beatmaps with custom ones.
@@ -348,11 +403,17 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
     Custom .dat or .json files are loaded, re-encoded as gzipped V3 JSON,
     and written to the corresponding TextAsset in the CAB.
 
+    File selection uses a priority fallback chain (see _select_beatmap_file):
+      1. <Diff>Standard.dat   (preferred)
+      2. <Diff>.dat           (bare, no mode suffix)
+      3. <Diff>.beatmap.dat   (BeatSaver .beatmap.dat format)
+      4. <Diff>90Degree.dat / OneSaber.dat / etc. (if not --ignore-non-standard)
+      (360Degree files are always excluded — unplayable on PS4 VR)
+
     Args:
         cab: Unity CAB bundle
         beatmap_dir: Directory containing .dat beatmap files
-        ignore_non_standard: If True, only match files containing "Standard"
-                             in their name (ignores 360Degree, 90Degree, OneSaber, etc.)
+        ignore_non_standard: If True, skip tier-4 fallback (90Degree, OneSaber, etc.)
     """
     beatmap_files = [f for f in os.listdir(beatmap_dir)
                      if f.endswith(('.json', '.dat'))]
@@ -369,31 +430,17 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
             if '.beatmap.gz' not in name and 'Beatmap' not in name:
                 continue
 
-            # Try to match this TextAsset to a custom beatmap by difficulty
+            # Determine which difficulty this TextAsset slot is for
             matched_file = None
             for diff in DIFFICULTIES:
-                # Exact match: the TextAsset name contains the difficulty as a word
-                # e.g., "StartMeUpEasy.beatmap.gz" matches "Easy"
                 # IMPORTANT: exclude "ExpertPlus" when matching "Expert" (substring trap)
                 if diff == 'Expert' and 'ExpertPlus' in name:
                     continue
-                if diff in name:
-                    # Find matching custom file by difficulty
-                    for f in beatmap_files:
-                        if 'Info' in f or 'Lightshow' in f:
-                            continue
-                        # Exclude "ExpertPlus" files when matching "Expert"
-                        if diff == 'Expert' and 'ExpertPlus' in f:
-                            continue
-                        # If --ignore-non-standard-beatmaps, only match files
-                        # containing "Standard" (skip 360Degree, 90Degree, OneSaber, etc.)
-                        if ignore_non_standard and 'Standard' not in f:
-                            continue
-                        if diff in f:
-                            matched_file = f
-                            break
-                    if matched_file:
-                        break
+                if diff not in name:
+                    continue
+                # Got the slot — now pick the best source file
+                matched_file = _select_beatmap_file(diff, beatmap_files, ignore_non_standard)
+                break
 
             if matched_file:
                 path = os.path.join(beatmap_dir, matched_file)

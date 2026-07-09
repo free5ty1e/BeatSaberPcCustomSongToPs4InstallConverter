@@ -10,13 +10,15 @@
 - [x] BeatSaver downloader
 - [x] Beatmap conversion V2→V3 (notes, obstacles, bombs, arcs, chains, 360-degree)
 - [x] Lapped audio detection and generation
+- [x] 12-song redirect table in plugin (all Rolling Stones slots)
+- [x] Beatmap filename fallback — handles all BeatSaver naming conventions (5-tier priority)
 
 ## M2 — Song Metadata & Database (In Progress)
 - [x] `beat_saber_song_ids.json` — 306 official songs cataloged
 - [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)
+- [x] Song testing log document (`song_testing_log.md`)
 - [ ] Difficulty metadata extraction from all 306 bundles
 - [ ] DLC song name extraction from addressables packs
-- [ ] Song testing log document
 
 ## M3 — Note Color Customization (NEW)
 - [ ] Research how BeatmapLevel defines left/right note box colors
