@@ -116,7 +116,6 @@ except ImportError:
 # Constants
 # ---------------------------------------------------------------------------
 ORIGINAL_RESOURCE_SIZE = 12305632   # size of original startmeup .resource (12MB)
-ORIGINAL_CAB_NAME = "CAB-6c9e66546e3e23434517417298a18b91"
 SAMPLE_RATE = 44100
 CHANNELS = 2
 
@@ -204,26 +203,33 @@ def load_target_bundle(template_path: str):
         raise RuntimeError(f"No bundles found in {template_path}")
 
     bf = bundles[0]
-    cab = bf.files[ORIGINAL_CAB_NAME]
 
-    # Confirm the .resource file exists
-    resource_key = f"{ORIGINAL_CAB_NAME}.resource"
+    # Auto-detect CAB name from bundle files
+    cab_key = None
+    for key in bf.files:
+        if key.startswith("CAB-") and not key.endswith(".resource"):
+            cab_key = key
+            break
+    if cab_key is None:
+        raise RuntimeError("No CAB file found in bundle")
+
+    resource_key = f"{cab_key}.resource"
     if resource_key not in bf.files:
         raise RuntimeError(f"Resource file '{resource_key}' not found in bundle")
 
-    log.info(f"  Bundle loaded: CAB={len(cab.objects)} objects, "
-             f"Resource={bf.files[resource_key].Length} bytes")
+    cab = bf.files[cab_key]
 
-    return bf, cab
+    log.info(f"  Bundle loaded: CAB={cab_key} ({len(cab.objects)} objects), "
+             f"Resource={resource_key} ({bf.files[resource_key].Length} bytes)")
+
+    return bf, cab, cab_key, resource_key
 
 
 # ============================================================================
 # Step 2: Replace .resource data
 # ============================================================================
 
-def replace_resource(bf, fsb5_bytes: bytes):
-    """Replace the .resource file in the bundle with new FSB5 data."""
-    resource_key = f"{ORIGINAL_CAB_NAME}.resource"
+def replace_resource(bf, fsb5_bytes: bytes, resource_key: str):
     new_res = EndianBinaryReader(fsb5_bytes)
     new_res.flags = 0
     new_res.BaseOffset = 0
@@ -803,13 +809,13 @@ Examples:
         log.error(f"Template bundle not found: {args.template}")
         sys.exit(1)
 
-    bf, cab = load_target_bundle(args.template)
+    bf, cab, cab_key, resource_key = load_target_bundle(args.template)
     log.info(f"Target: {args.target}")
 
     # -----------------------------------------------------------------------
     # Step 2: Replace .resource
     # -----------------------------------------------------------------------
-    replace_resource(bf, fsb5_bytes)
+    replace_resource(bf, fsb5_bytes, resource_key)
 
     if args.preserve_metadata:
         log.info("  --preserve-metadata: Skipping AudioClip and audio.gz updates")

@@ -17,6 +17,25 @@
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
 
+// ── Rolling Stones song redirect table ────────────────────────────────────
+// Each entry maps an official bundle ID to a custom bundle file on the AFR path.
+// The suffix _v3 is appended by the pipeline. Keep sorted for readability.
+static const char *REDIRECT_TABLE[][2] = {
+    {"BeatmapLevelsData/angry",                AFR_BASE "/" TITLE_ID "/angry_v3"},
+    {"BeatmapLevelsData/bitemyheadoff",        AFR_BASE "/" TITLE_ID "/bitemyheadoff_v3"},
+    {"BeatmapLevelsData/cantyouhearmeknocking",AFR_BASE "/" TITLE_ID "/cantyouhearmeknocking_v3"},
+    {"BeatmapLevelsData/deadmanwalking",       AFR_BASE "/" TITLE_ID "/deadmanwalking_v3"},
+    {"BeatmapLevelsData/gimmeshelter",         AFR_BASE "/" TITLE_ID "/gimmeshelter_v3"},
+    {"BeatmapLevelsData/icantgetnosatisfaction",AFR_BASE "/" TITLE_ID "/icantgetnosatisfaction_v3"},
+    {"BeatmapLevelsData/messitup",             AFR_BASE "/" TITLE_ID "/messitup_v3"},
+    {"BeatmapLevelsData/paintitblack",         AFR_BASE "/" TITLE_ID "/paintitblack_v3"},
+    {"BeatmapLevelsData/startmeup",            AFR_BASE "/" TITLE_ID "/startmeup_v3"},
+    {"BeatmapLevelsData/sugarsoaker",          AFR_BASE "/" TITLE_ID "/sugarsoaker_v3"},
+    {"BeatmapLevelsData/sympathyforthedevil",  AFR_BASE "/" TITLE_ID "/sympathyforthedevil_v3"},
+    {"BeatmapLevelsData/wholewideworld",       AFR_BASE "/" TITLE_ID "/wholewideworld_v3"},
+    {NULL, NULL}  // sentinel
+};
+
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
 
@@ -59,8 +78,12 @@ static int open_hook(const char *path, int flags, ...) {
     in_hook = 1;
     const char *np = NULL;
     if (path) {
-        if (strstr(path, "BeatmapLevelsData/startmeup"))
-            np = AFR_BASE "/" TITLE_ID "/startmeup_v3";
+        for (int i = 0; REDIRECT_TABLE[i][0]; i++) {
+            if (strstr(path, REDIRECT_TABLE[i][0])) {
+                np = REDIRECT_TABLE[i][1];
+                break;
+            }
+        }
     }
 #ifdef VERBOSE_LOG
     char lb[512]; snprintf(lb,sizeof(lb),"open:%s",path?: "NULL");
@@ -80,7 +103,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     OrbisNotificationRequest r;
     log_write("=== BS Deluxe v0.50 started ===");
 
-    log_write("v0.50: Fixed bpmData sync (beats not seconds)");
+    log_write("v0.50: bpmData sync fix + 12-song Rolling Stones redirect table");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 
