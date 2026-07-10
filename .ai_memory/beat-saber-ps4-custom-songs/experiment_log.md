@@ -1598,3 +1598,25 @@ Before building v0.35, I analyzed the difference between the original file and `
   ./beat_saber_deluxe/deploy_all.sh [--debug]
   
 - **Status:** 🏁 Ready for deploy test. PS4 can be turned off for now.
+
+
+### Experiment 102 — v0.52: Re-add V2→V3 converter as optional flag, Plugin-Only Mode, Audit Roadmap
+- **Date:** 2026-07-09
+- **ROOT CAUSE ANALYSIS:** The PS4 game handles V2 and V4 beatmap formats DIFFERENTLY.
+  Espresso (works) uses V4 format (`colorNotes` with `b` in beats). All 11 other songs
+  use V2 format (`_notes` with `_time` in beats). Despite both representing timing in beats,
+  the game's BeatmapDataLoader appears to interpret V2 `_time` differently from V4 `b`.
+  The `_BPMChanges` field in V2 beatmaps may override our audio.gz bpmData.
+- **Pipeline changes (v0.52):**
+  1. Re-added `is_v2_beatmap()` and `convert_v2_to_v3()` functions (from committed v0.51 code)
+  2. Added `--convert-to-v3` CLI flag — auto-converts V2 beatmaps to V3.2.0 format
+  3. Converter clears `_BPMChanges` and sets `bpmEvents: []` so game uses audio.gz bpmData
+  4. Made `--song-dir` optional — now can use `--deploy-plugin` alone to just deploy plugin
+  5. Plugin version bumped to v0.52
+  6. Added `auto_convert` parameter to `replace_beatmaps()`
+- **Roadmap audit items added (v0.53):**
+  1. Make plugin redirect table dynamic (JSON config file on AFR path)
+  2. Remove hardcoded TITLE_ID, AFR_BASE, version from plugin
+  3. Remove hardcoded DIFFICULTIES, ORIGINAL_RESOURCE_SIZE, SAMPLE_RATE from pipeline
+  4. Remove all hardcoded values — make config-driven
+- **Status:** 🚧 Ready to test on PS4: deploy plugin + bundles, enable --convert-to-v3 for V2 songs

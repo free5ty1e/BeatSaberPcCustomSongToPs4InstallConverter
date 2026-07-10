@@ -1,5 +1,5 @@
-// Beat Saber Deluxe v0.51 — All 12 Rolling Stones redirects + fixed beatmap filename fallback
-// v0.51: plugin version bump to reflect 12-song redirect table added in v0.50 batch deploy.
+// Beat Saber Deluxe v0.52 — All 12 Rolling Stones redirects + fixed beatmap filename fallback
+// v0.52: plugin version bump to reflect 12-song redirect table added in v0.50 batch deploy.
 // Key architecture: open() hook redirects BeatmapLevelsData/<id> → AFR custom bundle.
 // No jailbreak needed — AFR handles writes via sceKernelOpen.
 
@@ -10,7 +10,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.51"
+#define PLUGIN_VERSION "v0.52"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -99,9 +99,9 @@ static int open_hook(const char *path, int flags, ...) {
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
-    log_write("=== BS Deluxe v0.51 started ===");
+    log_write("=== BS Deluxe v0.52 started ===");
 
-    log_write("v0.51: 12-song Rolling Stones redirect table + improved beatmap filename fallback");
+    log_write("v0.52: 12-song Rolling Stones redirect table + improved beatmap filename fallback");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 

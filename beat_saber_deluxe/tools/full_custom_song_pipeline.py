@@ -266,12 +266,16 @@ def update_audioclip(cab, fsb5_bytes: bytes, duration: float, sample_rate: int =
 
 def load_bpm_regions(song_dir: str, sample_count: int) -> list:
     """
-    Load BPM region data from BPMInfo.dat (preferred) or compute from Info.dat.
+    Load BPM region data from BPMInfo.dat (preferred) or compute from beatmap data.
 
     The bpmData maps sample ranges to beat ranges. This is CRITICAL for sync:
     the game converts beatmap 'b' values (in beats) to time positions using
     these regions. If eb is in seconds instead of beats, the tempo is halved
     at 120 BPM, causing progressive desync.
+
+    IMPORTANT: Many BeatSaver mappers use a BPM slightly different from Info.dat's
+    _beatsPerMinute when placing notes. We detect this by scanning the beatmap
+    files for the highest _time/b value and using it to compute the effective BPM.
 
     Returns list of {"si": startSampleIndex, "ei": endSampleIndex,
                      "sb": startBeat, "eb": endBeat} dicts.
@@ -288,16 +292,44 @@ def load_bpm_regions(song_dir: str, sample_count: int) -> list:
                 for r in regions
             ]
 
-    # Fallback: compute from Info.dat BPM
-    info_path = os.path.join(song_dir, "Info.dat")
-    bpm = 120.0
-    if os.path.exists(info_path):
-        with open(info_path) as f:
-            info = json.load(f)
-        bpm = float(info.get("_beatsPerMinute", 120.0))
+    # Scan beatmap files to find the highest beat value (mapper's actual timing)
+    import glob as _glob
+    max_beat = 0.0
+    bm_files = _glob.glob(os.path.join(song_dir, "*.dat"))
+    for bm_path in bm_files:
+        fname = os.path.basename(bm_path).lower()
+        if fname in ('info.dat', 'bpminfo.dat'):
+            continue
+        try:
+            with open(bm_path) as f:
+                data = json.load(f)
+            # Check both V2 (_notes._time) and V3/V4 (colorNotes.b)
+            notes = data.get('_notes', data.get('colorNotes', []))
+            for note in notes:
+                t = note.get('_time', note.get('b', 0))
+                if isinstance(t, (int, float)) and t > max_beat:
+                    max_beat = t
+        except:
+            pass
 
+    # If we found beatmap data, use the max beat to compute the effective BPM
     duration = sample_count / SAMPLE_RATE
-    total_beats = duration * bpm / 60.0
+    if max_beat > 0:
+        # total_beats = the beatmap's last beat value
+        total_beats = max_beat
+        eff_bpm = total_beats * 60.0 / duration
+        log.info(f"  Beatmap-based BPM: {eff_bpm:.1f} (from last beat={total_beats:.1f}, audio={duration:.1f}s)")
+    else:
+        # Absolute fallback: use Info.dat BPM
+        info_path = os.path.join(song_dir, "Info.dat")
+        bpm = 120.0
+        if os.path.exists(info_path):
+            with open(info_path) as f:
+                info = json.load(f)
+            bpm = float(info.get("_beatsPerMinute", 120.0))
+        total_beats = duration * bpm / 60.0
+        log.info(f"  Info.dat BPM fallback: {bpm} (total_beats={total_beats:.1f})")
+
     return [{"si": 0, "ei": sample_count, "sb": 0.0, "eb": total_beats}]
 
 
@@ -334,6 +366,97 @@ def update_audio_gz(cab, duration: float, sample_rate: int = SAMPLE_RATE,
             return
 
     raise RuntimeError("No audio.gz TextAsset found in bundle!")
+
+
+# ============================================================================
+# V2 → V3/V4 beatmap converter
+# ============================================================================
+
+def is_v2_beatmap(data: dict) -> bool:
+    """Check if a beatmap dict is in V2 format (needs conversion)."""
+    ver = data.get("version") or data.get("_version") or ""
+    if ver.startswith("2"):
+        return True
+    if "_notes" in data and "colorNotes" not in data:
+        return True
+    return False
+
+
+def convert_v2_to_v3(v2_data: dict) -> dict:
+    """
+    Convert a V2 beatmap dict to V3.2.0 format.
+
+    V2 beatmaps store notes as _notes[] with _time/_lineIndex/_lineLayer/
+    _type/_cutDirection.  V3 uses colorNotes[] plus bombNotes[] with
+    b/x/y/a/d fields.  Obstacles, events, and sliders are converted
+    similarly, and the result is a minimal V3 structure the PS4 game
+    can parse without crashing on unknown keys.
+    """
+    # Pass through if already V3/V4
+    if not is_v2_beatmap(v2_data):
+        return v2_data
+
+    # -- notes -----------------------------------------------------------------
+    color_notes = []
+    bomb_notes = []
+    for note in v2_data.get("_notes", []):
+        nt = int(note.get("_type", 0))
+        base = {
+            "b": float(note["_time"]),
+            "x": int(note.get("_lineIndex", 0)),
+            "y": int(note.get("_lineLayer", 0)),
+        }
+        if nt == 3:
+            base["d"] = int(note.get("_cutDirection", 0))
+            bomb_notes.append(base)
+        else:
+            base["a"] = nt
+            base["d"] = int(note.get("_cutDirection", 0))
+            color_notes.append(base)
+
+    # -- obstacles -------------------------------------------------------------
+    obstacles = []
+    for obs in v2_data.get("_obstacles", []):
+        ot = int(obs.get("_type", 0))
+        obstacles.append({
+            "b": float(obs["_time"]),
+            "x": int(obs.get("_lineIndex", 0)),
+            "y": 0,
+            "d": float(obs.get("_duration", 0)),
+            "w": int(obs.get("_width", 1)),
+            "h": 3 if ot == 0 else 1,
+        })
+
+    # -- events (V2 $!$ basicBeatmapEvents) --------------------------------------
+    basic_events = []
+    for ev in v2_data.get("_events", []):
+        basic_events.append({
+            "b": float(ev["_time"]),
+            "t": int(ev.get("_type", 0)),
+            "i": int(ev.get("_value", 0)),
+        })
+
+    event_types = sorted(set(e["t"] for e in basic_events))
+
+    # -- build V3 structure ----------------------------------------------------
+    v3 = {
+        "version": "3.2.0",
+        "colorNotes": color_notes,
+        "bombNotes": bomb_notes,
+        "obstacles": obstacles,
+        "sliders": [],
+        "burstSliders": [],
+        "basicBeatmapEvents": basic_events,
+        "colorBoostBeatmapEvents": [],
+        "bpmEvents": [],
+        "rotationEvents": [],
+        "basicEventTypesWithKeywords": {
+            "d": [{"e": t, "n": f"EventType{t}"} for t in event_types]
+        },
+        "useNormalEventsAsCompatibleEvents": True,
+        "customData": {},
+    }
+    return v3
 
 
 # ============================================================================
@@ -395,7 +518,7 @@ def _select_beatmap_file(diff: str, beatmap_files: list, ignore_non_standard: bo
     return None
 
 
-def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
+def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_convert=False):
     """
     Replace all 5 difficulty beatmaps with custom ones.
 
@@ -446,6 +569,11 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
                 path = os.path.join(beatmap_dir, matched_file)
                 with open(path, 'r', encoding='utf-8') as fh:
                     data = json.load(fh)
+
+                # Auto-convert V2 → V3.2.0 if requested
+                if auto_convert and is_v2_beatmap(data):
+                    data = convert_v2_to_v3(data)
+                    log.info(f"  Converted V2 -> V3: '{matched_file}'")
 
                 # Encode as gzipped JSON
                 json_bytes = json.dumps(data, separators=(',', ':')).encode('utf-8')
@@ -722,7 +850,7 @@ Examples:
   python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy-plugin --preserve-metadata --no-pad
         """
     )
-    parser.add_argument('--song-dir', required=True,
+    parser.add_argument('--song-dir', default=None,
                         help='Folder containing the custom song (WAV + .dat/.json beatmaps)')
     parser.add_argument('--audio', default=None,
                         help='Pre-encoded FSB5 file (optional: skips WAV->FSB5 conversion)')
@@ -754,14 +882,31 @@ Examples:
     parser.add_argument('--debug-logging', action='store_true',
                         help='Build plugin with verbose logging (VERBOSE_LOG define). '
                              'Only meaningful with --deploy-plugin.')
+    parser.add_argument('--convert-to-v3', action='store_true',
+                        help='Auto-convert V2 beatmaps (_notes/_time) to V3.2.0 format (colorNotes/b). '
+                             'Use if custom songs use V2 format.')
 
     args = parser.parse_args()
 
-    # Load PS4 config and fill argument defaults from it
+    # Load PS4 config first
     config = load_config(args.config)
     cfg_ps4 = config.get('ps4', {})
     cfg_title = config.get('title', {})
     cfg_paths = config.get('paths', {})
+
+    # Plugin-only mode: deploy plugin and exit
+    if args.deploy_plugin and not args.song_dir:
+        deploy_plugin(
+            os.path.join(PROJECT_ROOT, 'beat_saber_deluxe.prx'),
+            {'ps4': cfg_ps4, 'title': cfg_title},
+            debug=args.debug_logging
+        )
+        log.info("Plugin deployment complete (no song processed)")
+        sys.exit(0)
+
+    # --song-dir is required for song processing
+    if not args.song_dir:
+        parser.error('--song-dir is required (or use --deploy-plugin to deploy plugin only)')
     cfg_pipe = config.get('pipeline', {})
 
     if args.target is None:
@@ -883,7 +1028,8 @@ Examples:
     # Step 5: Replace beatmaps
     # -----------------------------------------------------------------------
     replaced = replace_beatmaps(cab, args.song_dir,
-                                  ignore_non_standard=args.ignore_non_standard_beatmaps)
+                                  ignore_non_standard=args.ignore_non_standard_beatmaps,
+                                  auto_convert=args.convert_to_v3)
     log.info(f"Beatmaps replaced: {replaced}/5")
 
     # -----------------------------------------------------------------------

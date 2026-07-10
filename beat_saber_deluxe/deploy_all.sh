@@ -60,7 +60,10 @@ fi
 echo ""
 echo "📦 Deploying $((${#TARGETS[@]})) bundles..."
 for TARGET in "${TARGETS[@]}"; do
-    BUNDLE="$OUTPUT/${TARGET}_custom.bundle"
+    BUNDLE="$OUTPUT/${TARGET}_custom_v3.bundle"
+    if [ ! -f "$BUNDLE" ]; then
+        BUNDLE="$OUTPUT/${TARGET}_custom.bundle"
+    fi
     if [ ! -f "$BUNDLE" ]; then
         echo "  ⚠️  Bundle not found: $BUNDLE (skipping)"
         continue

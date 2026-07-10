@@ -142,3 +142,9 @@ Before reporting to the user:
 10. Then report
 
 **See also:** [[research-index-update]] for keeping RESEARCH_INDEX.md in sync.
+
+
+## Git Etiquette
+- The agent NEVER runs `git commit`. Stage only, present message for user review.
+- The agent NEVER stages compiled artifacts (.prx, .bundle, .oelf, .fsb5, etc.).
+- Binary files are added to `.gitignore` when first encountered.

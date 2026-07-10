@@ -13,6 +13,22 @@
 - [x] 12-song redirect table in plugin (all Rolling Stones slots)
 - [x] Beatmap filename fallback — handles all BeatSaver naming conventions (5-tier priority)
 
+## M1.5 — Dynamic Configuration & Pipeline Audit (NEW)
+
+### Plugin Hardcoded Values → Dynamic
+- [ ] Make plugin redirect table dynamic (read JSON config file from AFR path instead of C array)
+- [ ] Remove hardcoded `TITLE_ID` ("CUSA12878") — read from redirect config
+- [ ] Remove hardcoded `AFR_BASE` ("/data/GoldHEN/AFR") — read from redirect config
+- [ ] Remove hardcoded `PLUGIN_VERSION` — derive from git tag or redirect config
+
+### Pipeline Hardcoded Values → Config-Driven
+- [ ] Remove hardcoded `DIFFICULTIES` list — detect from song directory contents
+- [ ] Remove hardcoded `ORIGINAL_RESOURCE_SIZE` — set from config per template bundle
+- [ ] Remove hardcoded `SAMPLE_RATE` — detect from audio file metadata
+- [ ] Remove hardcoded V2/V3 beatmap matching in `load_bpm_regions` — use beatmap scanning
+- [ ] Add `--no-beatmap-bpm` flag (fall back to Info.dat BPM if beatmap scanning causes issues)
+- [ ] Make `--song-dir` truly optional when `--deploy-plugin` is used alone ✅ (DONE)
+
 ## M2 — Song Metadata & Database (In Progress)
 - [x] `beat_saber_song_ids.json` — 306 official songs cataloged
 - [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)

@@ -366,3 +366,11 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 lftp -u anonymous, -p 2121 192.168.100.117 \
   -e "ls /data/GoldHEN/AFR/CUSA12878/; quit"
 ```
+
+
+### NEVER COMMIT
+- The agent MUST NEVER run `git commit` under any circumstances.
+- The agent stages files with `git add` and presents a commit MESSAGE for the USER to review.
+- The user commits manually after reviewing the staged changes and the suggested message.
+- Compiled binaries (.prx, .oelf, .o, .elf, .fsb5, .bundle) must NEVER be staged or committed.
+- Binary/compiled artifacts are added to `.gitignore` so they cannot be accidentally committed.
