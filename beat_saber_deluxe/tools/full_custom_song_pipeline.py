@@ -585,6 +585,11 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
                     data = convert_v2_to_v3(data, default_bpm=bpm)
                     log.info(f"  Converted V2 -> V3: '{matched_file}'")
 
+                # Fix V3/V4 beatmaps with empty/missing bpmEvents (same BPM=60 fallback bug)
+                if not data.get('bpmEvents'):
+                    data['bpmEvents'] = [{"b": 0, "m": bpm}]
+                    log.info(f"  Added bpmEvents ({bpm} BPM) to '{matched_file}'")
+
                 # Encode as gzipped JSON
                 json_bytes = json.dumps(data, separators=(',', ':')).encode('utf-8')
                 compressed = gzip.compress(json_bytes)
