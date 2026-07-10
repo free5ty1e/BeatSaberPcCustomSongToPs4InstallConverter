@@ -1536,3 +1536,36 @@ Before building v0.35, I analyzed the difference between the original file and `
   filename patterns and the selection priority.
 - **Status:** ✅ Code complete, ready to build + deploy.
 
+
+
+### Experiment 100 — v.0.51a: Rebuild 11 Rolling Stones Songs (V2→V3 Converter Removed)
+- **Date:** 2026-07-09
+- **What:** Rebuilt all 11 Rolling Stones custom song bundles with V2→V3 converter REMOVED.
+  The converter was causing sync issues (notes at 2x/1/2x speed) by incorrectly converting
+  V2 beatmaps (_time in seconds) to V3 format using wrong BPM.
+- **Changes from committed code:**
+  1. Removed get_template_resource_size() — back to hardcoded 12MB (ORIGINAL_RESOURCE_SIZE)
+  2. Removed V2→V3 beatmap converter entirely
+  3. Simplified BPM lookup — only reads _beatsPerMinute from Info.dat (not V4 format)
+  4. Changed audio_to_fsb5() default pad_to_size back to ORIGINAL_RESOURCE_SIZE
+  5. Added .egg file extension support for BeatSaver audio files (.egg = renamed .ogg)
+  6. Removed template resource size loading from main() (no longer needed)
+- **Build results:** 11 bundles built (all except startmeup)
+  | Target | File Size | Audio Duration | BPM |
+  |--------|-----------|----------------|-----|
+  | angry | 25.2MB | 154.8s | 134 |
+  | bitemyheadoff | 23.2MB | 139.6s | 160 |
+  | cantyouhearmeknocking | 38.2MB | 231.7s | 128 |
+  | deadmanwalking | 36.5MB | 218.6s | 105 |
+  | gimmeshelter | 30.1MB | 180.0s | 130 |
+  | icantgetnosatisfaction | 34.4MB | 186.5s | 99 |
+  | messitup | 37.5MB | 226.0s | 175 |
+  | paintitblack | 30.6MB | 186.5s | 127 |
+  | sugarsoaker | 34.9MB | 207.0s | 164 |
+  | sympathyforthedevil | 42.7MB | 254.5s | 99 |
+  | wholewideworld | 31.0MB | 186.6s | 128 |
+- **Deploy script:** deploy_all_songs.sh ready for when PS4 is turned on
+- **Song directories:** All custom songs stored in songs_repo with .egg audio files
+  (BeatSaver uses .egg extension for .ogg files to prevent direct streaming)
+- **Beatmap format:** All 11 use V2 format (_notes with _time in seconds) — no BPM conversion needed
+- **Status:** 🚧 Ready to deploy and test sync on PS4

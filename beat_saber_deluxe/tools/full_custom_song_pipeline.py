@@ -115,6 +115,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
+ORIGINAL_RESOURCE_SIZE = 12305632   # size of original startmeup .resource (12MB)
 SAMPLE_RATE = 44100
 CHANNELS = 2
 
@@ -133,29 +134,11 @@ log = logging.getLogger('pipeline')
 
 
 # ============================================================================
-# Template resource size helper
-# ============================================================================
-
-def get_template_resource_size(template_path: str) -> int:
-    """
-    Load a template bundle and return its AudioClip resource size.
-    Each template has a different .resource size; we must pad to the
-    *target* template's size, not a hardcoded value.
-    """
-    env = UnityPy.load(template_path)
-    for obj in env.objects:
-        if obj.type.name == 'AudioClip':
-            tt = obj.read_typetree()
-            return tt.get('m_Resource', {}).get('m_Size', 0)
-    raise RuntimeError(f"No AudioClip found in template: {template_path}")
-
-
-# ============================================================================
 # Step 0: Audio -> PCM -> HEVAG -> FSB5 (with padding)
 # Supports .wav AND .ogg via soundfile
 # ============================================================================
 
-def audio_to_fsb5(audio_path: str, pad_to_size: int = 0) -> bytes:
+def audio_to_fsb5(audio_path: str, pad_to_size: int = ORIGINAL_RESOURCE_SIZE) -> bytes:
     """
     Convert an audio file (.wav or .ogg) to a PS4-compatible FSB5 file.
 
@@ -307,18 +290,11 @@ def load_bpm_regions(song_dir: str, sample_count: int) -> list:
 
     # Fallback: compute from Info.dat BPM
     info_path = os.path.join(song_dir, "Info.dat")
-    if not os.path.exists(info_path):
-        info_path = os.path.join(song_dir, "info.dat")
     bpm = 120.0
     if os.path.exists(info_path):
         with open(info_path) as f:
             info = json.load(f)
-        # V2 Info.dat uses top-level _beatsPerMinute; V4 uses audio.bpm
-        bpm = float(
-            info.get("_beatsPerMinute")
-            or info.get("audio", {}).get("bpm")
-            or 120.0
-        )
+        bpm = float(info.get("_beatsPerMinute", 120.0))
 
     duration = sample_count / SAMPLE_RATE
     total_beats = duration * bpm / 60.0
@@ -361,107 +337,6 @@ def update_audio_gz(cab, duration: float, sample_rate: int = SAMPLE_RATE,
 
 
 # ============================================================================
-# V2 → V3/V4 beatmap converter
-# ============================================================================
-
-V3_NOTE_CUT_DIRECTION_MAP = {
-    0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8
-}
-
-
-def is_v2_beatmap(data: dict) -> bool:
-    """Check if a beatmap dict is in V2 format (needs conversion)."""
-    ver = data.get("version") or data.get("_version") or ""
-    if ver.startswith("2"):
-        return True
-    if "_notes" in data and "colorNotes" not in data:
-        return True
-    return False
-
-
-def convert_v2_to_v3(v2_data: dict) -> dict:
-    """
-    Convert a V2 beatmap dict to V3.2.0 format.
-
-    V2 beatmaps store notes as _notes[] with _time/_lineIndex/_lineLayer/
-    _type/_cutDirection.  V3 uses colorNotes[] plus bombNotes[] with
-    b/x/y/a/d fields.  Obstacles, events, and sliders are converted
-    similarly, and the result is a minimal V3 structure the PS4 game
-    can parse without crashing on unknown keys.
-    """
-    # Pass through if already V3/V4
-    if not is_v2_beatmap(v2_data):
-        return v2_data
-
-    # -- notes -----------------------------------------------------------------
-    color_notes = []
-    bomb_notes = []
-    for note in v2_data.get("_notes", []):
-        nt = int(note.get("_type", 0))
-        base = {
-            "b": float(note["_time"]),
-            "x": int(note.get("_lineIndex", 0)),
-            "y": int(note.get("_lineLayer", 0)),
-        }
-        if nt == 3:
-            base["d"] = int(note.get("_cutDirection", 0))
-            bomb_notes.append(base)
-        else:
-            base["a"] = nt
-            base["d"] = int(note.get("_cutDirection", 0))
-            color_notes.append(base)
-
-    # -- obstacles -------------------------------------------------------------
-    obstacles = []
-    for obs in v2_data.get("_obstacles", []):
-        ot = int(obs.get("_type", 0))
-        obstacles.append({
-            "b": float(obs["_time"]),
-            "x": int(obs.get("_lineIndex", 0)),
-            "y": 0,
-            "d": float(obs.get("_duration", 0)),
-            "w": int(obs.get("_width", 1)),
-            "h": 3 if ot == 0 else 1,
-        })
-
-    # -- events (V2 → basicBeatmapEvents) --------------------------------------
-    basic_events = []
-    for ev in v2_data.get("_events", []):
-        basic_events.append({
-            "b": float(ev["_time"]),
-            "t": int(ev.get("_type", 0)),
-            "i": int(ev.get("_value", 0)),
-        })
-
-    # Collect which event types are present for basicEventTypesWithKeywords
-    event_types = sorted(set(e["t"] for e in basic_events))
-
-    # -- build V3 structure ----------------------------------------------------
-    v3 = {
-        "version": "3.2.0",
-        "colorNotes": color_notes,
-        "bombNotes": bomb_notes,
-        "obstacles": obstacles,
-        "sliders": [],
-        "burstSliders": [],
-        "basicBeatmapEvents": basic_events,
-        "colorBoostBeatmapEvents": [],
-        "bpmEvents": [],
-        "rotationEvents": [],
-        "basicEventTypesWithKeywords": {
-            "d": [
-                {"e": t, "n": f"EventType{t}"}
-                for t in event_types
-            ]
-        },
-        "useNormalEventsAsCompatibleEvents": True,
-        "customData": {},
-    }
-
-    return v3
-
-
-# ============================================================================
 # Step 5: Replace beatmaps
 # ============================================================================
 
@@ -486,8 +361,7 @@ def _select_beatmap_file(diff: str, beatmap_files: list, ignore_non_standard: bo
 
     for f in beatmap_files:
         base = f
-        # Exclude Info.dat (both cases), Lightshow.dat, AudioData.dat
-        if base.lower().startswith(('info.', 'lightshow.', 'audiodata.')):
+        if 'Info' in base or 'Lightshow' in base or 'AudioData' in base:
             continue
         if not base.endswith(('.dat', '.json')):
             continue
@@ -572,11 +446,6 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False):
                 path = os.path.join(beatmap_dir, matched_file)
                 with open(path, 'r', encoding='utf-8') as fh:
                     data = json.load(fh)
-
-                # Auto-convert V2 beatmaps to V3 format
-                if is_v2_beatmap(data):
-                    data = convert_v2_to_v3(data)
-                    log.info(f"  Converted V2 -> V3: '{matched_file}'")
 
                 # Encode as gzipped JSON
                 json_bytes = json.dumps(data, separators=(',', ':')).encode('utf-8')
@@ -870,7 +739,7 @@ Examples:
     parser.add_argument('--target-ip', default=None,
                         help='PS4 IP address for FTP deployment (overrides config)')
     parser.add_argument('--no-pad', action='store_true',
-                        help='Skip padding FSB5 (use only if PCM16 audio exceeds template resource size)')
+                        help='Skip padding FSB5 to 12MB')
     parser.add_argument('--preserve-metadata', action='store_true',
                         help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
     parser.add_argument('--ignore-non-standard-beatmaps', action='store_true',
@@ -912,16 +781,6 @@ Examples:
     if not os.path.isdir(args.song_dir):
         log.error(f"Song directory not found: {args.song_dir}")
         sys.exit(1)
-
-    # -----------------------------------------------------------------------
-    # Determine the template's AudioClip resource size for FSB5 padding
-    # -----------------------------------------------------------------------
-    if not os.path.isfile(args.template):
-        log.error(f"Template bundle not found: {args.template}")
-        sys.exit(1)
-    template_resource_size = get_template_resource_size(args.template)
-    log.info(f"Template resource size: {template_resource_size} bytes "
-             f"({template_resource_size/1024/1024:.1f} MB)")
 
     # -----------------------------------------------------------------------
     # Step 0: Audio conversion (WAV -> FSB5)
@@ -966,7 +825,7 @@ Examples:
             actual_sample_rate = min(info.samplerate, 44100)
             fsb5_bytes = build_vorbis_fsb5(audio_path,
                                             clip_seconds=30,
-                                            pad_to_size=template_resource_size)
+                                            pad_to_size=ORIGINAL_RESOURCE_SIZE)
             # Get PCM frame count from FSB5 sample descriptor
             sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
             total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
@@ -975,15 +834,7 @@ Examples:
         elif args.pcm16:
             log.info("Using PCM16 format (codec=2) for FSB5 (lossless)")
             actual_sample_rate = min(info.samplerate, 44100)
-            pcm16_estimated = int(info.duration * actual_sample_rate) * 4 + 125
-            pad_to = template_resource_size
-            if pcm16_estimated > template_resource_size and not args.no_pad:
-                log.warning(f"  PCM16 audio ({pcm16_estimated/1024/1024:.0f} MB) "
-                           f"exceeds template resource ({template_resource_size/1024/1024:.0f} MB)")
-                log.warning(f"  Using --no-pad to keep full audio (no padding)")
-                pad_to = 0
-            elif args.no_pad:
-                pad_to = 0
+            pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
             fsb5_bytes = build_pcm16_fsb5(audio_path, pad_to_size=pad_to)
             # Get frame count from FSB5 sample descriptor
             sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
@@ -992,7 +843,7 @@ Examples:
             log.info(f"  PCM16 FSB5: {len(fsb5_bytes)} bytes, {duration:.1f}s")
         else:
             actual_sample_rate = info.samplerate
-            pad_to = 0 if args.no_pad else template_resource_size
+            pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
             fsb5_bytes = audio_to_fsb5(audio_path, pad_to_size=pad_to)
             # Get data_size from FSB5 header (before padding)
             ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
