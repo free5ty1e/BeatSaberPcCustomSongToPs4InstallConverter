@@ -1569,3 +1569,32 @@ Before building v0.35, I analyzed the difference between the original file and `
   (BeatSaver uses .egg extension for .ogg files to prevent direct streaming)
 - **Beatmap format:** All 11 use V2 format (_notes with _time in seconds) — no BPM conversion needed
 - **Status:** 🚧 Ready to deploy and test sync on PS4
+
+
+### Experiment 101 — ROOT CAUSE FOUND: Plugin Not Deployed to PS4
+- **Date:** 2026-07-09
+- **Situation:** 11 bundles deployed to AFR paths, but all had sync issues
+- **PS4 log analysis (v0.51a deploy test):**
+  - Plugin version on PS4: **v0.49** (log says "=== BS Deluxe v0.49 started ===")
+  - Total redirects: startmeup=16, ALL OTHER 11 TARGETS=0!
+  - The v0.51 plugin with 12-song redirect table was compiled but NEVER uploaded to PS4
+  - PlayerData saves: 31 (user played many songs)
+- **ROOT CAUSE:** Bundles were deployed via deploy_all_songs.sh but that script
+  only deploys bundles, NOT the plugin. The PS4 plugin remained at v0.49 which
+  only has a startmeup redirect entry. All 11 other songs played the ORIGINAL
+  Rolling Stones songs — the user thought they were hearing custom songs with
+  sync issues, but they were hearing the original game songs!
+- **Fix applied:**
+  1. Verified plugin main.cpp has all 12 redirects (v0.51)
+  2. Built release + debug plugins with 12-song redirect table
+  3. Created deploy_all.sh which deploys BOTH plugin AND all 12 bundles
+- **"Live By The Sword"** — Song ID: livebythesword. Not in redirect table yet.
+  Need to find/download a custom song and build a bundle for this slot.
+- **Beatmap format check:** All 11 target songs use V2 format with _time in beats.
+  The pipeline updates audio.gz bpmData to match the song BPM from Info.dat.
+  This should be correct once the plugin is actually deployed.
+- **Corrective action:**
+  ️ Deploy plugin + bundles together with:
+  ./beat_saber_deluxe/deploy_all.sh [--debug]
+  
+- **Status:** 🏁 Ready for deploy test. PS4 can be turned off for now.
