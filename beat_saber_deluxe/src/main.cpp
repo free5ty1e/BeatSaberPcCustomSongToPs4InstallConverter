@@ -99,9 +99,9 @@ static int open_hook(const char *path, int flags, ...) {
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest r;
-    log_write("=== BS Deluxe v0.52 started ===");
+    log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
 
-    log_write("v0.52: 12-song Rolling Stones redirect table + improved beatmap filename fallback");
+    log_write(PLUGIN_VERSION ": 12-song Rolling Stones redirect table + improved beatmap filename fallback");
 
     // NO JAILBREAK — AFR handles writes via sceKernelOpen
 

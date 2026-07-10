@@ -1620,3 +1620,33 @@ Before building v0.35, I analyzed the difference between the original file and `
   3. Remove hardcoded DIFFICULTIES, ORIGINAL_RESOURCE_SIZE, SAMPLE_RATE from pipeline
   4. Remove all hardcoded values — make config-driven
 - **Status:** 🚧 Ready to test on PS4: deploy plugin + bundles, enable --convert-to-v3 for V2 songs
+
+
+### Experiment 103 — v0.52c: bpmEvents Fix (ROOT CAUSE #2)
+- **Date:** 2026-07-10
+- **ROOT CAUSE #2 FOUND:** V2→V3 converter set `bpmEvents: []` (empty). The PS4
+  game's BeatmapDataLoader requires at least one bpmEvents entry to know the song
+  BPM. Without `[{"b": 0, "m": <BPM>}]`, the game falls back to BPM=60 or another
+  default, causing severe desync (notes at wrong speed). Espresso worked because it
+  already had `bpmEvents=[{"b": 0, "m": 104}]` from its original V3.3.0 format.
+- **Fix:** V2→V3 converter now reads BPM from Info.dat (not beatmap file's
+  `_beatsPerMinute` which is often 120/default) and sets
+  `bpmEvents=[{"b": 0, "m": <Info.dat_BPM>}]`
+- **Build status:** All 11 _v3 bundles rebuilt with correct bpmEvents + correct bpmData
+  | Target | BPM (bpmEvents) | Status |
+  |--------|-----------------|--------|
+  | angry | 134 | ✅ |
+  | bitemyheadoff | 160 | ✅ |
+  | cantyouhearmeknocking | 128 | ✅ |
+  | deadmanwalking | 105 | ✅ |
+  | gimmeshelter | 130 | ✅ |
+  | icantgetnosatisfaction | 99 | ✅ |
+  | messitup | 175 | ✅ |
+  | paintitblack | 127 | ✅ |
+  | sugarsoaker | 164 | ✅ |
+  | sympathyforthedevil | 99 | ✅ |
+  | wholewideworld | 128 | ✅ |
+  | startmeup (Espresso) | 104 | ✅ (unchanged) |
+- **Also noted:** angry's song (We All Lift Together) — user wants replacement
+- **TODO:** Find replacement for angry (We All Lift Together) slot
+- **Status:** 🚀 Ready for next test on PS4

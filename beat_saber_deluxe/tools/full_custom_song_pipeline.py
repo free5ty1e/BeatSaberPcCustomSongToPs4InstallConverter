@@ -382,7 +382,7 @@ def is_v2_beatmap(data: dict) -> bool:
     return False
 
 
-def convert_v2_to_v3(v2_data: dict) -> dict:
+def convert_v2_to_v3(v2_data: dict, default_bpm: float = 120.0) -> dict:
     """
     Convert a V2 beatmap dict to V3.2.0 format.
 
@@ -391,6 +391,8 @@ def convert_v2_to_v3(v2_data: dict) -> dict:
     b/x/y/a/d fields.  Obstacles, events, and sliders are converted
     similarly, and the result is a minimal V3 structure the PS4 game
     can parse without crashing on unknown keys.
+
+    default_bpm: BPM to use for bpmEvents (from Info.dat, not beatmap file).
     """
     # Pass through if already V3/V4
     if not is_v2_beatmap(v2_data):
@@ -448,7 +450,7 @@ def convert_v2_to_v3(v2_data: dict) -> dict:
         "burstSliders": [],
         "basicBeatmapEvents": basic_events,
         "colorBoostBeatmapEvents": [],
-        "bpmEvents": [],
+        "bpmEvents": [{"b": 0, "m": default_bpm}],
         "rotationEvents": [],
         "basicEventTypesWithKeywords": {
             "d": [{"e": t, "n": f"EventType{t}"} for t in event_types]
@@ -538,6 +540,14 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
         beatmap_dir: Directory containing .dat beatmap files
         ignore_non_standard: If True, skip tier-4 fallback (90Degree, OneSaber, etc.)
     """
+    # Read BPM from Info.dat for V2→V3 conversion (used in bpmEvents)
+    bpm = 120.0
+    info_path = os.path.join(beatmap_dir, "Info.dat")
+    if os.path.exists(info_path):
+        with open(info_path) as f:
+            info = json.load(f)
+        bpm = float(info.get("_beatsPerMinute", 120.0))
+
     beatmap_files = [f for f in os.listdir(beatmap_dir)
                      if f.endswith(('.json', '.dat'))]
 
@@ -572,7 +582,7 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
 
                 # Auto-convert V2 → V3.2.0 if requested
                 if auto_convert and is_v2_beatmap(data):
-                    data = convert_v2_to_v3(data)
+                    data = convert_v2_to_v3(data, default_bpm=bpm)
                     log.info(f"  Converted V2 -> V3: '{matched_file}'")
 
                 # Encode as gzipped JSON
