@@ -1650,3 +1650,18 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Also noted:** angry's song (We All Lift Together) — user wants replacement
 - **TODO:** Find replacement for angry (We All Lift Together) slot
 - **Status:** 🚀 Ready for next test on PS4
+
+
+### Experiment 104 — v0.52d: Live By The Sword redirect + plugin cleanup + log clearing
+- **Date:** 2026-07-10
+- **User feedback:** MOST songs now perfectly synchronized! 🎉 bpmEvents fix confirmed working.
+  Two songs (Gimme Shelter, Can't You Hear Me Knocking) had "very very late" notes.
+- **Analysis:** PS4 log showed v0.50 loading AFTER v0.52. Songs tested during v0.50
+  session had empty bpmEvents → BPM=60 fallback → notes at 2x time → "very very late".
+  Root cause: GoldHEN plugin caching — v0.52 replaced by cached v0.50 on restart.
+- **Changes made:**
+  1. Added `livebythesword` to plugin redirect table (now 13 songs total)
+  2. Added `livebythesword` target to deploy_all.sh
+  3. Song: **MUSIC STAR** by M.G.G. Original (160 BPM, 5 beatmaps, first note 4.1s)
+  4. PS4 log cleared before this test session
+- **Status:** 🚀 Ready for next test. All 13 bundles deployed. User should reboot PS4.)

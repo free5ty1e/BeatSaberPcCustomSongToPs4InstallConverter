@@ -1,5 +1,5 @@
 #!/bin/bash
-# Complete deploy script: Plugin + All 12 Rolling Stones bundles
+# Complete deploy script: Plugin + All 12 Rolling Stones + Live By The Sword bundles
 # Usage: ./deploy_all.sh [--release|--debug]
 # Default: deploys release plugin (no verbose per-file logging)
 # --debug: deploys debug plugin with verbose logging to bs_log.txt
@@ -21,6 +21,7 @@ TARGETS=(
     "deadmanwalking"
     "gimmeshelter"
     "icantgetnosatisfaction"
+    "livebythesword"
     "messitup"
     "paintitblack"
     "startmeup"

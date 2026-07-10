@@ -31,6 +31,7 @@ static const char *REDIRECT_TABLE[][2] = {
     {"BeatmapLevelsData/sugarsoaker",          AFR_BASE "/" TITLE_ID "/sugarsoaker_v3"},
     {"BeatmapLevelsData/sympathyforthedevil",  AFR_BASE "/" TITLE_ID "/sympathyforthedevil_v3"},
     {"BeatmapLevelsData/wholewideworld",       AFR_BASE "/" TITLE_ID "/wholewideworld_v3"},
+    {"BeatmapLevelsData/livebythesword",       AFR_BASE "/" TITLE_ID "/livebythesword_v3"},
     {NULL, NULL}  // sentinel
 };
 
