@@ -85,6 +85,14 @@ for TARGET in "${TARGETS[@]}"; do
 done
 
 echo ""
+# ── Step 3: Clear PS4 log for next test session ────────────────────────
+echo ""
+echo "🗑️  Clearing PS4 log..."
+timeout 15 lftp -u anonymous, -p "$PS4_PORT" "$PS4_IP" \
+    -e "rm /data/GoldHEN/AFR/CUSA12878/bs_log.txt; quit" 2>/dev/null
+echo "  ✅ PS4 log cleared"
+
+echo ""
 echo "========================================"
 echo "✅ Deploy complete!"
 echo ""

@@ -50,7 +50,7 @@ jobs:
           sudo mkdir -p $SDK_DIR/include/GoldHEN
           # Download GoldHEN Common.h header from SDK repo
           curl -fsSL -o /tmp/GoldHEN_Common.h \
-            https://raw.githubusercontent.com/GoldHEN/GoldHEN_Plugins_SDK/main/GoldHEN/Common.h
+            https://raw.githubusercontent.com/GoldHEN/GoldHEN_Plugins_SDK/main/include/Common.h
           sudo cp /tmp/GoldHEN_Common.h $SDK_DIR/include/GoldHEN/Common.h
           # Build crtprx.o and libGoldHEN_Hook.a from source
           git clone --depth 1 https://github.com/GoldHEN/GoldHEN_Plugins_SDK.git /tmp/gh_sdk
