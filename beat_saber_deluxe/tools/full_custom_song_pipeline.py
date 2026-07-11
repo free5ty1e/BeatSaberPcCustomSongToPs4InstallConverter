@@ -264,6 +264,28 @@ def update_audioclip(cab, fsb5_bytes: bytes, duration: float, sample_rate: int =
 # Step 4: Update audio.gz metadata
 # ============================================================================
 
+def _scan_beatmap_max_beat(song_dir: str) -> float:
+    """Scan all beatmap .dat files and return the highest _time/b value found."""
+    import glob as _glob
+    max_beat = 0.0
+    bm_files = _glob.glob(os.path.join(song_dir, "*.dat"))
+    for bm_path in bm_files:
+        fname = os.path.basename(bm_path).lower()
+        if fname in ('info.dat', 'bpminfo.dat'):
+            continue
+        try:
+            with open(bm_path) as f:
+                data = json.load(f)
+            notes = data.get('_notes', data.get('colorNotes', []))
+            for note in notes:
+                t = note.get('_time', note.get('b', 0))
+                if isinstance(t, (int, float)) and t > max_beat:
+                    max_beat = t
+        except:
+            pass
+    return max_beat
+
+
 def load_bpm_regions(song_dir: str, sample_count: int) -> list:
     """
     Load BPM region data from BPMInfo.dat (preferred) or compute from beatmap data.
@@ -286,6 +308,11 @@ def load_bpm_regions(song_dir: str, sample_count: int) -> list:
             bpm_data = json.load(f)
         regions = bpm_data.get("_regions", [])
         if regions:
+            # Still scan beatmaps to check if BPMInfo.dat's eb is too small
+            max_beat = _scan_beatmap_max_beat(song_dir)
+            if max_beat > regions[-1]["_endBeat"]:
+                log.info(f"  Beatmap max beat ({max_beat:.1f}) > BPMInfo.dat eb ({regions[-1]['_endBeat']:.1f}) — using beatmap value")
+                regions[-1]["_endBeat"] = max_beat
             return [
                 {"si": r["_startSampleIndex"], "ei": r["_endSampleIndex"],
                  "sb": r["_startBeat"], "eb": r["_endBeat"]}
@@ -293,24 +320,7 @@ def load_bpm_regions(song_dir: str, sample_count: int) -> list:
             ]
 
     # Scan beatmap files to find the highest beat value (mapper's actual timing)
-    import glob as _glob
-    max_beat = 0.0
-    bm_files = _glob.glob(os.path.join(song_dir, "*.dat"))
-    for bm_path in bm_files:
-        fname = os.path.basename(bm_path).lower()
-        if fname in ('info.dat', 'bpminfo.dat'):
-            continue
-        try:
-            with open(bm_path) as f:
-                data = json.load(f)
-            # Check both V2 (_notes._time) and V3/V4 (colorNotes.b)
-            notes = data.get('_notes', data.get('colorNotes', []))
-            for note in notes:
-                t = note.get('_time', note.get('b', 0))
-                if isinstance(t, (int, float)) and t > max_beat:
-                    max_beat = t
-        except:
-            pass
+    max_beat = _scan_beatmap_max_beat(song_dir)
 
     # If we found beatmap data, use the max beat to compute the effective BPM
     duration = sample_count / SAMPLE_RATE
