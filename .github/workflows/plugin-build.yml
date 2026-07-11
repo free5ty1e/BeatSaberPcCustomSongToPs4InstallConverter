@@ -1,0 +1,149 @@
+name: Build Plugin + Plugins.ini
+
+on:
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            curl ca-certificates jq git clang lld llvm-dev \
+            build-essential cmake python3 python3-pip unzip \
+            libmbedtls-dev uthash-dev libicu-dev icu-devtools
+
+      - name: Install OpenOrbis PS4 Toolchain
+        run: |
+          echo "Fetching latest OpenOrbis SDK release..."
+          RELEASE_JSON=$(curl -s "https://api.github.com/repos/OpenOrbis/OpenOrbis-PS4-Toolchain/releases/latest")
+          TAG=$(echo "$RELEASE_JSON" | jq -r '.tag_name')
+          echo "Latest release: $TAG"
+          DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name | contains("toolchain") and contains(".tar.gz")) | .browser_download_url' | head -n 1)
+          if [ -z "$DOWNLOAD_URL" ]; then
+            DOWNLOAD_URL=$(echo "$RELEASE_JSON" | jq -r '.assets[] | select(.name | contains(".tar.gz")) | .browser_download_url' | head -n 1)
+          fi
+          echo "Downloading: $DOWNLOAD_URL"
+          sudo mkdir -p /opt/openorbis
+          sudo chmod 777 /opt/openorbis
+          curl -L "$DOWNLOAD_URL" -o /tmp/openorbis.tar.gz
+          tar -xzf /tmp/openorbis.tar.gz -C /opt/openorbis
+          sudo chmod -R 755 /opt/openorbis
+          export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain
+          echo "OO_PS4_TOOLCHAIN=$OO_PS4_TOOLCHAIN" >> $GITHUB_ENV
+          echo "Toolchain installed at $OO_PS4_TOOLCHAIN"
+
+      - name: Install GoldHEN Plugin SDK headers
+        run: |
+          SDK_DIR=/opt/openorbis/OpenOrbis/PS4Toolchain
+          # Create GoldHEN include dir if missing
+          sudo mkdir -p $SDK_DIR/include/GoldHEN
+          # Download ALL GoldHEN SDK headers (Common.h includes Detour.h etc.)
+          # and build crtprx.o + libGoldHEN_Hook.a from source
+          git clone --depth 1 https://github.com/GoldHEN/GoldHEN_Plugins_SDK.git /tmp/gh_sdk
+          sudo cp /tmp/gh_sdk/include/* $SDK_DIR/include/GoldHEN/
+          cd /tmp/gh_sdk
+          # Build crtprx.o and libGoldHEN_Hook.a from source
+          make clean
+          # Build crtprx.o manually (the Makefile's `crt` target has a mkdir -p
+          # race with the `_unused := $(shell ...)` at parse time in CI)
+          mkdir -p build
+          clang -target x86_64-pc-linux-gnu -ffreestanding -nostdlib \
+            -fno-builtin -fPIC -isysroot "$SDK_DIR" -isystem "$SDK_DIR/include" \
+            -c crt/crtprx.c -o build/crtprx.o
+          make libGoldHEN_Hook.a
+          sudo cp build/crtprx.o "$SDK_DIR/lib/"
+          sudo cp libGoldHEN_Hook.a "$SDK_DIR/lib/"
+          echo "GoldHEN SDK installed"
+
+      - name: Build plugin (release)
+        run: |
+          export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain
+          make clean && rm -rf obj && make -B
+        working-directory: beat_saber_deluxe
+        env:
+          OO_PS4_TOOLCHAIN: /opt/openorbis/OpenOrbis/PS4Toolchain
+
+      - name: Build plugin (debug — verbose logging)
+        run: |
+          export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain
+          rm -rf obj && DEBUG=1 make -B
+        working-directory: beat_saber_deluxe
+        env:
+          OO_PS4_TOOLCHAIN: /opt/openorbis/OpenOrbis/PS4Toolchain
+
+      - name: Generate plugins.ini
+        run: |
+          cat > plugins.ini << 'EOF'
+          [CUSA12878]
+          /data/GoldHEN/plugins/beat_saber_deluxe.prx
+          EOF
+          echo "plugins.ini generated:"
+          cat plugins.ini
+
+      - name: Verify artifacts
+        run: |
+          echo "=== Release PRX ==="
+          ls -la beat_saber_deluxe/beat_saber_deluxe.prx
+          python3 -c "open('beat_saber_deluxe/beat_saber_deluxe.prx','rb').read(4); print('FSELF OK')"
+          echo "=== Debug PRX ==="
+          ls -la beat_saber_deluxe/beat_saber_deluxe_debug.prx
+          python3 -c "open('beat_saber_deluxe/beat_saber_deluxe_debug.prx','rb').read(4); print('FSELF OK')"
+          echo "=== plugins.ini ==="
+          cat plugins.ini
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: beat-saber-deluxe-plugin
+          path: |
+            beat_saber_deluxe/beat_saber_deluxe.prx
+            beat_saber_deluxe/beat_saber_deluxe_debug.prx
+            plugins.ini
+          retention-days: 90
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: beat-saber-deluxe-plugin
+          path: release-artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Beat Saber Deluxe ${{ github.ref_name }}
+          body: |
+            ## Beat Saber Deluxe Plugin ${{ github.ref_name }}
+
+            ### Artifacts
+            - `beat_saber_deluxe.prx` — Release build (no verbose logging)
+            - `beat_saber_deluxe_debug.prx` — Debug build (verbose PS4 logging)
+            - `plugins.ini` — GoldHEN configuration for CUSA12878
+
+            ### Installation
+            1. Copy `beat_saber_deluxe.prx` to `/data/GoldHEN/plugins/` on your PS4
+            2. Copy `plugins.ini` to `/data/GoldHEN/plugins.ini` (merge with existing entries)
+            3. Launch Beat Saber — notification confirms plugin loaded
+          files: |
+            release-artifacts/beat_saber_deluxe.prx
+            release-artifacts/beat_saber_deluxe_debug.prx
+            release-artifacts/plugins.ini

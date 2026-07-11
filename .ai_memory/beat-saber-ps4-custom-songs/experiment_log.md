@@ -806,3 +806,876 @@ Before building v0.35, I analyzed the difference between the original file and `
   - `lz4` (Python) - LZ4 compression for AssetBundle manipulation
   - `UnityPy` (Python) - Unity AssetBundle reader/writer
 - **Devcontainer updated:** Both Dockerfiles include lz4 and UnityPy in pip packages
+### Experiment 62 — Custom song conversion pipeline + redirect (v0.38) [COMPLETED — FIXED BUNDLE DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Built `convert_song_v3.py` - converts BeatSaver custom songs to PS4 AssetBundles. Replaces all 5 difficulty beatmaps with custom song data.
+- **Tested song:** VOLUPTE by Tare (from songs_repo/01ce5a3adc19e360ba0ffd8347f91b5dc974eb7c)
+- **Result Part 1 (initial):** ❌ Quick black screen — beatmap TextAssets corrupted
+- **Root cause found (via UnityPy source code analysis):**
+  TextAsset type tree defines ONLY `m_Name` and `m_Script` (both strings). The beatmap format stores extra data: `[fn_len][fn_name][m_script_len][gzip_data]`. The `m_script_len` field is read by UnityPy as the string length for m_Script. Setting it to the decompressed data size (1.1MB) caused `read_str out of bounds` because the actual gzip data was only 76KB.
+- **Fix:** Changed "decomp_size" field from `len(decompressed_data)` to `len(compressed_gzip_data)`. The gzip container itself stores the original size internally, so decompression succeeds regardless.
+- **Result Part 2 (fixed):** ✅ **ALL 5 BEATMAPS VALID!** Bundle loads correctly. Easy, Normal, Hard, Expert, ExpertPlus all decompress to correct beatmap data.
+- **Deployed to:** `/data/GoldHEN/AFR/CUSA12878/startmeup_final`
+- **Limitations:** Audio is still from Start Me Up (FSB5 format — needs FMOD/fsbank tools). Song metadata from resources.assets manifest (not the bundle).
+
+### Experiment 62 — Custom song conversion test result [🧪 TESTED - PARTIAL SUCCESS]
+- **Date:** 2026-07-01
+- **Test:** Navigated to Start Me Up with the fixed bundle (VOLUPTE beatmaps)
+- **Result:** ✅ **CUSTOM BEATMAPS LOAD!** The note boxes were from VOLUPTE (different pattern from Start Me Up). Song played with custom note patterns.
+- **Issues observed:**
+  1. ✅ Audio works (but it's still Start Me Up's original FSB5 audio - expected)
+  2. ❌ Background is blank (space/stars only - environment scene not loading)
+  3. ❌ Notification showed "v0.37" (fixed by rebuilding v0.38 PRX)
+- **Analysis:** The beatmap gzip replacement via `set_raw_data` + UnityPy works correctly. The game loads our modified bundle, finds the custom gzip data, decompresses it, and renders the custom note patterns. The blank background suggests the environment scene (Rolling Stones environment bundle) isn't being loaded or doesn't match expectations. The original audio plays because the FSB5 audio resource wasn't replaced (that's the next challenge).
+- **Next steps:**
+  1. Fix blank background (environment scene issue)
+  2. Replace FSB5 audio with custom audio (needs FMOD tools)
+  3. Add new song entry to an album via resources.assets manifest
+
+### Experiment 63 — Strip _events from beatmap data for environment fix [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Analysis of beatmap data format revealed VOLUPTE uses V2 format (with `_notes`, `_obstacles`, `_events`) while PS4 expects V3/V4 format (with `colorNotes`, `obstacles`, and separate lightshow data). The 13,825 `_events` per difficulty conflicted with PS4's separate lightshow system, causing blank background.
+- **Fix:** Strip `_events` and `_customData` from each difficulty's `.dat` file before gzip compression. Updated `convert_song_v3.py` with this fix.
+- **Result:** Bundles now have V2 format beatmaps with events removed. Beatmap sizes dropped from ~76KB to 1-5KB (events were the bulk). Rolled back to `startmeup` template lightshow. AWAITING TEST.
+- **Also noted:** `_obstacles` were 0 for all VOLUPTE difficulties — this custom song has no obstacles/walls.
+
+### Experiment 64 — 100bills template + notification fix (v0.39) [DEPLOYED - v2]
+- **Date:** 2026-07-01
+- **Change:** 
+  1. Fix notification: was hardcoded "v0.37", now uses PLUGIN_VERSION
+  2. Switch to 100bills template for env/lightshow comparison test
+  3. Rename BeatmapLevelData m_Name + container path (NOT AudioClip - caused crash)
+  4. Replace 5 Standard beatmaps with VOLUPTE (events stripped)
+- **v1 result:** ❌ CE-34878-0 CRASH. AudioClip rename via `save_typetree` corrupted `m_Resource` field (FSB5 external reference).
+- **v2 fix:** Removed AudioClip rename. Keep original "$100Bills" name. Game uses PPtr for audio lookup, not name.
+- **v2 deployed:** No AudioClip rename, BeatmapLevelData renamed, container path renamed.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 65 — Diagnostic: unmodified UnityPy save [COMPLETED]
+- **Date:** 2026-07-01
+- **Change:** Saved startmeup template through UnityPy with ZERO modifications.
+- **Result:** ✅ Environment renders normally! UnityPy's save is fine. Beatmaps were original Start Me Up (expected since no modifications). Proves the blank background is from the BEATMAP DATA CONTENT, not UnityPy's save.
+
+### Experiment 66 — V2→V3 beatmap format conversion (v0.40) [CRASHED]
+- **Change:** V2→V3 converter + `set_raw_data` on beatmaps
+- **Result:** ❌ CE-34878-0 crash. 3 beatmap objects had read_typetree failures (Normal/Expert/ExpertPlus).
+
+### Experiment 67 — save_typetree + surrogateescape fix (v0.42) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Bug 1:** `set_raw_data` causes internal serialization inconsistency for 3 objects (Normal/Expert/ExpertPlus)
+- **Bug 2:** `latin-1` decoding followed by `utf-8` encoding corrupts bytes > 127 (doubles their size via 0xC2 prefix)
+- **Fix:** Use `save_typetree` with `surrogateescape` encoding (`.decode('utf-8', 'surrogateescape')`) to preserve all bytes through the string round-trip.
+- **Notif fix:** Changed hardcoded `"BS Deluxe v0.37"` to use `PLUGIN_VERSION` properly.
+- **Status:** ✅ DEPLOYED — awaiting test
+- **Date:** 2026-07-01
+- **Change:** Built V2→V3 beatmap converter. V2 format uses `_notes` array with inline properties, but PS4 expects V3 format with `colorNotes` + `colorNotesData` (deduplicated data arrays). The V3 data arrays store unique property combinations, and notes reference them by index (`i`). Without the `i` field, notes default to data[0] `{'x': 1, 'd': 1}`.
+- **Conversion process:**
+  1. Extract `_lineIndex`, `_lineLayer`, `_type`, `_cutDirection` from each V2 _note
+  2. Deduplicate into (x, y, c, d) tuples
+  3. Create `colorNotesData` array from unique tuples
+  4. Create `colorNotes` array: `b` (beat) + `i` (index, omitted if 0)
+  5. Convert obstacles similarly
+  6. Add empty arrays for chains, arcs, spawnRotations
+  7. Set version to "4.0.0"
+- **Deployed:** startmeup_v3 with VOLUPTE beatmaps in V3 format.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 68 — V3 conversion + save_typetree (v0.43) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Combined V2→V3 format conversion with `save_typetree` data setting. Converts V2 `_notes` → V3 `colorNotes` + `colorNotesData`. Uses `save_typetree` (not `set_raw_data` which had serialization bugs). Empty arrays for bombs/chains/arcs/spawn.
+- **Verified:** All 11 objects load correctly in UnityPy. 5 beatmaps have valid V3 format (version 4.0.0).
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 69 — Template-structure V3 + PRX rebuild (v0.43) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Now preserves template's EXACT V3 structure (bombNotes, chains, arcs from template NOT emptied). Replaces only `colorNotes`/`colorNotesData` and `obstacles`/`obstaclesData`. Fixes issue where custom V3 generation might have subtle format differences.
+- **Result:** All 11 objects verified. 
+- **PRX fix:** v0.43 PLUGIN_VERSION now properly deployed (was missing in previous test).
+- **Roadmap created:** `.agent/roadmap.md` with milestone checklists.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 70 — Minimal test: change one beat value (diagnostic) [DEPLOYED]
+- **Date:** 2026-07-01
+- **Change:** Template V3 beatmap with ONLY one modification: first note's `b` changed from 5.5 → 5.0. Uses `save_typetree`. All other data identical to template. Goal: isolate whether `save_typetree` itself breaks something or if the V3 conversion content is the issue.
+- **Prediction:** If song plays (note at 5.0 instead of 5.5), `save_typetree` is fine, issue is V3 conversion. If still fails, `save_typetree` pipeline itself is broken.
+- **Status:** ✅ DEPLOYED — awaiting test
+
+### Experiment 71 — THE FIX: m_Script is just gzip, no decompressed_size prefix! (v0.43) [SUCCESS! ✅]
+- **Knowledge file:** [[m_script-gzip-only]]
+- **Related fixes:** [[save-typetree-over-set-raw-data]], [[surrogateescape-encoding]]
+- **Date:** 2026-07-01
+- **ROOT CAUSE FOUND:** The m_Script field in the beatmap TextAsset is JUST gzip data — NO 4-byte decompressed_size prefix! My conversion was adding `struct.pack('<I', len(json))` before the gzip stream, shifting the gzip by 4 bytes. The game saw `dc 06 00 00` instead of `1f 8b` gzip magic and rejected the beatmap.
+- **Fix:** Remove the decompressed_size prefix. m_Script = `gzip.compress(json_data)` only.
+- **V3 note conversion included.** All 11 objects verified.
+- **Test Result:** ✅ **CUSTOM NOTES WITH ENVIRONMENT!** The Rolling Stones environment renders correctly with custom VOLUPTE note patterns. Audio is still Start Me Up (expected — FSB5 not replaced).
+- **Significance:** This proves the ENTIRE beatmap conversion pipeline works end-to-end. The fix was removing the 4-byte decompressed_size header before the gzip data.
+- **Log analysis** (753 lines, saved as `bs_log_v43_success.txt`):
+  - 2 startmeup redirects ✅ (game opened bundle twice, standard for Beat Saber)
+  - Rolling Stones environment loaded AFTER redirect (scenes + assets bundles) ✅
+  - No other songs' BeatmapLevelData files accessed (redirect is targeted) ✅
+  - PlayerData.dat saved (game recorded play/song exit cleanly)
+  - 750 open calls total — full song play with menu return
+  - No error/exception/failure/crash lines found
+  - Environment cascade: scenes → pack_assets → shaders → scripts → core_assets
+
+### Experiment 72 — Bomb notes conversion + MUSIC STAR test [SUCCESS! ✅]
+- **Date:** 2026-07-01
+- **Change:** Added bomb note conversion to the V2→V3 pipeline. V2 `_notes` with `_type=3` are now separated from regular notes and placed in `bombNotes` + `bombNotesData` arrays. BombNotesData only stores position (x, y) — no color or direction. Uses the same deduplication pattern as colorNotes (default data[0] = `{"x": 3}`).
+- **Song:** MUSIC STAR (M.G.G. Original) — has 14-40 bombs across all difficulties plus 6-37 obstacles
+- **Conversion breakdown per difficulty:**
+  - Easy: 181n + 14b + 36o
+  - Normal: 284n + 28b + 34o
+  - Hard: 350n + 32b + 37o
+  - Expert: 517n + 32b + 6o
+  - ExpertPlus: 609n + 40b + 6o
+- **Verify:** All 11 objects pass UnityPy verification. Gzip decompresses correctly.
+- **Log analysis** (751 lines, saved as `bs_log_v44_bombs.txt`):
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | Redirects | 2 | Game opened bundle twice |
+  | Env loaded | Yes | Rolling Stones environment (from template) |
+  | PlayerData saved | Yes | Clean menu return |
+  | Error lines | 0 | No crashes or assertions |
+- **Test result:** ✅ SUCCESS! Bombs confirmed visible alongside custom notes. MUSIC STAR's 14-40 bombs per difficulty appeared correctly.
+- **Next step:** Chains, arcs, or events conversion
+
+### What's Working Now
+- ✅ Plugin loads without crash, shows correct version notification
+- ✅ File redirect to AFR directory works
+- ✅ AssetBundle loads and assets are found by the game
+- ✅ Beatmap data replacement with custom song notes (V3 format)
+- ✅ Custom obstacles from song (when present)
+- ✅ Environment renders correctly (lightshow data works)
+- ✅ Other difficulties play correctly
+
+### What's Next
+- [] Replace audio (FSB5 format) with custom song audio
+- [] Replace cover art in song selection
+- [] Add new song entries to album via resources.assets
+
+### Experiment 73 — Slider/BurstSlider → Arc/Chain conversion [SUCCESS! ✅]
+- **Date:** 2026-07-01
+- **Change:** Added V2 `sliders` → V3 `arcs` + `arcsData` and V2 `burstSliders` → V3 `chains` + `chainsData` conversion.
+- **Song:** "Take Me to the Beach" (89-179 sliders + 2-5 burstSliders per difficulty, 0 regular notes — pure arc/chain map)
+- **Key discovery:** V2 songs store sliders/burstSliders as separate arrays (not `_chains`/`_arcs`). These map to V3 arc/chain structures with shared `colorNotesData` references.
+- **Also built:** VOLUPTE (notes) and MUSIC STAR (bombs) with same pipeline — both 11/11 OK. No regressions.
+- **Log analysis** (1502 lines, saved as `bs_log_v45_arcs.txt`):
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | Redirects | 4 | Game opened bundle 4x (longer load for arc-heavy) |
+  | PlayerData saved | Yes | Clean menu return |
+  | Error lines | 0 | No crashes or assertions |
+  | Env loaded | 20 | Rolling Stones environment loaded |
+- **Test result:** ✅ SUCCESS! Only arcs visible (no note boxes expected — song has 0 regular notes). Chains may have been visible too but hard to distinguish.
+- **Next step:** Find a song with ALL features (notes + bombs + obstacles + sliders + chains) and test end-to-end.
+
+### Experiment 74a — Combined features bundle [REPLACED]
+- **Date:** 2026-07-01
+- **Change:** Combined MUSIC STAR's notes+bombs+obstacles with Take Me to the Beach's arcs+chains. Replaced by quick_test.bundle for faster testing.
+- **Status:** Replaced by quick_test.bundle (12MB → much smaller, all features in ~20s)
+
+### Experiment 74b — Quick test bundle [FLOATING WALLS WORKING ✅]
+- **Date:** 2026-07-01
+- **Change:** Added 3 experimental floating walls with `y` (row offset) to quick_test_gen.py. These walls are offset from the floor so they float at head/mid/celing level, requiring ducking to avoid.
+- **Content per difficulty:** 9n + 3b + 8o (5 floor + 3 floating) + 2a + 2c
+- **Floating wall experiments:**
+  - `y:3, h:2, x:1` at beat 24 — floating at head level → duck under
+  - `y:2, h:2, x:0` at beat 26 — floating at mid level → medium duck
+  - `y:4, h:1, x:0` at beat 28 — floating at ceiling → barely duck
+- **Key discovery:** The V3 obstaclesData format DOES support `y` (row offset) field, even though the template doesn't use it. When `y` is omitted, it defaults to 0 (floor). Adding `y` enables floating/ceiling walls.
+- **Source:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` (committed in git)
+- **Status:** ✅ SUCCESS! All wall types confirmed working including floating walls.
+
+### Experiment 77 — Sample header fix + silence test [ROOT CAUSE NARROWED]
+- **Date:** 2026-07-03
+- **Change:** Fixed FSB5 sample_header_size from 900 to 1732 (matching the original FSB5). Previous experiments used a WRONG sample header (900 bytes) from a different song. The correct header size is 1732 bytes.
+- **Test:** Created `test_silence.bundle` — all-zero HEVAG frames (silence), full 1732-byte sample header
+- **Result:** ❌ **FREEZE** — first frame rendered, level frozen, no audio. Identical freeze to all previous 6 tests.
+- **Key finding:** Even with a byte-perfect FSB5 (sample header 0-diff from original), all-zero silence frames still cause a freeze. This rules out FSB5 structure issues and points to the audio CONTENT.
+- **Status:** ❌ FREEZE — need to test with actual audio content
+
+### Experiment 78 — Systematic audio isolation tests [ALL FROZE]
+- **Date:** 2026-07-03
+- **Tests:** 7 different bundles, all with same freeze symptom:
+  | # | Bundle | Audio | Result |
+  |---|--------|-------|--------|
+  | 1 | `test_silence.bundle` | All-zero HEVAG | ❌ FREEZE |
+  | 2 | `test_original_audio_3s.bundle` | Original 3s snippet | ❌ FREEZE |
+  | 3 | `test_p0_only.bundle` | Predictor 0, 440Hz sine | ❌ FREEZE |
+  | 4 | `test_p0_silence.bundle` | Predictor 0 silence | ❌ FREEZE |
+  | 5 | `test_silence_lz4.bundle` | All-zero LZ4 | ❌ FREEZE |
+  | 6 | `test_fullsize_silence.bundle` | 12MB padded silence | ⚠️ PARTIAL (notes moved 1s) |
+  | 7 | `test_original_12mb.bundle` | Original FSB5 (beatmaps only) | ✅ NEEDED DEPLOY |
+- **Key discoveries:**
+  1. All small-FSB5 tests (<1MB) freeze immediately on first frame
+  2. **Full-size 12MB silence test** got notes moving for ~1 second! This is the FIRST time ANY test got past the initial frame
+  3. The 12MB size is critical — padding the FSB5 to match the original .resource size (12,305,632 bytes) allows the game to initialize the audio decoder
+- **Hypothesis:** The PS4's audio decoder requires a minimum amount of audio data to initialize properly. Below this threshold, the decoder hangs immediately.
+- **Status:** 🔍 KEY INSIGHT: SIZE matters more than content
+
+### Experiment 79 — 🎉 BREAKTHROUGH: 12MB Original Audio WORKS!
+- **Date:** 2026-07-03
+- **Test:** Deployed `test_original_12mb.bundle` — the ORIGINAL unmodified FSB5 audio (12MB) but with CUSTOM beatmaps changed via our pipeline
+- **Result:** ✅ **SUCCESS!** Original Start Me Up audio played perfectly through the entire song. Custom beatmaps were applied. Gameplay was normal.
+- **PROVES:** Our AssetBundle building process is CORRECT. The `.resource` file replacement, `AudioClip` metadata updates, and UnityFS structure are all valid.
+- **ROOT CAUSE ISOLATED:** The issue is specifically in the HEVAG audio CONTENT we generate, not in the bundle structure.
+- **Status:** ✅ BREAKTHROUGH — Pipeline verified, issue narrowed to audio encoding
+
+### Experiment 80 — Full-size silence: notes moved 1 second [SIZE CONFIRMED]
+- **Date:** 2026-07-03
+- **Test:** `test_fullsize_silence.bundle` (12MB padded silence FSB5) — actually testable now
+- **Result:** ⚠️ **PARTIAL SUCCESS — Two note boxes moved towards the player for ~1 second, then froze.** This was the FIRST time ANY of our audio replacement tests progressed past the initial frame! The song length display showed the full original 213.7 seconds (because AudioClip.m_Length was preserved).
+- **Implications:**
+  - ✅ **12MB padding is CRITICAL** — it allows the decoder to initialize
+  - ❌ All-zero silence content causes decoder hang at ~1 second
+  - The decoder processes silence correctly for ~1 second, then hits a boundary condition (possibly empty buffer detection or DSP underflow)
+- **Status:** ⚠️ SIZE confirmed as critical factor, content still needs to be real audio
+
+### Experiment 81 — Predictor-0 custom audio: 1-sample play + beatmap bug [ISSUES FOUND]
+- **Date:** 2026-07-04
+- **Test:** Full pipeline run: `tigerblood_jewel.wav` → predictor-0 HEVAG → 12MB padded FSB5 → custom bundle → deploy
+- **Result:** ❌ **One sound sample heard, then freeze. Blank level (no objects).**
+- **Two critical issues discovered:**
+  1. **Audio:** Predictor-0-only HEVAG encoding fails. One sample played, then decoder hangs. The PS4 requires a wider predictor range (0-4 at minimum, ideally 0-15).
+  2. **Beatmap matching BUG:** The matching logic was too loose — `Easy.lightshow.gz` was matched to `EasyStandard.dat` (corrupting the lightshow), and both Expert and ExpertPlus were matched to the same `ExpertPlusStandard.dat` file (because "Expert" is a substring of "ExpertPlus"). Result: 0 objects rendered.
+- **FIXES APPLIED:**
+  - `opt_encode_frame()` — 5-predictor optimized encoder (~16x faster than brute-force, uses direct shift calculation per predictor)
+  - Beatmap matching now only targets `.beatmap.gz` TextAssets (not lightshow, info, or audio.gz)
+  - Difficulty matching uses more precise logic to prevent Expert/ExpertPlus confusion
+  - `fast_pcm_to_hevag()` now delegates to `opt_encode_frame()` internally
+- **Status:** ❌ FAILED — fixes applied for next test
+
+### Experiment 82 — Optimized 5-predictor encoder + 12MB padding + beatmap fix [DEPLOYED]
+- **Date:** 2026-07-04
+- **Bundle:** `complex_song_v4.bundle` (5.5MB, deployed to `startmeup_v3`)
+- **Changes:**
+  - Audio: `tigerblood_jewel.wav` → `opt_encode_frame()` (5-predictor) → 12MB padded FSB5
+  - Beatmaps: 5/5 correctly matched (fixed logic, no lightshow corruption)
+  - PRX version updated to v0.49
+  - Pipeline now supports `.ogg` audio via `soundfile` (standard BeatSaver format)
+  - Devcontainer persistence added (postCreateCommand)
+- **Status:** 🚀 **DEPLOYED — AWAITING PS4 TEST**
+- **Deploy command:** `python3 tools/full_custom_song_pipeline.py --song-dir <dir> --target startmeup --deploy`
+
+### Experiment 83 — Expert/ExpertPlus matching bug fix + PRX v0.49 rebuild [NOVEL TEST]
+- **Date:** 2026-07-04
+- **Bundle:** `novel_test.bundle` (5.5MB, deployed to `startmeup_v3`)
+- **Change 1 — Expert/ExpertPlus fix:** Beatmap matching now excludes "ExpertPlus" when matching "Expert". Previous logic matched both `ExpertStandard.dat` and `ExpertPlusStandard.dat` to the same file.
+- **Change 2 — PRX v0.49 rebuild:** Found toolchain at `/opt/openorbis/OpenOrbis/PS4Toolchain` (variable was unset). Persisted to `~/.zshrc`. Rebuilt and deployed PRX showing v0.49 in notification.
+- **Change 3 — Toolchain persistence:** Added `export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain` to `~/.zshrc` so future PRX builds work without manual setup.
+- **Results so far:** 
+  - 5-predictor encoder + 12MB padding: user heard 1-2 audio samples before freeze, no beatmap objects (expected due to Expert/ExpertPlus bug)
+  - Fixed Expert/ExpertPlus + same audio: NOVEL TEST — awaiting PS4 test
+  - PRX v0.49 deployed with new toolchain persistence
+
+### Experiment 84 — Metadata Preservation Test [DEPLOYED, AWAITING TEST]
+- **Date:** 2026-07-04
+- **Bundle:** `metadata_test.bundle` (5.5MB, deployed to `startmeup_v3`)
+- **Theory:** The freeze at 1-2 audio samples may be caused by our AudioClip metadata updates (m_Length=146.1s, m_Frequency=48000) and/or audio.gz updates, rather than the HEVAG encoding quality. The silence test (Experiment 80) which preserved ORIGINAL metadata got notes moving for 1 second, while our 5-predictor test with custom metadata froze immediately.
+- **Changes:**
+  - Audio: 5-predictor optimized HEVAG (re-encoded from `tigerblood_jewel.wav`)
+  - 12MB padding to match original .resource size
+  - **AudioClip metadata: PRESERVED from original** (m_Length=213.7s, m_Frequency=44100)
+  - **audio.gz metadata: PRESERVED from original** (songSampleCount=9425915, original bpmData)
+  - Beatmaps: 5/5 correctly matched (Expert/ExpertPlus fix applied)
+  - PRX v0.49 deployed
+- **What this tests:**
+  - If this WORKS: Our HEVAG encoding IS valid. The metadata updates cause the freeze.
+  - If this FREEZES: Our HEVAG encoding itself is the root cause.
+- **Pipeline change:** Added `--preserve-metadata` flag to `full_custom_song_pipeline.py` for future tests.
+- **Toolchain fix:** `OO_PS4_TOOLCHAIN` path re-persisted to `~/.zshrc` (was lost on restart).
+- **Status:** 🚀 **DEPLOYED — AWAITING PS4 TEST**
+- **What makes this NOVEL:** 
+  1. First test with CORRECTLY MATCHED beatmaps (Expert→ExpertStandard, ExpertPlus→ExpertPlusStandard)
+  2. First test with rebuilt v0.49 PRX  
+  3. Toolchain build path is now permanent
+- **Status:** 🚀 **DEPLOYED — AWAITING PS4 TEST**
+
+### Pipeline Files (committed 2026-07-04)
+- `tools/hevag_encoder.py` — `fast_encode_frame` (pred-0), `opt_encode_frame` (5-pred), `fast_pcm_to_hevag`, `pcm_to_hevag`
+- `tools/full_custom_song_pipeline.py` — End-to-end: `.wav`/`.ogg` → HEVAG → FSB5 → bundle → deploy
+- `src/main.cpp` — PRX v0.49 with updated version string
+- `.devcontainer/openorbis/devcontainer.json` — postCreateCommand for persistence
+- `.devcontainer/standard/devcontainer.json` — postCreateCommand for persistence
+
+### Experiment 75 — Audio Replacement Milestone [READY FOR DEPLOY]
+- **Date:** 2026-07-01
+- **Change:** Complete custom audio replacement pipeline! HEVAG (PS4 ADPCM) encoder implemented in Python. FSB5 container created with custom test audio (3-second sine tones: 440Hz→880Hz→660Hz).
+- **Audio pipeline:**
+  1. Generate PCM16 test audio at 44.1kHz stereo
+  2. Encode to HEVAG (PS4 ADPCM) — 3.5:1 compression ratio
+  3. Wrap in FSB5 container (copies sample header from existing FSB5)
+  4. Replace CAB resource data in the AssetBundle
+  5. Update AudioClip metadata (length, resource size)
+  6. Update audio.gz TextAsset (sample count, frequency, bpm data)
+- **Result:** `quick_test.bundle` is now 216 KB (down from 12MB!)
+- **Content:** 9n + 3b + 8o + 2a + 2c + 3-second test audio
+- **HEVAG encoder extracted:** `beat_saber_deluxe/tools/hevag_encoder.py` — standalone CLI tool + importable module
+- **Script:** `beat_saber_deluxe/custom_songs/quick_test_gen.py` — now imports from hevag_encoder
+- **Knowledge base:** `ps4-hevag-fsb5-audio.md` — full audio pipeline documented
+- **Status:** ✅ READY FOR DEPLOY — PS4 was powered on
+
+### Experiment 75b — Audio freeze fix: correct FSB5 header + optimized encoder
+- **Date:** 2026-07-01
+- **Issue:** First audio replacement attempt (wrong FSB5 header template) caused the game to hang on audio start. The header was from a **different song's FSB5 export** (46.9% match with correct header).
+- **Fix 1—Correct template:** Now using Start Me Up's own FSB5 900-byte sample header (bytes 16-915 of the original CAB resource). Template saved to `fsb5_header_template.bin`.
+- **Fix 2—Hevag encoder optimization:** Added silence fast path (pre-computed zero frame), early termination on perfect encoding, and batch PCM reading via `struct.unpack` format string instead of per-sample loop.
+- **Encoder speed:** Silence frames: 211K/s, Tone frames: 229/s (brute-force over 5×13 parameters ×28 samples is the bottleneck)
+- **Status:** ✅ DEPLOYED AND READY FOR TEST — corrected 216KB bundle on PS4
+
+### Experiment 76 — ROOT CAUSE: incorrect FSB5 sample_header_size (900 vs 1732) [FIXED]
+- **Date:** 2026-07-02
+- **Investigation:** Systematic analysis of audio freeze. Tests across multiple bundle configurations (PCM format, HEVAG with freq, padded audio) all showed same freeze. Extracted original FSB5 from bundle's .resource file via UnityPy for deep analysis.
+- **Root Cause:** The original PS4 Beat Saber FSB5 uses `sample_header_size=1732`, but our `build_fsb5()` was hardcoding `sample_header_size=900`. This meant:
+  - We were only storing 900 of the required 1732 sample header bytes
+  - The PS4's FMOD audio decoder couldn't find the hash table and additional DSP state
+  - Audio decoder hung/froze when attempting to play back the incomplete FSB5
+  - The 832 missing bytes contain 612 non-zero bytes of DSP/hash data critical for decoder init
+- **Fix:** 
+  1. Extracted full 1732-byte sample header from original FSB5
+  2. Updated `_load_fsb5_header_template()` to detect and load full header
+  3. Updated `build_fsb5()` to write correct `sample_header_size` in FSB5 header
+  4. Updated template file `fsb5_header_template.bin` from 900 to 1732 bytes
+  5. Added `FSB5_SAMPLE_HEADER_SIZE = 1732` constant
+  6. Fast path bug also fixed (preserve h1/h2 history) while investigating
+- **Technical Details:**
+  - Original FSB5: 12,305,632 bytes, ver=1, nsamples=1, shsz=1732, format=1(HEVAG)
+  - Audio data offset in FSB5: 1748 (was incorrectly 916)
+  - Non-zero bytes in full SH: 1247/1700 (beyond sample entry)
+- **Status:** ✅ FIX DEPLOYED — awaiting PS4 test
+- **⚠️ Operational Note — Deploy Path:** The plugin's open hook (v0.44, main.cpp line 65) redirects `BeatmapLevelsData/startmeup` → `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`. New test bundles MUST be deployed to `startmeup_v3`, NOT `startmeup`, or the plugin ignores them.
+- **Files changed:**
+  - `beat_saber_deluxe/tools/hevag_encoder.py` — _load_fsb5_header_template, build_fsb5, FSB5_SAMPLE_HEADER_SIZE
+  - `beat_saber_deluxe/custom_songs/fsb5_header_template.bin` — updated to 1732 bytes
+  - `beat_saber_deluxe/custom_songs/quick_test.bundle` — regenerated with correct FSB5
+  - `beat_saber_deluxe/tests/` — analysis tools created
+
+### Experiment 77 — Systematic Isolation: Silence Test + Predictor-0-Only [READY FOR TEST]
+- **Date:** 2026-07-03
+- **Previous tests:** All 6 attempts (different header templates, fast path fix, sample_header_size fix) resulted in same freeze.
+- **New Hypothesis:** Since the FSB5 structure (header size, sample header, AudioClip metadata) is all confirmed correct, the issue must be in our HEVAG-encoded audio CONTENT.
+- **New Tests Created:**
+
+  | # | Bundle | Audio Content | What It Tests |
+  |---|--------|---------------|---------------|
+  | 1 | `test_silence.bundle` | All-zero HEVAG frames (pred=0, shift=0, nibbles=0) | Is our FSB5 structure valid? |
+  | 2 | `test_original_audio_3s.bundle` | Original Start Me Up HEVAG frames (first 3s) | Is our FSB5 building process correct? |
+  | 3 | `test_p0_only.bundle` | Predictor 0 only, 440Hz sine wave, normal nibbles | Is the problem in predictors 1-4? |
+  | 4 | `test_p0_silence.bundle` | Predictor 0 silence (all zeros) | Baseline for predictor 0 |
+
+- **Testing Strategy (ordered):**
+  1. Deploy `test_silence.bundle` → if WORKS (no freeze), FSB5 structure is correct
+  2. Deploy `test_p0_only.bundle` → if WORKS, problem is in predictors 1-4 specifically
+  3. Deploy `test_original_audio_3s.bundle` → if WORKS, our FSB5 building process is correct
+  4. Based on results, focus on either encoding algorithm or FSB5 structure
+
+- **Key insight from AudioClip type tree:** Original has `m_LoadType: 1` (CompressedInMemory), `m_PreloadAudioData: false`, `m_LoadInBackground: true`, `m_Legacy3D: true`, `m_CompressionFormat: 1`. All preserved correctly in our bundles.
+- **Status:** 🧪 BUNDLES READY — awaiting PS4 test
+- **Deploy command:**
+  ```
+  lftp -u anonymous, -p 2121 192.168.100.117 -e "put test_silence.bundle -o /data/GoldHEN/AFR/CUSA12878/startmeup_v3; quit"
+  ``
+- **Quick deploy script:** `beat_saber_deluxe/custom_songs/quick_deploy.sh`
+
+### Experiment 78 — All Audio Tests Freeze: Every variant fails identically [ROOT CAUSE ELUSIVE]
+- **Date:** 2026-07-03
+- **Tests Performed (ALL froze with same symptom: first frame renders, level freezes, stars move, no audio):**
+
+  | # | Bundle | Packer | Audio Content | Result |
+  |---|--------|--------|---------------|--------|
+  | 1 | `test_silence.bundle` | none | All-zero HEVAG frames | ❌ FREEZE |
+  | 2 | `test_original_audio_3s.bundle` | none | Original Start Me Up frames (3s) | ❌ FREEZE |
+  | 3 | `test_p0_only.bundle` | none | Predictor 0 only, 440Hz sine | ❌ FREEZE |
+  | 4 | `test_p0_silence.bundle` | none | Predictor 0 silence | ❌ FREEZE |
+  | 5 | `test_silence_lz4.bundle` | lz4 | All-zero HEVAG frames (LZ4 compressed) | ❌ FREEZE |
+  | 6 | `test_fullsize_silence.bundle` | none | Full-size silence (12MB, matches original audio size) | ❌ NOT DEPLOYED (FTP timeout during 12MB transfer) |
+  | 7 | `test_original_12mb.bundle` | lz4 | Original 12MB FSB5 (audio unchanged), beatmaps changed | ❌ NOT DEPLOYED (PS4 went offline) |
+
+- **Key findings from analysis:**
+  1. **FSB5 structure is byte-perfect** — sample header matches original with 0 differences (excluding data_size field)
+  2. **AudioClip serialization is identical** — `save_typetree` produces identical raw bytes (164 bytes AudioClip)
+  3. **CAB save output is 67,656 bytes** — does NOT contain FSB5 data (correctly stored externally in .resource)
+  4. **Bundle UnityFS header is identical** — first 32 bytes match original exactly
+  5. **Original audio uses predictors 0-15 and shifts 0-15** — our encoder only uses predictors 0-4 and shifts 0-12, but all-zero silence frames (pred=0, shift=0) also freeze, ruling out encoding content
+  6. **Original bundle has no separate .resource file entry** in raw binary (likely compressed file table), but UnityPy shows 2 entries (CAB + .resource)
+  7. **Our saved bundles show 4 CAB string occurrences** in raw binary, indicating UnityPy writes .resource as separate file block
+
+- **Root cause STILL ELUSIVE.** All structural analysis shows the FSB5 and bundle are correctly formed. The AudioClip reference path `archive:/CAB-xxx/CAB-xxx.resource` should resolve correctly. Yet the PS4 freezes every time audio replacement is attempted.
+
+- **Unsolved questions:**
+  1. Does the 12MB original-audio bundle (where only beatmaps change, audio untouched) work? Couldn't deploy due to FTP timeout.
+  2. Why does ALL audio content (silence included) cause the same freeze? 
+  3. Is the PS4's Unity runtime expecting a specific bundle structure that UnityPy doesn't produce?
+
+- **Next steps needed when PS4 is online:**
+  1. Try deploying the full-size silence bundle or 12MB original bundle via alternative method (HTTP server, USB, etc.)
+  2. If 12MB original bundle works → issue is in our FSB5 content (size or structure)
+  3. If 12MB original bundle freezes → issue is in UnityPy's save function or bundle structure
+  4. Try manually patching original bundle binary (replace .resource bytes in-place, bypassing UnityPy save entirely)
+  5. Consider if the issue is in the CAB serialization (not .resource) — maybe save_typetree changes something beyond the 164 bytes we checked
+
+### Summary of Audio Experiments (v0.48 - v0.49)
+- **Conclusion:** The PS4 audio decoder hangs if the HEVAG data is 'too simple' (e.g. all-zero silence or limited predictors). The original audio uses the full 4-bit range (0-15) for both predictors and shifts. To avoid freezes, we must use an encoder that produces high-fidelity, wide-range HEVAG frames.
+- **Verification:** 12MB original audio in our bundle worked, proving the pipeline is correct.
+
+
+### Experiment 84b — Metadata Preservation Test Result [FROZE]
+- **Date:** 2026-07-04
+- **Bundle tested:** 
+- **Result:** ❌ Same freeze at 1-2 audio samples. No beatmap objects rendered.
+- **Log:** 2930 lines, 6 redirects, 0 errors, clean exit (7 PlayerData saves)
+- **Conclusion:** Preserving original AudioClip/audio.gz metadata does NOT fix the freeze.
+- **New theory:** Our HEVAG encoding itself is invalid. The PS4 decoder produces incorrect
+  output from our frames, causing the game to hang after 1-2 frames.
+- **Next:** Testing if re-encoded original audio (decode -> re-encode with our encoder) works.
+  If it works: encoder is valid, issue is elsewhere.
+  If it fails: encoder is fundamentally broken.
+- **Fallback plan:** PCM FSB5 (uncompressed format, no coefficient table dependency)
+
+
+
+### Experiment 85 — Re-encoding Test: Our Encoder is INCONSISTENT
+- **Date:** 2026-07-04
+- **Test:** Decoded original HEVAG to PCM, re-encoded with our `fast_pcm_to_hevag` (opt_encode_frame), then decoded again.
+- **Key finding: First 100 samples match (decode->encode->decode): FALSE**
+  - Original first 5 PCM samples: [192, 0, 8032, 224, 0]
+  - Our re-encoded first 5 PCM samples: [0, 0, 0, 6144, 0]
+  - Our frame headers use pred=0 almost exclusively (original uses pred=14, 0, 4, 11, 14)
+- **Conclusion:** Our encoder produces output that, when decoded, does NOT match the original audio.
+  The encoder is fundamentally broken — it fails to properly track decoder state across frames.
+  Likely root cause: the `opt_encode_frame` function recalculates shift for each sample (per-sample,
+  not per-frame), and the encoder's state tracking diverges from what the decoder expects.
+- **Impact:** All previous HEVAG-encoded bundles (pred-0, 5-pred) produce invalid audio that the PS4 decoder cannot process correctly, causing the freeze after 1-2 samples.
+- **PCM FSB5 alternative:** Building PCM FSB5 with byte 8 of sample header set to 0. Currently deployed.
+- **Status:** ❌ ENCODER BROKEN — PCM approach being tested
+
+
+### Experiment 86 — 🎉 BREAKTHROUGH: Original Audio is VORBIS, not HEVAG!
+- **Date:** 2026-07-04
+- **Discovery:** The original FSB5 file uses SoundFormat.VORBIS (mode=15), not HEVAG (mode=9).
+  This was revealed by the `fsb5` Python module (pip install fsb5) which successfully parsed
+  the original FSB5 and showed mode=VORBIS.
+- **Evidence:**
+  - FSB5 header mode field at offset 24 = 15 (VORBIS)
+  - fsb5 module confirms: mode=SoundFormat.VORBIS, metadata=VorbisData
+  - Audio data in FSB5 starts with OggS magic (0x4F676753)
+  - The FSB5 wraps OGG Vorbis data in the FMOD container
+- **Why this changes everything:**
+  - All previous tests assumed HEVAG format, which the game does NOT use
+  - Our HEVAG encoder was producing data in the wrong format
+  - The PCM test (byte 8 = 0) used the wrong format code
+  - The correct approach: replace the OGG Vorbis data inside the FSB5
+- **Vorbis FSB5 built:** `vorbis_test.fsb5` — 30s of custom WAV encoded as OGG Vorbis,
+  placed into the original FSB5 structure. Preserves original sample header.
+  Deployed as `vorbis_test.bundle` (577KB). Awaiting PS4 test.
+- **Pipeline:** `tools/create_vorbis_fsb5.py` should be created for future use.
+- **Status:** 🚀 BREAKTHROUGH — VORBIS FORMAT CONFIRMED. Bundle ready for deployment.
+- **Decoded PCM WAV:** `custom_songs/startmeup_decoded_30s.wav` (30s of decoded original audio)
+
+
+### Experiment 87 — Vorbis FSB5 v3: Pipeline Integration + VorbisData Headers [VORBIS FIXED]
+- **Date:** 2026-07-04
+- **Fix:** The VorbisData chunk's extra data (1708 bytes in original) was being copied verbatim
+  from the original FSB5. This data contains the OGG Vorbis codec setup headers (identification,
+  comment, setup packets). When we replaced the OGG data but kept the original headers, FMOD
+  rejected the sample because the setup headers didn't match the audio data.
+- **Fix applied:** Vorbis FSB5 builder now parses our OGG file and extracts the 3 Vorbis header
+  packets, then updates the VorbisData chunk with the correct headers from our custom audio.
+- **Pipeline change:** New `build_vorbis_fsb5()` function added to `hevag_encoder.py`.
+  New `--vorbis` flag added to `full_custom_song_pipeline.py`. Use:
+  `python3 full_custom_song_pipeline.py --song-dir <dir> --target startmeup --vorbis --deploy`
+- **Bundle:** `vorbis_v3.bundle` (568KB) — 30s custom OGG Vorbis with correct headers
+- **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 88 — HEVAG + Zeroed Hash: The Hash Theory [DEPLOYED]
+- **Date:** 2026-07-04
+- **Critical discovery:** The original audio IS HEVAG, not Vorbis. The fsb5 module
+  misinterpreted mode=15 at offset 24 as Vorbis. On PS4 FMOD, mode=15 means HEVAG.
+  The module's field layout doesn't match PS4 FSB5 format.
+- **Previous Vorbis tests (86-87):** Invalid approach — OGG data was decoded as HEVAG,
+  causing immediate rejection (0:00 freeze with no audio)
+- **New theory:** The 16-byte hash field at template offset 20-35 (file offset 36-51)
+  is an FMOD content hash of the audio data. When we replace the audio but keep the
+  original hash, FMOD rejects the FSB5. Zeroing the hash might bypass this check.
+- **Fix applied:** `build_fsb5()` in `hevag_encoder.py` now zeros out bytes 12-43 of
+  the template (hash + dummy + field_1 + field_2) and updates the sample descriptor
+  with the correct PCM frame count.
+- **Bundle:** `hevag_fixed_hash.bundle` — HEVAG audio (full 146.1s), zeroed hash,
+  mode=15 (HEVAG on PS4), metadata preserved, 5/5 beatmaps fixed.
+- **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 89 — Vorbis FSB5 v4: Size-Prefixed Raw Vorbis Packets [DEPLOYED]
+- **Date:** 2026-07-04
+- **Key breakthrough:** vgmstream installed and correctly decoded the original FSB5
+  to PCM WAV. Confirmed encoding is "Custom Vorbis" (FMOD's FSB5 Vorbis variant).
+  vgmstream pre-built binary downloaded from GitHub releases r2117.
+- **FSB5 Vorbis format:**
+  1. Audio data = size-prefixed raw Vorbis packets: [uint16 size][packet_bytes]...
+  2. Terminated with uint16(0). No OGG framing.
+  3. The Vorbis header packets (ident, comment, setup) are NOT in audio data.
+  4. VorbisData chunk contains CRC32 (for lookup) + FMOD-specific seek table.
+  5. The CRC32 lookup table in the fsb5 module (vorbis_headers.py) is NOT reliable
+     for PS4 FSB5 files — it's a generic table that doesn't match PS4 FMOD.
+- **Tools installed:** vgmstream-cli (statically linked, no deps), persisted in devcontainer
+- **Correctly decoded WAV:** `/workspace/beat_saber_deluxe/custom_songs/startmeup_decoded_vgmstream.wav`
+- **Bundle:** `vorbis_v4.bundle` (142KB) — 21 size-prefixed Vorbis packets, 30s audio
+- **Status:** 🚀 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 90 — Vorbis FSB5 v5: Correctly Assembled Vorbis Packets [1/8 SEC OF MUSIC!]
+- **Date:** 2026-07-04
+- **Critical fix:** OGG packet parser was splitting packets at segment boundaries (255 bytes).
+  Segments with length=255 are continuations of the same packet and must be reassembled.
+  This produced 4940 correctly assembled Vorbis packets (vs 21 fragments in v1-v4).
+- **Result:** 🎉 1/8 second of actual music heard! First test to produce ANY music.
+- **What it means:** FSB5 Vorbis format is CORRECT. The size-prefixed packet format,
+  header structure, and CRC32 lookup all work. FMOD initializes and decodes early packets.
+- **Why it stops:** The Vorbis codebooks used by oggenc (libvorbis) don't match the FMOD
+  setup packet codebooks (looked up by CRC32=0x6D39BF3E). Early packets decode correctly,
+  but later packets require codebook-specific decoding and fail.
+- **Log analysis (vs v1):**
+  | Signal | v1 | v5 | Meaning |
+  |--------|-----|-----|---------|
+  | Lines | 751 | 3006 | Game ran much longer |
+  | Redirects | 2 | 8 | Bundle loaded 4 times (retry) |
+  | Env loads | 10 | 40 | More environment bundles |
+  | PlayerData | 2 | 8 | More clean returns to menu |
+  | Errors | 0 | 0 | No crashes |
+- **Status:** 🎯 BREAKTHROUGH — FORMAT CORRECT, NEED FMOD-COMPATIBLE VORBIS ENCODING
+
+
+### Experiment 90b — Round-trip Test & Vorbis v6: Seek Table Zeroed [DETAILED ANALYSIS]
+- **Date:** 2026-07-04
+- **Round-trip test:** Encoded WAV → OGG (oggenc q=10) → FSB5 → Decoded with vgmstream
+  - Result: ✅ vgmstream successfully decoded our FSB5!
+  - 1323000 frames (30s), 44100Hz, stereo — exact same length as input
+  - FSB5 structure confirmed correct (passes vgmstream validation)
+  - Audio diff: NRMSE=104% (high due to Vorbis lossy artifacts)
+- **vorbis_v5 results:** 1/8 second of actual music (first packets decoded correctly)
+  - 3006 log lines (vs 751 in v1) — game ran much longer
+  - 8 bundle redirects (4 load attempts — game retries)
+  - 0 errors — FMOD decoder doesn't crash, just stops after ~1-2 packets
+- **vorbis_v6 deployed:** Seek table zeroed (table_size=0 at offset 76)
+  - Tests if PS4 FMOD validates seek table against audio data
+  - Original seek table (213 entries) pointed to wrong offsets for custom audio
+- **Next theory:** If v6 also fails, the issue is likely the Vorbis codebook mismatch
+  between libvorbis (oggenc) and FMOD's built-in setup packet lookup table.
+  Solution: Find/use FMOD fsbank tool for compatible Vorbis encoding.
+- **Pipeline fix:** `build_vorbis_fsb5()` updated to preserve original header fields,
+  use original CRC32, and zero seek table instead of keeping invalid entries.
+- **Status:** ⏳ Vorbis v6 DEPLOYED — AWAITING PS4 TEST
+
+
+### Experiment 91 — PCM16 FSB5: BIT-IDENTICAL Round-Trip Achieved! [BREAKTHROUGH]
+- **Date:** 2026-07-04
+- **Approach:** Use PCM16 (codec=2) instead of Vorbis in FSB5.
+  PCM is lossless, no codebooks needed, no FMOD-specific encoding.
+- **Key insight:** vgmstream expects audio at base_header_size+sampleHeaderSize.
+  44 bytes of alignment padding required between header body and PCM data.
+- **Result:** 100% BIT-IDENTICAL round-trip for both original and custom audio
+  Decoded WAVs saved for listening confirmation.
+- **Next step:** Deploy PCM16 FSB5 to PS4 to test if game accepts PCM16 codec.
+- **Status:** READY FOR PS4 TEST
+
+
+### Experiment 92 — PCM16 FSB5: CUSTOM AUDIO PLAYS ON PS4! [🎉 BREAKTHROUGH] 🎉🎉🎉
+- **Date:** 2026-07-04
+- **Approach:** PCM16 (codec=2) in FSB5 format. Lossless, no codebooks needed.
+- **Result:** ✅ **CUSTOM SONG PLAYED ON PS4!** First time ever!
+  - User confirmed decoded WAVs sound perfect (bit-identical round-trip)
+  - PS4 played ~30s of custom song with custom beatmaps
+  - HUD showed 0:29 / 3:33 when audio stopped (AudioClip mismatch)
+  - Level froze after audio ended (expects 3:33 of data)
+- **Key finding:** PCM16 codec is supported by PS4 FMOD! No Vorbis needed.
+- **Remaining issues:**
+  1. 30-second clip (clip_seconds=30 in encoder) — needs full-song support
+  2. AudioClip metadata needs updating to match actual song duration
+  3. Level freezes after audio ends — likely needs AudioClip sync
+- **Status:** 🏆 ALPHA-READY! Basic song replacement pipeline WORKS.
+
+
+### Experiment 93 — ALPHA RELEASE: End-to-End Pipeline Complete
+- **Date:** 2026-07-04
+- **Summary:** Alpha release of Beat Saber Deluxe with PCM16 FSB5 custom songs
+  - PCM16 FSB5: confirmed working on PS4 (30 second custom audio played)
+  - Pipeline: full_custom_song_pipeline.py with --pcm16 flag
+  - README: comprehensive walkthrough written
+  - AudioClip/audio.gz updates: fixed duration calculation for PCM16
+- **Known limitations:**
+  1. ~70 second PCM16 limit (12MB FSB5 resource cap)
+  2. Vorbis codebook mismatch unresolved (needs FMOD fsbank)
+  3. HEVAG encoder produces garbage output (being investigated)
+  4. Level freezes after audio ends (AudioClip mismatch — use --preserve-metadata)
+- **Status:** 🏆 v0.50 ALPHA — BASIC SONG REPLACEMENT WORKS!
+
+
+### Experiment 94 — Full-Length PCM16: END-TO-END CONFIRMED! 🏆
+- **Date:** 2026-07-04
+- **Song tested:** Full PCM16 encoded song (146s, 25.8MB FSB5)
+- **Result:** ✅ Song played all the way through! Score screen reached!
+  - Audio played completely, level faded out, score screen displayed
+  - Log analysis: 10 PlayerData saves (score saved), 0 errors
+  - Bundle size: 25.4MB (LZ4), Audio size: 25.8MB
+  - Synchronization between audio and beatmaps needs verification
+- **Second deployment:** Reol drop pop candy (224s, 8 beatmaps)
+  - 360-degree and 90-degree maps included
+  - All object types: notes, obstacles, events
+  - Expert+ has 1035 notes
+  - Pipeline correctly matched 360DegreeExpert.dat to Expert slot
+- **Key confirmations:**
+  1. PCM16 full songs work (no size limit beyond PS4 memory)
+  2. AudioClip metadata update prevents freeze at end
+  3. Beatmap replacement works for all 5 difficulty slots
+  4. Score saves correctly after song completion
+  5. --no-pad is essential for songs longer than 70s
+- **Status:** 🏆 v0.50 ALPHA — CONFIRMED WORKING!
+
+
+### Experiment 94b — PCM16 Quality Verified; Config System Created
+- **Date:** 2026-07-05
+- **Key finding:** PCM16 LE encoding is correct. First song (high-quality WAV)
+  sounds CLEAR on PS4. Crackling in Reol song was due to OGG source quality.
+- **Config system:** ps4_config.json created. Pipeline reads IP, port, title ID,
+  AFR paths from config. --config flag added. CLI args override config values.
+- **Beatmap matching:** --ignore-non-standard-beatmaps flag added. When set,
+  only matches files containing "Standard" in the name (ignores 360Degree,
+  90Degree, OneSaber variants). Default behavior (no flag) keeps current
+  substring matching which can match non-standard variants first.
+- **Big Endian test:** PS4 does NOT expect big-endian PCM16. BE version was
+  loud static/noise — much worse than LE version. Confirms LE is correct.
+- **Status:** Pipeline configurable, beatmap matching improved, quality verified.
+
+
+### Experiment 95 — bpmData Sync Fixed; Espresso Tested ✅ PERFECT
+- **Date:** 2026-07-08
+- **Root cause found:** `bpmData` `eb` field was set to `duration` (in **seconds**)
+  instead of **beats**. At 120 BPM, this gave half the correct value, making the
+  game think the tempo was 60 BPM instead of 120 BPM. Notes mapped to double
+  their correct time position.
+- **Fix:** `load_bpm_regions()` reads BPMInfo.dat (preferred, from BeatSaver) or
+  computes `total_beats = duration * bpm / 60.0` from Info.dat. `update_audio_gz()`
+  now accepts `bpm_regions` parameter with proper beat values.
+- **Test song:** "Espresso" by Sabrina Carpenter (104 BPM, 177.5s, Standard
+  E/N/H/Ex/Ex+, PCM16 FSB5, `--no-pad`)
+- **Result:** ✅ **PERFECT SYNC** — audio matches beatmaps flawlessly. All note
+  types visible: arrows, chains, arcs, walls, dots. No bombs in this map but
+  previously confirmed.
+- **Score saves:** ✅
+- **KB page:** `beatmap-audio-sync.md` created with bpmData structure
+  documentation, root cause explanation, BPMInfo.dat format.
+- **Version:** v0.50 — "Fixed bpmData sync (beats not seconds)"
+
+### Experiment 96 — Debug/Release Plugin Build System
+- **Date:** 2026-07-08
+- **What:** Added `#ifdef VERBOSE_LOG` guard around per-file logging in plugin.
+  `make` = release (no verbose PS4 logging, faster gameplay).
+  `make DEBUG=1` = debug build with `-DVERBOSE_LOG` (every file access logged).
+- **Pipeline flags:** `--deploy-plugin` builds + deploys plugin.
+  `--debug-logging` enables verbose mode. `ensure_plugins_ini()` handles
+  `plugins.ini` idempotently (downloads, parses, adds/updates entry, uploads).
+- **Status:** ✅ Both build variants verified (FSELF magic 4f 15 3d 1d confirmed).
+
+### Experiment 97 — CI/CD Workflow + gh Installation
+- **Date:** 2026-07-08
+- **What:** Installed GitHub CLI (`gh`) via apt, added to Dockerfile for
+  persistence. Created `.github/workflows/plugin-build.yml` for automated
+  PRX builds and release artifacts.
+- **Status:** 🚧 Awaiting user GitHub auth login for PR operations.
+
+
+### Experiment 98 — 12-Song Rolling Stones Batch Deploy
+- **Date:** 2026-07-08
+- **What:** Deployed all 12 Rolling Stones song slots with custom community songs.
+  Plugin updated with full redirect table (12 entries). Pipeline updated with
+  auto-detecting CAB hash per target bundle (each Rolling Stones song has a unique hash).
+  Removed `--ignore-non-standard-beatmaps` from the batch deploy commands — the
+  flag was filtering out bare-named beatmaps (e.g. `Easy.dat`) that have no
+  "Standard" in the filename.
+- **Slot assignments:**
+  | Bundle ID | Custom Song | BPM | Diffs |
+  |-----------|-------------|-----|-------|
+  | startmeup | Espresso (Sabrina Carpenter) | 104 | All 5 ✅ tested |
+  | angry | We All Lift Together | 134 | E/N/H |
+  | bitemyheadoff | Escaping the Ruins | 160 | E/N/H/Ex |
+  | cantyouhearmeknocking | Spectre | 128 | All 5 |
+  | deadmanwalking | Finesse (Remix) | 105 | All 5 |
+  | gimmeshelter | How You Like That | 130 | All 5 |
+  | icantgetnosatisfaction | Dreams Come True | 99 | All 5 |
+  | messitup | Powersnake | 175 | All 5 |
+  | paintitblack | Time Lapse | 127 | All 5 |
+  | sugarsoaker | Venom of Venus | 164 | All 5 |
+  | sympathyforthedevil | LIT | 99 | All 5 |
+  | wholewideworld | VOLUPTE | 128 | All 5 |
+- **Issue found:** Plugin version was not incremented despite redirect table change.
+  User noted this should have been v0.51.
+- **Status:** 🚧 Bundles deployed, plugin still at v0.50 (version not bumped).
+
+
+### Experiment 99 — v0.51: Plugin Version Bump + Beatmap Filename Fallback Fix
+- **Date:** 2026-07-08
+- **What:** Two changes:
+  1. **Plugin version bumped to v0.51** — `main.cpp` version string + log message updated.
+     The 12-song redirect table was added during the v0.50 batch deploy but the version
+     was never incremented; v0.51 corrects this.
+  2. **Beatmap filename fallback logic rewritten** — `full_custom_song_pipeline.py`
+     `replace_beatmaps()` now uses a 5-tier priority selection via `_select_beatmap_file()`:
+     - Tier 1: `<Diff>Standard.dat` (e.g. `ExpertPlusStandard.dat`)
+     - Tier 2: `<Diff>.dat` (bare name, e.g. `ExpertPlus.dat`)
+     - Tier 3: `<Diff>.beatmap.dat` (BeatSaver .beatmap.dat format)
+     - Tier 4: Other modes — `90Degree`, `OneSaber`, `NoArrows`, `Legacy`, etc.
+     - Tier 5: `360Degree` (absolute last resort — unplayable in PS4 VR but better than nothing)
+     `--ignore-non-standard-beatmaps` now suppresses only tiers 4 and 5 (bare files in
+     tier 2 are always included since they have no mode suffix).
+- **Why:** The old logic used a single `for f in beatmap_files` loop that broke when
+  `--ignore-non-standard-beatmaps` was set and the song only had bare filenames (no
+  "Standard" in the name). The new tiered approach is deterministic and handles all
+  known BeatSaver naming conventions found in the 96-song repo.
+- **KB:** New wiki page `beatmap-filename-conventions.md` added documenting all
+  filename patterns and the selection priority.
+- **Status:** ✅ Code complete, ready to build + deploy.
+
+
+
+### Experiment 100 — v.0.51a: Rebuild 11 Rolling Stones Songs (V2→V3 Converter Removed)
+- **Date:** 2026-07-09
+- **What:** Rebuilt all 11 Rolling Stones custom song bundles with V2→V3 converter REMOVED.
+  The converter was causing sync issues (notes at 2x/1/2x speed) by incorrectly converting
+  V2 beatmaps (_time in seconds) to V3 format using wrong BPM.
+- **Changes from committed code:**
+  1. Removed get_template_resource_size() — back to hardcoded 12MB (ORIGINAL_RESOURCE_SIZE)
+  2. Removed V2→V3 beatmap converter entirely
+  3. Simplified BPM lookup — only reads _beatsPerMinute from Info.dat (not V4 format)
+  4. Changed audio_to_fsb5() default pad_to_size back to ORIGINAL_RESOURCE_SIZE
+  5. Added .egg file extension support for BeatSaver audio files (.egg = renamed .ogg)
+  6. Removed template resource size loading from main() (no longer needed)
+- **Build results:** 11 bundles built (all except startmeup)
+  | Target | File Size | Audio Duration | BPM |
+  |--------|-----------|----------------|-----|
+  | angry | 25.2MB | 154.8s | 134 |
+  | bitemyheadoff | 23.2MB | 139.6s | 160 |
+  | cantyouhearmeknocking | 38.2MB | 231.7s | 128 |
+  | deadmanwalking | 36.5MB | 218.6s | 105 |
+  | gimmeshelter | 30.1MB | 180.0s | 130 |
+  | icantgetnosatisfaction | 34.4MB | 186.5s | 99 |
+  | messitup | 37.5MB | 226.0s | 175 |
+  | paintitblack | 30.6MB | 186.5s | 127 |
+  | sugarsoaker | 34.9MB | 207.0s | 164 |
+  | sympathyforthedevil | 42.7MB | 254.5s | 99 |
+  | wholewideworld | 31.0MB | 186.6s | 128 |
+- **Deploy script:** deploy_all_songs.sh ready for when PS4 is turned on
+- **Song directories:** All custom songs stored in songs_repo with .egg audio files
+  (BeatSaver uses .egg extension for .ogg files to prevent direct streaming)
+- **Beatmap format:** All 11 use V2 format (_notes with _time in seconds) — no BPM conversion needed
+- **Status:** 🚧 Ready to deploy and test sync on PS4
+
+
+### Experiment 101 — ROOT CAUSE FOUND: Plugin Not Deployed to PS4
+- **Date:** 2026-07-09
+- **Situation:** 11 bundles deployed to AFR paths, but all had sync issues
+- **PS4 log analysis (v0.51a deploy test):**
+  - Plugin version on PS4: **v0.49** (log says "=== BS Deluxe v0.49 started ===")
+  - Total redirects: startmeup=16, ALL OTHER 11 TARGETS=0!
+  - The v0.51 plugin with 12-song redirect table was compiled but NEVER uploaded to PS4
+  - PlayerData saves: 31 (user played many songs)
+- **ROOT CAUSE:** Bundles were deployed via deploy_all_songs.sh but that script
+  only deploys bundles, NOT the plugin. The PS4 plugin remained at v0.49 which
+  only has a startmeup redirect entry. All 11 other songs played the ORIGINAL
+  Rolling Stones songs — the user thought they were hearing custom songs with
+  sync issues, but they were hearing the original game songs!
+- **Fix applied:**
+  1. Verified plugin main.cpp has all 12 redirects (v0.51)
+  2. Built release + debug plugins with 12-song redirect table
+  3. Created deploy_all.sh which deploys BOTH plugin AND all 12 bundles
+- **"Live By The Sword"** — Song ID: livebythesword. Not in redirect table yet.
+  Need to find/download a custom song and build a bundle for this slot.
+- **Beatmap format check:** All 11 target songs use V2 format with _time in beats.
+  The pipeline updates audio.gz bpmData to match the song BPM from Info.dat.
+  This should be correct once the plugin is actually deployed.
+- **Corrective action:**
+  ️ Deploy plugin + bundles together with:
+  ./beat_saber_deluxe/deploy_all.sh [--debug]
+  
+- **Status:** 🏁 Ready for deploy test. PS4 can be turned off for now.
+
+
+### Experiment 102 — v0.52: Re-add V2→V3 converter as optional flag, Plugin-Only Mode, Audit Roadmap
+- **Date:** 2026-07-09
+- **ROOT CAUSE ANALYSIS:** The PS4 game handles V2 and V4 beatmap formats DIFFERENTLY.
+  Espresso (works) uses V4 format (`colorNotes` with `b` in beats). All 11 other songs
+  use V2 format (`_notes` with `_time` in beats). Despite both representing timing in beats,
+  the game's BeatmapDataLoader appears to interpret V2 `_time` differently from V4 `b`.
+  The `_BPMChanges` field in V2 beatmaps may override our audio.gz bpmData.
+- **Pipeline changes (v0.52):**
+  1. Re-added `is_v2_beatmap()` and `convert_v2_to_v3()` functions (from committed v0.51 code)
+  2. Added `--convert-to-v3` CLI flag — auto-converts V2 beatmaps to V3.2.0 format
+  3. Converter clears `_BPMChanges` and sets `bpmEvents: []` so game uses audio.gz bpmData
+  4. Made `--song-dir` optional — now can use `--deploy-plugin` alone to just deploy plugin
+  5. Plugin version bumped to v0.52
+  6. Added `auto_convert` parameter to `replace_beatmaps()`
+- **Roadmap audit items added (v0.53):**
+  1. Make plugin redirect table dynamic (JSON config file on AFR path)
+  2. Remove hardcoded TITLE_ID, AFR_BASE, version from plugin
+  3. Remove hardcoded DIFFICULTIES, ORIGINAL_RESOURCE_SIZE, SAMPLE_RATE from pipeline
+  4. Remove all hardcoded values — make config-driven
+- **Status:** 🚧 Ready to test on PS4: deploy plugin + bundles, enable --convert-to-v3 for V2 songs
+
+
+### Experiment 103 — v0.52c: bpmEvents Fix (ROOT CAUSE #2)
+- **Date:** 2026-07-10
+- **ROOT CAUSE #2 FOUND:** V2→V3 converter set `bpmEvents: []` (empty). The PS4
+  game's BeatmapDataLoader requires at least one bpmEvents entry to know the song
+  BPM. Without `[{"b": 0, "m": <BPM>}]`, the game falls back to BPM=60 or another
+  default, causing severe desync (notes at wrong speed). Espresso worked because it
+  already had `bpmEvents=[{"b": 0, "m": 104}]` from its original V3.3.0 format.
+- **Fix:** V2→V3 converter now reads BPM from Info.dat (not beatmap file's
+  `_beatsPerMinute` which is often 120/default) and sets
+  `bpmEvents=[{"b": 0, "m": <Info.dat_BPM>}]`
+- **Build status:** All 11 _v3 bundles rebuilt with correct bpmEvents + correct bpmData
+  | Target | BPM (bpmEvents) | Status |
+  |--------|-----------------|--------|
+  | angry | 134 | ✅ |
+  | bitemyheadoff | 160 | ✅ |
+  | cantyouhearmeknocking | 128 | ✅ |
+  | deadmanwalking | 105 | ✅ |
+  | gimmeshelter | 130 | ✅ |
+  | icantgetnosatisfaction | 99 | ✅ |
+  | messitup | 175 | ✅ |
+  | paintitblack | 127 | ✅ |
+  | sugarsoaker | 164 | ✅ |
+  | sympathyforthedevil | 99 | ✅ |
+  | wholewideworld | 128 | ✅ |
+  | startmeup (Espresso) | 104 | ✅ (unchanged) |
+- **Also noted:** angry's song (We All Lift Together) — user wants replacement
+- **TODO:** Find replacement for angry (We All Lift Together) slot
+- **Status:** 🚀 Ready for next test on PS4
+
+
+### Experiment 104 — v0.52d: Live By The Sword redirect + plugin cleanup + log clearing
+- **Date:** 2026-07-10
+- **User feedback:** MOST songs now perfectly synchronized! 🎉 bpmEvents fix confirmed working.
+  Two songs (Gimme Shelter, Can't You Hear Me Knocking) had "very very late" notes.
+- **Analysis:** PS4 log showed v0.50 loading AFTER v0.52. Songs tested during v0.50
+  session had empty bpmEvents → BPM=60 fallback → notes at 2x time → "very very late".
+  Root cause: GoldHEN plugin caching — v0.52 replaced by cached v0.50 on restart.
+- **Changes made:**
+  1. Added `livebythesword` to plugin redirect table (now 13 songs total)
+  2. Added `livebythesword` target to deploy_all.sh
+  3. Song: **MUSIC STAR** by M.G.G. Original (160 BPM, 5 beatmaps, first note 4.1s)
+  4. PS4 log cleared before this test session
+- **Status:** 🚀 Ready for next test. All 13 bundles deployed. User should reboot PS4.)
+
+
+### Experiment 105 — v0.53: Note Color Fix (c field)
+- **Date:** 2026-07-10
+- **Bug found:** V2→V3 converter set `a` field but not `c` field for note color.
+  The PS4 game uses `c` (V3.3.0+) for note color, not `a`. Without `c` field,
+  all notes default to `c: 0` (Red), making songs with both colors unplayable.
+- **Evidence from Espresso (WORKING V3.3.0):**
+  - `a: 0` for ALL 262 notes (constant — NOT the color field!)
+  - `c: 0` or `c: 1` alternating — this IS the color field
+- **Fix:** Added `"c": nt` to each note in convert_v2_to_v3(), where nt = _type
+- **Version bumped to v0.53** (plugin + pipeline change)
+- **All 13 songs rebuilt** with c field fix
+- **Status:** 🚀 Ready for next test on PS4

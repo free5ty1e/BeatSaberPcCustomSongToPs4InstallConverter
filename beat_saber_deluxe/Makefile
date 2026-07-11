@@ -1,4 +1,10 @@
-TARGET := beat_saber_deluxe.prx
+DEBUG ?= 0
+ifeq ($(DEBUG),1)
+  CXXFLAGS += -DVERBOSE_LOG
+  TARGET := beat_saber_deluxe_debug.prx
+else
+  TARGET := beat_saber_deluxe.prx
+endif
 
 LIBS := -lGoldHEN_Hook -lSceLibcInternal -lkernel
 

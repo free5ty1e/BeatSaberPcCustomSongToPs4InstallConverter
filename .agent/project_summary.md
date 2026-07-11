@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-06-11
-**Current Status:** 🏆 v0.37 **CONFIRMED — SONG REPLACEMENT WORKS!** Start Me Up now plays $100 Bills with correct level data. Other songs unaffected (targeted redirect). Full plugin infrastructure: no jailbreak, AFR logging, Detour hooks, file redirect + UnityPy AssetBundle rename. Next: create custom song AssetBundles for any song.
+**Last Updated:** 2026-07-08
+**Status:** 🏆 v0.51 — All 12 Rolling Stones songs replaced with custom songs. bpmData sync ✅. PCM16 FSB5 ✅. **Next action:** deploy v0.51 plugin to PS4 and test all 12 songs. Pipeline beatmap filename fallback now handles all BeatSaver naming conventions (Standard > bare > .beatmap.dat > 90Degree/OneSaber > 360Degree last resort).
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -24,8 +24,8 @@ Enable installation and playback of custom songs on a jailbroken PS4 by patching
 - **Custom assets path:** `/data/custom/bs_deluxe/`
 - **GoldHEN plugin config:** `/data/GoldHEN/plugins.ini` (⚠️ root level, NOT `plugins/` subdirectory)
 - **Custom assets deployed:**
-  - `resources_patched.assets` (modified manifest)
-  - `CustomSong` (test AssetBundle, clone of $100 Bills)
+  - `startmeup_v3` at `/data/GoldHEN/AFR/CUSA12878/` (Espresso bundle, 30.6MB)
+- **⚠️ Plugin deploy target:** The plugin (v0.51) redirects `BeatmapLevelsData/startmeup` → `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`. All test bundles MUST be deployed to `startmeup_v3`, NOT `startmeup`.
 
 ## Experiment Timeline
 
@@ -404,63 +404,50 @@ nm /opt/openorbis/OpenOrbis/PS4Toolchain/lib/crt_dyn.o
 
 ### Phase 1: Development (this environment)
 1. Edit source files in `/workspace/beat_saber_deluxe/`
-2. Rebuild: `export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain && make clean && rm -rf obj && make -B`
-3. Verify entry point and symbols with `readelf`
+2. Build plugin:
+   ```bash
+   cd /workspace/beat_saber_deluxe
+   export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain
+   make clean && rm -rf obj && make -B        # release
+   make clean && rm -rf obj && DEBUG=1 make -B  # debug
+   ```
 
 ### Phase 2: Deploy to PS4
+Use the pipeline:
 ```bash
-lftp -u anonymous, <<EOF
-open -p 2121 192.168.100.117
-put /workspace/beat_saber_deluxe/beat_saber_deluxe.prx -o /data/GoldHEN/plugins/beat_saber_deluxe.prx
-put /workspace/plugins.ini -o /data/GoldHEN/plugins.ini
-quit
-EOF
+cd /workspace/beat_saber_deluxe
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir ./custom_songs/espresso_prepped \
+  --target startmeup --pcm16 --no-pad --deploy \
+  --deploy-plugin --debug-logging
 ```
+The pipeline handles:
+- Bundle build + FTP upload to AFR path
+- Plugin build (release or debug) + FTP upload to `/data/GoldHEN/plugins/`
+- `plugins.ini` idempotent management: downloads existing, parses sections, adds/updates our entry, re-uploads
 
 ### Phase 3: Test (user on PS4)
-⚠️ **No reboot needed** — plugins.ini is solidified. GoldHEN reads plugin updates on game launch.
+⚠️ **No reboot needed** — plugin updates take effect on game launch.
 
-1. **Deploy** updated PRX + plugins.ini via FTP (Phase 2 above)
-2. **Launch Beat Saber** (CUSA12878) or configured game
+1. Launch Beat Saber (CUSA12878)
+2. Play "Start Me Up" (now hijacked to custom song)
 3. Report:
-   - **Notification text** seen on screen (if any)
-   - **Did the game crash?** (PS4 may need hard reset if crash occurs)
-   - **Did the game reach the "turn on VR headset" screen?** (baseline: plugin loaded without crash)
+   - Notification text: "BS Deluxe v0.51"
+   - Did the game crash?
+   - Sync quality (audio matching beatmap notes)
+   - Any visual issues (missing notes, walls, arcs, chains)
 
-### Phase 4: Analyze (this environment)
-Check for heartbeat or log file:
+### Phase 4: Analyze
+Download and examine the log:
 ```bash
-lftp -u anonymous, <<EOF
-open -p 2121 192.168.100.117
-ls /data/custom/bs_deluxe/
-# To download a specific log:
-# get /data/custom/bs_deluxe/heartbeat.txt -o /workspace/heartbeat.txt
-# get /data/custom/bs_deluxe/plugin.log -o /workspace/plugin.log
-quit
-EOF
+lftp -u anonymous, -p 2121 192.168.100.117 \
+  -e "get /data/GoldHEN/AFR/CUSA12878/bs_log.txt -o /tmp/bs_log_v0.51.txt; quit"
 ```
+Check for: redirect count, error lines, PlayerData save, notification confirmation.
+Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 
-Check plugin deployment:
-```bash
-lftp -u anonymous, <<EOF
-open -p 2121 192.168.100.117
-ls /data/GoldHEN/plugins/
-quit
-EOF
-```
-
-### Phase 5: Iterate (updated with AFR breakthrough — 2026-07-01)
-Based on results:
-- **FSELF FORMAT BREAKTHROUGH ✅ (2026-06-12):** Deployed `--lib` FSELF wrapper instead of `-out` OELF signed ELF → **notification appeared!** GoldHEN's plugin loader accepts FSELF format (SCE magic `4f 15 3d 1c`) but REJECTS bare OELF signed ELF (ELF magic `7f 45 4c 46`).
-- **Jailbreak + file I/O ❌ (v0.21-v0.25):** Jailbreak in module_start destabilizes the game process. Even with raw syscalls (no heap), the game crashes after module_start during normal init. Adding delays, extra syscalls, or mprotect calls doesn't fix the propagation issue. **Jailbreak fundamentally conflicts with game initialization on PS4.**
-- **AFR BREAKTHROUGH ✅ (v0.27, 2026-07-01):** GoldHEN's AFR path `/data/GoldHEN/AFR/<TitleID>/` accepts `sceKernelOpen` writes **without jailbreak!** No heap allocation needed. No credential propagation issues. v0.27 confirmed: file written successfully, game runs without crashes. Full log captured at `/workspace/screenshots/afr_log_v27.txt`.
-- **Working logging (v0.28):** Combined AFR file logging (`sceKernelOpen`/`sceKernelWrite`/`sceKernelClose`) with Detour hooks for fopen+open. No jailbreak. Only 2 status notifications. AWAITING TEST.
-- **Key insight from user research:**
-  - `fopen` to `/data/` under sandbox kills the thread (confirmed: v0.21 hard crash)
-  - `make PRINTF=1` bypasses variadic stack corruption issues (not our current issue)
-  - AFR redirects writes to `/data/GoldHEN/AFR/<TitleID>/` with sandbox bypass
-  - `sceKernelOpenFile` (Orbis API) is the proper file I/O mechanism for plugins
-  - Thread isolation (ring buffer + background thread) needed for production logging
+### Phase 5: Iterate
+See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)
@@ -474,6 +461,8 @@ Based on results:
 - `/workspace/plugins.ini` - GoldHEN plugin configuration (deployed to `/data/GoldHEN/plugins.ini` — root level, NOT `plugins/` subdirectory)
 - `/workspace/resources_patched.assets` - Modified manifest
 - `/workspace/CustomSong` - Test song AssetBundle
+- `/workspace/beat_saber_deluxe/tools/hevag_encoder.py` - HEVAG encoder + FSB5 builder (fast_encode_frame, opt_encode_frame, fast_pcm_to_hevag, build_fsb5)
+- `/workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py` - Full pipeline: .wav/.ogg → HEVAG → FSB5 → 12MB padded bundle → deploy
 - `/workspace/.devcontainer/openorbis/` - OpenOrbis SDK installation
 - `/workspace/.agent/project_summary.md` - This file
 - `/workspace/setup_claude_zen_devcontainer.sh` - Devcontainer setup script (includes memory symlink step)
@@ -535,16 +524,14 @@ fopen:/data/custom/bs_deluxe/CustomSong (if startmeup matched)
 - **[Research Index](../.ai_memory/RESEARCH_INDEX.md)** — **START HERE.** Comprehensive catalog of all project documents with descriptions, status tracking, and quick commands.
 - **[Memory Index](../.ai_memory/MEMORY.md)** — Categorized links to all research/planning documents.
 
-### Recent Findings (2026-06-11)
-- [crtlib.o module_start analysis](../.ai_memory/beat-saber-ps4-custom-songs/crtlib-o-module-start-analysis.md) — Root cause: plugin_main() never called by CRT
-- [RB4DX Plugin Architecture Reference](../.ai_memory/beat-saber-ps4-custom-songs/rb4dx-plugin-architecture-reference.md) — Working GoldHEN plugin pattern reference
-- [Experiment 4d: Constructor Fix](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4d-constructor-fix.md) — FAILED: constructor didn't fire either
-- [Experiment 4e: Direct module_start](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4e-direct-module-start.md) — Dropped crtlib.o, defined module_start directly. FAILED.
-- [Experiment 4f: _init entry point](../.ai_memory/beat-saber-ps4-custom-songs/experiment-4f-init-entry-point.md) — Changed entry to _init like RB4DX. DEPLOYED.
-- [PRX Format Discovery] — GoldHEN expects `.oelf` (signed ELF), not fself wrapper. All prior experiments deployed wrong format. FIXED in Makefile.
-- [⚠️ plugins.ini Path Discovery](../.ai_memory/beat-saber-ps4-custom-songs/plugins-ini-path-discovery.md) — **CRITICAL:** GoldHEN reads root `/data/GoldHEN/plugins.ini`, not `plugins/`. All prior tests were never registered. FIXED.
-- [Module param flags fix] — Bit 32 (exports) was set in our SceModuleParam flags. RB4DX has it clear. Fixed by setting `.flags = 0x0000000000000051`.
-- [Experiment 4g: GoldHEN SDK crtprx.o] — First build using GoldHEN SDK CRT (matching RB4DX exactly). DEPLOYED 2026-06-11.
+### Recent Findings (2026-07-08)
+- [bpmData Sync Fix] — **bpmData `eb` field MUST be in beats, not seconds.** `update_audio_gz()` was setting `eb = duration` (seconds). At 120 BPM, this gave half the correct value (135.6 beats vs 271.2), making the game think tempo was 60 BPM instead of 120 BPM. Notes mapped to double their correct time position. **Fixed:** `load_bpm_regions()` reads BPMInfo.dat (preferred) or computes `total_beats = duration * bpm / 60.0`.
+- [PCM16 FSB5 @ --no-pad] — PCM16 (codec=2) confirmed working without padding. No size limit. Lossless, bit-identical.
+- [Song Selection Criteria] — Songs need Easy/Normal/Hard as Standard, 90Degree, or OneSaber. 360Degree maps load but are unplayable on PS4 VR.
+- [Debug/Release Plugin] — Plugin now has `#ifdef VERBOSE_LOG` guard around per-file logging. Release: no per-file log writes (faster gameplay). Debug (`make DEBUG=1`): verbose logging to `bs_log.txt`.
+- [Pipeline Plugin Deploy] — `--deploy-plugin` builds and deploys the plugin. `--debug-logging` enables verbose plugin build. `ensure_plugins_ini()` handles `plugins.ini` idempotently (preserves other plugins).
+- [Experiment Workflow Doc] — Created `.ai_memory/experiment-workflow.md` with complete cycle for fresh agents.
+- [KB Audit] — 6 outdated wiki pages rewritten (fsb5-padding-required, ps4-hevag-fsb5-audio, ps4-fsb5-vorbis, ps4-fsb5-audio, ps4-audio-decoder-behavior, encoder-decoder-inconsistency). New page: `beatmap-audio-sync.md`.
 
 ## Key Technical Decisions
 1. **Plugin over PKG:** `.prx` plugin via GoldHEN chosen for rapid iteration vs full PKG rebuild

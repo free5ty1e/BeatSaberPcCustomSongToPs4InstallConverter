@@ -1,3 +1,7 @@
+> **HISTORICAL REFERENCE:** This document is from the old PKG-based installation method
+> and is no longer relevant to the current plugin/pipeline workflow.
+> Kept for reference only.
+
 # Beat Saber PS4 Custom Songs Pipeline
 
 A build system to download Beat Saber PC songs and create installable PS4 fPKG files for GoldHEN jailbroken PlayStation 4.
@@ -87,7 +91,7 @@ windows_build/
 
 ### CLI Instructions
 ```bash
-cd C:\path\to\windows_build
+cd C:\path	o\windows_build
 orbis-pub-gen image Project.gp4
 ```
 

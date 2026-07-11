@@ -1,3 +1,7 @@
+> **HISTORICAL REFERENCE:** This document is from the old PKG-based installation method
+> and is no longer relevant to the current plugin/pipeline workflow.
+> Kept for reference only.
+
 # Beat Saber PS4 Custom Songs - INSTALLATION GUIDE
 
 ## Files Created

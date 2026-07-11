@@ -6,7 +6,11 @@
 ## 🎯 Project Context
 - [Project Goal](../.agent/goal.md) — Mission, three-tier approach, success criteria
 - [Project Summary](../.agent/project_summary.md) — Experiment timeline, build system, test procedures
+- [Roadmap](../.agent/roadmap.md) — Feature milestones, task checklists, known issues
 - [Agent Rules](../.agent/rules.md) — Operating conventions for AI agents
+
+## 📚 LLM Wiki Knowledge Base
+- [Knowledge Base (Index)](../.agent/llm-wiki-knowledge-base/index.md) — **Compiled, durable knowledge wiki** with cross-referenced pages covering plugin architecture, AssetBundle structure, beatmap formats, conversion pipeline, root causes, and tooling. Self-contained for LLM consumption.
 
 ## 🔬 Key Technical Findings
 
@@ -26,6 +30,11 @@
 - [PS4 FTP Topology](beat-saber-ps4-custom-songs/ps4_topology.md) — Directory structure, GoldHEN paths, custom asset paths
 - [DLC Internal Format](beat-saber-ps4-custom-songs/dlc_internal_format.md) — DLC PKG structure, AssetBundles, FSB5 audio
 - [Alternative Paths & Tools](beat-saber-ps4-custom-songs/alternative_paths.md) — PkgToolBox, LibForge, UABEA, AssetRipper analysis
+
+### Beatmap Conversion Pipeline ✅ WORKING
+- [🔬 m_Script = Just Gzip (No Prefix)](beat-saber-ps4-custom-songs/m_script-gzip-only.md) — **ROOT CAUSE FIXED!** m_Script is just gzip data, no decompressed_size prefix. This was the blocker for ALL previous experiments.
+- [💾 Use save_typetree Instead of set_raw_data](beat-saber-ps4-custom-songs/save-typetree-over-set-raw-data.md) — save_typetree handles alignment correctly; set_raw_data causes serialization bugs.
+- [🔤 Surrogateescape Encoding for Binary Data](beat-saber-ps4-custom-songs/surrogateescape-encoding.md) — Use .decode('utf-8', 'surrogateescape') not latin-1 for binary data in string fields.
 
 ### Initial Research
 - [Research Findings](beat-saber-ps4-custom-songs/research_findings.md) — Feasibility research, existing projects, PS4 limitations

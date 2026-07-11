@@ -31,6 +31,10 @@
       }
     }
   },
+  "postCreateCommand": "pip3 install --break-system-packages soundfile pydub 2>/dev/null; apt-get install -y -qq libsndfile1 2>/dev/null || true; mkdir -p ~/.local/bin && cp -n /workspace/vgmstream-bin/vgmstream-cli ~/.local/bin/vgmstream-cli 2>/dev/null; echo 'tools ready'",
+  "remoteEnv": {
+    "OO_PS4_TOOLCHAIN": "/opt/openorbis/OpenOrbis/PS4Toolchain"
+  },
   "forwardPorts": [
     3000
   ],
@@ -40,6 +44,5 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "bash .devcontainer/setup_devcontainer.sh && bash beat-saber-ps4-custom-songs/scripts/setup_beatsaber_tools.sh && sudo bash .devcontainer/openorbis/install_openorbis_complete.sh",
   "remoteUser": "vscode"
 }

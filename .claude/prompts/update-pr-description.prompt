@@ -1,0 +1,28 @@
+Download the current PR description from GitHub using `gh pr view 1 --json body --jq '.body'` and save it to `/workspace/.pr_temp/current_pr_description.md` (creating the directory if it doesn't exist).
+
+Read the full content of that file, then create an updated version at `/workspace/.pr_temp/updated_pr_description.md` that reflects the current state of the project. Consider:
+
+- Update the version number (check `PLUGIN_VERSION` in `beat_saber_deluxe/src/main.cpp`)
+- Update the song list if any songs changed (check `deploy_all.sh` for current targets)
+- Add any new bug fixes or features since the PR was last updated
+- Update CI/CD status (check if CI passes, what artifacts are produced)
+- Keep the same structure and tone as the original
+
+**IMPORTANT — make surgical edits, not a full rewrite.** Copy the original to the updated file, then use `Edit` to change only the specific lines that need updating. This keeps the diff readable and preserves all existing formatting.
+
+Then run a diff between old and new:
+```bash
+diff -u /workspace/.pr_temp/current_pr_description.md /workspace/.pr_temp/updated_pr_description.md > /workspace/.pr_temp/pr_description_diff.md
+```
+
+Present the 3 file paths to the user and explain what changed. Once they type "approved", push the update:
+
+**CRITICAL — use --raw-field, never --field or json.dumps:**
+- `--field` wraps values in JSON quotes and escapes special chars, which double-encodes and breaks markdown formatting (\n becomes literal \\n)
+- `--raw-field` sends the raw string as-is, preserving all newlines and markdown
+
+```bash
+gh api repos/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/pulls/1 --method PATCH --raw-field body="$(cat /workspace/.pr_temp/updated_pr_description.md)"
+```
+
+Do NOT use python3 json.dumps() to encode the body — it adds extra JSON escaping that corrupts the markdown.
