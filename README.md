@@ -4,11 +4,45 @@
 
 Replace any Rolling Stones DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook.
 
-> **⚠️ Current limitation:** The plugin's 13-song redirect table is **hardcoded** as a C array (see `src/main.cpp`). Making it dynamic via JSON config is on the [roadmap](.agent/roadmap.md) (M1.5).
+> **⚠️ Current limitations:**
+> - **Song menu is untouched** — song names, artists, and cover art still show the original Rolling Stones track. You must remember which custom song is mapped to which slot to find it in-game.
+> - **13-song hardcoded redirect table** — the plugin's slot list is a C array in `src/main.cpp`. Making it dynamic via JSON config is on the [roadmap](.agent/roadmap.md) (M1.5).
+> - **No note color customization** — left/right saber colors are the game's default red/blue. Custom color schemes are planned (M3 on roadmap).
+> - **No extra game modes** — custom songs only provide Standard beatmaps. 90-degree, 360-degree, and OneSaber modes are not added.
 
 ## Status
 
 🏆 **v0.53 ALPHA** — All 13 Rolling Stones slots replaced. Every song perfectly synchronized, both note colors working.
+
+### ✅ What Works
+
+| Feature | Status |
+|---------|--------|
+| Audio replacement | ✅ PCM16 FSB5 lossless, any song length |
+| Beatmap replacement | ✅ All 5 difficulties (Easy → Expert+) |
+| V2→V3 beatmap conversion | ✅ Auto-detects legacy format, converts to playable V3 |
+| Audio sync (bpmData) | ✅ Uses mapper's actual last-note beat — no progressive desync |
+| Note timing (bpmEvents) | ✅ Populated for all songs — no BPM=60 fallback |
+| Note colors | ✅ Both red and blue correct (c field fix) |
+| All object types | ✅ Arrows, dots, chains, arcs, walls, bombs — all working |
+| Score saving | ✅ Clean exit, PlayerData.dat written |
+| Debug logging | ✅ Verbose per-file logging to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` (debug build) |
+| Other songs unaffected | ✅ Only the 13 targeted slots are redirected; all other DLC and base songs play normally |
+| Plugin hot-reload | ✅ Drop in new `.prx`, restart game — no full PS4 reboot needed |
+| CI/CD automation | ✅ Both PRX variants built and uploaded as artifacts on every push/PR |
+| GitHub Releases | ✅ Tag `v*` auto-creates release with PRX files + `plugins.ini` |
+
+### ❌ Known Limitations
+
+| Limitation | Impact | Future? |
+|------------|--------|---------|
+| Song names/artists unchanged | Must remember which slot has which custom song | Post-MVP |
+| Hardcoded 13-song redirect table | Can only replace these specific Rolling Stones slots | M1.5 (dynamic JSON config) |
+| No note color customization | Left/right remain default red/blue | M3 |
+| No extra game modes | 90-degree, 360-degree, OneSaber not added | Post-MVP |
+| HEVAG encoder produces garbage | Can't use compressed audio (PCM16 is lossless anyway) | Unlikely (Sony proprietary) |
+| Vorbis FSB5 codec mismatch | FMOD/libvorbis codebook incompatibility | Unlikely |
+| 360° beatmaps unplayable | PS4 VR has single-camera ~90° tracking arc | Won't fix |
 
 ## Quick Start (5 minutes)
 
