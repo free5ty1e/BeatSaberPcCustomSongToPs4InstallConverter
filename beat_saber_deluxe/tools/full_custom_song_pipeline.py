@@ -848,6 +848,181 @@ def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
 
 
 # ============================================================================
+# Redirect Config Management
+# ============================================================================
+
+REDIRECT_CONFIG_FILENAME = "redirects.json"
+
+def _get_redirect_config_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to redirects.json in the project root."""
+    return os.path.join(project_root, REDIRECT_CONFIG_FILENAME)
+
+def _get_remote_redirect_path(config: dict) -> str:
+    """Return the remote AFR path for redirects.json."""
+    cfg_paths = config.get('paths', {})
+    cfg_title = config.get('title', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    return f"{afr_base}/{title_id}/{REDIRECT_CONFIG_FILENAME}"
+
+def _load_local_redirects(local_path: str) -> dict:
+    """Load a local redirects.json file. Returns default structure if missing."""
+    default = {
+        "titleId": "CUSA12878",
+        "afrBase": "/data/GoldHEN/AFR",
+        "redirects": {}
+    }
+    if not os.path.exists(local_path):
+        return default
+    try:
+        with open(local_path, 'r') as f:
+            data = json.load(f)
+        if 'redirects' not in data:
+            data['redirects'] = {}
+        return data
+    except (json.JSONDecodeError, IOError):
+        log.warning(f"  ⚠️  Failed to parse {local_path}, starting fresh")
+        return default
+
+def _download_redirect_from_ps4(config: dict) -> dict | None:
+    """
+    Download redirects.json from PS4 via FTP.
+    Returns the parsed JSON dict, or None if the file doesn't exist.
+    """
+    import tempfile
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    remote_path = _get_remote_redirect_path(config)
+
+    user_part = f"{user},{password}" if password else f"{user},"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_tmp = os.path.join(tmpdir, "redirects.json")
+        cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+               "-e", f"get {remote_path} -o {local_tmp}; quit"]
+        result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0 or not os.path.exists(local_tmp):
+            return None
+        try:
+            with open(local_tmp, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return None
+
+def _deploy_redirect_to_ps4(config: dict):
+    """Upload the local redirects.json to PS4 via FTP."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    local_path = _get_redirect_config_path()
+    remote_path = _get_remote_redirect_path(config)
+
+    if not os.path.exists(local_path):
+        log.warning(f"  ⚠️  Local redirects.json not found at {local_path}")
+        return
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_path} -o {remote_path}; quit"]
+    log.info(f"  Deploying redirect config to PS4: {remote_path}")
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info("  ✅ Redirect config deployed")
+    else:
+        log.warning(f"  ⚠️  Redirect config deploy failed: {result.stderr}")
+
+def manage_redirect_config(
+    config: dict,
+    target_name: str | None = None,
+    bundle_suffix: str = "_custom_v3",
+    generate: bool = False,
+    deploy: bool = False,
+    sync: bool = False,
+    enforce_local: bool = False,
+):
+    """
+    Manage the redirects.json configuration file.
+
+    Modes:
+      generate=True:  Create/update local redirects.json with the current target.
+      sync=True:      Download existing config from PS4, merge, save locally, redeploy.
+      enforce_local=True: Use only the local redirects.json as truth, deploy it to PS4.
+      deploy=True:    Deploy the local redirects.json to PS4.
+
+    When called without any mode flags, auto-generates if local file is missing
+    or if a deploy/sync is happening.
+    """
+    cfg_paths = config.get('paths', {})
+    cfg_title = config.get('title', {})
+    title_id = cfg_title.get('id', 'CUSA12878')
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    local_path = _get_redirect_config_path()
+
+    # Determine what to do
+    should_generate = generate or (deploy and not os.path.exists(local_path))
+    should_deploy = deploy or sync or enforce_local
+    should_sync = sync
+
+    redirect_data = None
+
+    # SYNC mode: download from PS4 first
+    if should_sync:
+        log.info("🔄 Syncing redirect config from PS4...")
+        ps4_data = _download_redirect_from_ps4(config)
+        if ps4_data is not None:
+            redirect_data = ps4_data
+            log.info(f"  Downloaded config with {len(ps4_data.get('redirects', {}))} redirects")
+        else:
+            log.info("  No existing config on PS4, starting fresh")
+            redirect_data = {
+                "titleId": title_id,
+                "afrBase": afr_base,
+                "redirects": {}
+            }
+    else:
+        # GENERATE mode: load local config or start fresh
+        redirect_data = _load_local_redirects(local_path)
+
+    # Update redirect_data with current title/afr settings
+    redirect_data['titleId'] = title_id
+    redirect_data['afrBase'] = afr_base
+
+    # ENFORCE LOCAL mode: reload from local file, ignoring any PS4 data
+    if enforce_local and os.path.exists(local_path):
+        redirect_data = _load_local_redirects(local_path)
+        log.info(f"  Enforcing local config ({len(redirect_data.get('redirects', {}))} redirects)")
+
+    # If we have a target, add/update the entry
+    if target_name and should_generate:
+        bundle_name = f"{target_name}{bundle_suffix}"
+        redirect_data.setdefault('redirects', {})[target_name] = bundle_name
+        log.info(f"  Added redirect: {target_name} -> {bundle_name}")
+
+    # Save updated config locally
+    os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
+    with open(local_path, 'w') as f:
+        json.dump(redirect_data, f, indent=2)
+        f.write('\n')
+    count = len(redirect_data.get('redirects', {}))
+    log.info(f"  Saved redirects.json ({count} redirects)")
+
+    # Deploy to PS4 if requested
+    if should_deploy:
+        _deploy_redirect_to_ps4(config)
+
+    return redirect_data
+
+
+# ============================================================================
 # Main
 # ============================================================================
 
@@ -874,6 +1049,18 @@ Examples:
 
   # Just build & deploy plugin (song-dir still required for config):
   python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy-plugin --preserve-metadata --no-pad
+
+  # Build song AND generate/update redirects.json:
+  python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --generate-config
+
+  # Build song, update redirects.json, deploy both bundle + config to PS4:
+  python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy --deploy-config
+
+  # Sync redirect config from PS4, merge with current build, redeploy:
+  python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --sync-config
+
+  # Enforce local redirects.json as truth and deploy to PS4 (no merge):
+  python3 full_custom_song_pipeline.py --enforce-config --deploy
         """
     )
     parser.add_argument('--song-dir', default=None,
@@ -912,6 +1099,17 @@ Examples:
                         help='Auto-convert V2 beatmaps (_notes/_time) to V3.2.0 format (colorNotes/b). '
                              'Use if custom songs use V2 format.')
 
+    # Redirect config management flags
+    parser.add_argument('--generate-config', action='store_true',
+                        help='Generate/update redirects.json with the current --target entry '
+                             '(creates file if missing)')
+    parser.add_argument('--deploy-config', action='store_true',
+                        help='Deploy the local redirects.json to PS4 via FTP')
+    parser.add_argument('--sync-config', action='store_true',
+                        help='Download config from PS4, merge with current target, save, redeploy')
+    parser.add_argument('--enforce-config', action='store_true',
+                        help='Use only the local redirects.json as truth and deploy it to PS4')
+
     args = parser.parse_args()
 
     # Load PS4 config first
@@ -928,6 +1126,17 @@ Examples:
             debug=args.debug_logging
         )
         log.info("Plugin deployment complete (no song processed)")
+
+        # Handle redirect config in plugin-only mode
+        if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config:
+            manage_redirect_config(
+                {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths},
+                target_name=None,
+                generate=args.generate_config,
+                deploy=(args.deploy_config or args.sync_config or args.enforce_config),
+                sync=args.sync_config,
+                enforce_local=args.enforce_config,
+            )
         sys.exit(0)
 
     # --song-dir is required for song processing
@@ -1076,6 +1285,22 @@ Examples:
     if args.deploy_plugin:
         prx_path = build_plugin(PROJECT_ROOT, debug=args.debug_logging)
         deploy_plugin(prx_path, config, debug=args.debug_logging)
+
+    # -----------------------------------------------------------------------
+    # Step 9: Manage redirect config (redirects.json)
+    # -----------------------------------------------------------------------
+    # Generate config if requested, or auto-generate when deploying
+    should_generate = args.generate_config or args.deploy_config or args.sync_config
+    should_deploy = args.deploy_config or args.sync_config or args.enforce_config
+    if should_generate or should_deploy or args.sync_config or args.enforce_config:
+        manage_redirect_config(
+            config,
+            target_name=args.target,
+            generate=should_generate,
+            deploy=should_deploy,
+            sync=args.sync_config,
+            enforce_local=args.enforce_config,
+        )
 
     log.info("Pipeline complete!")
     log.info(f"  Bundle: {args.output}")
