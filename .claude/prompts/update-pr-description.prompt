@@ -1,0 +1,21 @@
+Download the current PR description from GitHub using `gh pr view 1 --json body --jq '.body'` and save it to `/workspace/.pr_temp/current_pr_description.md` (creating the directory if it doesn't exist).
+
+Read the full content of that file, then create an updated version at `/workspace/.pr_temp/updated_pr_description.md` that reflects the current state of the project. Consider:
+
+- Update the version number (check `PLUGIN_VERSION` in `beat_saber_deluxe/src/main.cpp`)
+- Update the song list if any songs changed (check `deploy_all.sh` for current targets)
+- Add any new bug fixes or features since the PR was last updated
+- Update CI/CD status (check if CI passes, what artifacts are produced)
+- Keep the same structure and tone as the original
+
+Then run a diff between old and new:
+```bash
+diff -u /workspace/.pr_temp/current_pr_description.md /workspace/.pr_temp/updated_pr_description.md > /workspace/.pr_temp/pr_description_diff.md
+```
+
+Present the 3 file paths to the user and ask them to review. Once they type "approved", push the update with:
+```bash
+gh api repos/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/pulls/1 --method PATCH --field body="$(cat /workspace/.pr_temp/updated_pr_description.md | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')"
+```
+
+(Use the REST API directly — `gh pr edit` has a known GraphQL deprecation issue that causes it to fail on this repo.)
