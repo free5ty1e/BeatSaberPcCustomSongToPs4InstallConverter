@@ -29,6 +29,13 @@
 - [ ] Add `--no-beatmap-bpm` flag (fall back to Info.dat BPM if beatmap scanning causes issues)
 - [ ] Make `--song-dir` truly optional when `--deploy-plugin` is used alone ✅ (DONE)
 
+### Pipeline Bug Fixes (Completed)
+- [x] `bpmData eb` — was in seconds, not beats (v0.52)
+- [x] `bpmEvents` empty — BPM=60 fallback caused 2x speed desync (v0.52)
+- [x] V3.0.0 beatmaps with empty bpmEvents — converter only handled V2 (v0.52c)
+- [x] Note color `c` field — PS4 game uses `c` not `a` (v0.53)
+- [x] BPMInfo.dat eb too small — beatmap scan now cross-checks BPMInfo.dat (v0.52c)
+
 ## M2 — Song Metadata & Database (In Progress)
 - [x] `beat_saber_song_ids.json` — 306 official songs cataloged
 - [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)
@@ -36,9 +43,7 @@
 - [ ] Difficulty metadata extraction from all 306 bundles
 - [ ] DLC song name extraction from addressables packs
 
-## M3 — Note Color Customization (In Progress)
-- [x] Fixed `c` field bug: PS4 game uses `c` (not `a`) for note color (V3.3.0+ format)
-- [x] Documented in `note-color-field-version-differences.md` (knowledge base)
+## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors
 - [ ] Check `BeatmapLevelColorSchemeSaveData` in globalgamemanagers.assets
 - [ ] Add `--left-color R G B` / `--right-color R G B` flags to pipeline

@@ -1,3 +1,6 @@
+> **HISTORICAL REFERENCE:** Old progress document from the PKG-based method.
+> Kept for reference only.
+
 # Beat Saber PS4 Custom Songs - Progress Log
 
 ## Project Goal

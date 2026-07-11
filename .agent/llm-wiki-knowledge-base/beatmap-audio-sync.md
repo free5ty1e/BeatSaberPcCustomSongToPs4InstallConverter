@@ -134,7 +134,54 @@ To verify sync on PS4:
 4. If desync worsens progressively, the bpmData beat→sample ratio is wrong
 5. If notes end before/after audio, check songSampleCount
 
+### bpmEvents Empty (Root Cause #2)
+
+**Bug (v0.50-0.51):** The V2→V3 beatmap converter set `bpmEvents: []` (empty).
+The PS4 game's `BeatmapDataLoader` requires bpmEvents to determine tempo.
+Without them, the game defaults to BPM=60, making notes at ~120 BPM appear 
+at roughly 2× the correct time ("very very late" user reports).
+
+**Fix (v0.52):** `convert_v2_to_v3()` now reads BPM from Info.dat and sets:
+```json
+"bpmEvents": [{"b": 0, "m": <BPM>}]
+```
+
+### V3.0.0 Beatmaps With Empty bpmEvents (Root Cause #3)
+
+**Bug (v0.52):** Some BeatSaver songs are already V3.0.0 format (`colorNotes`,
+not `_notes`) but still have `bpmEvents: []`. The `--convert-to-v3` flag only
+processed V2 beatmaps (detected by `_notes` key), so V3 beatmaps were passed
+through unchanged — same BPM=60 fallback.
+
+**Fix (v0.52c):** Pipeline now patches `bpmEvents` on ANY beatmap that lacks
+them:
+```python
+if not data.get('bpmEvents'):
+    data['bpmEvents'] = [{"b": 0, "m": bpm}]
+```
+
+### Note Color Field: `c` vs `a` (Root Cause #4)
+
+**Bug (v0.50-0.52):** V2→V3 converter set `"a": nt` for note color.
+The PS4 game uses the `c` field for color (V3.3.0+ format), not `a`.
+Without `c`, the game defaults to `c: 0` (Red), making all notes appear
+Red regardless of beatmap color data.
+
+**Evidence from Espresso (V3.3.0, WORKING):**
+- `a: 0` for ALL 262 notes (constant — NOT the actual color field)
+- `c: 0` or `c: 1` alternating — this IS the color field
+
+**Fix (v0.53):** Both `a` and `c` are set from V2 `_type`:
+```python
+base["a"] = nt   # standard V3 field
+base["c"] = nt   # PS4 game uses this for color (V3.3.0+)
+```
+
+The PS4 port shipped with V4.0.0 format bundles where note color is stored
+in `colorNotesData[].c`, so the parser expects `c` as the color source.
+
 ## Related
 - [[beatmap-conversion-pipeline]]
 - [[ps4-fsb5-pcm16-format]]
+- [[note-color-field-version-differences]]
 - [[development-workflow]]

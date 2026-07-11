@@ -34,31 +34,11 @@ This document tracks every custom song we've deployed and tested. Songs are list
 | wholewideworld | VOLUPTE | | 128 | 2.8s (b=6) | 5/5 | ✅ Good | |
 
 
-## Sync/Color Fixes Summary
+## Sync Knowledge
 
-### v0.53 — Note Color Fix (c field)
-
-**Bug:** V2→V3 converter only set the `a` field for note color. The PS4 game uses the `c` field (V3.3.0+) for note color, not `a`. Without the `c` field, ALL notes defaulted to `c: 0` (Red), making songs with both red and blue notes appear all-red/unplayable.
-
-**Root cause:** Espresso (V3.3.0, WORKING) has `a: 0` for ALL notes but `c: 0/1` alternating — proving the `c` field is the true color source. Our V3.2.0 converter only set `a`.
-
-**Fix:** Added `"c": nt` alongside `"a": nt` in the V2→V3 converter, where `nt` is the V2 note type (0=Red, 1=Blue).
-
-### v0.52 — bpmData + bpmEvents Fix
-
-### v0.52 — bpmData + bpmEvents Fix
-
-**Root Cause #1 — bpmData eb value:**
-Pipeline computed bpmData.eb from Info.dat BPM (e.g. 134 BPM) instead of the mapper's actual last-note time. Mappers use a slightly different effective BPM (e.g. 126 BPM for "We All Lift Together"). This caused progressive 3-6% desync.
-→ **Fix:** `load_bpm_regions()` scans beatmap files for the highest `_time`/`b` value and uses it as `eb`.
-
-**Root Cause #2 — bpmEvents empty:**
-V2→V3 converter set `bpmEvents=[]`. The PS4 game's BeatmapDataLoader NEEDS bpmEvents to know the song's tempo. Without it, the game defaults to BPM=60, making notes appear at ≈2× the correct time.
-→ **Fix:** Converter sets `bpmEvents=[{"b": 0, "m": <BPM>}]` from Info.dat BPM.
-
-**Root Cause #3 (NEW) — V3 beatmaps with empty bpmEvents:**
-Some BeatSaver songs are already V3 format (version 3.0.0) but still have `bpmEvents: []` empty. The pipeline's `--convert-to-v3` flag only processed V2 beatmaps, so V3 songs with empty bpmEvents were left untouched — same BPM=60 fallback.
-→ **Fix:** Pipeline now patches bpmEvents on ANY beatmap (V2, V3, V4) that lacks them.
+All sync and color fix details are documented in the knowledge base:
+- **[beatmap-audio-sync.md](../llm-wiki-knowledge-base/beatmap-audio-sync.md)** — bpmData eb fix, bpmEvents fix, V3 empty bpmEvents fix, c field color fix
+- **[note-color-field-version-differences.md](../llm-wiki-knowledge-base/note-color-field-version-differences.md)** — c vs a field deep dive with V4 reference
 
 ## Song Selection Criteria
 
