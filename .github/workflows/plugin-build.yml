@@ -77,7 +77,7 @@ jobs:
       - name: Build plugin (debug — verbose logging)
         run: |
           export OO_PS4_TOOLCHAIN=/opt/openorbis/OpenOrbis/PS4Toolchain
-          make clean && rm -rf obj && DEBUG=1 make -B
+          rm -rf obj && DEBUG=1 make -B
         working-directory: beat_saber_deluxe
         env:
           OO_PS4_TOOLCHAIN: /opt/openorbis/OpenOrbis/PS4Toolchain
