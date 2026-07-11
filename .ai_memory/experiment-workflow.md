@@ -374,3 +374,12 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 - The user commits manually after reviewing the staged changes and the suggested message.
 - Compiled binaries (.prx, .oelf, .o, .elf, .fsb5, .bundle) must NEVER be staged or committed.
 - Binary/compiled artifacts are added to `.gitignore` so they cannot be accidentally committed.
+
+## Plugin Versioning & Rebuild Rules
+
+- **Any pipeline change** → rebuild ALL 13 songs from scratch
+- **Any plugin change** → increment `PLUGIN_VERSION` in `src/main.cpp` → rebuild plugin → rebuild ALL 13 songs
+- **Version format:** `v{major}.{minor}` (e.g. v0.53)
+- **After rebuild:** run `deploy_all.sh --debug` to push everything to PS4
+- **After deploy:** download and analyze PS4 log, then clear it for next test session
+- **Documentation:** update supported-songs.md, PS4 replacements doc, experiment log

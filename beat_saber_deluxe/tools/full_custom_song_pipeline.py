@@ -423,6 +423,7 @@ def convert_v2_to_v3(v2_data: dict, default_bpm: float = 120.0) -> dict:
             bomb_notes.append(base)
         else:
             base["a"] = nt
+            base["c"] = nt  # PS4 game uses 'c' for color (V3.3.0+), not 'a'
             base["d"] = int(note.get("_cutDirection", 0))
             color_notes.append(base)
 

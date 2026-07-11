@@ -1,8 +1,8 @@
 # Current Song Replacements on Chris's PS4
 
-> **Plugin:** Beat Saber Deluxe v0.52  
+> **Plugin:** Beat Saber Deluxe v0.53  
 > **All 13 Rolling Stones slots replaced** with custom community songs.  
-> **Last rebuilt:** 2026-07-10 (full fresh build, all 13 songs)  
+> **Last rebuilt:** 2026-07-10 (v0.53 - c field color fix)  
 > **Status:** ✅ All songs fully synchronized
 
 ## Replacement Table
@@ -31,7 +31,7 @@ cd /workspace/beat_saber_deluxe
 ```
 
 This deploys:
-- Plugin (v0.52) → `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
+- Plugin (v0.53) → `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
 - All 13 bundles → `/data/GoldHEN/AFR/CUSA12878/{slot}_v3`
 
 ## How to Rebuild a Single Song

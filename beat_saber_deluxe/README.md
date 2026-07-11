@@ -8,7 +8,7 @@ Replace any song's audio and beatmaps with your own content, all through a conve
 
 ✅ **Confirmed working:** PCM16 FSB5 (codec=2) custom audio plays on PS4. Custom beatmaps display and interact correctly. Tested with CUSA12878 patched (v1.29).
 
-**Status:** 🏆 **v0.51** — 12-song redirect table (all Rolling Stones slots) + priority-based beatmap fallback!
+**Status:** 🏆 **v0.53** — 13-song redirect table (all Rolling Stones + Live By The Sword) + note color fix!
 
 ## How It Works
 
@@ -416,6 +416,12 @@ python3 tools/full_custom_song_pipeline.py \
 
 ## Troubleshooting
 
+### "Notes appear all one color (only red or only blue)"
+
+**Fixed in v0.53.** The V2→V3 converter was only setting the `a` field for note color. The PS4 game's Beat Saber uses the `c` field (V3.3.0+ format) for note color, NOT `a`. Without the `c` field, all notes default to Red.
+
+**Fix:** The converter now sets both `"a"` and `"c"` fields from the V2 `_type` value (0=Red, 1=Blue). Songs need to be rebuilt and redeployed after this pipeline change.
+
 ### "Audio stops early / level freezes"
 
 **This should be fixed in the latest version.** The pipeline now:
@@ -493,6 +499,15 @@ beat_saber_deluxe/
 ├── Makefile                    # Plugin build system
 └── build.sh                    # Build script
 ```
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v0.53 | 2026-07-10 | **Note color fix (c field):** V2→V3 converter now sets `c` field (PS4 game uses `c` for color, not `a`). All songs rebuilt. |
+| v0.52 | 2026-07-09 | **bpmEvents/bpmData sync fix:** Pipeline now populates bpmEvents with correct BPM (was empty → BPM=60 fallback). bpmData eb computed from beatmap's actual last note instead of Info.dat BPM. |
+| v0.51 | 2026-07-08 | 12-song Rolling Stones redirect table. Priority-based beatmap fallback. |
+| v0.50 | 2026-07-01 | Proof of concept. Plugin hook on `open()`. PCM16 FSB5 audio. |
 
 ## License and Credits
 

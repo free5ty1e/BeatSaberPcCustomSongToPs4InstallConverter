@@ -1665,3 +1665,17 @@ Before building v0.35, I analyzed the difference between the original file and `
   3. Song: **MUSIC STAR** by M.G.G. Original (160 BPM, 5 beatmaps, first note 4.1s)
   4. PS4 log cleared before this test session
 - **Status:** 🚀 Ready for next test. All 13 bundles deployed. User should reboot PS4.)
+
+
+### Experiment 105 — v0.53: Note Color Fix (c field)
+- **Date:** 2026-07-10
+- **Bug found:** V2→V3 converter set `a` field but not `c` field for note color.
+  The PS4 game uses `c` (V3.3.0+) for note color, not `a`. Without `c` field,
+  all notes default to `c: 0` (Red), making songs with both colors unplayable.
+- **Evidence from Espresso (WORKING V3.3.0):**
+  - `a: 0` for ALL 262 notes (constant — NOT the color field!)
+  - `c: 0` or `c: 1` alternating — this IS the color field
+- **Fix:** Added `"c": nt` to each note in convert_v2_to_v3(), where nt = _type
+- **Version bumped to v0.53** (plugin + pipeline change)
+- **All 13 songs rebuilt** with c field fix
+- **Status:** 🚀 Ready for next test on PS4

@@ -33,7 +33,18 @@ This document tracks every custom song we've deployed and tested. Songs are list
 | sympathyforthedevil | LIT | | 99 | 2.4s (b=4) | 5/5 | ✅ Good | |
 | wholewideworld | VOLUPTE | | 128 | 2.8s (b=6) | 5/5 | ✅ Good | |
 
-## Sync Fixes Summary
+
+## Sync/Color Fixes Summary
+
+### v0.53 — Note Color Fix (c field)
+
+**Bug:** V2→V3 converter only set the `a` field for note color. The PS4 game uses the `c` field (V3.3.0+) for note color, not `a`. Without the `c` field, ALL notes defaulted to `c: 0` (Red), making songs with both red and blue notes appear all-red/unplayable.
+
+**Root cause:** Espresso (V3.3.0, WORKING) has `a: 0` for ALL notes but `c: 0/1` alternating — proving the `c` field is the true color source. Our V3.2.0 converter only set `a`.
+
+**Fix:** Added `"c": nt` alongside `"a": nt` in the V2→V3 converter, where `nt` is the V2 note type (0=Red, 1=Blue).
+
+### v0.52 — bpmData + bpmEvents Fix
 
 ### v0.52 — bpmData + bpmEvents Fix
 
