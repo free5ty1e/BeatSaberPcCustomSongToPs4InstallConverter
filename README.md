@@ -6,7 +6,6 @@ Replace any Rolling Stones DLC song's audio and beatmaps with community-made cus
 
 > **⚠️ Current limitations:**
 > - **Song menu is untouched** — song names, artists, and cover art still show the original Rolling Stones track. You must remember which custom song is mapped to which slot to find it in-game.
-> - **13-song hardcoded redirect table** — the plugin's slot list is a C array in `src/main.cpp`. Making it dynamic via JSON config is on the [roadmap](.agent/roadmap.md) (M1.5).
 > - **No note color customization** — left/right saber colors are the game's default red/blue. Custom color schemes are planned (M3 on roadmap).
 > - **No extra game modes** — custom songs only provide Standard beatmaps. 90-degree, 360-degree, and OneSaber modes are not added.
 
@@ -37,7 +36,7 @@ Replace any Rolling Stones DLC song's audio and beatmaps with community-made cus
 | Limitation | Impact | Future? |
 |------------|--------|---------|
 | Song names/artists unchanged | Must remember which slot has which custom song | Post-MVP |
-| Hardcoded 13-song redirect table | Can only replace these specific Rolling Stones slots | M1.5 (dynamic JSON config) |
+| 13-song redirect config (editable file) | Limited to Rolling Stones slots by default | ✅ Done — edit `redirects.json` to add more |
 | No note color customization | Left/right remain default red/blue | M3 |
 | No extra game modes | 90-degree, 360-degree, OneSaber not added | Post-MVP |
 | HEVAG encoder produces garbage | Can't use compressed audio (PCM16 is lossless anyway) | Unlikely (Sony proprietary) |
@@ -219,6 +218,25 @@ Song plays with correct sync, both colors, score saves
 ### Architecture
 
 The plugin intercepts file `open()` calls from Beat Saber at runtime. When the game requests `BeatmapLevelsData/startmeup` (for example), the plugin transparently redirects to a custom AssetBundle stored on the PS4's data partition. No original game files are modified — the redirect is purely in memory.
+
+### Dynamic Redirect Config
+
+The redirect table is no longer hardcoded. On startup, the plugin reads `redirects.json` from the AFR path:
+
+**`/data/GoldHEN/AFR/CUSA12878/redirects.json`**
+```json
+{
+  "redirects": {
+    "startmeup": "startmeup_custom_v3",
+    "angry": "angry_custom_v3",
+    "bitemyheadoff": "bitemyheadoff_custom_v3"
+  }
+}
+```
+
+To add or change a redirect — edit the JSON on PS4 via FTP (at the path above), restart Beat Saber, and the plugin picks up the changes. No plugin rebuild needed.
+
+The source of truth is [`beat_saber_deluxe/redirects.json`](beat_saber_deluxe/redirects.json) — edit this file, then run `./beat_saber_deluxe/deploy_all.sh` to push it alongside the bundles.
 
 ---
 

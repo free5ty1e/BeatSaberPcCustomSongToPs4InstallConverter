@@ -85,6 +85,20 @@ for TARGET in "${TARGETS[@]}"; do
 done
 
 echo ""
+echo "---"
+echo ""
+echo "📝 Deploying redirects config..."
+CONFIG_FILE="$SCRIPT_DIR/redirects.json"
+REMOTE_CONFIG="/data/GoldHEN/AFR/CUSA12878/redirects.json"
+if [ -f "$CONFIG_FILE" ]; then
+    lftp -u anonymous, -p "$PS4_PORT" "$PS4_IP" \
+        -e "put '$CONFIG_FILE' -o '$REMOTE_CONFIG'; quit" 2>/dev/null
+    echo "  ✅ redirects.json deployed"
+else
+    echo "  ⚠️  redirects.json not found at $CONFIG_FILE"
+fi
+
+echo ""
 # ── Step 3: Clear PS4 log for next test session ────────────────────────
 echo ""
 echo "🗑️  Clearing PS4 log..."

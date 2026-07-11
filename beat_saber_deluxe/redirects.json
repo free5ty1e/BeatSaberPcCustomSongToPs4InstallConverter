@@ -1,0 +1,20 @@
+{
+  "titleId": "CUSA12878",
+  "afrBase": "/data/GoldHEN/AFR",
+  "comment": "Map each slot ID to either a bundle name (loaded from AFR_BASE/TITLE_ID/<name>) or a full AFR path.",
+  "redirects": {
+    "angry": "angry_custom_v3",
+    "bitemyheadoff": "bitemyheadoff_custom_v3",
+    "cantyouhearmeknocking": "cantyouhearmeknocking_custom_v3",
+    "deadmanwalking": "deadmanwalking_custom_v3",
+    "gimmeshelter": "gimmeshelter_custom_v3",
+    "icantgetnosatisfaction": "icantgetnosatisfaction_custom_v3",
+    "livebythesword": "livebythesword_custom_v3",
+    "messitup": "messitup_custom_v3",
+    "paintitblack": "paintitblack_custom_v3",
+    "startmeup": "startmeup_custom_v3",
+    "sugarsoaker": "sugarsoaker_custom_v3",
+    "sympathyforthedevil": "sympathyforthedevil_custom_v3",
+    "wholewideworld": "wholewideworld_custom_v3"
+  }
+}

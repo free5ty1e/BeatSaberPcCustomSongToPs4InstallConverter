@@ -53,14 +53,62 @@ This guard is critical because inside the hook we call `sceKernelOpen` for loggi
 - File permissions set via `sceKernelFchmod` to 0644
 - Notification sent via `/dev/notification0` on plugin load
 
+## Dynamic Redirect Config
+
+As of v1.0, the redirect table is no longer hardcoded in the plugin. Instead, the plugin reads song→bundle mappings from an external JSON config file at runtime.
+
+### Config File
+**Path:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+
+```json
+{
+  "titleId": "CUSA12878",
+  "afrBase": "/data/GoldHEN/AFR",
+  "redirects": {
+    "startmeup": "startmeup_custom_v3",
+    "angry": "angry_custom_v3"
+  }
+}
+```
+
+### How it Works
+1. On startup, `load_redirects()` attempts to open `redirects.json` from the AFR path
+2. If found, it parses the JSON to extract key-value pairs from the `redirects` object
+3. Each key is a slot ID (prefixed with `BeatmapLevelsData/`) and the value is either:
+   - A **bundle name** (resolved to `AFR_BASE/TITLE_ID/<name>`)
+   - A **full AFR path** (used as-is if it contains `/`)
+4. If the config file is missing, empty, or malformed, the plugin falls back to a built-in hardcoded table of 13 Rolling Stones songs
+5. The fallback ensures existing installations continue to work without the config file
+
+### Modifying Redirects Without Rebuilding
+To add, remove, or change a redirect:
+1. Edit `redirects.json` on the PS4 via FTP at `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+2. Restart Beat Saber (no full PS4 reboot needed)
+3. Check `bs_log.txt` to verify the loaded count
+
+Example — adding a new redirect:
+```json
+{
+  "redirects": {
+    "100bills": "/data/GoldHEN/AFR/CUSA12878/100bills_custom_v3"
+  }
+}
+```
+
+### Config File Source
+The `redirects.json` at the project root (`beat_saber_deluxe/redirects.json`) is the source of truth. It's deployed alongside the bundles by `deploy_all.sh`. The pipeline does NOT generate it automatically — edit the file directly when changing slots.
+
 ## File Structure
 ```
 beat_saber_deluxe/
   src/main.cpp           — Plugin source code
+  redirects.json          — Dynamic redirect config (source of truth)
   include/               — GoldHEN SDK headers
   obj/                   — Build artifacts
   beat_saber_deluxe.prx   — Final FSELF plugin
+  beat_saber_deluxe_debug.prx — Debug build (verbose logging)
   Makefile               — Build configuration
+  deploy_all.sh          — Deploy script (plugin + bundles + config)
   custom_songs/          — Generated custom AssetBundles
 ```
 

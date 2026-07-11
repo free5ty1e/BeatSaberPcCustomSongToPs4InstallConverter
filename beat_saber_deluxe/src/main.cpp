@@ -1,38 +1,46 @@
-// Beat Saber Deluxe v0.52 — All 12 Rolling Stones redirects + fixed beatmap filename fallback
-// v0.52: plugin version bump to reflect 12-song redirect table added in v0.50 batch deploy.
-// Key architecture: open() hook redirects BeatmapLevelsData/<id> → AFR custom bundle.
-// No jailbreak needed — AFR handles writes via sceKernelOpen.
+// Beat Saber Deluxe — dynamic redirect plugin
+// Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
+// Falls back to internal hardcoded defaults if config file is missing.
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.53"
+#define PLUGIN_VERSION "v1.0"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
+#define CONFIG_PATH AFR_BASE "/" TITLE_ID "/redirects.json"
+#define MAX_REDIRECTS 256
+#define MAX_PATH 256
 
-// ── Rolling Stones song redirect table ────────────────────────────────────
-// Each entry maps an official bundle ID to a custom bundle file on the AFR path.
-// The suffix _v3 is appended by the pipeline. Keep sorted for readability.
-static const char *REDIRECT_TABLE[][2] = {
+// ── Dynamic redirect table ──────────────────────────────────────────────────
+// Populated from redirects.json at startup. Falls back to hardcoded defaults.
+static char *REDIRECT_KEYS[MAX_REDIRECTS];
+static char *REDIRECT_VALS[MAX_REDIRECTS];
+static int REDIRECT_COUNT = 0;
+
+// ── Built-in fallback defaults ──────────────────────────────────────────────
+// Used when redirects.json is not present on the PS4.
+static const char *FALLBACK_TABLE[][2] = {
     {"BeatmapLevelsData/angry",                AFR_BASE "/" TITLE_ID "/angry_v3"},
     {"BeatmapLevelsData/bitemyheadoff",        AFR_BASE "/" TITLE_ID "/bitemyheadoff_v3"},
     {"BeatmapLevelsData/cantyouhearmeknocking",AFR_BASE "/" TITLE_ID "/cantyouhearmeknocking_v3"},
     {"BeatmapLevelsData/deadmanwalking",       AFR_BASE "/" TITLE_ID "/deadmanwalking_v3"},
     {"BeatmapLevelsData/gimmeshelter",         AFR_BASE "/" TITLE_ID "/gimmeshelter_v3"},
     {"BeatmapLevelsData/icantgetnosatisfaction",AFR_BASE "/" TITLE_ID "/icantgetnosatisfaction_v3"},
+    {"BeatmapLevelsData/livebythesword",       AFR_BASE "/" TITLE_ID "/livebythesword_v3"},
     {"BeatmapLevelsData/messitup",             AFR_BASE "/" TITLE_ID "/messitup_v3"},
     {"BeatmapLevelsData/paintitblack",         AFR_BASE "/" TITLE_ID "/paintitblack_v3"},
     {"BeatmapLevelsData/startmeup",            AFR_BASE "/" TITLE_ID "/startmeup_v3"},
     {"BeatmapLevelsData/sugarsoaker",          AFR_BASE "/" TITLE_ID "/sugarsoaker_v3"},
     {"BeatmapLevelsData/sympathyforthedevil",  AFR_BASE "/" TITLE_ID "/sympathyforthedevil_v3"},
     {"BeatmapLevelsData/wholewideworld",       AFR_BASE "/" TITLE_ID "/wholewideworld_v3"},
-    {"BeatmapLevelsData/livebythesword",       AFR_BASE "/" TITLE_ID "/livebythesword_v3"},
-    {NULL, NULL}  // sentinel
+    {NULL, NULL}
 };
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -43,6 +51,134 @@ HOOK_INIT(hook_open);
 
 static int in_hook = 0;
 static int log_ok = 0;
+
+// ── Forward declarations ────────────────────────────────────────────────────
+static int log_write(const char *msg);
+
+// ── Minimal JSON parser ─────────────────────────────────────────────────────
+// Extracts key-value pairs from a flat JSON object like:
+//   {"startmeup":"startmeup_custom_v3","angry":"angry_custom_v3"}
+// Stores up to max entries. Returns number of pairs found.
+
+static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], char vals[][MAX_PATH]) {
+    int count = 0;
+    const char *p = json;
+    while (*p && count < max) {
+        // Find opening brace or comma for next key
+        while (*p && *p != '{' && *p != ',' && *p != '}') p++;
+        if (*p == '}') break;
+        if (*p == '{' || *p == ',') p++;
+        // Skip whitespace
+        while (*p && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) p++;
+        if (*p != '"') continue;
+        // Read key
+        p++; int ki = 0;
+        while (*p && *p != '"' && ki < MAX_PATH-1) keys[count][ki++] = *p++;
+        keys[count][ki] = '\0';
+        if (*p) p++;
+        // Skip colon and whitespace
+        while (*p && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' || *p == ':')) p++;
+        if (*p != '"') continue;
+        // Read value
+        p++; int vi = 0;
+        while (*p && *p != '"' && vi < MAX_PATH-1) vals[count][vi++] = *p++;
+        vals[count][vi] = '\0';
+        if (*p) p++;
+        count++;
+    }
+    return count;
+}
+
+// ── Helper: fall back to built-in table ────────────────────────────────────
+
+static int use_fallback_table(void) {
+    int count = 0;
+    for (int i = 0; FALLBACK_TABLE[i][0] && i < MAX_REDIRECTS; i++) {
+        REDIRECT_KEYS[i] = (char *)malloc(strlen(FALLBACK_TABLE[i][0]) + 1);
+        REDIRECT_VALS[i] = (char *)malloc(strlen(FALLBACK_TABLE[i][1]) + 1);
+        if (REDIRECT_KEYS[i] && REDIRECT_VALS[i]) {
+            strcpy(REDIRECT_KEYS[i], FALLBACK_TABLE[i][0]);
+            strcpy(REDIRECT_VALS[i], FALLBACK_TABLE[i][1]);
+            count++;
+        }
+    }
+    log_write("using built-in fallback redirect table");
+    return count;
+}
+
+// ── Load redirects from JSON config file ────────────────────────────────────
+
+static void load_redirects(void) {
+    // Try to open the config file
+    int fd = sceKernelOpen(CONFIG_PATH, O_RDONLY, 0);
+    if (fd < 0) {
+        REDIRECT_COUNT = use_fallback_table();
+        return;
+    }
+
+    // Read file content
+    char buf[16384];
+    ssize_t got = sceKernelRead(fd, buf, sizeof(buf) - 1);
+    sceKernelClose(fd);
+    if (got <= 0) {
+        REDIRECT_COUNT = use_fallback_table();
+        return;
+    }
+    buf[got] = '\0';
+
+    // Find the "redirects" object in the JSON
+    char *rp = strstr(buf, "\"redirects\"");
+    if (!rp) {
+        REDIRECT_COUNT = use_fallback_table();
+        return;
+    }
+    rp += 10;
+    while (*rp && (*rp == ' ' || *rp == '\t' || *rp == '\n' || *rp == '\r' || *rp == ':')) rp++;
+    if (*rp != '{') {
+        REDIRECT_COUNT = use_fallback_table();
+        return;
+    }
+
+    // Parse the redirects object
+    char keys[MAX_REDIRECTS][MAX_PATH];
+    char vals[MAX_REDIRECTS][MAX_PATH];
+    int n = parse_json_pairs(rp, MAX_REDIRECTS, keys, vals);
+    if (n <= 0) {
+        REDIRECT_COUNT = use_fallback_table();
+        return;
+    }
+
+    // Allocate and populate the redirect table
+    for (int i = 0; i < n && i < MAX_REDIRECTS; i++) {
+        char buf_key[MAX_PATH + 32];
+        snprintf(buf_key, sizeof(buf_key), "BeatmapLevelsData/%s", keys[i]);
+        char buf_val[MAX_PATH];
+        if (strchr(vals[i], '/')) {
+            snprintf(buf_val, sizeof(buf_val), "%s", vals[i]);
+        } else {
+            snprintf(buf_val, sizeof(buf_val), AFR_BASE "/" TITLE_ID "/%s", vals[i]);
+        }
+        REDIRECT_KEYS[i] = (char *)malloc(strlen(buf_key) + 1);
+        REDIRECT_VALS[i] = (char *)malloc(strlen(buf_val) + 1);
+        if (REDIRECT_KEYS[i] && REDIRECT_VALS[i]) {
+            strcpy(REDIRECT_KEYS[i], buf_key);
+            strcpy(REDIRECT_VALS[i], buf_val);
+            REDIRECT_COUNT++;
+        }
+    }
+
+    char logmsg[128];
+    snprintf(logmsg, sizeof(logmsg), "loaded %d redirects from config", REDIRECT_COUNT);
+    log_write(logmsg);
+}
+
+static void free_redirects(void) {
+    for (int i = 0; i < REDIRECT_COUNT; i++) {
+        free(REDIRECT_KEYS[i]);
+        free(REDIRECT_VALS[i]);
+    }
+    REDIRECT_COUNT = 0;
+}
 
 static void ensure_dir(void) {
     sceKernelMkdir(AFR_BASE, 0777);
@@ -77,9 +213,9 @@ static int open_hook(const char *path, int flags, ...) {
     in_hook = 1;
     const char *np = NULL;
     if (path) {
-        for (int i = 0; REDIRECT_TABLE[i][0]; i++) {
-            if (strstr(path, REDIRECT_TABLE[i][0])) {
-                np = REDIRECT_TABLE[i][1];
+        for (int i = 0; i < REDIRECT_COUNT; i++) {
+            if (strstr(path, REDIRECT_KEYS[i])) {
+                np = REDIRECT_VALS[i];
                 break;
             }
         }
@@ -95,16 +231,15 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
-
-
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
-    OrbisNotificationRequest r;
+    OrbisNotificationRequest notif;
+
+    ensure_dir();
     log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
 
-    log_write(PLUGIN_VERSION ": 12-song Rolling Stones redirect table + improved beatmap filename fallback");
-
-    // NO JAILBREAK — AFR handles writes via sceKernelOpen
+    // Load redirects from external config (or fall back to built-in)
+    load_redirects();
 
     // fopen hook via Detour
     Detour_Construct(&Detour_hook_fopen, DetourMode_x64);
@@ -117,14 +252,15 @@ extern "C" int module_start(size_t argc, const void *args) {
     log_write("hooks installed");
 
     // Notification
-    memset(&r,0,sizeof(r)); r.type=(OrbisNotificationRequestType)0; r.targetId=-1;
-    snprintf(r.message,sizeof(r.message),"BS Deluxe %s", PLUGIN_VERSION);
-    sceKernelSendNotificationRequest(0,&r,sizeof(r),0);
+    memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
+    snprintf(notif.message,sizeof(notif.message),"BS Deluxe %s", PLUGIN_VERSION);
+    sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
 
     return 0;
 }
 
 extern "C" int module_stop(size_t argc, const void *args) {
     (void)argc;(void)args;
+    free_redirects();
     return 0;
 }

@@ -13,12 +13,11 @@
 - [x] 12-song redirect table in plugin (all Rolling Stones slots)
 - [x] Beatmap filename fallback — handles all BeatSaver naming conventions (5-tier priority)
 
-## M1.5 — Dynamic Configuration & Pipeline Audit (NEW)
+## M1.5 — Dynamic Configuration & Pipeline Audit
 
 ### Plugin Hardcoded Values → Dynamic
-- [ ] Make plugin redirect table dynamic (read JSON config file from AFR path instead of C array)
-- [ ] Remove hardcoded `TITLE_ID` ("CUSA12878") — read from redirect config
-- [ ] Remove hardcoded `AFR_BASE` ("/data/GoldHEN/AFR") — read from redirect config
+- [x] Make plugin redirect table dynamic — reads `redirects.json` from AFR path, falls back to built-in defaults
+- [x] Added `titleId` and `afrBase` to redirect config schema
 - [ ] Remove hardcoded `PLUGIN_VERSION` — derive from git tag or redirect config
 
 ### Pipeline Hardcoded Values → Config-Driven
