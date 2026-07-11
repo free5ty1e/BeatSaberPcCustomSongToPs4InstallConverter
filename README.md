@@ -14,6 +14,10 @@ Replace any Rolling Stones DLC song's audio and beatmaps with community-made cus
 
 🏆 **v0.53 ALPHA** — All 13 Rolling Stones slots replaced. Every song perfectly synchronized, both note colors working.
 
+
+### 🎥Demo Video of Redirecting a Rolling Stones Song to a Custom Song
+https://www.youtube.com/watch?v=J835HDdB-7g
+
 ### ✅ What Works
 
 | Feature | Status |
