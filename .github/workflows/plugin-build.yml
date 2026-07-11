@@ -55,7 +55,9 @@ jobs:
           # Build crtprx.o and libGoldHEN_Hook.a from source
           git clone --depth 1 https://github.com/GoldHEN/GoldHEN_Plugins_SDK.git /tmp/gh_sdk
           cd /tmp/gh_sdk
-          make all -j$(nproc)
+          make clean
+          make crt
+          make libGoldHEN_Hook.a
           sudo cp build/crtprx.o $SDK_DIR/lib/
           sudo cp libGoldHEN_Hook.a $SDK_DIR/lib/
           echo "GoldHEN SDK installed"
