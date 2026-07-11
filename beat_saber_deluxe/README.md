@@ -8,7 +8,25 @@ Replace any song's audio and beatmaps with your own content, all through a conve
 
 ✅ **Confirmed working:** PCM16 FSB5 (codec=2) custom audio plays on PS4. Custom beatmaps display and interact correctly. Tested with CUSA12878 patched (v1.29).
 
-**Status:** 🏆 **v0.53** — 13-song redirect table (all Rolling Stones + Live By The Sword) + note color fix!
+**Status:** 🏆 **v0.53 alpha** — 13-song redirect table (all Rolling Stones + Live By The Sword) + note color fix!
+
+> **⚠️ Hardcoded Redirect Table:** The plugin currently has a hardcoded C array of 13 Rolling Stones song redirects. This is on the [roadmap](.agent/roadmap.md) (M1.5) to be made dynamic via JSON config.
+
+## Documentation
+
+Knowledge base and development docs are maintained alongside the code:
+
+| Resource | Location | Description |
+|----------|----------|-------------|
+| 📚 **Knowledge Base** | [`.agent/llm-wiki-knowledge-base/`](.agent/llm-wiki-knowledge-base/) | Technical docs: audio sync, beatmap format, plugin architecture, PS4 environment |
+| 🗺️ **Roadmap** | [`.agent/roadmap.md`](.agent/roadmap.md) | Current milestones and planned features |
+| 📋 **Song Replacements** | [`.agent/current-song-replacements-on-chris-ps4.md`](.agent/current-song-replacements-on-chris-ps4.md) | Current PS4 deployment state |
+| 📖 **Supported Songs** | [`.agent/llm-wiki-knowledge-base/supported-songs.md`](.agent/llm-wiki-knowledge-base/supported-songs.md) | Sync status and fix history |
+| 🧪 **Experiment Log** | [`.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`](.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md) | Full experiment/test history |
+| 📦 **Song Catalog** | [`.agent/beat_saber_song_ids.json`](.agent/beat_saber_song_ids.json) | 306 official song IDs |
+| 🔧 **Development** | [`development/`](development/) | Old scripts and historical docs (archived) |
+
+The knowledge base can be visualized in **[Obsidian](https://obsidian.md)** — open the `.agent/llm-wiki-knowledge-base/` folder as a vault. The `index.md` file serves as the entry point.
 
 ## How It Works
 
@@ -482,22 +500,22 @@ This indicates a codec incompatibility. The PCM16 codec (`--pcm16`) is the most 
 ```
 beat_saber_deluxe/
 ├── beat_saber_deluxe.prx      # Plugin (release build)
-├── beat_saber_deluxe_minimal.prx  # Plugin (minimal build)
+├── beat_saber_deluxe_debug.prx  # Plugin (debug build)
 ├── README.md                  # This file
 ├── ps4_config.example.json    # Example PS4 configuration
 ├── ps4_config.json            # Your PS4 configuration (gitignored)
+├── deploy_all.sh              # Deploy plugin + all 13 bundles to PS4
 ├── tools/
 │   ├── full_custom_song_pipeline.py  # Main pipeline (use this!)
-│   ├── hevag_encoder.py            # Audio encoder
-│   ├── convert_song.py             # Song download/conversion
-│   └── prepare_binary_patch.py     # Binary patch utility
-├── custom_songs/               # Output directory
-├── tests/                      # Test files
-│   └── reference/
-│       └── original_audio.fsb5 # Original game FSB5
-├── src/                        # Plugin source
-├── Makefile                    # Plugin build system
-└── build.sh                    # Build script
+│   ├── hevag_encoder.py            # Audio encoder (PCM16/HEVAG)
+│   ├── lapped_audio.py             # Lapped audio detection/generation
+│   └── download_beatsaver_songs.py # BeatSaver song downloader
+├── development/
+│   ├── scripts/               # Old/unused scripts (archived)
+│   └── docs/                   # Historical documentation (archived)
+├── custom_songs/               # Output directory (gitignored)
+├── src/                        # Plugin source (main.cpp + Makefile)
+└── Makefile                    # Plugin build system
 ```
 
 ## Version History

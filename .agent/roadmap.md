@@ -36,7 +36,9 @@
 - [ ] Difficulty metadata extraction from all 306 bundles
 - [ ] DLC song name extraction from addressables packs
 
-## M3 — Note Color Customization (NEW)
+## M3 — Note Color Customization (In Progress)
+- [x] Fixed `c` field bug: PS4 game uses `c` (not `a`) for note color (V3.3.0+ format)
+- [x] Documented in `note-color-field-version-differences.md` (knowledge base)
 - [ ] Research how BeatmapLevel defines left/right note box colors
 - [ ] Check `BeatmapLevelColorSchemeSaveData` in globalgamemanagers.assets
 - [ ] Add `--left-color R G B` / `--right-color R G B` flags to pipeline
