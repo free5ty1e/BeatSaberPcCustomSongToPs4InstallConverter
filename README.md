@@ -145,6 +145,26 @@ This replaces "Sympathy for the Devil" with Polyphia's "LIT", uploads to PS4 via
 ./beat_saber_deluxe/deploy_all.sh
 ```
 
+The deploy script also uploads `redirects.json` alongside the bundles, so the plugin picks up the latest redirects on PS4.
+
+### Managing the Redirect Config
+
+The plugin reads `redirects.json` from the AFR path at startup. To add a new song slot or change an existing redirect without rebuilding the plugin:
+
+```bash
+# Build a song and automatically update the local redirects.json:
+python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --generate-config
+
+# Build, deploy bundle + config to PS4:
+python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy --deploy-config
+
+# Sync config from PS4 (download, merge with local changes, redeploy):
+python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --sync-config
+
+# Enforce local config as truth (overwrite PS4 config entirely):
+python3 full_custom_song_pipeline.py --enforce-config --deploy
+```
+
 ---
 
 ## Prerequisites
@@ -175,13 +195,24 @@ python3 tools/full_custom_song_pipeline.py \
 | Flag | Purpose |
 |------|---------|
 | `--song-dir` | Directory with song audio + `.dat` beatmap files |
-| `--target` | Rolling Stones slot ID (e.g. `startmeup`, `angry`) |
+| `--target` | Song slot ID (e.g. `startmeup`, `angry`) |
 | `--pcm16` | PCM16 FSB5 audio (lossless, best quality) |
 | `--no-pad` | Don't extend audio — use when PCM16 exceeds template resource size |
 | `--convert-to-v3` | Auto-convert V2 beatmaps (legacy format) to V3 |
 | `--deploy` | Upload bundle to PS4 via FTP after building |
 | `--deploy-plugin` | Build + deploy plugin PRX |
 | `--debug-logging` | Build plugin with `DEBUG=1` (verbose PS4 logging) |
+
+### Redirect Config Management Flags
+
+| Flag | Purpose |
+|------|---------|
+| `--generate-config` | Create/update `redirects.json` with the current `--target` entry. First call creates the file; subsequent calls add/update entries |
+| `--deploy-config` | Deploy the local `redirects.json` to PS4 via FTP (to `/data/GoldHEN/AFR/CUSA12878/redirects.json`) |
+| `--sync-config` | Download existing `redirects.json` from PS4, merge with current target, save locally, redeploy. Use when PS4 config has entries your local doesn't |
+| `--enforce-config` | Ignore any PS4 config and use only the local `redirects.json` as truth, then deploy it to PS4 |
+
+**Default behavior:** When deploying config, if no `redirects.json` exists locally, one is auto-generated with the current target mapping. When deploying a bundle, the config is automatically updated if the file already exists.
 
 ### What the Pipeline Does
 
@@ -253,7 +284,8 @@ The GitHub Actions workflow at [`.github/workflows/plugin-build.yml`](.github/wo
 - Clones and builds the GoldHEN Plugin SDK from source
 - Builds both PRX variants (release + debug)
 - Generates a minimal `plugins.ini` for CUSA12878
-- Uploads all artifacts (downloadable from the Action run page)
+- Generates `redirects.json` with the 13 Rolling Stones slot → bundle mappings
+- Uploads all artifacts: PRX files, `plugins.ini`, `redirects.json`
 
 ### On Tag Push (`v*`)
 When you push a tag like `v0.53`, the workflow additionally:
@@ -261,6 +293,7 @@ When you push a tag like `v0.53`, the workflow additionally:
 - **Creates a GitHub Release** titled "Beat Saber Deluxe v0.53" with:
   - `beat_saber_deluxe.prx` — Release build
   - `beat_saber_deluxe_debug.prx` — Debug build (verbose logging)
+  - `redirects.json` — Song redirect config (edit to add/change slot mappings)
   - `plugins.ini` — GoldHEN configuration for CUSA12878
 
 ### Manual Trigger

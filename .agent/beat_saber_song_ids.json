@@ -12,7 +12,8 @@
       "songAuthor": "Jaroslav Beck",
       "levelAuthor": "DefaultEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "100billsremix": {
       "songID": "100billsremix",
@@ -27,7 +28,8 @@
     "aboutdamntime": {
       "songID": "aboutdamntime",
       "bundlePath": "BeatmapLevelsData/aboutdamntime",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "lizzo"
     },
     "abracadabra": {
       "songID": "abracadabra",
@@ -42,7 +44,8 @@
     "alejandro": {
       "songID": "alejandro",
       "bundlePath": "BeatmapLevelsData/alejandro",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "lady-gaga"
     },
     "alleyezonme": {
       "songID": "alleyezonme",
@@ -67,7 +70,8 @@
       "songAuthor": "Mike Shinoda",
       "levelAuthor": "Kolezan",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "linkin-park-2"
     },
     "americanidiot": {
       "songID": "americanidiot",
@@ -77,7 +81,8 @@
       "songAuthor": "Green Day",
       "levelAuthor": "GreenDayGrenadeEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "green-day"
     },
     "anaconda": {
       "songID": "anaconda",
@@ -92,7 +97,8 @@
     "angry": {
       "songID": "angry",
       "bundlePath": "BeatmapLevelsData/angry",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "animals": {
       "songID": "animals",
@@ -102,12 +108,14 @@
     "anotheronebitesthedust": {
       "songID": "anotheronebitesthedust",
       "bundlePath": "BeatmapLevelsData/anotheronebitesthedust",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "queen"
     },
     "aroundtheworld": {
       "songID": "aroundtheworld",
       "bundlePath": "BeatmapLevelsData/aroundtheworld",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "daft-punk"
     },
     "aroundtheworldharderbetterfasterstronger": {
       "songID": "aroundtheworldharderbetterfasterstronger",
@@ -127,12 +135,14 @@
     "babyonemoretime": {
       "songID": "babyonemoretime",
       "bundlePath": "BeatmapLevelsData/babyonemoretime",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "britney-spears"
     },
     "badguy": {
       "songID": "badguy",
       "bundlePath": "BeatmapLevelsData/badguy",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "billie-eilish"
     },
     "badliar": {
       "songID": "badliar",
@@ -142,7 +152,8 @@
     "badromance": {
       "songID": "badromance",
       "bundlePath": "BeatmapLevelsData/badromance",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "lady-gaga"
     },
     "balearicpumping": {
       "songID": "balearicpumping",
@@ -157,7 +168,8 @@
       "songAuthor": "feat. Sirah",
       "levelAuthor": "Skrillex",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "skrillex"
     },
     "battery": {
       "songID": "battery",
@@ -172,17 +184,20 @@
       "songAuthor": "Jaroslav Beck",
       "levelAuthor": "DefaultEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "believer": {
       "songID": "believer",
       "bundlePath": "BeatmapLevelsData/believer",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "imagine-dragons"
     },
     "bellyache": {
       "songID": "bellyache",
       "bundlePath": "BeatmapLevelsData/bellyache",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "billie-eilish"
     },
     "bethereforyou": {
       "songID": "bethereforyou",
@@ -192,7 +207,8 @@
     "bitemyheadoff": {
       "songID": "bitemyheadoff",
       "bundlePath": "BeatmapLevelsData/bitemyheadoff",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "blackened": {
       "songID": "blackened",
@@ -207,12 +223,14 @@
       "songAuthor": "Linkin Park",
       "levelAuthor": "Freeek (Narwall, Freeek, ETAN & altrewin Remaster)",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "linkin-park"
     },
     "blindinglights": {
       "songID": "blindinglights",
       "bundlePath": "BeatmapLevelsData/blindinglights",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-weeknd"
     },
     "bloodsweatandtears": {
       "songID": "bloodsweatandtears",
@@ -222,7 +240,8 @@
     "bohemianrhapsody": {
       "songID": "bohemianrhapsody",
       "bundlePath": "BeatmapLevelsData/bohemianrhapsody",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "queen"
     },
     "bones": {
       "songID": "bones",
@@ -242,7 +261,8 @@
     "boulevardofbrokendreams": {
       "songID": "boulevardofbrokendreams",
       "bundlePath": "BeatmapLevelsData/boulevardofbrokendreams",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "green-day"
     },
     "boundless": {
       "songID": "boundless",
@@ -252,7 +272,8 @@
       "songAuthor": "Aero Chord",
       "levelAuthor": "MonstercatEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "boywithluv": {
       "songID": "boywithluv",
@@ -292,12 +313,14 @@
     "cantfeelmyface": {
       "songID": "cantfeelmyface",
       "bundlePath": "BeatmapLevelsData/cantfeelmyface",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-weeknd"
     },
     "cantyouhearmeknocking": {
       "songID": "cantyouhearmeknocking",
       "bundlePath": "BeatmapLevelsData/cantyouhearmeknocking",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "cathedral": {
       "songID": "cathedral",
@@ -307,7 +330,8 @@
     "centuries": {
       "songID": "centuries",
       "bundlePath": "BeatmapLevelsData/centuries",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "fall-out-boy"
     },
     "circus": {
       "songID": "circus",
@@ -317,7 +341,8 @@
       "songAuthor": "Britney Spears",
       "levelAuthor": "BritneyEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "britney-spears"
     },
     "commercialpumping": {
       "songID": "commercialpumping",
@@ -412,7 +437,8 @@
     "deadmanwalking": {
       "songID": "deadmanwalking",
       "bundlePath": "BeatmapLevelsData/deadmanwalking",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "dieforyou": {
       "songID": "dieforyou",
@@ -422,7 +448,8 @@
       "songAuthor": "The Weeknd & Ariana Grande",
       "levelAuthor": "Zakka",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "the-weeknd"
     },
     "digital": {
       "songID": "digital",
@@ -462,7 +489,8 @@
     "dontstopmenow": {
       "songID": "dontstopmenow",
       "bundlePath": "BeatmapLevelsData/dontstopmenow",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "queen"
     },
     "dope": {
       "songID": "dope",
@@ -477,7 +505,8 @@
     "dynamite": {
       "songID": "dynamite",
       "bundlePath": "BeatmapLevelsData/dynamite",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "bts"
     },
     "elixia": {
       "songID": "elixia",
@@ -517,7 +546,8 @@
     "escape": {
       "songID": "escape",
       "bundlePath": "BeatmapLevelsData/escape",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "ost-vol-3"
     },
     "escaperemix": {
       "songID": "escaperemix",
@@ -532,7 +562,8 @@
     "exitthisearthsatomosphere": {
       "songID": "exitthisearthsatomosphere",
       "bundlePath": "BeatmapLevelsData/exitthisearthsatomosphere",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "camellia"
     },
     "eyeofthetiger": {
       "songID": "eyeofthetiger",
@@ -597,7 +628,8 @@
       "songAuthor": "Tanger",
       "levelAuthor": "ETAN",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "firstoftheyear": {
       "songID": "firstoftheyear",
@@ -642,7 +674,8 @@
     "ghost": {
       "songID": "ghost",
       "bundlePath": "BeatmapLevelsData/ghost",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "camellia"
     },
     "ghostsnstuff": {
       "songID": "ghostsnstuff",
@@ -657,7 +690,8 @@
     "gimmeshelter": {
       "songID": "gimmeshelter",
       "bundlePath": "BeatmapLevelsData/gimmeshelter",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "ginandjuice": {
       "songID": "ginandjuice",
@@ -682,7 +716,8 @@
       "songAuthor": "Stephen Walking",
       "levelAuthor": "RocketEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "godzilla": {
       "songID": "godzilla",
@@ -692,7 +727,8 @@
     "goodashell": {
       "songID": "goodashell",
       "bundlePath": "BeatmapLevelsData/goodashell",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "lizzo"
     },
     "happierthanever": {
       "songID": "happierthanever",
@@ -707,7 +743,8 @@
       "songAuthor": "Daft Punk",
       "levelAuthor": "ETAN",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "daft-punk"
     },
     "hasameaning": {
       "songID": "hasameaning",
@@ -732,7 +769,8 @@
     "highhopes": {
       "songID": "highhopes",
       "bundlePath": "BeatmapLevelsData/highhopes",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "panic-at-the-disco"
     },
     "hitthelights": {
       "songID": "hitthelights",
@@ -747,7 +785,8 @@
       "songAuthor": "Green Day",
       "levelAuthor": "GreenDayGrenadeEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "green-day"
     },
     "houdini": {
       "songID": "houdini",
@@ -767,7 +806,8 @@
     "icantgetnosatisfaction": {
       "songID": "icantgetnosatisfaction",
       "bundlePath": "BeatmapLevelsData/icantgetnosatisfaction",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "icarus": {
       "songID": "icarus",
@@ -817,7 +857,8 @@
       "songAuthor": "Megaphonix",
       "levelAuthor": "Purphoros & Split",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "inmyhead": {
       "songID": "inmyhead",
@@ -887,7 +928,8 @@
     "legend": {
       "songID": "legend",
       "bundlePath": "BeatmapLevelsData/legend",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "ost-vol-3"
     },
     "lessthanzero": {
       "songID": "lessthanzero",
@@ -907,7 +949,8 @@
     "livebythesword": {
       "songID": "livebythesword",
       "bundlePath": "BeatmapLevelsData/livebythesword",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "loseyourselftodance": {
       "songID": "loseyourselftodance",
@@ -922,7 +965,8 @@
       "songAuthor": "Linkin Park",
       "levelAuthor": "Narwall & ETAN",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "linkin-park"
     },
     "ludicrousplus": {
       "songID": "ludicrousplus",
@@ -982,7 +1026,8 @@
     "messitup": {
       "songID": "messitup",
       "bundlePath": "BeatmapLevelsData/messitup",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "metronome": {
       "songID": "metronome",
@@ -1067,7 +1112,8 @@
     "onemoretime": {
       "songID": "onemoretime",
       "bundlePath": "BeatmapLevelsData/onemoretime",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "daft-punk"
     },
     "onestepcloser": {
       "songID": "onestepcloser",
@@ -1082,7 +1128,8 @@
     "oopsididitagain": {
       "songID": "oopsididitagain",
       "bundlePath": "BeatmapLevelsData/oopsididitagain",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "britney-spears"
     },
     "origins": {
       "songID": "origins",
@@ -1097,7 +1144,8 @@
       "songAuthor": "RIOT",
       "levelAuthor": "MonstercatEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-1"
     },
     "overprotected": {
       "songID": "overprotected",
@@ -1112,7 +1160,8 @@
     "paintitblack": {
       "songID": "paintitblack",
       "bundlePath": "BeatmapLevelsData/paintitblack",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "paparazzi": {
       "songID": "paparazzi",
@@ -1142,7 +1191,8 @@
     "pokerface": {
       "songID": "pokerface",
       "bundlePath": "BeatmapLevelsData/pokerface",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "lady-gaga"
     },
     "popstars": {
       "songID": "popstars",
@@ -1162,7 +1212,8 @@
       "songAuthor": "The Weeknd, Kendrick Lamar",
       "levelAuthor": "altrewin",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "the-weeknd"
     },
     "primetimeofyourlifebrainwasherrollinalivelive2007": {
       "songID": "primetimeofyourlifebrainwasherrollinalivelive2007",
@@ -1172,7 +1223,8 @@
       "songAuthor": "(Live 2007)",
       "levelAuthor": "Daft Punk",
       "defaultEnvironment": "DaftPunkEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-3"
     },
     "pump": {
       "songID": "pump",
@@ -1187,7 +1239,8 @@
     "radioactive": {
       "songID": "radioactive",
       "bundlePath": "BeatmapLevelsData/radioactive",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "imagine-dragons"
     },
     "raggabomb": {
       "songID": "raggabomb",
@@ -1197,7 +1250,8 @@
       "songAuthor": "feat. Ragga Twins",
       "levelAuthor": "Skrillex",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-2"
     },
     "rainonme": {
       "songID": "rainonme",
@@ -1232,7 +1286,8 @@
       "songAuthor": "Tokyo Machine",
       "levelAuthor": "RocketEnvironment",
       "defaultEnvironment": "",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-2"
     },
     "rocknroll": {
       "songID": "rocknroll",
@@ -1252,7 +1307,8 @@
       "songAuthor": "Boom Kitty",
       "levelAuthor": "Freek & Split",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "ost-vol-2"
     },
     "sacrifice": {
       "songID": "sacrifice",
@@ -1277,7 +1333,8 @@
     "sayamen": {
       "songID": "sayamen",
       "bundlePath": "BeatmapLevelsData/sayamen",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "panic-at-the-disco"
     },
     "scarymonstersandnicesprites": {
       "songID": "scarymonstersandnicesprites",
@@ -1322,7 +1379,8 @@
       "songAuthor": "Linkin Park",
       "levelAuthor": "Kolezan (Remaster)",
       "defaultEnvironment": "GlassDesertEnvironment",
-      "metadataSource": "resources.assets"
+      "metadataSource": "resources.assets",
+      "pack": "linkin-park"
     },
     "spineternally": {
       "songID": "spineternally",
@@ -1337,12 +1395,14 @@
     "starboy": {
       "songID": "starboy",
       "bundlePath": "BeatmapLevelsData/starboy",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-weeknd"
     },
     "startmeup": {
       "songID": "startmeup",
       "bundlePath": "BeatmapLevelsData/startmeup",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "staythenight": {
       "songID": "staythenight",
@@ -1372,7 +1432,8 @@
     "sugarsoaker": {
       "songID": "sugarsoaker",
       "bundlePath": "BeatmapLevelsData/sugarsoaker",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "sweetchildomine": {
       "songID": "sweetchildomine",
@@ -1382,7 +1443,8 @@
     "sympathyforthedevil": {
       "songID": "sympathyforthedevil",
       "bundlePath": "BeatmapLevelsData/sympathyforthedevil",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "takemybreath": {
       "songID": "takemybreath",
@@ -1502,7 +1564,8 @@
     "thunder": {
       "songID": "thunder",
       "bundlePath": "BeatmapLevelsData/thunder",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "imagine-dragons"
     },
     "tillitsover": {
       "songID": "tillitsover",
@@ -1517,7 +1580,8 @@
     "toxic": {
       "songID": "toxic",
       "bundlePath": "BeatmapLevelsData/toxic",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "britney-spears"
     },
     "truthhurts": {
       "songID": "truthhurts",
@@ -1577,12 +1641,14 @@
     "wearethechampions": {
       "songID": "wearethechampions",
       "bundlePath": "BeatmapLevelsData/wearethechampions",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "queen"
     },
     "wewillrockyou": {
       "songID": "wewillrockyou",
       "bundlePath": "BeatmapLevelsData/wewillrockyou",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "queen"
     },
     "wewontbealone": {
       "songID": "wewontbealone",
@@ -1617,7 +1683,8 @@
     "wholewideworld": {
       "songID": "wholewideworld",
       "bundlePath": "BeatmapLevelsData/wholewideworld",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "the-rolling-stones"
     },
     "witchcraft": {
       "songID": "witchcraft",
@@ -1627,7 +1694,8 @@
     "womanizer": {
       "songID": "womanizer",
       "bundlePath": "BeatmapLevelsData/womanizer",
-      "metadataSource": "bundle_only"
+      "metadataSource": "bundle_only",
+      "pack": "britney-spears"
     },
     "worldwideweb": {
       "songID": "worldwideweb",
@@ -1644,5 +1712,25 @@
       "bundlePath": "BeatmapLevelsData/youshouldseemeinacrown",
       "metadataSource": "bundle_only"
     }
-  }
+  },
+  "packCount": 17,
+  "packNames": [
+    "billie-eilish",
+    "britney-spears",
+    "bts",
+    "camellia",
+    "daft-punk",
+    "fall-out-boy",
+    "green-day",
+    "imagine-dragons",
+    "lady-gaga",
+    "linkin-park",
+    "linkin-park-2",
+    "lizzo",
+    "panic-at-the-disco",
+    "queen",
+    "skrillex",
+    "the-rolling-stones",
+    "the-weeknd"
+  ]
 }
