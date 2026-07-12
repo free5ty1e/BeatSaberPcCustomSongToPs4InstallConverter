@@ -1,12 +1,13 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
-// Falls back to internal hardcoded defaults if config file is missing.
+// All redirects come from the external config file — no hardcoded fallback.
 
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
@@ -19,29 +20,10 @@
 #define MAX_PATH 256
 
 // ── Dynamic redirect table ──────────────────────────────────────────────────
-// Populated from redirects.json at startup. Falls back to hardcoded defaults.
+// Populated from redirects.json at startup. No hardcoded fallback.
 static char *REDIRECT_KEYS[MAX_REDIRECTS];
 static char *REDIRECT_VALS[MAX_REDIRECTS];
 static int REDIRECT_COUNT = 0;
-
-// ── Built-in fallback defaults ──────────────────────────────────────────────
-// Used when redirects.json is not present on the PS4.
-static const char *FALLBACK_TABLE[][2] = {
-    {"BeatmapLevelsData/angry",                AFR_BASE "/" TITLE_ID "/angry_v3"},
-    {"BeatmapLevelsData/bitemyheadoff",        AFR_BASE "/" TITLE_ID "/bitemyheadoff_v3"},
-    {"BeatmapLevelsData/cantyouhearmeknocking",AFR_BASE "/" TITLE_ID "/cantyouhearmeknocking_v3"},
-    {"BeatmapLevelsData/deadmanwalking",       AFR_BASE "/" TITLE_ID "/deadmanwalking_v3"},
-    {"BeatmapLevelsData/gimmeshelter",         AFR_BASE "/" TITLE_ID "/gimmeshelter_v3"},
-    {"BeatmapLevelsData/icantgetnosatisfaction",AFR_BASE "/" TITLE_ID "/icantgetnosatisfaction_v3"},
-    {"BeatmapLevelsData/livebythesword",       AFR_BASE "/" TITLE_ID "/livebythesword_v3"},
-    {"BeatmapLevelsData/messitup",             AFR_BASE "/" TITLE_ID "/messitup_v3"},
-    {"BeatmapLevelsData/paintitblack",         AFR_BASE "/" TITLE_ID "/paintitblack_v3"},
-    {"BeatmapLevelsData/startmeup",            AFR_BASE "/" TITLE_ID "/startmeup_v3"},
-    {"BeatmapLevelsData/sugarsoaker",          AFR_BASE "/" TITLE_ID "/sugarsoaker_v3"},
-    {"BeatmapLevelsData/sympathyforthedevil",  AFR_BASE "/" TITLE_ID "/sympathyforthedevil_v3"},
-    {"BeatmapLevelsData/wholewideworld",       AFR_BASE "/" TITLE_ID "/wholewideworld_v3"},
-    {NULL, NULL}
-};
 
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
@@ -89,39 +71,26 @@ static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], ch
     return count;
 }
 
-// ── Helper: fall back to built-in table ────────────────────────────────────
-
-static int use_fallback_table(void) {
-    int count = 0;
-    for (int i = 0; FALLBACK_TABLE[i][0] && i < MAX_REDIRECTS; i++) {
-        REDIRECT_KEYS[i] = (char *)malloc(strlen(FALLBACK_TABLE[i][0]) + 1);
-        REDIRECT_VALS[i] = (char *)malloc(strlen(FALLBACK_TABLE[i][1]) + 1);
-        if (REDIRECT_KEYS[i] && REDIRECT_VALS[i]) {
-            strcpy(REDIRECT_KEYS[i], FALLBACK_TABLE[i][0]);
-            strcpy(REDIRECT_VALS[i], FALLBACK_TABLE[i][1]);
-            count++;
-        }
-    }
-    log_write("using built-in fallback redirect table");
-    return count;
-}
-
 // ── Load redirects from JSON config file ────────────────────────────────────
 
 static void load_redirects(void) {
-    // Try to open the config file
-    int fd = sceKernelOpen(CONFIG_PATH, O_RDONLY, 0);
+    // Try to open the config file via POSIX open (respects GoldHEN AFR mapping)
+    int fd = open(CONFIG_PATH, O_RDONLY, 0);
     if (fd < 0) {
-        REDIRECT_COUNT = use_fallback_table();
+        // Fallback: try sceKernelOpen directly
+        fd = sceKernelOpen(CONFIG_PATH, O_RDONLY, 0);
+    }
+    if (fd < 0) {
+        log_write("ERROR: no config file found and no fallback available");
         return;
     }
 
     // Read file content
     char buf[16384];
-    ssize_t got = sceKernelRead(fd, buf, sizeof(buf) - 1);
-    sceKernelClose(fd);
+    ssize_t got = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
     if (got <= 0) {
-        REDIRECT_COUNT = use_fallback_table();
+        log_write("ERROR: config file exists but is empty");
         return;
     }
     buf[got] = '\0';
@@ -129,13 +98,13 @@ static void load_redirects(void) {
     // Find the "redirects" object in the JSON
     char *rp = strstr(buf, "\"redirects\"");
     if (!rp) {
-        REDIRECT_COUNT = use_fallback_table();
+        log_write("ERROR: redirects.json has no 'redirects' key");
         return;
     }
     rp += 10;
     while (*rp && (*rp == ' ' || *rp == '\t' || *rp == '\n' || *rp == '\r' || *rp == ':')) rp++;
     if (*rp != '{') {
-        REDIRECT_COUNT = use_fallback_table();
+        log_write("ERROR: redirects object not found in config");
         return;
     }
 
@@ -144,7 +113,7 @@ static void load_redirects(void) {
     char vals[MAX_REDIRECTS][MAX_PATH];
     int n = parse_json_pairs(rp, MAX_REDIRECTS, keys, vals);
     if (n <= 0) {
-        REDIRECT_COUNT = use_fallback_table();
+        log_write("ERROR: no valid redirect pairs found in config");
         return;
     }
 
@@ -243,7 +212,7 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     ensure_dir();
     log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
-    log_write("v" PLUGIN_VERSION " — dynamic redirect config (reads redirects.json from AFR)");
+    log_write(PLUGIN_VERSION " — dynamic redirect config (reads redirects.json from AFR)");
 
     // Log the config path being checked for debugging
     log_write("config: " CONFIG_PATH);
