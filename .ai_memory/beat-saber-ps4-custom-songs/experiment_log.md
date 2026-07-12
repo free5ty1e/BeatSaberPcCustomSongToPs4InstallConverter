@@ -73,6 +73,15 @@ metadata:
 - **Learned:** The bug was right under my nose: `open()` DID find the file (v0.55), but the JSON parser had a simple character-skip bug. The original `parse_json_pairs()` function handles quotes correctly, but the preamble code that finds the `"redirects"` key manually skips characters without accounting for the trailing `"`.
 - **Version bumped:** v0.55 → v0.56 for this fix
 
+### Experiment 107: Bundle suffix mismatch — redirects pointed to wrong filenames
+- **Date:** 2026-07-11
+- **What:** v0.56 log confirmed "loaded 32 redirects from config" but NO redirects worked. PS4 AFR directory listing showed bundles named `{slot}_v3` (e.g., `startmeup_v3`) but `redirects.json` had entries pointing to `{slot}_custom_v3` (e.g., `startmeup_custom_v3`). Every redirect pointed to a non-existent file.
+- **Root cause:** `manage_redirect_config()` (line 946) had `bundle_suffix = "_custom_v3"` hardcoded, but `deploy_to_ps4()` (line 660) used `suffix = paths_cfg.get('afr_target_suffix', '_v3')` which resolved to `"_v3"`.
+- **Result:** ✅ FIXED — Changed `manage_redirect_config` signature to `bundle_suffix: str | None = None`, and added logic to read from config: `bundle_suffix = cfg_paths.get('afr_target_suffix', '_v3')`. This ensures redirect filenames always match deployed bundle filenames.
+- **All three failure modes explained:** Rolling Stones (black screen → menu) = file `startmeup_custom_v3` not found. Billie Eilish (no redirect) = file `AllTheGoodGirlsGoToHell_custom_v3` not found. Lizzo (frozen at 0:00) = file `2BeLoved_custom_v3` not found (game handled the missing bundle differently).
+- **Regenerated:** `redirects.json` with all 32 entries using `_v3` suffix, deployed to PS4 (1334 bytes).
+- **Version bumped:** Pipeline logic fix (no plugin change needed).
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

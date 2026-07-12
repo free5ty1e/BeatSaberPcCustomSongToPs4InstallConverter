@@ -943,7 +943,7 @@ def _deploy_redirect_to_ps4(config: dict):
 def manage_redirect_config(
     config: dict,
     target_name: str | None = None,
-    bundle_suffix: str = "_custom_v3",
+    bundle_suffix: str | None = None,
     generate: bool = False,
     deploy: bool = False,
     sync: bool = False,
@@ -962,6 +962,9 @@ def manage_redirect_config(
     or if a deploy/sync is happening.
     """
     cfg_paths = config.get('paths', {})
+    # Use same suffix as deploy_to_ps4() so redirect filenames match actual bundle filenames
+    if bundle_suffix is None:
+        bundle_suffix = cfg_paths.get('afr_target_suffix', '_v3')
     cfg_title = config.get('title', {})
     title_id = cfg_title.get('id', 'CUSA12878')
     afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
