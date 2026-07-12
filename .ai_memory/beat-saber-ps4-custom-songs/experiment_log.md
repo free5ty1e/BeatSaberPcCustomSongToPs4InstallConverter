@@ -44,7 +44,16 @@ metadata:
 ### Experiment 103: Billie Eilish + Lizzo album replacements
 - **Date:** 2026-07-11
 - **What:** Selected 19 custom songs matching criteria. Script at `deploy_billie_lizzo.sh`
-- **Result:** ⏳ PENDING — script ready, waiting for build & deploy
+- **Result:** ✅ MOSTLY SUCCESS — 19 bundles built. FTP deploy initially failed (PS4 offline), later succeeded after retry.
+- **Learned:** Serial build-then-deploy is slow. Better to build all, then deploy in bulk.
+
+### Experiment 104: `--download-beat-saver-song` end-to-end validation
+- **Date:** 2026-07-11
+- **What:** Tested the new `--download-beat-saver-song` pipeline feature with BeatSaver map ID `d242` (Breezeblocks by Alt-J). Also fixed a bug where the download function used wrong API endpoint (`/maps/id/<key>/download` returned 404).
+- **Result:** ✅ SUCCESS — Pipeline correctly fetches map info from `api.beatsaver.com/maps/id/<key>`, extracts the CDN download URL (`cdn.beatsaver.com/<hash>.zip`), downloads the ZIP, extracts to temp dir, converts audio and beatmaps, and deploys to PS4.
+- **Fixed:** Download function now extracts `downloadURL` from the API response (the CDN URL) instead of using a non-existent `/download` endpoint.
+- **Fixed:** Download logic was moved to before the `--song-dir` validation check so the temp directory is set before the required-dir check.
+- **Also:** Replaced "360" by Charli xcx (NDA slot) with "Duvet" by Bôa (186 BPM, alt-rock, 5 diffs, 1.6s first note) because 360-degree maps are unsuitable for PS4 VR.
 
 ## Phase 1: Initial Research & Failed Approaches
 

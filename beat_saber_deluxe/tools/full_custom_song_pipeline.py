@@ -1049,10 +1049,11 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
     info_url = f"{BEATSAVER_API_BASE}/maps/id/{map_id}"
 
     log.info(f"Downloading BeatSaver song: {map_id}")
-    log.info(f"  API: {download_url}")
+    log.info(f"  API: {info_url}")
 
-    # Try to fetch song info first (optional, for logging)
+    # Try to fetch song info first (extracts download URL from the API response)
     song_name = map_id
+    cdn_url = None
     try:
         req = urllib.request.Request(info_url, headers={"User-Agent": "BeatSaberDeluxe/0.54"})
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -1060,22 +1061,34 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
             if info_data.get('name'):
                 song_name = info_data['name']
                 log.info(f"  Song: {song_name} by {info_data.get('metadata', {}).get('songAuthorName', '?')}")
-            # Also check if it has the required beatmap characteristics
+            # Check if it has the required beatmap characteristics
             versions = info_data.get('versions', [])
             if versions:
-                diffs = versions[0].get('diffs', [])
+                v0 = versions[0]
+                diffs = v0.get('diffs', [])
                 has_standard = any(d.get('characteristic','').lower() == 'standard' for d in diffs)
                 if not has_standard:
                     log.warning("  ⚠️  Song has no Standard characteristic beatmaps (may not work)")
+                # Extract download URL — BeatSaver uses CDN: cdn.beatsaver.com/<hash>.zip
+                cdn_url = v0.get('downloadURL')
+                if not cdn_url and v0.get('hash'):
+                    cdn_url = f"https://cdn.beatsaver.com/{v0['hash']}.zip"
+                if cdn_url:
+                    log.info(f"  Download URL: {cdn_url}")
     except Exception as e:
         log.warning(f"  ⚠️  Could not fetch song info: {e}")
+
+    if not cdn_url:
+        # Fallback: try the direct download endpoint
+        cdn_url = download_url
+        log.warning("  Using fallback download URL (may not work)")
 
     # Download the zip
     tmp_dir = output_dir or tempfile.mkdtemp(prefix="beatsaver_")
     zip_path = os.path.join(tmp_dir, f"{map_id}.zip")
 
     try:
-        req = urllib.request.Request(download_url, headers={"User-Agent": "BeatSaberDeluxe/0.54"})
+        req = urllib.request.Request(cdn_url, headers={"User-Agent": "BeatSaberDeluxe/0.54"})
         with urllib.request.urlopen(req, timeout=120) as resp:
             total_size = int(resp.headers.get('Content-Length', 0))
             log.info(f"  Downloading ({total_size / 1024 / 1024:.1f} MB)...")
@@ -1229,6 +1242,14 @@ Examples:
             )
         sys.exit(0)
 
+    # Auto-download from BeatSaver if requested (sets args.song_dir before the dir check)
+    if args.download_beat_saver_song and not args.song_dir:
+        log.info("Downloading song from BeatSaver...")
+        extracted_dir = download_beat_saver_song(args.download_beat_saver_song)
+        args.song_dir = extracted_dir
+    elif args.download_beat_saver_song and args.song_dir:
+        log.info(f"Using local song directory: {args.song_dir} (ignoring --download-beat-saver-song)")
+
     # --song-dir is required for song processing
     if not args.song_dir:
         parser.error('--song-dir is required (or use --deploy-plugin to deploy plugin only)')
@@ -1247,14 +1268,6 @@ Examples:
         args.target_ip = cfg_ps4.get('ip', '192.168.100.117')
     # Override config IP with --target-ip if explicitly provided
     cfg_ps4['ip'] = args.target_ip
-
-    # Handle BeatSaver song download
-    if args.download_beat_saver_song and not args.song_dir:
-        log.info("Downloading song from BeatSaver...")
-        extracted_dir = download_beat_saver_song(args.download_beat_saver_song)
-        args.song_dir = extracted_dir
-    elif args.download_beat_saver_song and args.song_dir:
-        log.info(f"Using local song directory: {args.song_dir} (ignoring --download-beat-saver-song)")
 
     if not os.path.isdir(args.song_dir):
         log.error(f"Song directory not found: {args.song_dir}")
