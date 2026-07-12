@@ -170,6 +170,12 @@ static void load_redirects(void) {
     char logmsg[128];
     snprintf(logmsg, sizeof(logmsg), "loaded %d redirects from config", REDIRECT_COUNT);
     log_write(logmsg);
+    // Log first entry as a sample for log verification
+    if (REDIRECT_COUNT > 0) {
+        char sample[256];
+        snprintf(sample, sizeof(sample), "  e.g. %s -> %s", REDIRECT_KEYS[0], REDIRECT_VALS[0]);
+        log_write(sample);
+    }
 }
 
 static void free_redirects(void) {
@@ -237,6 +243,10 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     ensure_dir();
     log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
+    log_write("v" PLUGIN_VERSION " — dynamic redirect config (reads redirects.json from AFR)");
+
+    // Log the config path being checked for debugging
+    log_write("config: " CONFIG_PATH);
 
     // Load redirects from external config (or fall back to built-in)
     load_redirects();

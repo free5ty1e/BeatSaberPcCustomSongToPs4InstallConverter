@@ -96,10 +96,10 @@ To build custom bundles, you need the **template bundles** from a decrypted dump
 
 | Resource | Description |
 |----------|-------------|
-| [**PS4 Game Dumping Guide**](https://www.reddit.com/r/ps4homebrew/wiki/dumpinggames/) (r/ps4homebrew wiki) | Step-by-step FTP & USB dumping |
-| [**Itemzflow**](https://github.com/Scene-Collective/itemzflow) | All-in-one payload manager with built-in dumper |
-| [**PS4 Game Dumper by Leeful**](https://github.com/Leeful/PS4-Game-Dumper) | USB & FTP dumping payload |
-| [**GoldHEN FTP guide**](https://github.com/GoldHEN/GoldHEN) | FTP transfer for smaller games |
+| [**r/ps4homebrew**](https://www.reddit.com/r/ps4homebrew/) | Active PS4 homebrew community with dumping guides and support |
+| [**PSX-Place PS4 Forum**](https://www.psx-place.com/forums/ps4-general/) | Large community forum with step-by-step dumping tutorials |
+| [**Modded Warfare YouTube**](https://www.youtube.com/@ModdedWarfare) | Best video guides for PS4 jailbreak, FTP setup, and game dumping |
+| [**GoldHEN**](https://github.com/GoldHEN/GoldHEN) | PS4 Homebrew Enabler — enables FTP, payload loading, and custom plugins |
 
 **Quick summary of the dump process:**
 1. Boot PS4, load GoldHEN (user guide payload)

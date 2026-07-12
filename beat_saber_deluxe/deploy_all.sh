@@ -48,7 +48,7 @@ fi
 
 echo "📤 Uploading plugin..."
 lftp -u anonymous, -p "$PS4_PORT" "$PS4_IP" \
-    -e "put '$PLUGIN_FILE' -o '/data/GoldHEN/plugins/beat_saber_deluxe.prx'; quit" 2>/dev/null
+    -e "put '$PLUGIN_FILE' -o '/data/GoldHEN/plugins/beat_saber_deluxe.prx'; chmod 755 '/data/GoldHEN/plugins/beat_saber_deluxe.prx'; quit" 2>&1 | grep -v "^$"
 
 if [ $? -eq 0 ]; then
     echo "  ✅ Plugin deployed"
@@ -75,7 +75,7 @@ for TARGET in "${TARGETS[@]}"; do
 
     echo "  📤 $TARGET ($SIZE_MB MB)..."
     lftp -u anonymous, -p "$PS4_PORT" "$PS4_IP" \
-        -e "put '$BUNDLE' -o '$REMOTE_PATH'; quit" 2>/dev/null
+        -e "put '$BUNDLE' -o '$REMOTE_PATH'; quit" 2>&1 | grep -v "^$"
 
     if [ $? -eq 0 ]; then
         echo "    ✅ $TARGET deployed"
@@ -92,7 +92,7 @@ CONFIG_FILE="$SCRIPT_DIR/redirects.json"
 REMOTE_CONFIG="/data/GoldHEN/AFR/CUSA12878/redirects.json"
 if [ -f "$CONFIG_FILE" ]; then
     lftp -u anonymous, -p "$PS4_PORT" "$PS4_IP" \
-        -e "put '$CONFIG_FILE' -o '$REMOTE_CONFIG'; quit" 2>/dev/null
+        -e "put '$CONFIG_FILE' -o '$REMOTE_CONFIG'; quit" 2>&1 | grep -v "^$"
     echo "  ✅ redirects.json deployed"
 else
     echo "  ⚠️  redirects.json not found at $CONFIG_FILE"
