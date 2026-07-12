@@ -55,6 +55,17 @@ metadata:
 - **Fixed:** Download logic was moved to before the `--song-dir` validation check so the temp directory is set before the required-dir check.
 - **Also:** Replaced "360" by Charli xcx (NDA slot) with "Duvet" by Bôa (186 BPM, alt-rock, 5 diffs, 1.6s first note) because 360-degree maps are unsuitable for PS4 VR.
 
+### Experiment 105: Dynamic redirect fix — sceKernelOpen → POSIX open() for AFR
+- **Date:** 2026-07-11
+- **What:** Diagnosed and fixed the root cause of `redirects.json` not loading. `sceKernelOpen()` bypasses GoldHEN's AFR kernel hook. The file uploaded via FTP is at the physical path visible through `open()` but NOT through `sceKernelOpen()`.
+- **Result:** ✅ FIXED — Changed `load_redirects()` to use POSIX `open()` instead of `sceKernelOpen()`. Also removed the entire hardcoded 13-song Rolling Stones fallback table so ALL redirects must come from `redirects.json`.
+- **Learned:** GoldHEN's Advanced File Redirect (AFR) works at the POSIX `open()` syscall level. Direct syscalls like `sceKernelOpen()` bypass the AFR mapping. Files created by the plugin with `O_CREAT` (like `bs_log.txt`) exist at the GoldHEN-mapped path. Files uploaded via FTP exist at the physical path. Using POSIX `open()` bridges this gap because it goes through GoldHEN's kernel hook which performs the path translation.
+- **Version bumped:** v0.54 → v0.55 for this fix
+- **Rule added:** Every plugin change MUST bump the version number. Documented in CLAUDE.md.
+- **Config path:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+- **Plugin version:** v0.55
+- **Build:** 71584 bytes (release PRX)
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

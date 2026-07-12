@@ -72,13 +72,27 @@ As of v1.0, the redirect table is no longer hardcoded in the plugin. Instead, th
 ```
 
 ### How it Works
-1. On startup, `load_redirects()` attempts to open `redirects.json` from the AFR path
+1. On startup, `load_redirects()` opens `redirects.json` using POSIX `open()` from the AFR path
 2. If found, it parses the JSON to extract key-value pairs from the `redirects` object
 3. Each key is a slot ID (prefixed with `BeatmapLevelsData/`) and the value is either:
    - A **bundle name** (resolved to `AFR_BASE/TITLE_ID/<name>`)
    - A **full AFR path** (used as-is if it contains `/`)
-4. If the config file is missing, empty, or malformed, the plugin falls back to a built-in hardcoded table of 13 Rolling Stones songs
-5. The fallback ensures existing installations continue to work without the config file
+4. **No hardcoded fallback table** — if `redirects.json` is missing, empty, or malformed, the plugin loads zero redirects and logs an error
+5. All redirects must come from `redirects.json` — enabling/disabling is done by modifying the config file
+
+### ⚠️ Critical: POSIX `open()` vs `sceKernelOpen()` for AFR
+
+**Always use POSIX `open()` (not `sceKernelOpen()`) when reading from the AFR path.**
+
+GoldHEN's Advanced File Redirect (AFR) hooks the POSIX `open()` syscall at the kernel level. When a process calls `open("/data/GoldHEN/AFR/CUSA12878/file")`, GoldHEN intercepts it and maps the path to the actual physical storage location. However, `sceKernelOpen()` is a direct syscall that **bypasses** GoldHEN's hook entirely.
+
+This means:
+- Files **created by the plugin** with `sceKernelOpen()` + `O_CREAT` (like `bs_log.txt`) exist at the GoldHEN-mapped AFR path
+- Files **uploaded via FTP** (like `redirects.json`) exist at the **physical** path on internal storage
+- Reading with `sceKernelOpen()` sees the mapped path — NOT the physical path where FTP put the file
+- Reading with POSIX `open()` goes through GoldHEN's hook, which correctly resolves the physical path
+
+**Consequence:** The `load_redirects()` function (as of v0.55) uses `open()` first, then falls back to `sceKernelOpen()`. This ensures FTP-uploaded config files are found. The `log_write()` function correctly uses `sceKernelOpen()` with `O_CREAT` to append to the log file, because it's creating/opening at the mapped path.
 
 ### Modifying Redirects Without Rebuilding
 To add, remove, or change a redirect:
