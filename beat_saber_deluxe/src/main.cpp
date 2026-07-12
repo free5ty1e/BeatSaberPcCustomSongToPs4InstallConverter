@@ -11,7 +11,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.55"
+#define PLUGIN_VERSION "v0.56"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -102,7 +102,7 @@ static void load_redirects(void) {
         return;
     }
     rp += 10;
-    while (*rp && (*rp == ' ' || *rp == '\t' || *rp == '\n' || *rp == '\r' || *rp == ':')) rp++;
+    while (*rp && (*rp == ' ' || *rp == '\t' || *rp == '\n' || *rp == '\r' || *rp == ':' || *rp == '"')) rp++;
     if (*rp != '{') {
         log_write("ERROR: redirects object not found in config");
         return;

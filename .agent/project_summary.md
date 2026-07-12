@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🏆 v0.55 — Dynamic redirect fully working via POSIX `open()`. Hardcoded fallback table removed. All 32 redirects from `redirects.json`. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
+**Status:** 🏆 v0.56 — Dynamic redirect fully working via POSIX `open()`. Hardcoded fallback table removed. All 32 redirects from `redirects.json`. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

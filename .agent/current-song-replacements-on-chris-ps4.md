@@ -1,6 +1,6 @@
 # Current Song Replacements on Chris's PS4
 
-> **Plugin:** Beat Saber Deluxe v0.54  
+> **Plugin:** Beat Saber Deluxe v0.56  
 > **All 32 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo) with custom community songs.  
 > **Last rebuilt:** 2026-07-11 (v0.54 - dynamic redirect config + BeatSaver download feature)  
 > **Status:** ✅ All songs deployed. Requires gameplay testing to verify sync.

@@ -66,6 +66,13 @@ metadata:
 - **Plugin version:** v0.55
 - **Build:** 71584 bytes (release PRX)
 
+### Experiment 106: JSON parser bug — closing quote not skipped in `load_redirects`
+- **Date:** 2026-07-11
+- **What:** After confirming `open()` successfully reads redirects.json (Experiment 105 fix was correct), the plugin still didn't load redirects. Downloaded PS4 log showed "ERROR: redirects object not found in config". Traced the bug: the JSON key `"redirects"` is parsed by skipping 10 chars from the opening `"`, landing on the closing `"`. But the while loop only skips whitespace and colons — it doesn't skip `'"'`!
+- **Result:** ✅ FIXED — Added `*rp == '"'` to the skip condition in the while loop. One-character addition to line 105.
+- **Learned:** The bug was right under my nose: `open()` DID find the file (v0.55), but the JSON parser had a simple character-skip bug. The original `parse_json_pairs()` function handles quotes correctly, but the preamble code that finds the `"redirects"` key manually skips characters without accounting for the trailing `"`.
+- **Version bumped:** v0.55 → v0.56 for this fix
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
@@ -1718,7 +1725,7 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Status:** 🚀 Ready for next test. All 13 bundles deployed. User should reboot PS4.)
 
 
-### Experiment 105 — v0.53: Note Color Fix (c field)
+### Experiment 105 (old) — v0.53: Note Color Fix (c field)
 - **Date:** 2026-07-10
 - **Bug found:** V2→V3 converter set `a` field but not `c` field for note color.
   The PS4 game uses `c` (V3.3.0+) for note color, not `a`. Without `c` field,
