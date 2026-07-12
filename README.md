@@ -60,11 +60,65 @@ This builds the plugin with verbose logging, uploads it and all 13 custom song b
 
 ### Launch Beat Saber on PS4
 
-Look for the notification: **BS Deluxe v0.53 started** in the top-right corner. Play any Rolling Stones song to hear your custom replacement.
+Look for the notification: **BS Deluxe v0.54 started** in the top-right corner. Play any Rolling Stones song to hear your custom replacement.
 
 ---
 
-## 13 Rolling Stones → Custom Song Replacements
+## Prerequisites
+
+### Hardware & Software
+
+| Requirement | Details |
+|------------|---------|
+| **PS4 on FW 9.00** | Any model (Slim/Pro/Base) |
+| **GoldHEN** | v2.4b+ — [GoldHEN on GitHub](https://github.com/GoldHEN/GoldHEN) |
+| **FTP server** | Enable in GoldHEN settings (payloader or built-in) |
+| **Beat Saber installed** | CUSA12878 (any region), must be a **patched/fake-signed** PKG |
+| **Network** | PC and PS4 on the same LAN |
+
+### Development Machine
+
+| Requirement | Details |
+|------------|---------|
+| **OpenOrbis PS4 Toolchain** | Cross-compiler for PS4 PRX plugins — [OpenOrbis on GitHub](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) |
+| **Python 3.10+** | Core pipeline runtime |
+| `pip install soundfile numpy pyfmodex UnityPy` | Python dependencies for audio encoding & bundle editing |
+| **Full decrypted game dump** | Required for template bundles — see "Getting a Game Dump" below |
+
+### Getting a Decrypted Game Dump
+
+To build custom bundles, you need the **template bundles** from a decrypted dump of Beat Saber PS4. This requires:
+
+1. **A jailbroken PS4** with GoldHEN loaded
+2. **A dump tool** to extract the game decrypted (see guides below)
+
+**Popular guides for dumping a decrypted PS4 game:**
+
+| Resource | Description |
+|----------|-------------|
+| [**PS4 Game Dumping Guide**](https://www.reddit.com/r/ps4homebrew/wiki/dumpinggames/) (r/ps4homebrew wiki) | Step-by-step FTP & USB dumping |
+| [**Itemzflow**](https://github.com/Scene-Collective/itemzflow) | All-in-one payload manager with built-in dumper |
+| [**PS4 Game Dumper by Leeful**](https://github.com/Leeful/PS4-Game-Dumper) | USB & FTP dumping payload |
+| [**GoldHEN FTP guide**](https://github.com/GoldHEN/GoldHEN) | FTP transfer for smaller games |
+
+**Quick summary of the dump process:**
+1. Boot PS4, load GoldHEN (user guide payload)
+2. Insert USB drive or start FTP server
+3. Run a game dumper payload (choose USB for faster speed)
+4. Copy the dumped game directory to your PC
+5. The dump should contain `Media/` with `resources.assets`, `StreamingAssets/BeatmapLevelsData/`, etc.
+
+> ⚠️ The dump must be **fully decrypted**. A stub dump (without actual asset data) won't work — the template bundles are required for the pipeline to build custom songs.
+
+### Project Structure After Dump
+
+Place the dump at:
+```
+/workspace/ps4_dump/CUSA12878-app/     # Base game files
+/workspace/ps4_dump/CUSA12878-patch/   # Game update files
+```
+
+Or configure a custom path in `beat_saber_deluxe/ps4_config.json`.
 
 | Slot ID | Original Song | Custom Song | Artist | BPM |
 |---------|--------------|-------------|--------|-----|
