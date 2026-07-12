@@ -15,6 +15,37 @@ metadata:
 
 ---
 
+## Phase 5: Dynamic Redirect Config & Rich Song Database
+
+### Experiment 99: Dynamic redirect v0.54 — first test
+- **Date:** 2026-07-11
+- **What:** Deployed v0.54 plugin with dynamic `redirects.json` config for 13 Rolling Stones slots
+- **Result:** ⚠️ PARTIAL — v0.54 loaded correctly (`=== BS Deluxe v0.54 started ===`), but used built-in fallback table because `redirects.json` wasn't on PS4 (FTP error suppressed by `2>/dev/null`)
+- **Learned:** `deploy_all.sh` had `2>/dev/null` swallowing FTP errors. Fixed in deploy_all.sh (removed error suppression) and pipeline (`args.deploy` now triggers redirect config deployment).
+
+### Experiment 100: Rich song database — metadata extraction
+- **Date:** 2026-07-11
+- **What:** Extracted ALL song metadata from 36 non-zero addressable pack bundles
+- **Result:** ✅ SUCCESS — 305 songs extracted with names, artists, BPM, duration, difficulties, bundle paths
+- **Learned:** Key insight — pack bundles had multiple hash variants; only the largest is non-zero. BeatmapLevelSO objects are in raw serialized file objects (not container). Check `m_Name` for `BeatmapLevel` suffix.
+
+### Experiment 101: Per-difficulty beatmap stats extraction
+- **Date:** 2026-07-11
+- **What:** Extracted notes/bombs/arcs/chains/walls counts per difficulty from template bundles (Billie Eilish & Lizzo)
+- **Result:** ✅ SUCCESS
+- **Learned:** TextAsset `m_Script` stores binary gzip data as `str`. Need `.encode('utf-8', errors='surrogateescape')` then gunzip.
+
+### Experiment 102: `--download-beat-saver-song` pipeline feature
+- **Date:** 2026-07-11
+- **What:** Auto-download from BeatSaver API. Accepts map key, downloads ZIP, extracts and runs pipeline
+- **Result:** ✅ IMPLEMENTED
+- **Usage:** `--download-beat-saver-song <map_key> --target <slot> --deploy --generate-config --deploy-config`
+
+### Experiment 103: Billie Eilish + Lizzo album replacements
+- **Date:** 2026-07-11
+- **What:** Selected 19 custom songs matching criteria. Script at `deploy_billie_lizzo.sh`
+- **Result:** ⏳ PENDING — script ready, waiting for build & deploy
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

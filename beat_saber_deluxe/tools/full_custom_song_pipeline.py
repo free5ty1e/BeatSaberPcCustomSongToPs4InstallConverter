@@ -1218,7 +1218,7 @@ Examples:
         log.info("Plugin deployment complete (no song processed)")
 
         # Handle redirect config in plugin-only mode
-        if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config:
+        if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config or args.deploy:
             manage_redirect_config(
                 {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths},
                 target_name=None,
@@ -1387,9 +1387,9 @@ Examples:
     # -----------------------------------------------------------------------
     # Step 9: Manage redirect config (redirects.json)
     # -----------------------------------------------------------------------
-    # Generate config if requested, or auto-generate when deploying
-    should_generate = args.generate_config or args.deploy_config or args.sync_config
-    should_deploy = args.deploy_config or args.sync_config or args.enforce_config
+    # Auto-generate and auto-deploy config when deploying bundles
+    should_generate = args.generate_config or args.deploy_config or args.sync_config or args.deploy
+    should_deploy = args.deploy_config or args.sync_config or args.enforce_config or args.deploy
     if should_generate or should_deploy or args.sync_config or args.enforce_config:
         manage_redirect_config(
             config,

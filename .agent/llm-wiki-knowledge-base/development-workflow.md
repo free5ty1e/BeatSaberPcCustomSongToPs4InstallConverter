@@ -53,6 +53,18 @@ To overwrite the PS4 config with your local version:
 python3 tools/full_custom_song_pipeline.py --enforce-config --deploy
 ```
 
+### Downloading Songs from BeatSaver
+```bash
+# One-command download + convert + deploy:
+python3 tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song <map_key> \
+  --target <ps4_slot_id> \
+  --pcm16 --no-pad --convert-to-v3 \
+  --deploy --generate-config --deploy-config
+```
+
+The pipeline fetches from `api.beatsaver.com/maps/id/<map_key>/download`, extracts the ZIP, runs the full conversion, and deploys everything. Browse songs at https://beatsaver.com.
+
 ## FTP Deployment Commands
 
 ### Deploy plugin

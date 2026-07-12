@@ -94,31 +94,27 @@ jobs:
 
       - name: Generate redirects.json
         run: |
-          python3 -c "
-import json
-redirects = {
-    'titleId': 'CUSA12878',
-    'afrBase': '/data/GoldHEN/AFR',
-    'redirects': {
-        'angry': 'angry_custom_v3',
-        'bitemyheadoff': 'bitemyheadoff_custom_v3',
-        'cantyouhearmeknocking': 'cantyouhearmeknocking_custom_v3',
-        'deadmanwalking': 'deadmanwalking_custom_v3',
-        'gimmeshelter': 'gimmeshelter_custom_v3',
-        'icantgetnosatisfaction': 'icantgetnosatisfaction_custom_v3',
-        'livebythesword': 'livebythesword_custom_v3',
-        'messitup': 'messitup_custom_v3',
-        'paintitblack': 'paintitblack_custom_v3',
-        'startmeup': 'startmeup_custom_v3',
-        'sugarsoaker': 'sugarsoaker_custom_v3',
-        'sympathyforthedevil': 'sympathyforthedevil_custom_v3',
-        'wholewideworld': 'wholewideworld_custom_v3',
-    }
-}
-with open('redirects.json', 'w') as f:
-    json.dump(redirects, f, indent=2)
-    f.write(chr(10))
-"
+          cat > redirects.json << 'JSONEOF'
+          {
+            "titleId": "CUSA12878",
+            "afrBase": "/data/GoldHEN/AFR",
+            "redirects": {
+              "angry": "angry_custom_v3",
+              "bitemyheadoff": "bitemyheadoff_custom_v3",
+              "cantyouhearmeknocking": "cantyouhearmeknocking_custom_v3",
+              "deadmanwalking": "deadmanwalking_custom_v3",
+              "gimmeshelter": "gimmeshelter_custom_v3",
+              "icantgetnosatisfaction": "icantgetnosatisfaction_custom_v3",
+              "livebythesword": "livebythesword_custom_v3",
+              "messitup": "messitup_custom_v3",
+              "paintitblack": "paintitblack_custom_v3",
+              "startmeup": "startmeup_custom_v3",
+              "sugarsoaker": "sugarsoaker_custom_v3",
+              "sympathyforthedevil": "sympathyforthedevil_custom_v3",
+              "wholewideworld": "wholewideworld_custom_v3"
+            }
+          }
+          JSONEOF
           echo "redirects.json generated:"
           python3 -m json.tool redirects.json | head -5
 

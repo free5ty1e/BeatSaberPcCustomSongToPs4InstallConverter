@@ -92,14 +92,23 @@ To build custom bundles, you need the **template bundles** from a decrypted dump
 1. **A jailbroken PS4** with GoldHEN loaded
 2. **A dump tool** to extract the game decrypted (see guides below)
 
-**Popular guides for dumping a decrypted PS4 game:**
+**Quick summary of the dump process:**
 
-| Resource | Description |
-|----------|-------------|
-| [**r/ps4homebrew**](https://www.reddit.com/r/ps4homebrew/) | Active PS4 homebrew community with dumping guides and support |
-| [**PSX-Place PS4 Forum**](https://www.psx-place.com/forums/ps4-general/) | Large community forum with step-by-step dumping tutorials |
-| [**Modded Warfare YouTube**](https://www.youtube.com/@ModdedWarfare) | Best video guides for PS4 jailbreak, FTP setup, and game dumping |
-| [**GoldHEN**](https://github.com/GoldHEN/GoldHEN) | PS4 Homebrew Enabler — enables FTP, payload loading, and custom plugins |
+> **Note:** Since community guides come and go, here's a brief overview of the process:
+
+1. **Jailbreak your PS4** — Load GoldHEN via your preferred user guide payload
+2. **Enable FTP** — In GoldHEN settings, enable the FTP server (or use a payload that bundles it)
+3. **Dump the game** — Use a game dumper payload on the PS4 (via the GoldHEN payload list) to dump Beat Saber (CUSA12878) to USB. The dumper will produce a decrypted copy of the game files
+4. **Transfer to PC** — Copy the dumped directory from USB to your PC
+5. **Verify** — The dump should contain `Media/` with `resources.assets` and `StreamingAssets/BeatmapLevelsData/` (306 template bundles)
+
+For step-by-step video instructions, [**Modded Warfare on YouTube**](https://www.youtube.com/@ModdedWarfare) has the most comprehensive PS4 jailbreak and game dumping guides.
+
+**Additional community resources:**
+- [**GoldHEN**](https://github.com/GoldHEN/GoldHEN) — PS4 Homebrew Enabler (jailbreak + FTP + plugin loader)
+- [**xvortex PS4 Dumper**](https://github.com/xvortex/ps4-dumper-vtx) — All-in-one game dumper for PS4
+- [**r/ps4homebrew**](https://www.reddit.com/r/ps4homebrew/) — Active community with guides and support
+- [**PSX-Place**](https://www.psx-place.com/forums/ps4-general/) — Community forum with written dumping tutorials
 
 **Quick summary of the dump process:**
 1. Boot PS4, load GoldHEN (user guide payload)
@@ -160,6 +169,33 @@ python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py \
   --song-dir /path/to/song_directory \
   --target <slot_id> --pcm16 --no-pad --convert-to-v3 \
   --deploy --deploy-plugin
+```
+
+### Browse & Auto-Download from BeatSaver
+
+Browse available custom songs at [**BeatSaver.com**](https://beatsaver.com/). Each song page has a URL like `https://beatsaver.com/maps/<map_key>` (e.g. `1d6c7c2`). Use the `--download-beat-saver-song` flag to auto-download and deploy in one command:
+
+```bash
+python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song <map_key> \
+  --target <slot_id> --pcm16 --no-pad --convert-to-v3 \
+  --deploy --deploy-config
+```
+
+The pipeline will:
+1. Fetch song metadata from the BeatSaver API (`api.beatsaver.com`)
+2. Download the ZIP containing audio + beatmaps
+3. Extract to a temporary directory
+4. Run the full conversion pipeline (V2→V3, PCM16 audio, auto-BPM, etc.)
+5. Deploy the bundle to PS4
+6. Update `redirects.json` and deploy it to PS4
+
+A complete one-command example:
+```bash
+python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song 1d6c7c2 \
+  --target BadGuy --pcm16 --no-pad --convert-to-v3 \
+  --deploy --generate-config --deploy-config
 ```
 
 ### Replace a Specific Rolling Stones Slot

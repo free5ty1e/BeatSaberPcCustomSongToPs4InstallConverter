@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-08
-**Status:** 🏆 v0.51 — All 12 Rolling Stones songs replaced with custom songs. bpmData sync ✅. PCM16 FSB5 ✅. **Next action:** deploy v0.51 plugin to PS4 and test all 12 songs. Pipeline beatmap filename fallback now handles all BeatSaver naming conventions (Standard > bare > .beatmap.dat > 90Degree/OneSaber > 360Degree last resort).
+**Last Updated:** 2026-07-11
+**Status:** 🏆 v0.54 — Dynamic redirect config system. `--download-beat-saver-song` auto-download feature. Rich song database (305 songs, 36 albums). Billie Eilish + Lizzo album replacements pending build.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
