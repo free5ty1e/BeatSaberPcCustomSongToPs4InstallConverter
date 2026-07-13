@@ -2,7 +2,7 @@
 
 > **Plugin:** Beat Saber Deluxe v0.56  
 > **All 32 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo) with custom community songs.  
-> **Last rebuilt:** 2026-07-11 (v0.54 - dynamic redirect config + BeatSaver download feature)  
+> **Last rebuilt:** 2026-07-11 (v0.57 - dynamic redirect config + BeatSaver download feature)  
 > **Status:** ✅ All songs deployed. Requires gameplay testing to verify sync.
 
 ## Rolling Stones Replacements (13 songs)
@@ -66,7 +66,7 @@ cd /workspace/beat_saber_deluxe
 ```
 
 This deploys:
-- Plugin (v0.54 debug) → `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
+- Plugin (v0.57 debug) → `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
 - All bundles → `/data/GoldHEN/AFR/CUSA12878/{slot}_v3`
 - `redirects.json` → `/data/GoldHEN/AFR/CUSA12878/redirects.json`
 

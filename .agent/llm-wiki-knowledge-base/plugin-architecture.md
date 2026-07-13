@@ -92,7 +92,7 @@ This means:
 - Reading with `sceKernelOpen()` sees the mapped path — NOT the physical path where FTP put the file
 - Reading with POSIX `open()` goes through GoldHEN's hook, which correctly resolves the physical path
 
-**Consequence:** The `load_redirects()` function (as of v0.55) uses `open()` first, then falls back to `sceKernelOpen()`. This ensures FTP-uploaded config files are found. The `log_write()` function correctly uses `sceKernelOpen()` with `O_CREAT` to append to the log file, because it's creating/opening at the mapped path.
+**Consequence:** The `load_redirects()` function (as of v0.57) uses `open()` first, then falls back to `sceKernelOpen()`. This ensures FTP-uploaded config files are found. The `log_write()` function correctly uses `sceKernelOpen()` with `O_CREAT` to append to the log file, because it's creating/opening at the mapped path.
 
 ### Modifying Redirects Without Rebuilding
 To add, remove, or change a redirect:

@@ -90,6 +90,14 @@ metadata:
 - **Version bumped:** v0.56 → v0.57 for this fix.
 - **Outcome:** Debug PRX (71648 bytes) now contains all verbose logging strings (`open:%s`, `fopen:%s`), allowing real-time analysis of file access.
 
+
+### Experiment 109: Case-Insensitive Redirect Matching
+- **Date:** 2026-07-11
+- **What:** v0.57 debug log showed that Rolling Stones songs (lowercase in la- l_ la path) redirect successfully, but Billie Eilish and Lizzo songs (CamelCase in `redirects.json`) do not redirect.
+- **Root cause:** `strstr()` is case-sensitive. The game requests paths in lowercase, but the config used CamelCase keys.
+- **Result:** ✅ FIXED — Implemented case-insensitive matching in `open_hook` by creating a lowercase copy of the requested path and matching it against a pre-computed `LOWER_REDIRECT_KEYS` array.
+- **Verification:** All 32 songs (including Billie Eilish and Lizzo) now redirect correctly on PS4.
+- **Version bumped:** v0.57 (maintenance update)
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
