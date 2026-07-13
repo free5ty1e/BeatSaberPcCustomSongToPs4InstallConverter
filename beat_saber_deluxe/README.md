@@ -1,4 +1,4 @@
-# Beat Saber Deluxe — Pipeline & Plugin
+# Beat Saber Deluxe — Pipeline & Plugin (v0.57)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
@@ -21,6 +21,12 @@ python3 tools/full_custom_song_pipeline.py \
   --song-dir <song_directory> \
   --target <slot_name> --pcm16 --no-pad \
   --convert-to-v3 --deploy --deploy-plugin --debug-logging
+
+# Direct download from BeatSaver and deploy
+python3 tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song <map_id> \
+  --target <slot_name> --pcm16 --no-pad \
+  --convert-to-v3 --deploy --deploy-plugin
 ```
 
 ### Pipeline Flags
@@ -28,13 +34,23 @@ python3 tools/full_custom_song_pipeline.py \
 | Flag | Purpose |
 |------|---------|
 | `--song-dir` | Directory with song audio + beatmap .dat files |
-| `--target` | Rolling Stones slot (startmeup, angry, etc.) |
+| `--download-beat-saver-song <id>` | Download map directly from BeatSaver using map ID |
+| `--target` | Target slot (e.g. `startmeup`, `Oxytocin`, `2BeLoved`) |
 | `--pcm16` | PCM16 FSB5 audio (lossless) |
 | `--no-pad` | Don't extend audio (use when PCM16 > original resource size) |
 | `--convert-to-v3` | Auto-convert V2 beatmaps to V3.2.0 |
 | `--deploy` | Upload bundle to PS4 via FTP |
 | `--deploy-plugin` | Build + deploy plugin PRX |
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) |
+| `--generate-config` | Update `redirects.json` config on PS4 |
+
+## Dynamic Redirect Config
+
+The plugin now uses a **dynamic redirect table** instead of hardcoded defaults. This allows adding new songs without recompiling the plugin.
+
+- **Config Path:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+- **Format:** JSON mapping of `slot_id` → `bundle_filename`
+- **Mechanism:** The plugin uses POSIX `open()` to read the config from the AFR path, ensuring compatibility with files uploaded via FTP.
 
 ## Plugin
 
@@ -53,7 +69,7 @@ Version defined by `PLUGIN_VERSION` in `src/main.cpp`. Increment when plugin cha
 ./deploy_all.sh [--release|--debug]
 ```
 
-Deploys plugin + all 13 custom song bundles to PS4. Also clears PS4 log.
+Deploys plugin + all 32 custom song bundles (Rolling Stones, Billie Eilish, Lizzo) and `redirects.json` to PS4. Also clears PS4 log.
 
 ## Documentation
 
