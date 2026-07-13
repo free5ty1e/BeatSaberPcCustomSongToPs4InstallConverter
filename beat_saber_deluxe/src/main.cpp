@@ -121,7 +121,7 @@ static void load_redirects(void) {
     // Allocate and populate the redirect table
     for (int i = 0; i < n && i < MAX_REDIRECTS; i++) {
         char buf_key[MAX_PATH + 32];
-        snprintf(buf_key, sizeof(buf_key), "BeatmapLevelsData/%s", keys[i]);
+        snprintf(buf_key, sizeof(buf_key), "%s", keys[i]);
         char buf_val[MAX_PATH];
         if (strchr(vals[i], '/')) {
             snprintf(buf_val, sizeof(buf_val), "%s", vals[i]);

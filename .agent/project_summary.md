@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector investigation: Experiment 111 (pack bundle patching) tested — FAILED. Experiment 112 (AFR root redirect + DEBUG plugin) deployed, awaiting retest. The game UI reads `_previewDifficultyBeatmapSets` from `BeatmapLevelSO` in Addressables pack bundle; redirect not working yet — moved pack bundle to AFR root and added `open_hook` redirect entry. DEBUG plugin deployed for log analysis. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
+**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector investigation ongoing. Exp 112 (AFR root redirect) tested — FAILED. **Root cause found:** Plugin hardcodes `"BeatmapLevelsData/"` prefix on all redirect keys (main.cpp:124), preventing non-BeatmapLevelsData paths (like Addressables pack bundles) from matching. Exp 113 deployed with fix — keys used as-is from redirects.json. All 32 existing keys updated to include `BeatmapLevelsData/` prefix in JSON. Pack bundle redirect now possible. Awaiting retest.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,12 +449,13 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (112):** Addressables pack bundle redirect via AFR root.
-- **Problem:** Mode selector doesn't appear for Start Me Up despite having OneSaber/90Degree `_difficultyBeatmapSets` in the per-song bundle
-- **Root Cause:** UI reads `_previewDifficultyBeatmapSets` from `BeatmapLevelSO` in Addressables pack bundle, not from per-song `BeatmapLevel`
-- **Fix Attempt 1 (Exp 111):** Modified pack bundle's `BeatmapLevelSO` to add 3 preview sets. Deployed to AFR subdirectory. **FAILED** — subdirectory redirect didn't work
-- **Fix Attempt 2 (Exp 112):** Moved pack bundle to AFR root, added redirect entry to `redirects.json`, deployed DEBUG plugin for logging. **AWAITING TEST**
-- **Remaining:** If AFR root redirect works, next challenge is locating OneSaber/90Degree `BeatmapCharacteristicSO` PIDs for correct mode labels
+**Current Experiment (113):** Plugin key matching fix — removed hardcoded `"BeatmapLevelsData/"` prefix.
+- **Problem:** Exp 112 failed — plugin prepends `"BeatmapLevelsData/"` to ALL redirect keys, making Addressables path match impossible
+- **Root Cause caught by log analysis:** 33 redirects loaded, pack bundle IS opened by game (8×), but `strstr("...aa/PS4/therollingstones_pack_assets...", "BeatmapLevelsData/therollingstones_pack_assets...")` never matches
+- **Fix (Exp 113):** Removed prefix from `main.cpp`; moved prefix into redirects.json keys. Now keys match their paths literally
+- **Status:** Deployed — awaiting retest
+- **Next if passes:** Mode buttons appear above difficulty list
+- **Next challenge:** Locate OneSaber/90Degree `BeatmapCharacteristicSO` PIDs for correct mode labels (currently using Standard PID as fallback)
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

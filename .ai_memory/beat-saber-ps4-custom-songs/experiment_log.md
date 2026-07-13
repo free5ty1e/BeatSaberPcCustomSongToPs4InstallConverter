@@ -134,7 +134,33 @@ metadata:
   2. Added redirect entry to `redirects.json`: `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle": "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle"`
   3. Built and deployed DEBUG plugin (`make DEBUG=1`) — enables verbose logging to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
 - **Theory:** The plugin's `open_hook` uses `strstr()` to match redirect keys against the game's open path. Since `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` will appear in the Addressables open path, it should match and redirect to the AFR root.
-- **Status:** 🔄 DEPLOYED — awaiting retest. Restart Beat Saber, select Start Me Up, check for mode options above the difficulty list.
+- **Status:** ❌ TEST FAILED — User restarted and selected Start Me Up. No mode options appeared above the difficulty list.
+- **Log Analysis:** Log file existed (739 lines, 79KB) — DEBUG plugin IS running. 33 redirects loaded from config (including pack bundle entry). Rolling Stones pack bundle IS being opened by the game (8 open calls seen — 4× `/archive/mount/point/`, 4× `/app0/`). However, the **redirect never fires** for the pack bundle — only the startmeup redirect triggers.
+- **Root Cause:** Plugin code at `main.cpp:124` prepends `"BeatmapLevelsData/"` to EVERY redirect key:
+  ```c
+  snprintf(buf_key, sizeof(buf_key), "BeatmapLevelsData/%s", keys[i]);
+  ```
+  So the pack bundle key becomes `"BeatmapLevelsData/therollingstones_pack_assets_all_...bundle"` which will NEVER match the Addressables open path (which doesn't contain `"BeatmapLevelsData/"` at all).
+
+### Experiment 113: Fix Plugin Key Matching — Remove Hardcoded "BeatmapLevelsData/" Prefix
+- **Date:** 2026-07-13
+- **What:** Fixed the plugin's redirect key logic to NOT prepend "BeatmapLevelsData/" to all keys. Instead, keys in redirects.json now include the path prefix directly, allowing both BeatmapLevelsData paths AND Addressables paths to be matched.
+- **Changes:**
+  1. **`main.cpp` line 124:** Changed `snprintf(buf_key, ..., "BeatmapLevelsData/%s", keys[i])` → `snprintf(buf_key, ..., "%s", keys[i])` — uses the key as-is from redirects.json
+  2. **`redirects.json`:** Updated all 32 existing keys from `"startmeup"` → `"BeatmapLevelsData/startmeup"` (and similarly for all entries). The pack bundle entry stays as `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle"` — no "BeatmapLevelsData/" prefix needed
+- **Root Cause of Exp 112 failure:** The plugin always wrapped keys with `"BeatmapLevelsData/"`, making it impossible to match non-BeatmapLevelsData paths like the Addressables pack bundle
+- **Log Findings Table:**
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | Total lines | 739 | Full song play cycle (~full menu + song select + return) |
+  | v0.57 loaded | 1 | Plugin initialized correctly |
+  | Redirects loaded | 33 | Config parsed, all 33 entries in table |
+  | startmeup redirect | 1 | `BeatmapLevelsData/startmeup -> startmeup_v3` |
+  | Pack bundle opens | 8 | Game opened `therollingstones_pack_assets_all_*` 8×, NONE redirected |
+  | Other pack opens | ~40 | All other Addressables packs opened at startup |
+  | PlayerData saved | 1 | Clean return to menu |
+  | Error lines | 0 | No errors |
+- **Status:** 🔄 DEPLOYED — awaiting retest. Restart Beat Saber, select Start Me Up, check for mode buttons above difficulty list.
 
 ## Phase 1: Initial Research & Failed Approaches
 

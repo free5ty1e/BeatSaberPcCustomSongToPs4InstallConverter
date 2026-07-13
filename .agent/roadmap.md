@@ -55,7 +55,11 @@
 - [ ] Add new songs to existing album packs
 - [ ] Create custom album pack definition
 - [x] Per-song `_difficultyBeatmapSets` modification — `add_mode_characteristics()` function added to pipeline (Exp 110)
-- [/] Addressables `BeatmapLevelSO._previewDifficultyBeatmapSets` modification — UI mode selector requires patching the pack bundle. Exp 111 (subdirectory AFR) FAILED. Exp 112 (AFR root redirect) awaiting test.
+- [x] Addressables `BeatmapLevelSO._previewDifficultyBeatmapSets` modification — pack bundle patched (Exp 111)
+- [x] Pack bundle redirect attempt via AFR root (Exp 112) — FAILED. **Root cause:** plugin hardcoded `"BeatmapLevelsData/"` prefix on all keys
+- [x] Plugin key matching fix (Exp 113) — removed hardcoded prefix, keys now used as-is from JSON
+- [/] Pack bundle redirect via `open_hook` — Exp 113 fix deployed, awaiting test
+- [ ] Behind pack bundle redirect: verify `_previewDifficultyBeatmapSets` changes propagate to UI
 - [ ] Locate OneSaber/90Degree/NoArrows `BeatmapCharacteristicSO` PIDs in external CAB for proper mode labels
 
 ## M5 — Polishing (Future)

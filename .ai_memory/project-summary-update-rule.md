@@ -7,6 +7,13 @@ metadata:
 
 ## Rule: Update Documentation Before Reporting
 
+**Note:** All project READMEs have been consolidated into a single project-level README at the repo root. No per-module READMEs.
+
+### README update rule: After any experiment that produces a new finding, also update:
+- The **"Current Experiment"** section in the project-level README
+- Any **ASCII art diagrams** or **usage examples** that are now incorrect
+- The **features table** or **status indicators**
+
 **Enforcement:** After every task completion, deployment, experiment result, or significant discovery — and **before** reporting back to the user — update project documentation FIRST.
 
 ### Documents to update:
