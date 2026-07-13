@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🏆 v0.57 — Dynamic redirect fully working via POSIX `open()`. All 32 redirects from `redirects.json`. Debug build enabled for verbose file-access logging. Pipeline supports `--enable-modes` flag for adding OneSaber/90Degree characteristics to bundles. Song metadata Addressables structure documented in knowledge base. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
+**Status:** 🏆 v0.57 — Dynamic redirect fully working via POSIX `open()`. All 32 redirects from `redirects.json`. Debug build enabled for verbose file-access logging. Pipeline supports `--enable-modes` flag for adding OneSaber/90Degree characteristics to per-song bundles. Song metadata Addressables structure documented (BeatmapLevelSO vs BeatmapLevel). **Mode selector investigation ongoing** — UI reads `_previewDifficultyBeatmapSets` from BeatmapLevelSO in Addressables pack bundle, not `_difficultyBeatmapSets` from per-song bundle. BeatmapCharacteristicSO references for OneSaber/90Degree could not be located (in external CAB). Pack bundle patching script created for experimentation. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

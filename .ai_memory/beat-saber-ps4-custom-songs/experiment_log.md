@@ -104,9 +104,22 @@ metadata:
 - **What:** Implemented the ability to add alternative beatmap characteristics (OneSaber, 90Degree, etc.) to custom song bundles so they appear in the in-game mode selector.
 - **How:** Added `add_mode_characteristics()` function to the pipeline that clones Standard `_difficultyBeatmapSet` entries into new characteristics. The cloned entries reuse the same `.beatmap.gz` and `.lightshow.gz` assets, so the game plays Standard-mode notes with the mode modifier applied.
 - **CLI:** Added `--enable-modes OneSaber,90Degree` flag to the pipeline.
-- **Result:** ✅ Implemented and verified - bundles correctly contain all 3 characteristics (Standard, OneSaber, 90Degree) with 5 difficulties each.
-- **Next:** Awaiting PS4 test to confirm the mode selector appears in-game.
-- **Also:** Added `song-metadata-addressables-structure.md` to knowledge base documenting the `BeatmapLevel` vs `BeatmapLevelSO` hierarchy, Addressables catalog, and IL2CPP hook targets.
+- **Result:** ❌ Test FAILED — User tested Start Me Up on PS4 and confirmed NO mode selector appeared. All difficulties only showed standard 2-saber mode.
+- **Next:** Investigation needed — why didn't the mode selector appear?
+
+### Experiment 111: BeatmapLevelSO Preview Sets — Root Cause of Missing Mode Selector
+- **Date:** 2026-07-13
+- **What:** Investigated why the mode selector didn't appear in-game despite adding OneSaber/90Degree characteristics to the per-song `BeatmapLevel` bundle.
+- **Root Cause:** The in-game mode selector does NOT read characteristics from the per-song `BeatmapLevel` bundle (`_difficultyBeatmapSets`). Instead, the UI reads `_previewDifficultyBeatmapSets` from the `BeatmapLevelSO` object stored in the **Addressables pack bundle** (`aa/PS4/therollingstones_pack_assets_all_*.bundle`).
+- **Key Discoveries:**
+  1. The Rolling Stones pack has a single Addressables bundle containing `BeatmapLevelPackSO` → `BeatmapLevelCollectionSO` → 11 `BeatmapLevelSO` objects
+  2. Each `BeatmapLevelSO` has `_previewDifficultyBeatmapSets` which drives the UI mode selector
+  3. The BeatmapCharacteristicSO references (Standard, OneSaber, 90Degree) are in an external CAB (`CAB-cb38b3e2985c65d4cf8a63437da74a89`) referenced via `m_FileID=3` in the pack bundle's externals table
+  4. The BeatmapCharacteristicSO PID for Standard is `-7286399427822119286`; OneSaber and 90Degree PIDs could not be found
+- **Solution:** Modified the pack bundle's `BeatmapLevelSO` for `StartMeUp` to add `_previewDifficultyBeatmapSets` entries for OneSaber and 90Degree (using the Standard BeatmapCharacteristicSO reference as a fallback)
+- **Tool:** Created `development/scripts/modify_pack_bundle.py` — utility script to patch the Addressables pack bundle
+- **Status:** Modified bundle deployed to PS4 AFR path (`/data/GoldHEN/AFR/CUSA12878/Media/StreamingAssets/aa/PS4/...`). Awaiting retest.
+- **Remaining Challenge:** Need to locate the OneSaber and 90Degree BeatmapCharacteristicSO PIDs for proper mode labels. If using Standard PID for all modes, the UI may show "Standard" for all three mode options.
 
 ## Phase 1: Initial Research & Failed Approaches
 

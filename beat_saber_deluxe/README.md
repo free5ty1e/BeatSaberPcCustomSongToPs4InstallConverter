@@ -45,45 +45,11 @@ python3 tools/full_custom_song_pipeline.py \
 | `--generate-config` | Update `redirects.json` config on PS4 |
 | `--enable-modes` | Comma-separated list of extra beatmap modes to enable (e.g. `OneSaber,90Degree`). Clones Standard beatmaps into the new characteristics so they appear in the in-game mode selector. |
 
-## Beatmap Mode Control
+## Beatmap Mode Control — CAUTION: EARLY STAGE (v0.57 experimental)
 
-By default, custom song bundles only have the `"Standard"` characteristic in their `_difficultyBeatmapSets` array. The game hides the mode selector when there's only one option.
+**NOTE:** This feature is currently experimental. Adding `_difficultyBeatmapSets` entries to the per-song bundle is only **half** of the solution — the in-game UI also requires modifying `_previewDifficultyBeatmapSets` in the `BeatmapLevelSO` (stored in the Addressables pack bundle, not the per-song bundle). See Experiment 111 for details.
 
-Without `--enable-modes` (current behavior):
-```
-Song Select Screen:
-  ┌─────────────────────────────────┐
-  │  startmeup  [Standard]          │
-  │  ▸ Easy     ▸ Expert            │
-  │  ▸ Normal   ▸ Expert+          │  ← NO MODE SELECTOR VISIBLE
-  │  ▸ Hard                        │     (game hides it when
-  └─────────────────────────────────┘     only 1 mode exists)
-```
-
-With `--enable-modes OneSaber,90Degree`:
-```
-Song Select Screen:
-  ┌─────────────────────────────────┐
-  │  startmeup                      │
-  │  Mode: [Standard ▼]   ◄ CLICK  │  ← MODE DROPDOWN APPEARS
-  │  ▸ Easy     ▸ Expert            │     click to switch between
-  │  ▸ Normal   ▸ Expert+          │     Standard / One Saber /
-  │  ▸ Hard                        │     90 Degree
-  └─────────────────────────────────┘
-```
-
-### How to Use
-
-```bash
-# Build & deploy a song with OneSaber and 90Degree modes enabled
-python3 tools/full_custom_song_pipeline.py \
-  --song-dir <song_directory> \
-  --target <slot_name> --pcm16 --no-pad \
-  --convert-to-v3 --enable-modes OneSaber,90Degree \
-  --deploy
-```
-
-### How It Works
+### How It Works (Pipeline Side)
 
 The pipeline's `add_mode_characteristics()` function finds the `BeatmapLevel` object (class_id 114) in the bundle's CAB and reads its TypeTree. It clones the existing `"Standard"` entries in the `_difficultyBeatmapSets` array, creating new entries for each requested characteristic:
 
@@ -97,7 +63,46 @@ The pipeline's `add_mode_characteristics()` function finds the `BeatmapLevel` ob
 
 Each cloned entry references the **same** `.beatmap.gz` and `.lightshow.gz` assets as the Standard characteristic (same path IDs). The game's engine applies the mode modifier (one saber, 90-degree rotation) to the Standard notes at runtime.
 
-**Important:** No separate mode-specific `.dat` files are needed. The feature works by cloning, not by generating new beatmap content. The mode selector appears in-game because the game reads `_difficultyBeatmapSets` to determine what mode options to show.
+### UI Reality (After Investigation)
+
+The in-game mode selector is NOT controlled by the per-song bundle's `_difficultyBeatmapSets`. Instead:
+
+| Data Source | Location | Controls |
+|-------------|----------|----------|
+| `_previewDifficultyBeatmapSets` | `BeatmapLevelSO` in Addressables pack bundle | What modes appear in the song selection UI |
+| `_difficultyBeatmapSets` | `BeatmapLevel` in per-song bundle (`BeatmapLevelsData/{slot}`) | What beatmaps load when you select a mode |
+
+**User UI description:** "I select a difficulty, and then the UI above the difficulty section shows the modes." The mode options appear as buttons/segments in a row above the difficulty list — NOT a dropdown.
+
+**Known Beatmap Characteristic names:** `Standard`, `OneSaber`, `90Degree`, `NoArrows`, `OneColor`
+
+### What's Required to Make Modes Visible
+
+1. **Modify the `BeatmapLevelSO` in the pack bundle** — add `_previewDifficultyBeatmapSets` entries for each desired characteristic. Each entry needs a reference to a `BeatmapCharacteristicSO` object (located in an external CAB).
+2. **Modify the per-song `BeatmapLevel` bundle** — add `_difficultyBeatmapSets` entries (done by `add_mode_characteristics()`).
+3. **Deploy both bundles** to PS4 and use AFR to redirect the pack bundle load.
+4. **Challenge:** The `BeatmapCharacteristicSO` references for OneSaber/90Degree are in an external CAB that couldn't be located. The current workaround uses the Standard BeatmapCharacteristicSO reference for all modes, which may show all modes as "Standard" in the UI.
+
+### Utility Script
+
+`development/scripts/modify_pack_bundle.py` — modifies the Addressables pack bundle to add `_previewDifficultyBeatmapSets` entries for a specific song. Usage:
+
+```bash
+python3 development/scripts/modify_pack_bundle.py
+```
+
+(Currently hardcoded for StartMeUp. Edit the script to target different songs.)
+
+### CLI Flag
+
+```bash
+# Build a bundle with OneSaber and 90Degree characteristics
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir <song_directory> \
+  --target <slot_name> --pcm16 --no-pad \
+  --convert-to-v3 --enable-modes OneSaber,90Degree \
+  --deploy
+```
 
 ### Verification
 
