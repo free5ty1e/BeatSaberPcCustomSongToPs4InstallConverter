@@ -72,6 +72,7 @@ enforced by the files they reference — read them if you haven't already.
 **Rule file:** `/workspace/.ai_memory/project-summary-update-rule.md`
 
 Before presenting results to the user, you MUST update ALL of these:
+
 1. Download & analyze the PS4 log first
 2. Update `experiment_log.md` with a new sequential experiment entry
 3. Update `song_testing_log.md` if testing songs
@@ -83,7 +84,7 @@ Before presenting results to the user, you MUST update ALL of these:
 
 **Rule file:** `/workspace/.ai_memory/experiment-workflow.md`
 
-Every experiment cycle follows: Understand → Make Changes → Deploy → 
+Every experiment cycle follows: Understand → Make Changes → Deploy →
 Prepare for User Test → Analyze Results → Iterate
 
 Read both rule files above before starting any work cycle.
@@ -101,3 +102,8 @@ This rule also applies to any pipeline changes that affect deployment.
 - `song_testing_log.md` — update after every PS4 test
 - `experiment_log.md` — sequential entries for every cycle
 - `project_summary.md` — keep the one-line status current
+
+## 5. Mine conversation / results for durable, useful knowledge and capture / update in our llm-wiki knowledge base
+
+The knowledge base is described in this document: `.agent/llm-wiki.md`
+The knowledge base itself is located here: `.agent/llm-wiki-knowledge-base`

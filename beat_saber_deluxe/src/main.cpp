@@ -11,7 +11,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.56"
+#define PLUGIN_VERSION "v0.57"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -23,6 +23,7 @@
 // Populated from redirects.json at startup. No hardcoded fallback.
 static char *REDIRECT_KEYS[MAX_REDIRECTS];
 static char *REDIRECT_VALS[MAX_REDIRECTS];
+static char *LOWER_REDIRECT_KEYS[MAX_REDIRECTS];
 static int REDIRECT_COUNT = 0;
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -129,9 +130,13 @@ static void load_redirects(void) {
         }
         REDIRECT_KEYS[i] = (char *)malloc(strlen(buf_key) + 1);
         REDIRECT_VALS[i] = (char *)malloc(strlen(buf_val) + 1);
-        if (REDIRECT_KEYS[i] && REDIRECT_VALS[i]) {
+        LOWER_REDIRECT_KEYS[i] = (char *)malloc(strlen(buf_key) + 1);
+        if (REDIRECT_KEYS[i] && REDIRECT_VALS[i] && LOWER_REDIRECT_KEYS[i]) {
             strcpy(REDIRECT_KEYS[i], buf_key);
             strcpy(REDIRECT_VALS[i], buf_val);
+            char *lk = LOWER_REDIRECT_KEYS[i];
+            for (int j = 0; buf_key[j]; j++) lk[j] = (buf_key[j] >= 'A' && buf_key[j] <= 'Z') ? (buf_key[j] + 32) : buf_key[j];
+            lk[strlen(buf_key)] = '\0';
             REDIRECT_COUNT++;
         }
     }
@@ -151,6 +156,7 @@ static void free_redirects(void) {
     for (int i = 0; i < REDIRECT_COUNT; i++) {
         free(REDIRECT_KEYS[i]);
         free(REDIRECT_VALS[i]);
+        free(LOWER_REDIRECT_KEYS[i]);
     }
     REDIRECT_COUNT = 0;
 }
@@ -188,10 +194,16 @@ static int open_hook(const char *path, int flags, ...) {
     in_hook = 1;
     const char *np = NULL;
     if (path) {
-        for (int i = 0; i < REDIRECT_COUNT; i++) {
-            if (strstr(path, REDIRECT_KEYS[i])) {
-                np = REDIRECT_VALS[i];
-                break;
+        char lower_path[MAX_PATH];
+        int len = strlen(path);
+        if (len < MAX_PATH) {
+            for (int i = 0; i < len; i++) lower_path[i] = (path[i] >= 'A' && path[i] <= 'Z') ? (path[i] + 32) : path[i];
+            lower_path[len] = '\0';
+            for (int i = 0; i < REDIRECT_COUNT; i++) {
+                if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
+                    np = REDIRECT_VALS[i];
+                    break;
+                }
             }
         }
     }

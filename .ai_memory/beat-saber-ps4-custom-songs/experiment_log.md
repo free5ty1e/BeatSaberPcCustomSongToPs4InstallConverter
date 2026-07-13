@@ -82,6 +82,14 @@ metadata:
 - **Regenerated:** `redirects.json` with all 32 entries using `_v3` suffix, deployed to PS4 (1334 bytes).
 - **Version bumped:** Pipeline logic fix (no plugin change needed).
 
+### Experiment 108: Makefile DEBUG flag overwrite bug
+- **Date:** 2026-07-11
+- **What:** Found that `make DEBUG=1` did not actually enable `-DVERBOSE_LOG` in the compiler command.
+- **Root cause:** Makefile line 21 used `CXXFLAGS := ...` (immediate assignment), which overwrote the `CXXFLAGS += -DVERBOSE_LOG` set in the `ifeq ($(DEBUG),1)` block on line 3.
+- **Result:** ✅ FIXED — Moved the `ifeq` block AFTER the `CXXFLAGS` assignment so the debug flag is appended to the final flag list.
+- **Version bumped:** v0.56 → v0.57 for this fix.
+- **Outcome:** Debug PRX (71648 bytes) now contains all verbose logging strings (`open:%s`, `fopen:%s`), allowing real-time analysis of file access.
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
