@@ -30,13 +30,12 @@ The game stores song metadata (display names, artists) in `BeatmapLevelSO` Scrip
 - **Cons:** May not work if the game ignores per-bundle metadata for the UI
 - **Difficulty:** Low-Medium
 
-#### Recommended Path: Option A → Investigate Option C first
-1. Try Option C first (add `m_Name` or custom fields to the per-song bundle's `BeatmapLevel` object)
-2. If the game ignores per-bundle metadata for the song list, proceed with Option A
-3. Option A requires:
-   - Running an IL2CPP dumper to find the `get_DisplayName` function address
-   - Implementing a hook in the plugin
-   - Adding a `metadata.json` config for custom names/artists
+#### Status: Option C Investigated — NOT Feasible
+- **Result:** The `BeatmapLevel` object (class_id 114) in per-song bundles does NOT contain display name or artist fields. The `m_Name` field is just the internal object name (e.g. "AngryBeatmapLevelData"), not the song name.
+- **Key Finding:** Song metadata lives exclusively in `BeatmapLevelSO` objects in the Addressables system (`aa/PS4/*.bundle`).
+- **Binary Analysis:** The game binary is at `eboot.bin`. IL2CPP metadata is in `global-metadata.dat`. The `get_DisplayName` function string is in `global-metadata.dat` but NOT in `eboot.bin` as a plain string (IL2CPP name mangling).
+- **Next Step:** Use an IL2CPP dumper (e.g. `Il2CppDumper` by Perfare) to extract the function address of `get_DisplayName` from `eboot.bin` + `global-metadata.dat`.
+- **Fallback:** If IL2CPP analysis is not available, consider creating a custom `BeatmapLevelSO` bundle that the `open_hook` can redirect to (requires knowing the `BeatmapLevelSO` serialization format).
 
 ## Goal 2: Enable/Disable specific beatmap modes (OneSaber, 90Degree, NoArrows, etc.)
 
@@ -62,30 +61,41 @@ The `BeatmapLevel` object in each bundle has a `_difficultyBeatmapSets` array th
 - **Cons:** Complex, requires IL2CPP function address
 - **Difficulty:** High
 
-#### Recommended Path: Option A
-1. Modify the pipeline to detect existing mode-specific beatmaps or generate them from Standard notes
-2. Add the `_difficultyBeatmapSets` entries for the desired modes
-3. If no custom beatmaps exist for a mode, reject the mode (rather than proxy) to ensure quality
+#### 🟢 IMPLEMENTED — Mode Characteristic Cloning
+**Status:** ✅ Implemented in `full_custom_song_pipeline.py`
 
-### Mode Implementation Details
-Each `_difficultyBeatmapSet` entry requires:
-1. `_beatmapCharacteristicSerializedName` - e.g., `"OneSaber"` or `"90Degree"`
-2. `_difficultyBeatmaps` array with `{difficulty, beatmapAsset, lightshowAsset}` per level
+A new `add_mode_characteristics(cab, enable_modes: list)` function has been added:
+1. Finds the `BeatmapLevel` object (class_id 114) in the CAB
+2. Reads the existing `_difficultyBeatmapSets` array (which always has "Standard")
+3. For each requested mode (e.g. `"OneSaber"`, `"90Degree"`), clones the Standard difficulty entries with the new characteristic name
+4. Saves the modified TypeTree to the bundle
+5. Reuses the same `.beatmap.gz` and `.lightshow.gz` assets (same path IDs) as Standard
 
-The `.beatmap.gz` and `.lightshow.gz` assets for each mode must exist in the bundle. They are separate TextAsset objects referenced by path ID.
+**Usage:** `--enable-modes OneSaber,90Degree`
+**How it works:** The new mode entries reference the same beatmap TextAsset path IDs, so the game loads the Standard-mode notes in the new mode. Works because Beat Saber on PS4 supports playing Standard notes with mode modifiers (OneSaber/90Degree).
 
-## Recommended Order of Implementation
+**Verification:** After save+reload, the bundle correctly contains all 3 characteristics with 5 difficulties each:
+- Standard (5 diffs)
+- OneSaber (5 diffs) 
+- 90Degree (5 diffs)
 
-### Phase 1: Investigate & Prototype (this investigation)
+## Updated Order of Implementation
+
+### Phase 1: Investigation & Root Cause Analysis
 - ✅ Discovered `BeatmapLevel` TypeTree structure
 - ✅ Identified `_difficultyBeatmapSets` as the mode control mechanism
 - ✅ Found `get_DisplayName` / `get_songName` as metadata access points
-- ⬜ Verify Option C viability (does per-bundle `m_Name` affect the UI?)
+- ✅ Option C investigated: display names NOT in per-bundle `BeatmapLevel` object
 
-### Phase 2: Song List Implementation
-1. Download the game from PS4 to get the main executable (for IL2CPP analysis)
-2. Run IL2CPP dumper to get function addresses
-3. Implement `metadata.json` config with fields:
+### Phase 2: Beatmap Mode Control (DONE)
+- ✅ `add_mode_characteristics()` function implemented
+- ✅ `--enable-modes` CLI flag added to pipeline
+- ✅ Verified: OneSaber and 90Degree added to bundles correctly
+- ⬜ Test on actual PS4 (needs restart)
+
+### Phase 3: Song List Implementation
+1. Run an IL2CPP dumper on `eboot.bin` + `global-metadata.dat` to get the `get_DisplayName` function address
+2. Implement `metadata.json` config with fields:
    ```json
    "redirects": {
      "startmeup": {
@@ -97,16 +107,10 @@ The `.beatmap.gz` and `.lightshow.gz` assets for each mode must exist in the bun
      }
    }
    ```
-4. Modify `load_redirects()` to parse metadata
-5. Implement `open_hook` for `get_DisplayName` or intercept the metadata bundle load
-
-### Phase 3: Beatmap Mode Implementation
-1. Modify the pipeline to accept mode-specific `.dat` files
-2. Update the `_difficultyBeatmapSets` array in the bundle
-3. Create mode-specific `.beatmap.gz` and `.lightshow.gz` TextAsset objects
-4. Verify in-game: the mode selector should appear in the UI
+3. Modify `load_redirects()` to parse metadata (name, artist, modes)
+4. Implement plugin hook for `get_DisplayName` to return custom names for redirected songs
 
 ## Dependencies
-- IL2CPP dumper (for function address discovery) — `Il2CppDumper` from Perfare
+- IL2CPP dumper (for function address discovery) — `Il2CppDumper` by Perfare
 - UnityPy (already installed) — for bundle manipulation
 - GoldHEN plugin hook infrastructure (already working)

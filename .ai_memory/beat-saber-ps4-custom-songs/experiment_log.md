@@ -98,6 +98,16 @@ metadata:
 - **Result:** ✅ FIXED — Implemented case-insensitive matching in `open_hook` by creating a lowercase copy of the requested path and matching it against a pre-computed `LOWER_REDIRECT_KEYS` array.
 - **Verification:** All 32 songs (including Billie Eilish and Lizzo) now redirect correctly on PS4.
 - **Version bumped:** v0.57 (maintenance update)
+
+### Experiment 110: Beatmap Mode Control — add_mode_characteristics function
+- **Date:** 2026-07-12
+- **What:** Implemented the ability to add alternative beatmap characteristics (OneSaber, 90Degree, etc.) to custom song bundles so they appear in the in-game mode selector.
+- **How:** Added `add_mode_characteristics()` function to the pipeline that clones Standard `_difficultyBeatmapSet` entries into new characteristics. The cloned entries reuse the same `.beatmap.gz` and `.lightshow.gz` assets, so the game plays Standard-mode notes with the mode modifier applied.
+- **CLI:** Added `--enable-modes OneSaber,90Degree` flag to the pipeline.
+- **Result:** ✅ Implemented and verified - bundles correctly contain all 3 characteristics (Standard, OneSaber, 90Degree) with 5 difficulties each.
+- **Next:** Awaiting PS4 test to confirm the mode selector appears in-game.
+- **Also:** Added `song-metadata-addressables-structure.md` to knowledge base documenting the `BeatmapLevel` vs `BeatmapLevelSO` hierarchy, Addressables catalog, and IL2CPP hook targets.
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

@@ -43,6 +43,21 @@ python3 tools/full_custom_song_pipeline.py \
 | `--deploy-plugin` | Build + deploy plugin PRX |
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) |
 | `--generate-config` | Update `redirects.json` config on PS4 |
+| `--enable-modes` | Comma-separated list of extra beatmap modes to enable (e.g. `OneSaber,90Degree`). Clones Standard beatmaps into the new characteristics so they appear in the in-game mode selector. |
+
+## Beatmap Mode Control
+
+In addition to Standard mode, you can enable alternative beatmap characteristics (OneSaber, 90Degree, etc.) for your custom song bundles. The pipeline clones the Standard beatmap assets into entries for the requested characteristics so they appear in the in-game mode selector.
+
+```bash
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir <song_directory> \
+  --target <slot_name> --pcm16 --no-pad \
+  --convert-to-v3 --enable-modes OneSaber,90Degree \
+  --deploy
+```
+
+This reuses the same beatmap notes as Standard mode. The game will automatically apply the mode modifier (e.g. one saber, 90-degree rotation) to the Standard notes. No separate mode-specific beatmap files are required.
 
 ## Dynamic Redirect Config
 

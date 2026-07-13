@@ -681,6 +681,85 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy failed (PS4 offline?): {result.stderr}")
 
 
+def add_mode_characteristics(cab, enable_modes: list) -> int:
+    """
+    Add additional beatmap characteristics (OneSaber, 90Degree, etc.)
+    to the BeatmapLevel object so they appear in the in-game mode selector.
+
+    Each new characteristic set reuses the SAME beatmap assets as Standard.
+    This means the song will be playable in those modes (e.g. playing
+    Standard notes while in OneSaber mode) without requiring separate
+    mode-specific .beatmap.gz files.
+
+    Args:
+        cab: Unity CAB bundle containing BeatmapLevel
+        enable_modes: List of characteristic names (e.g. ["OneSaber", "90Degree"])
+
+    Returns:
+        Number of modes added
+    """
+    if not enable_modes:
+        return 0
+
+    added = 0
+    for pid, reader in cab.objects.items():
+        # BeatmapLevel = class_id 114
+        if reader.class_id != 114:
+            continue
+
+        tt = reader.read_typetree()
+        existing_sets = tt.get('_difficultyBeatmapSets', [])
+
+        # Build a set of already-present characteristic names
+        existing_chars = set()
+        for s in existing_sets:
+            ch = s.get('_beatmapCharacteristicSerializedName', '')
+            existing_chars.add(ch)
+
+        if 'Standard' not in existing_chars:
+            log.warning("  No Standard characteristic found - cannot clone modes")
+            return 0
+
+        # Find the Standard set to clone
+        standard_set = None
+        for s in existing_sets:
+            if s.get('_beatmapCharacteristicSerializedName') == 'Standard':
+                standard_set = s
+                break
+
+        if not standard_set:
+            log.warning("  Standard characteristic not found - cannot clone modes")
+            return 0
+
+        # Add each requested mode
+        for mode in enable_modes:
+            if mode in existing_chars:
+                log.info(f"  Mode '{mode}' already exists - skipping")
+                continue
+
+            new_set = {
+                '_beatmapCharacteristicSerializedName': mode,
+                '_difficultyBeatmaps': []
+            }
+            for entry in standard_set.get('_difficultyBeatmaps', []):
+                new_set['_difficultyBeatmaps'].append({
+                    '_difficulty': entry['_difficulty'],
+                    '_beatmapAsset': entry['_beatmapAsset'],
+                    '_lightshowAsset': entry['_lightshowAsset'],
+                })
+            existing_sets.append(new_set)
+            existing_chars.add(mode)
+            added += 1
+            log.info(f"  Added mode: {mode}")
+
+        tt['_difficultyBeatmapSets'] = existing_sets
+        reader.save_typetree(tt)
+        break  # Only one BeatmapLevel per bundle
+
+    log.info(f"  Modes added: {added}")
+    return added
+
+
 def build_plugin(project_root: str, debug: bool = False) -> str:
     """
     Build the GoldHEN plugin.
@@ -1187,6 +1266,10 @@ Examples:
     parser.add_argument('--ignore-non-standard-beatmaps', action='store_true',
                         help='Only match beatmap files containing "Standard" in name '
                              '(ignores 360Degree, 90Degree, OneSaber variants)')
+    parser.add_argument('--enable-modes', type=str, default=None,
+                        help='Comma-separated list of additional beatmap characteristics to enable '
+                             '(e.g. "OneSaber,90Degree,Degree"). Makes the song playable in those '
+                             'modes by cloning the Standard beatmaps.')
     parser.add_argument('--vorbis', action='store_true',
                         help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
     parser.add_argument('--pcm16', action='store_true',
@@ -1382,7 +1465,14 @@ Examples:
     log.info(f"Beatmaps replaced: {replaced}/5")
 
     # -----------------------------------------------------------------------
-    # Step 6: Save bundle
+    # Step 6: Add mode characteristics (OneSaber, 90Degree, etc.)
+    # -----------------------------------------------------------------------
+    enable_modes = args.enable_modes.split(',') if args.enable_modes else None
+    if enable_modes:
+        add_mode_characteristics(cab, [m.strip() for m in enable_modes if m.strip()])
+
+    # -----------------------------------------------------------------------
+    # Step 7: Save bundle
     # -----------------------------------------------------------------------
     os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
     save_bundle(bf, args.output)
