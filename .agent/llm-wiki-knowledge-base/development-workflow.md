@@ -12,17 +12,58 @@ metadata:
 Each iteration follows this sequence:
 
 ```
-1.  Edit plugin source (main.cpp) or conversion script (convert_song_v3.py)
+1.  Edit plugin source (main.cpp), redirect config (redirects.json), or pipeline
 2.  Build plugin (make clean && rm -rf obj && make -B)
-3.  Build custom bundle (python3 convert_song_v3.py)
-4.  Deploy plugin (lftp put beat_saber_deluxe.prx)
-5.  Deploy bundle (lftp put custom_song.bundle)
-6.  Test on PS4 (launch game, select song)
-7.  Download log (lftp get bs_log.txt)
-8.  Analyze log (redirects, env loading, errors, PlayerData)
-9.  Document results (experiment_log.md, project_summary.md, roadmap.md)
-10. Stage in git
+3.  Build custom bundle (python3 tools/full_custom_song_pipeline.py)
+4.  Deploy plugin + bundle + config (deploy_all.sh or pipeline --deploy flags)
+5.  Test on PS4 (launch game, select song)
+6.  Download log (lftp get bs_log.txt)
+7.  Analyze log (redirects, env loading, errors, PlayerData)
+8.  Document results (experiment_log.md, project_summary.md, roadmap.md)
+9.  Stage in git
 ```
+
+## Redirect Config Management
+
+The redirect table is no longer hardcoded. The plugin reads `redirects.json` from the AFR path at startup.
+
+### Adding a New Song Slot
+```bash
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir ./my_song \
+  --target newslot \
+  --pcm16 --no-pad --convert-to-v3 \
+  --generate-config --deploy --deploy-config
+```
+
+This builds the bundle, adds the `newslot → newslot_custom_v3` mapping to `redirects.json`, deploys both to PS4.
+
+### Syncing Config from PS4
+When you've made changes directly on the PS4 (via FTP) and want to merge them locally:
+```bash
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir ./my_song --target startmeup \
+  --sync-config
+```
+This downloads the PS4 config, merges with local changes, saves, and redeploys.
+
+### Enforcing Local Config
+To overwrite the PS4 config with your local version:
+```bash
+python3 tools/full_custom_song_pipeline.py --enforce-config --deploy
+```
+
+### Downloading Songs from BeatSaver
+```bash
+# One-command download + convert + deploy:
+python3 tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song <map_key> \
+  --target <ps4_slot_id> \
+  --pcm16 --no-pad --convert-to-v3 \
+  --deploy --generate-config --deploy-config
+```
+
+The pipeline fetches from `api.beatsaver.com/maps/id/<map_key>/download`, extracts the ZIP, runs the full conversion, and deploys everything. Browse songs at https://beatsaver.com.
 
 ## FTP Deployment Commands
 

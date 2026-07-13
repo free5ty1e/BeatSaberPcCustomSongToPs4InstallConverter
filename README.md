@@ -6,7 +6,6 @@ Replace any Rolling Stones DLC song's audio and beatmaps with community-made cus
 
 > **⚠️ Current limitations:**
 > - **Song menu is untouched** — song names, artists, and cover art still show the original Rolling Stones track. You must remember which custom song is mapped to which slot to find it in-game.
-> - **13-song hardcoded redirect table** — the plugin's slot list is a C array in `src/main.cpp`. Making it dynamic via JSON config is on the [roadmap](.agent/roadmap.md) (M1.5).
 > - **No note color customization** — left/right saber colors are the game's default red/blue. Custom color schemes are planned (M3 on roadmap).
 > - **No extra game modes** — custom songs only provide Standard beatmaps. 90-degree, 360-degree, and OneSaber modes are not added.
 
@@ -41,7 +40,7 @@ https://www.youtube.com/watch?v=J835HDdB-7g
 | Limitation | Impact | Future? |
 |------------|--------|---------|
 | Song names/artists unchanged | Must remember which slot has which custom song | Post-MVP |
-| Hardcoded 13-song redirect table | Can only replace these specific Rolling Stones slots | M1.5 (dynamic JSON config) |
+| 13-song redirect config (editable file) | Limited to Rolling Stones slots by default | ✅ Done — edit `redirects.json` to add more |
 | No note color customization | Left/right remain default red/blue | M3 |
 | No extra game modes | 90-degree, 360-degree, OneSaber not added | Post-MVP |
 | HEVAG encoder produces garbage | Can't use compressed audio (PCM16 is lossless anyway) | Unlikely (Sony proprietary) |
@@ -61,11 +60,74 @@ This builds the plugin with verbose logging, uploads it and all 13 custom song b
 
 ### Launch Beat Saber on PS4
 
-Look for the notification: **BS Deluxe v0.53 started** in the top-right corner. Play any Rolling Stones song to hear your custom replacement.
+Look for the notification: **BS Deluxe v0.54 started** in the top-right corner. Play any Rolling Stones song to hear your custom replacement.
 
 ---
 
-## 13 Rolling Stones → Custom Song Replacements
+## Prerequisites
+
+### Hardware & Software
+
+| Requirement | Details |
+|------------|---------|
+| **PS4 on FW 9.00** | Any model (Slim/Pro/Base) |
+| **GoldHEN** | v2.4b+ — [GoldHEN on GitHub](https://github.com/GoldHEN/GoldHEN) |
+| **FTP server** | Enable in GoldHEN settings (payloader or built-in) |
+| **Beat Saber installed** | CUSA12878 (any region), must be a **patched/fake-signed** PKG |
+| **Network** | PC and PS4 on the same LAN |
+
+### Development Machine
+
+| Requirement | Details |
+|------------|---------|
+| **OpenOrbis PS4 Toolchain** | Cross-compiler for PS4 PRX plugins — [OpenOrbis on GitHub](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain) |
+| **Python 3.10+** | Core pipeline runtime |
+| `pip install soundfile numpy pyfmodex UnityPy` | Python dependencies for audio encoding & bundle editing |
+| **Full decrypted game dump** | Required for template bundles — see "Getting a Game Dump" below |
+
+### Getting a Decrypted Game Dump
+
+To build custom bundles, you need the **template bundles** from a decrypted dump of Beat Saber PS4. This requires:
+
+1. **A jailbroken PS4** with GoldHEN loaded
+2. **A dump tool** to extract the game decrypted (see guides below)
+
+**Quick summary of the dump process:**
+
+> **Note:** Since community guides come and go, here's a brief overview of the process:
+
+1. **Jailbreak your PS4** — Load GoldHEN via your preferred user guide payload
+2. **Enable FTP** — In GoldHEN settings, enable the FTP server (or use a payload that bundles it)
+3. **Dump the game** — Use a game dumper payload on the PS4 (via the GoldHEN payload list) to dump Beat Saber (CUSA12878) to USB. The dumper will produce a decrypted copy of the game files
+4. **Transfer to PC** — Copy the dumped directory from USB to your PC
+5. **Verify** — The dump should contain `Media/` with `resources.assets` and `StreamingAssets/BeatmapLevelsData/` (306 template bundles)
+
+For step-by-step video instructions, [**Modded Warfare on YouTube**](https://www.youtube.com/@ModdedWarfare) has the most comprehensive PS4 jailbreak and game dumping guides.
+
+**Additional community resources:**
+- [**GoldHEN**](https://github.com/GoldHEN/GoldHEN) — PS4 Homebrew Enabler (jailbreak + FTP + plugin loader)
+- [**xvortex PS4 Dumper**](https://github.com/xvortex/ps4-dumper-vtx) — All-in-one game dumper for PS4
+- [**r/ps4homebrew**](https://www.reddit.com/r/ps4homebrew/) — Active community with guides and support
+- [**PSX-Place**](https://www.psx-place.com/forums/ps4-general/) — Community forum with written dumping tutorials
+
+**Quick summary of the dump process:**
+1. Boot PS4, load GoldHEN (user guide payload)
+2. Insert USB drive or start FTP server
+3. Run a game dumper payload (choose USB for faster speed)
+4. Copy the dumped game directory to your PC
+5. The dump should contain `Media/` with `resources.assets`, `StreamingAssets/BeatmapLevelsData/`, etc.
+
+> ⚠️ The dump must be **fully decrypted**. A stub dump (without actual asset data) won't work — the template bundles are required for the pipeline to build custom songs.
+
+### Project Structure After Dump
+
+Place the dump at:
+```
+/workspace/ps4_dump/CUSA12878-app/     # Base game files
+/workspace/ps4_dump/CUSA12878-patch/   # Game update files
+```
+
+Or configure a custom path in `beat_saber_deluxe/ps4_config.json`.
 
 | Slot ID | Original Song | Custom Song | Artist | BPM |
 |---------|--------------|-------------|--------|-----|
@@ -109,6 +171,33 @@ python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py \
   --deploy --deploy-plugin
 ```
 
+### Browse & Auto-Download from BeatSaver
+
+Browse available custom songs at [**BeatSaver.com**](https://beatsaver.com/). Each song page has a URL like `https://beatsaver.com/maps/<map_key>` (e.g. `1d6c7c2`). Use the `--download-beat-saver-song` flag to auto-download and deploy in one command:
+
+```bash
+python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song <map_key> \
+  --target <slot_id> --pcm16 --no-pad --convert-to-v3 \
+  --deploy --deploy-config
+```
+
+The pipeline will:
+1. Fetch song metadata from the BeatSaver API (`api.beatsaver.com`)
+2. Download the ZIP containing audio + beatmaps
+3. Extract to a temporary directory
+4. Run the full conversion pipeline (V2→V3, PCM16 audio, auto-BPM, etc.)
+5. Deploy the bundle to PS4
+6. Update `redirects.json` and deploy it to PS4
+
+A complete one-command example:
+```bash
+python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py \
+  --download-beat-saver-song 1d6c7c2 \
+  --target BadGuy --pcm16 --no-pad --convert-to-v3 \
+  --deploy --generate-config --deploy-config
+```
+
 ### Replace a Specific Rolling Stones Slot
 
 Pick a BeatSaver song, download it to a directory, then run the pipeline with the corresponding `--target`:
@@ -146,6 +235,26 @@ This replaces "Sympathy for the Devil" with Polyphia's "LIT", uploads to PS4 via
 ./beat_saber_deluxe/deploy_all.sh
 ```
 
+The deploy script also uploads `redirects.json` alongside the bundles, so the plugin picks up the latest redirects on PS4.
+
+### Managing the Redirect Config
+
+The plugin reads `redirects.json` from the AFR path at startup. To add a new song slot or change an existing redirect without rebuilding the plugin:
+
+```bash
+# Build a song and automatically update the local redirects.json:
+python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --generate-config
+
+# Build, deploy bundle + config to PS4:
+python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --deploy --deploy-config
+
+# Sync config from PS4 (download, merge with local changes, redeploy):
+python3 full_custom_song_pipeline.py --song-dir ./my_song --target startmeup --sync-config
+
+# Enforce local config as truth (overwrite PS4 config entirely):
+python3 full_custom_song_pipeline.py --enforce-config --deploy
+```
+
 ---
 
 ## Prerequisites
@@ -176,13 +285,24 @@ python3 tools/full_custom_song_pipeline.py \
 | Flag | Purpose |
 |------|---------|
 | `--song-dir` | Directory with song audio + `.dat` beatmap files |
-| `--target` | Rolling Stones slot ID (e.g. `startmeup`, `angry`) |
+| `--target` | Song slot ID (e.g. `startmeup`, `angry`) |
 | `--pcm16` | PCM16 FSB5 audio (lossless, best quality) |
 | `--no-pad` | Don't extend audio — use when PCM16 exceeds template resource size |
 | `--convert-to-v3` | Auto-convert V2 beatmaps (legacy format) to V3 |
 | `--deploy` | Upload bundle to PS4 via FTP after building |
 | `--deploy-plugin` | Build + deploy plugin PRX |
 | `--debug-logging` | Build plugin with `DEBUG=1` (verbose PS4 logging) |
+
+### Redirect Config Management Flags
+
+| Flag | Purpose |
+|------|---------|
+| `--generate-config` | Create/update `redirects.json` with the current `--target` entry. First call creates the file; subsequent calls add/update entries |
+| `--deploy-config` | Deploy the local `redirects.json` to PS4 via FTP (to `/data/GoldHEN/AFR/CUSA12878/redirects.json`) |
+| `--sync-config` | Download existing `redirects.json` from PS4, merge with current target, save locally, redeploy. Use when PS4 config has entries your local doesn't |
+| `--enforce-config` | Ignore any PS4 config and use only the local `redirects.json` as truth, then deploy it to PS4 |
+
+**Default behavior:** When deploying config, if no `redirects.json` exists locally, one is auto-generated with the current target mapping. When deploying a bundle, the config is automatically updated if the file already exists.
 
 ### What the Pipeline Does
 
@@ -224,6 +344,25 @@ Song plays with correct sync, both colors, score saves
 
 The plugin intercepts file `open()` calls from Beat Saber at runtime. When the game requests `BeatmapLevelsData/startmeup` (for example), the plugin transparently redirects to a custom AssetBundle stored on the PS4's data partition. No original game files are modified — the redirect is purely in memory.
 
+### Dynamic Redirect Config
+
+The redirect table is no longer hardcoded. On startup, the plugin reads `redirects.json` from the AFR path:
+
+**`/data/GoldHEN/AFR/CUSA12878/redirects.json`**
+```json
+{
+  "redirects": {
+    "startmeup": "startmeup_custom_v3",
+    "angry": "angry_custom_v3",
+    "bitemyheadoff": "bitemyheadoff_custom_v3"
+  }
+}
+```
+
+To add or change a redirect — edit the JSON on PS4 via FTP (at the path above), restart Beat Saber, and the plugin picks up the changes. No plugin rebuild needed.
+
+The source of truth is [`beat_saber_deluxe/redirects.json`](beat_saber_deluxe/redirects.json) — edit this file, then run `./beat_saber_deluxe/deploy_all.sh` to push it alongside the bundles.
+
 ---
 
 ## CI/CD & Release Automation
@@ -235,7 +374,8 @@ The GitHub Actions workflow at [`.github/workflows/plugin-build.yml`](.github/wo
 - Clones and builds the GoldHEN Plugin SDK from source
 - Builds both PRX variants (release + debug)
 - Generates a minimal `plugins.ini` for CUSA12878
-- Uploads all artifacts (downloadable from the Action run page)
+- Generates `redirects.json` with the 13 Rolling Stones slot → bundle mappings
+- Uploads all artifacts: PRX files, `plugins.ini`, `redirects.json`
 
 ### On Tag Push (`v*`)
 When you push a tag like `v0.53`, the workflow additionally:
@@ -243,6 +383,7 @@ When you push a tag like `v0.53`, the workflow additionally:
 - **Creates a GitHub Release** titled "Beat Saber Deluxe v0.53" with:
   - `beat_saber_deluxe.prx` — Release build
   - `beat_saber_deluxe_debug.prx` — Debug build (verbose logging)
+  - `redirects.json` — Song redirect config (edit to add/change slot mappings)
   - `plugins.ini` — GoldHEN configuration for CUSA12878
 
 ### Manual Trigger

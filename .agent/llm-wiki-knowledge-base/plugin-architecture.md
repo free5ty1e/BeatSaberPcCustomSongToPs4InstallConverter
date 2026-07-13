@@ -53,14 +53,76 @@ This guard is critical because inside the hook we call `sceKernelOpen` for loggi
 - File permissions set via `sceKernelFchmod` to 0644
 - Notification sent via `/dev/notification0` on plugin load
 
+## Dynamic Redirect Config
+
+As of v1.0, the redirect table is no longer hardcoded in the plugin. Instead, the plugin reads song→bundle mappings from an external JSON config file at runtime.
+
+### Config File
+**Path:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+
+```json
+{
+  "titleId": "CUSA12878",
+  "afrBase": "/data/GoldHEN/AFR",
+  "redirects": {
+    "startmeup": "startmeup_custom_v3",
+    "angry": "angry_custom_v3"
+  }
+}
+```
+
+### How it Works
+1. On startup, `load_redirects()` opens `redirects.json` using POSIX `open()` from the AFR path
+2. If found, it parses the JSON to extract key-value pairs from the `redirects` object
+3. Each key is a slot ID (prefixed with `BeatmapLevelsData/`) and the value is either:
+   - A **bundle name** (resolved to `AFR_BASE/TITLE_ID/<name>`)
+   - A **full AFR path** (used as-is if it contains `/`)
+4. **No hardcoded fallback table** — if `redirects.json` is missing, empty, or malformed, the plugin loads zero redirects and logs an error
+5. All redirects must come from `redirects.json` — enabling/disabling is done by modifying the config file
+
+### ⚠️ Critical: POSIX `open()` vs `sceKernelOpen()` for AFR
+
+**Always use POSIX `open()` (not `sceKernelOpen()`) when reading from the AFR path.**
+
+GoldHEN's Advanced File Redirect (AFR) hooks the POSIX `open()` syscall at the kernel level. When a process calls `open("/data/GoldHEN/AFR/CUSA12878/file")`, GoldHEN intercepts it and maps the path to the actual physical storage location. However, `sceKernelOpen()` is a direct syscall that **bypasses** GoldHEN's hook entirely.
+
+This means:
+- Files **created by the plugin** with `sceKernelOpen()` + `O_CREAT` (like `bs_log.txt`) exist at the GoldHEN-mapped AFR path
+- Files **uploaded via FTP** (like `redirects.json`) exist at the **physical** path on internal storage
+- Reading with `sceKernelOpen()` sees the mapped path — NOT the physical path where FTP put the file
+- Reading with POSIX `open()` goes through GoldHEN's hook, which correctly resolves the physical path
+
+**Consequence:** The `load_redirects()` function (as of v0.55) uses `open()` first, then falls back to `sceKernelOpen()`. This ensures FTP-uploaded config files are found. The `log_write()` function correctly uses `sceKernelOpen()` with `O_CREAT` to append to the log file, because it's creating/opening at the mapped path.
+
+### Modifying Redirects Without Rebuilding
+To add, remove, or change a redirect:
+1. Edit `redirects.json` on the PS4 via FTP at `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+2. Restart Beat Saber (no full PS4 reboot needed)
+3. Check `bs_log.txt` to verify the loaded count
+
+Example — adding a new redirect:
+```json
+{
+  "redirects": {
+    "100bills": "/data/GoldHEN/AFR/CUSA12878/100bills_custom_v3"
+  }
+}
+```
+
+### Config File Source
+The `redirects.json` at the project root (`beat_saber_deluxe/redirects.json`) is the source of truth. It's deployed alongside the bundles by `deploy_all.sh`. The pipeline does NOT generate it automatically — edit the file directly when changing slots.
+
 ## File Structure
 ```
 beat_saber_deluxe/
   src/main.cpp           — Plugin source code
+  redirects.json          — Dynamic redirect config (source of truth)
   include/               — GoldHEN SDK headers
   obj/                   — Build artifacts
   beat_saber_deluxe.prx   — Final FSELF plugin
+  beat_saber_deluxe_debug.prx — Debug build (verbose logging)
   Makefile               — Build configuration
+  deploy_all.sh          — Deploy script (plugin + bundles + config)
   custom_songs/          — Generated custom AssetBundles
 ```
 

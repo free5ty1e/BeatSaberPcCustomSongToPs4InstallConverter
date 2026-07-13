@@ -1,12 +1,4 @@
 DEBUG ?= 0
-ifeq ($(DEBUG),1)
-  CXXFLAGS += -DVERBOSE_LOG
-  TARGET := beat_saber_deluxe_debug.prx
-else
-  TARGET := beat_saber_deluxe.prx
-endif
-
-LIBS := -lGoldHEN_Hook -lSceLibcInternal -lkernel
 
 TOOLCHAIN := $(OO_PS4_TOOLCHAIN)
 INTDIR := obj
@@ -19,6 +11,16 @@ OBJS := $(patsubst src/%.c, $(INTDIR)/%.o, $(CFILES)) $(patsubst src/%.cpp, $(IN
 
 CFLAGS := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -I./include
 CXXFLAGS := $(CFLAGS) -isystem $(TOOLCHAIN)/include/c++/v1
+
+# Debug build: enable verbose per-file logging (must come AFTER CXXFLAGS assignment)
+ifeq ($(DEBUG),1)
+  CXXFLAGS += -DVERBOSE_LOG
+  TARGET := beat_saber_deluxe_debug.prx
+else
+  TARGET := beat_saber_deluxe.prx
+endif
+
+LIBS := -lGoldHEN_Hook -lSceLibcInternal -lkernel
 LDFLAGS := -m elf_x86_64 -pie -e _init --script link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib $(LIBS)
 
 _unused := $(shell mkdir -p $(INTDIR))

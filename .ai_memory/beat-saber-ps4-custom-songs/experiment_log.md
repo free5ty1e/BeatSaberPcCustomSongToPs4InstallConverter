@@ -15,6 +15,81 @@ metadata:
 
 ---
 
+## Phase 5: Dynamic Redirect Config & Rich Song Database
+
+### Experiment 99: Dynamic redirect v0.54 — first test
+- **Date:** 2026-07-11
+- **What:** Deployed v0.54 plugin with dynamic `redirects.json` config for 13 Rolling Stones slots
+- **Result:** ⚠️ PARTIAL — v0.54 loaded correctly (`=== BS Deluxe v0.54 started ===`), but used built-in fallback table because `redirects.json` wasn't on PS4 (FTP error suppressed by `2>/dev/null`)
+- **Learned:** `deploy_all.sh` had `2>/dev/null` swallowing FTP errors. Fixed in deploy_all.sh (removed error suppression) and pipeline (`args.deploy` now triggers redirect config deployment).
+
+### Experiment 100: Rich song database — metadata extraction
+- **Date:** 2026-07-11
+- **What:** Extracted ALL song metadata from 36 non-zero addressable pack bundles
+- **Result:** ✅ SUCCESS — 305 songs extracted with names, artists, BPM, duration, difficulties, bundle paths
+- **Learned:** Key insight — pack bundles had multiple hash variants; only the largest is non-zero. BeatmapLevelSO objects are in raw serialized file objects (not container). Check `m_Name` for `BeatmapLevel` suffix.
+
+### Experiment 101: Per-difficulty beatmap stats extraction
+- **Date:** 2026-07-11
+- **What:** Extracted notes/bombs/arcs/chains/walls counts per difficulty from template bundles (Billie Eilish & Lizzo)
+- **Result:** ✅ SUCCESS
+- **Learned:** TextAsset `m_Script` stores binary gzip data as `str`. Need `.encode('utf-8', errors='surrogateescape')` then gunzip.
+
+### Experiment 102: `--download-beat-saver-song` pipeline feature
+- **Date:** 2026-07-11
+- **What:** Auto-download from BeatSaver API. Accepts map key, downloads ZIP, extracts and runs pipeline
+- **Result:** ✅ IMPLEMENTED
+- **Usage:** `--download-beat-saver-song <map_key> --target <slot> --deploy --generate-config --deploy-config`
+
+### Experiment 103: Billie Eilish + Lizzo album replacements
+- **Date:** 2026-07-11
+- **What:** Selected 19 custom songs matching criteria. Script at `deploy_billie_lizzo.sh`
+- **Result:** ✅ MOSTLY SUCCESS — 19 bundles built. FTP deploy initially failed (PS4 offline), later succeeded after retry.
+- **Learned:** Serial build-then-deploy is slow. Better to build all, then deploy in bulk.
+
+### Experiment 104: `--download-beat-saver-song` end-to-end validation
+- **Date:** 2026-07-11
+- **What:** Tested the new `--download-beat-saver-song` pipeline feature with BeatSaver map ID `d242` (Breezeblocks by Alt-J). Also fixed a bug where the download function used wrong API endpoint (`/maps/id/<key>/download` returned 404).
+- **Result:** ✅ SUCCESS — Pipeline correctly fetches map info from `api.beatsaver.com/maps/id/<key>`, extracts the CDN download URL (`cdn.beatsaver.com/<hash>.zip`), downloads the ZIP, extracts to temp dir, converts audio and beatmaps, and deploys to PS4.
+- **Fixed:** Download function now extracts `downloadURL` from the API response (the CDN URL) instead of using a non-existent `/download` endpoint.
+- **Fixed:** Download logic was moved to before the `--song-dir` validation check so the temp directory is set before the required-dir check.
+- **Also:** Replaced "360" by Charli xcx (NDA slot) with "Duvet" by Bôa (186 BPM, alt-rock, 5 diffs, 1.6s first note) because 360-degree maps are unsuitable for PS4 VR.
+
+### Experiment 105: Dynamic redirect fix — sceKernelOpen → POSIX open() for AFR
+- **Date:** 2026-07-11
+- **What:** Diagnosed and fixed the root cause of `redirects.json` not loading. `sceKernelOpen()` bypasses GoldHEN's AFR kernel hook. The file uploaded via FTP is at the physical path visible through `open()` but NOT through `sceKernelOpen()`.
+- **Result:** ✅ FIXED — Changed `load_redirects()` to use POSIX `open()` instead of `sceKernelOpen()`. Also removed the entire hardcoded 13-song Rolling Stones fallback table so ALL redirects must come from `redirects.json`.
+- **Learned:** GoldHEN's Advanced File Redirect (AFR) works at the POSIX `open()` syscall level. Direct syscalls like `sceKernelOpen()` bypass the AFR mapping. Files created by the plugin with `O_CREAT` (like `bs_log.txt`) exist at the GoldHEN-mapped path. Files uploaded via FTP exist at the physical path. Using POSIX `open()` bridges this gap because it goes through GoldHEN's kernel hook which performs the path translation.
+- **Version bumped:** v0.54 → v0.55 for this fix
+- **Rule added:** Every plugin change MUST bump the version number. Documented in CLAUDE.md.
+- **Config path:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+- **Plugin version:** v0.55
+- **Build:** 71584 bytes (release PRX)
+
+### Experiment 106: JSON parser bug — closing quote not skipped in `load_redirects`
+- **Date:** 2026-07-11
+- **What:** After confirming `open()` successfully reads redirects.json (Experiment 105 fix was correct), the plugin still didn't load redirects. Downloaded PS4 log showed "ERROR: redirects object not found in config". Traced the bug: the JSON key `"redirects"` is parsed by skipping 10 chars from the opening `"`, landing on the closing `"`. But the while loop only skips whitespace and colons — it doesn't skip `'"'`!
+- **Result:** ✅ FIXED — Added `*rp == '"'` to the skip condition in the while loop. One-character addition to line 105.
+- **Learned:** The bug was right under my nose: `open()` DID find the file (v0.55), but the JSON parser had a simple character-skip bug. The original `parse_json_pairs()` function handles quotes correctly, but the preamble code that finds the `"redirects"` key manually skips characters without accounting for the trailing `"`.
+- **Version bumped:** v0.55 → v0.56 for this fix
+
+### Experiment 107: Bundle suffix mismatch — redirects pointed to wrong filenames
+- **Date:** 2026-07-11
+- **What:** v0.56 log confirmed "loaded 32 redirects from config" but NO redirects worked. PS4 AFR directory listing showed bundles named `{slot}_v3` (e.g., `startmeup_v3`) but `redirects.json` had entries pointing to `{slot}_custom_v3` (e.g., `startmeup_custom_v3`). Every redirect pointed to a non-existent file.
+- **Root cause:** `manage_redirect_config()` (line 946) had `bundle_suffix = "_custom_v3"` hardcoded, but `deploy_to_ps4()` (line 660) used `suffix = paths_cfg.get('afr_target_suffix', '_v3')` which resolved to `"_v3"`.
+- **Result:** ✅ FIXED — Changed `manage_redirect_config` signature to `bundle_suffix: str | None = None`, and added logic to read from config: `bundle_suffix = cfg_paths.get('afr_target_suffix', '_v3')`. This ensures redirect filenames always match deployed bundle filenames.
+- **All three failure modes explained:** Rolling Stones (black screen → menu) = file `startmeup_custom_v3` not found. Billie Eilish (no redirect) = file `AllTheGoodGirlsGoToHell_custom_v3` not found. Lizzo (frozen at 0:00) = file `2BeLoved_custom_v3` not found (game handled the missing bundle differently).
+- **Regenerated:** `redirects.json` with all 32 entries using `_v3` suffix, deployed to PS4 (1334 bytes).
+- **Version bumped:** Pipeline logic fix (no plugin change needed).
+
+### Experiment 108: Makefile DEBUG flag overwrite bug
+- **Date:** 2026-07-11
+- **What:** Found that `make DEBUG=1` did not actually enable `-DVERBOSE_LOG` in the compiler command.
+- **Root cause:** Makefile line 21 used `CXXFLAGS := ...` (immediate assignment), which overwrote the `CXXFLAGS += -DVERBOSE_LOG` set in the `ifeq ($(DEBUG),1)` block on line 3.
+- **Result:** ✅ FIXED — Moved the `ifeq` block AFTER the `CXXFLAGS` assignment so the debug flag is appended to the final flag list.
+- **Version bumped:** v0.56 → v0.57 for this fix.
+- **Outcome:** Debug PRX (71648 bytes) now contains all verbose logging strings (`open:%s`, `fopen:%s`), allowing real-time analysis of file access.
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
@@ -1667,7 +1742,7 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Status:** 🚀 Ready for next test. All 13 bundles deployed. User should reboot PS4.)
 
 
-### Experiment 105 — v0.53: Note Color Fix (c field)
+### Experiment 105 (old) — v0.53: Note Color Fix (c field)
 - **Date:** 2026-07-10
 - **Bug found:** V2→V3 converter set `a` field but not `c` field for note color.
   The PS4 game uses `c` (V3.3.0+) for note color, not `a`. Without `c` field,

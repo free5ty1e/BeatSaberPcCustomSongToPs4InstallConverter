@@ -92,6 +92,32 @@ jobs:
           echo "plugins.ini generated:"
           cat plugins.ini
 
+      - name: Generate redirects.json
+        run: |
+          cat > redirects.json << 'JSONEOF'
+          {
+            "titleId": "CUSA12878",
+            "afrBase": "/data/GoldHEN/AFR",
+            "redirects": {
+              "angry": "angry_custom_v3",
+              "bitemyheadoff": "bitemyheadoff_custom_v3",
+              "cantyouhearmeknocking": "cantyouhearmeknocking_custom_v3",
+              "deadmanwalking": "deadmanwalking_custom_v3",
+              "gimmeshelter": "gimmeshelter_custom_v3",
+              "icantgetnosatisfaction": "icantgetnosatisfaction_custom_v3",
+              "livebythesword": "livebythesword_custom_v3",
+              "messitup": "messitup_custom_v3",
+              "paintitblack": "paintitblack_custom_v3",
+              "startmeup": "startmeup_custom_v3",
+              "sugarsoaker": "sugarsoaker_custom_v3",
+              "sympathyforthedevil": "sympathyforthedevil_custom_v3",
+              "wholewideworld": "wholewideworld_custom_v3"
+            }
+          }
+          JSONEOF
+          echo "redirects.json generated:"
+          python3 -m json.tool redirects.json | head -5
+
       - name: Verify artifacts
         run: |
           echo "=== Release PRX ==="
@@ -102,6 +128,8 @@ jobs:
           python3 -c "open('beat_saber_deluxe/beat_saber_deluxe_debug.prx','rb').read(4); print('FSELF OK')"
           echo "=== plugins.ini ==="
           cat plugins.ini
+          echo "=== redirects.json ==="
+          python3 -c "import json; d=json.load(open('redirects.json')); print(f'{len(d[\"redirects\"])} redirects: {list(d[\"redirects\"].keys())}')"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -111,6 +139,7 @@ jobs:
             beat_saber_deluxe/beat_saber_deluxe.prx
             beat_saber_deluxe/beat_saber_deluxe_debug.prx
             plugins.ini
+            redirects.json
           retention-days: 90
 
   release:
@@ -137,13 +166,16 @@ jobs:
             ### Artifacts
             - `beat_saber_deluxe.prx` — Release build (no verbose logging)
             - `beat_saber_deluxe_debug.prx` — Debug build (verbose PS4 logging)
+            - `redirects.json` — Song redirect config (edit to add/change slot mappings)
             - `plugins.ini` — GoldHEN configuration for CUSA12878
 
             ### Installation
             1. Copy `beat_saber_deluxe.prx` to `/data/GoldHEN/plugins/` on your PS4
-            2. Copy `plugins.ini` to `/data/GoldHEN/plugins.ini` (merge with existing entries)
-            3. Launch Beat Saber — notification confirms plugin loaded
+            2. Copy `redirects.json` to `/data/GoldHEN/AFR/CUSA12878/redirects.json` (edit to customize)
+            3. Copy `plugins.ini` to `/data/GoldHEN/plugins.ini` (merge with existing entries)
+            4. Launch Beat Saber — notification confirms plugin loaded
           files: |
             release-artifacts/beat_saber_deluxe.prx
             release-artifacts/beat_saber_deluxe_debug.prx
             release-artifacts/plugins.ini
+            release-artifacts/redirects.json
