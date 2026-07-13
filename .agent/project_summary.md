@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** ⚠️ v0.57 — Dynamic redirect working. Mode selector investigation paused. Exp 113 (plugin key fix + pack bundle redirect) tested — **game CRASHED** CE-34878-0. **Root cause:** UnityPy `save_bundle()` corrupts external references when re-saving the Addressables pack bundle. Exp 114 deployed: pack bundle redirect removed, game should launch normally. Per-song redirects preserved (32/32). Next steps: binary patching, IL2CPP hook, or memory patching for safe BeatmapLevelSO modification.
+**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector: binary patching approach (Exp 115) deployed. Using `set_raw_data()` instead of `save_typetree()` to modify BeatmapLevelSO `_previewDifficultyBeatmapSets` while preserving external references. 3 preview sets (Standard, OneSaber, 90Degree) in patched pack bundle. Pack bundle redirect reactivated. Awaiting test.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,11 +449,12 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (114):** Remove pack bundle redirect to fix game crash.
-- **Exp 113 result:** Game CRASHED CE-34878-0. The pack bundle redirect FIRED (proving the key-matching fix works) but the modified bundle has corrupted external references from UnityPy re-serialization.
-- **Crash mechanism:** `bf.save(packer="lz4")` changes internal CAB structure. External references (m_FileID=3 → CAB-cb38b3e2985c65d4cf8a63437da74a89) become invalid. Unity segfaults when resolving BeatmapCharacteristicSO PPtr.
-- **Fix (Exp 114):** Removed pack bundle entry from redirects.json. Game should now launch without crashing.
-- **Next:** Re-evaluate approach for mode selector modification. Three options: binary patching (hex-edit bundle directly), IL2CPP hook (intercept at runtime), or memory patching (modify in-game memory).
+**Current Experiment (115):** Binary patching — `set_raw_data()` preserves external references.
+- **Exp 113 crash root cause:** `save_typetree()` re-serializes the TypeTree, regenerating the external reference table incorrectly
+- **Exp 115 fix:** `set_raw_data()` replaces only the object's serialized bytes, preserving ALL original binary data including the external reference table
+- **How:** Changed `_previewDifficultyBeatmapSets` count from 1→3, appended 2×196 bytes for OneSaber/90Degree sets
+- **Status:** Deployed to PS4 — pack bundle with 3 preview sets + redirect entry active. Game should launch without crashing.
+- **Test:** Restart Beat Saber, select Start Me Up, check for mode buttons above difficulty list
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

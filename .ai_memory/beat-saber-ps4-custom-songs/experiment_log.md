@@ -190,6 +190,21 @@ metadata:
   3. **Memory patching**: Use GoldHEN plugin to modify BeatmapLevelSO in game memory after loading
 - **Status:** 🔄 FIX DEPLOYED — pack bundle redirect removed, 32 song redirects preserved. Game should launch without crashing. Awaiting test.
 
+### Experiment 115: Binary Patching — set_raw_data() Preserves External References
+- **Date:** 2026-07-13
+- **What:** Replaced `save_typetree()` + `save_bundle()` approach with `set_raw_data()` (raw binary patching) to modify the BeatmapLevelSO's `_previewDifficultyBeatmapSets` while preserving external references.
+- **Key Discovery:** The crash in Exp 113 was caused by UnityPy's `save_typetree()` re-serializing the TypeTree, which regenerated the external reference table incorrectly. Using `set_raw_data()` to replace ONLY the object's serialized bytes (without touching the TypeTree) preserves the original external references.
+- **How it works:** 
+  1. Read the original BeatmapLevelSO raw data (440 bytes)
+  2. The `_previewDifficultyBeatmapSets` array starts at byte 236 with count=1
+  3. Each set entry is 196 bytes (PPtr + difficulty count + 5×36 bytes difficulties)
+  4. Changed count from 1 → 3, appended 2 more copies of the Standard set data
+  5. New raw data is 832 bytes — appended at end, no other bytes shifted
+  6. Called `reader.set_raw_data(new_bytes)` instead of `reader.save_typetree()`
+  7. `save_bundle()` with the modified object — **externals table preserved** ✅
+- **Verification:** Saved bundle re-loads correctly. 3 preview sets (Standard, OneSaber, 90Degree), all with correct BeatmapCharacteristicSO external references. Externals match original exactly.
+- **Status:** 🔄 DEPLOYED — pack bundle with 3 preview sets on PS4 AFR root, redirect entry reactivated in redirects.json. Awaiting test.
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

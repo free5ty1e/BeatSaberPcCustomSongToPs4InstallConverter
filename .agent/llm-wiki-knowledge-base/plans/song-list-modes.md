@@ -114,3 +114,23 @@ A new `add_mode_characteristics(cab, enable_modes: list)` function has been adde
 - IL2CPP dumper (for function address discovery) — `Il2CppDumper` by Perfare
 - UnityPy (already installed) — for bundle manipulation
 - GoldHEN plugin hook infrastructure (already working)
+
+## Experimental Results (Exps 110-115)
+
+| Exp | Approach | Status | Result |
+|-----|----------|--------|--------|
+| 110 | `add_mode_characteristics()` on per-song bundle `_difficultyBeatmapSets` | ✅ Complete | Pipeline flag works, but doesn't affect UI |
+| 111 | Modified pack bundle BeatmapLevelSO via UnityPy TypeTree | ❌ Failed | Pack bundle in AFR subdir — redirect didn't fire |
+| 112 | Moved pack bundle to AFR root + added redirect entry | ❌ Failed | Plugin hardcoded `BeatmapLevelsData/` prefix — key never matched Addressables path |
+| 113 | Removed hardcoded prefix from plugin + redirect fired | ❌ **Crash** | Redirect WORKS but `save_typetree()` corrupted external refs → CE-34878-0 |
+| 114 | Removed pack bundle redirect (crash fix) | ✅ Fixed | Game launches, 32 per-song redirects work |
+| 115 | Binary patching via `set_raw_data()` | ✅ **Working** | Pack bundle patched with 3 preview sets (Standard, OneSaber, 90Degree). External refs preserved. |
+
+### Key Discovery for Exp 115
+The crash in Exp 113 was caused by UnityPy's `save_typetree()` which re-serializes the TypeTree and regenerates the external reference table incorrectly. Using `set_raw_data()` to replace ONLY the object's serialized bytes (raw binary patching) preserves the original external references perfectly.
+
+The `_previewDifficultyBeatmapSets` array is at the END of the BeatmapLevelSO raw data (offset 236 in the 440-byte blob). It stores:
+- count (int32): number of preview sets
+- For each set: PPtr (12 bytes) + difficulty count (4) + N × difficulty struct (36 bytes each)
+
+By changing the count from 1→3 and appending 2 more set entries (196 bytes each), the array extends without shifting other data.
