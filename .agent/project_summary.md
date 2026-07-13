@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🏆 v0.57 — Dynamic redirect fully working via POSIX `open()`. All 32 redirects from `redirects.json`. Debug build enabled for verbose file-access logging. Pipeline supports `--enable-modes` flag for adding OneSaber/90Degree characteristics to per-song bundles. Song metadata Addressables structure documented (BeatmapLevelSO vs BeatmapLevel). **Mode selector investigation ongoing** — UI reads `_previewDifficultyBeatmapSets` from BeatmapLevelSO in Addressables pack bundle, not `_difficultyBeatmapSets` from per-song bundle. BeatmapCharacteristicSO references for OneSaber/90Degree could not be located (in external CAB). Pack bundle patching script created for experimentation. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
+**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector investigation: Experiment 111 (pack bundle patching) tested — FAILED. Experiment 112 (AFR root redirect + DEBUG plugin) deployed, awaiting retest. The game UI reads `_previewDifficultyBeatmapSets` from `BeatmapLevelSO` in Addressables pack bundle; redirect not working yet — moved pack bundle to AFR root and added `open_hook` redirect entry. DEBUG plugin deployed for log analysis. Billie Eilish + Lizzo + Rolling Stones all deployed. `--download-beat-saver-song` validated end-to-end.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -448,6 +448,13 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
+
+**Current Experiment (112):** Addressables pack bundle redirect via AFR root.
+- **Problem:** Mode selector doesn't appear for Start Me Up despite having OneSaber/90Degree `_difficultyBeatmapSets` in the per-song bundle
+- **Root Cause:** UI reads `_previewDifficultyBeatmapSets` from `BeatmapLevelSO` in Addressables pack bundle, not from per-song `BeatmapLevel`
+- **Fix Attempt 1 (Exp 111):** Modified pack bundle's `BeatmapLevelSO` to add 3 preview sets. Deployed to AFR subdirectory. **FAILED** — subdirectory redirect didn't work
+- **Fix Attempt 2 (Exp 112):** Moved pack bundle to AFR root, added redirect entry to `redirects.json`, deployed DEBUG plugin for logging. **AWAITING TEST**
+- **Remaining:** If AFR root redirect works, next challenge is locating OneSaber/90Degree `BeatmapCharacteristicSO` PIDs for correct mode labels
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

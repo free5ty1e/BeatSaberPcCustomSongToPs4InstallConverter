@@ -40,7 +40,8 @@
 - [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)
 - [x] Song testing log document (`song_testing_log.md`)
 - [ ] Difficulty metadata extraction from all 306 bundles
-- [ ] DLC song name extraction from addressables packs
+- [x] DLC song name extraction from addressables packs — BeatmapLevelSO objects found in `aa/PS4/therollingstones_pack_assets_all_*.bundle` (Exp 111)
+- [ ] DLC song `BeatmapCharacteristicSO` references — need to locate OneSaber/90Degree PIDs in external CAB `CAB-cb38b3e2985c65d4cf8a63437da74a89` (Exp 111)
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors
@@ -50,10 +51,12 @@
 - [ ] Test color injection on PS4
 
 ## M4 — Advanced Song Manipulation (Planned)
-- [ ] Modify existing song entries in the in-game song list
+- [ ] Modify existing song entries in the in-game song list (needs IL2CPP hook for `get_DisplayName`)
 - [ ] Add new songs to existing album packs
 - [ ] Create custom album pack definition
-- [ ] Modify beatmap characteristics (OneSaber, 90-degree, 360-degree, NoArrows)
+- [x] Per-song `_difficultyBeatmapSets` modification — `add_mode_characteristics()` function added to pipeline (Exp 110)
+- [/] Addressables `BeatmapLevelSO._previewDifficultyBeatmapSets` modification — UI mode selector requires patching the pack bundle. Exp 111 (subdirectory AFR) FAILED. Exp 112 (AFR root redirect) awaiting test.
+- [ ] Locate OneSaber/90Degree/NoArrows `BeatmapCharacteristicSO` PIDs in external CAB for proper mode labels
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

@@ -118,8 +118,23 @@ metadata:
   4. The BeatmapCharacteristicSO PID for Standard is `-7286399427822119286`; OneSaber and 90Degree PIDs could not be found
 - **Solution:** Modified the pack bundle's `BeatmapLevelSO` for `StartMeUp` to add `_previewDifficultyBeatmapSets` entries for OneSaber and 90Degree (using the Standard BeatmapCharacteristicSO reference as a fallback)
 - **Tool:** Created `development/scripts/modify_pack_bundle.py` — utility script to patch the Addressables pack bundle
-- **Status:** Modified bundle deployed to PS4 AFR path (`/data/GoldHEN/AFR/CUSA12878/Media/StreamingAssets/aa/PS4/...`). Awaiting retest.
+- **Status:** ❌ TEST FAILED — User restarted Beat Saber and selected Start Me Up. No OneSaber or 90Degree modes appeared. All difficulties only showed standard 2-saber mode.
+- **Log Analysis:** No log file existed on PS4 (`/data/GoldHEN/AFR/CUSA12878/bs_log.txt` returned 550). This means the plugin was NOT a DEBUG build, or the plugin didn't initialize properly.
+- **Root Cause of Redirect Failure:** The modified pack bundle was deployed to a subdirectory of the AFR path (`/data/GoldHEN/AFR/CUSA12878/Media/StreamingAssets/aa/PS4/...`). This subdirectory approach failed because:
+  1. GoldHEN's built-in AFR might not match subdirectory paths
+  2. Our plugin's `open_hook` redirect table only handles BeatmapLevelsData entries, not Addressables paths
+  3. Unity's Addressables bundle loading might bypass the POSIX `open()` hook entirely
 - **Remaining Challenge:** Need to locate the OneSaber and 90Degree BeatmapCharacteristicSO PIDs for proper mode labels. If using Standard PID for all modes, the UI may show "Standard" for all three mode options.
+
+### Experiment 112: Addressables Pack Bundle — AFR Root Redirect Attempt
+- **Date:** 2026-07-13
+- **What:** Moved the modified pack bundle from AFR subdirectory to AFR ROOT and added a redirect entry to `redirects.json` so the plugin's `open_hook` can intercept the Addressables bundle load
+- **Changes:**
+  1. Moved `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` from `AFR/CUSA12878/Media/StreamingAssets/aa/PS4/` to `AFR/CUSA12878/` (AFR root, same as per-song bundles)
+  2. Added redirect entry to `redirects.json`: `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle": "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle"`
+  3. Built and deployed DEBUG plugin (`make DEBUG=1`) — enables verbose logging to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
+- **Theory:** The plugin's `open_hook` uses `strstr()` to match redirect keys against the game's open path. Since `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` will appear in the Addressables open path, it should match and redirect to the AFR root.
+- **Status:** 🔄 DEPLOYED — awaiting retest. Restart Beat Saber, select Start Me Up, check for mode options above the difficulty list.
 
 ## Phase 1: Initial Research & Failed Approaches
 
