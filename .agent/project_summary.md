@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector investigation ongoing. Exp 112 (AFR root redirect) tested — FAILED. **Root cause found:** Plugin hardcodes `"BeatmapLevelsData/"` prefix on all redirect keys (main.cpp:124), preventing non-BeatmapLevelsData paths (like Addressables pack bundles) from matching. Exp 113 deployed with fix — keys used as-is from redirects.json. All 32 existing keys updated to include `BeatmapLevelsData/` prefix in JSON. Pack bundle redirect now possible. Awaiting retest.
+**Status:** ⚠️ v0.57 — Dynamic redirect working. Mode selector investigation paused. Exp 113 (plugin key fix + pack bundle redirect) tested — **game CRASHED** CE-34878-0. **Root cause:** UnityPy `save_bundle()` corrupts external references when re-saving the Addressables pack bundle. Exp 114 deployed: pack bundle redirect removed, game should launch normally. Per-song redirects preserved (32/32). Next steps: binary patching, IL2CPP hook, or memory patching for safe BeatmapLevelSO modification.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,13 +449,11 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (113):** Plugin key matching fix — removed hardcoded `"BeatmapLevelsData/"` prefix.
-- **Problem:** Exp 112 failed — plugin prepends `"BeatmapLevelsData/"` to ALL redirect keys, making Addressables path match impossible
-- **Root Cause caught by log analysis:** 33 redirects loaded, pack bundle IS opened by game (8×), but `strstr("...aa/PS4/therollingstones_pack_assets...", "BeatmapLevelsData/therollingstones_pack_assets...")` never matches
-- **Fix (Exp 113):** Removed prefix from `main.cpp`; moved prefix into redirects.json keys. Now keys match their paths literally
-- **Status:** Deployed — awaiting retest
-- **Next if passes:** Mode buttons appear above difficulty list
-- **Next challenge:** Locate OneSaber/90Degree `BeatmapCharacteristicSO` PIDs for correct mode labels (currently using Standard PID as fallback)
+**Current Experiment (114):** Remove pack bundle redirect to fix game crash.
+- **Exp 113 result:** Game CRASHED CE-34878-0. The pack bundle redirect FIRED (proving the key-matching fix works) but the modified bundle has corrupted external references from UnityPy re-serialization.
+- **Crash mechanism:** `bf.save(packer="lz4")` changes internal CAB structure. External references (m_FileID=3 → CAB-cb38b3e2985c65d4cf8a63437da74a89) become invalid. Unity segfaults when resolving BeatmapCharacteristicSO PPtr.
+- **Fix (Exp 114):** Removed pack bundle entry from redirects.json. Game should now launch without crashing.
+- **Next:** Re-evaluate approach for mode selector modification. Three options: binary patching (hex-edit bundle directly), IL2CPP hook (intercept at runtime), or memory patching (modify in-game memory).
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

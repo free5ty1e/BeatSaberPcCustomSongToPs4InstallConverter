@@ -58,8 +58,10 @@
 - [x] Addressables `BeatmapLevelSO._previewDifficultyBeatmapSets` modification — pack bundle patched (Exp 111)
 - [x] Pack bundle redirect attempt via AFR root (Exp 112) — FAILED. **Root cause:** plugin hardcoded `"BeatmapLevelsData/"` prefix on all keys
 - [x] Plugin key matching fix (Exp 113) — removed hardcoded prefix, keys now used as-is from JSON
-- [/] Pack bundle redirect via `open_hook` — Exp 113 fix deployed, awaiting test
-- [ ] Behind pack bundle redirect: verify `_previewDifficultyBeatmapSets` changes propagate to UI
+- [x] Pack bundle redirect via `open_hook` — Exp 113 tested, redirect WORKS but modified bundle crashes game (CE-34878-0)
+- [x] **Root cause:** `UnityPy.save_bundle()` corrupts external reference table
+- [x] Fix deployed (Exp 114): pack bundle redirect removed, per-song redirects preserved
+- [ ] Re-evaluate: binary patching, IL2CPP hook, or memory patching for safe BeatmapLevelSO modification
 - [ ] Locate OneSaber/90Degree/NoArrows `BeatmapCharacteristicSO` PIDs in external CAB for proper mode labels
 
 ## M5 — Polishing (Future)

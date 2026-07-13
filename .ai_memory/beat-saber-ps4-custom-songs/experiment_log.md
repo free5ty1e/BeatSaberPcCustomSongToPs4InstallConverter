@@ -161,6 +161,34 @@ metadata:
   | PlayerData saved | 1 | Clean return to menu |
   | Error lines | 0 | No errors |
 - **Status:** 🔄 DEPLOYED — awaiting retest. Restart Beat Saber, select Start Me Up, check for mode buttons above difficulty list.
+- **Status:** ❌ TEST FAILED — game crashes with CE-34878-0 at startup.
+- **Log Analysis:** Plugin loaded successfully (33 redirects). Pack bundle redirect FIRED once (`-> /data/GoldHEN/AFR/CUSA12878/...`). Game continued loading other packs (skrillex, timbaland, theweeknd) then crashed silently.
+- **Root Cause:** The `save_bundle()` function (UnityPy LZ4 compression) corrupted the pack bundle's external reference table. When Unity loaded the modified pack bundle, it couldn't resolve the BeatmapCharacteristicSO external references (m_FileID=3 → CAB-cb38b3e2985c65d4cf8a63437da74a89), causing a segfault.
+- **Log saved to:** `screenshots/bs_log_exp113_crash.txt`
+
+### Experiment 114: Fix Crash — Remove Pack Bundle Redirect
+- **Date:** 2026-07-13
+- **What:** Removed the pack bundle entry from redirects.json to prevent the game from loading the corrupted modified pack bundle. Kept the plugin code change (keys used as-is from JSON) and the updated redirects.json keys with "BeatmapLevelsData/" prefix.
+- **Changes:**
+  1. Removed `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle"` entry from redirects.json
+  2. Plugin remains at v0.57 with `snprintf(buf_key, ..., "%s", keys[i])` (no hardcoded prefix)
+  3. All 32 existing keys remain as `"BeatmapLevelsData/startmeup"` etc. — per-song redirects unaffected
+- **Log Findings Table (Exp 113 Crash):**
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | Total lines | 1334 | Full game startup sequence |
+  | v0.57 loaded | 1 | Plugin initialized |
+  | Redirects loaded | 33 | Config parsed with pack bundle entry |
+  | Pack bundle redirects | 1 | 🔥 Redirect FIRED (first time!) |
+  | Per-song redirects | 1 | startmeup redirect logged |
+  | PlayerData saved | 2 | From previous run(s) |
+  | Error lines | 0 | Crash was silent (no error log) |
+- **Key Insight:** The redirect code IS working correctly. `strstr()` match for the pack bundle key fires as expected. Problem is that `UnityPy`'s `bf.save(packer="lz4")` re-serializes the entire bundle, changing the internal CAB structure and corrupting external references.
+- **Next Steps:** Three options for safe BeatmapLevelSO modification:
+  1. **Binary patching**: Hex-edit the serialized TypeTree data directly in the original bundle (avoid UnityPy re-serialization)
+  2. **IL2CPP hook**: Hook `BeatmapLevelSO._previewDifficultyBeatmapSets` getter at runtime
+  3. **Memory patching**: Use GoldHEN plugin to modify BeatmapLevelSO in game memory after loading
+- **Status:** 🔄 FIX DEPLOYED — pack bundle redirect removed, 32 song redirects preserved. Game should launch without crashing. Awaiting test.
 
 ## Phase 1: Initial Research & Failed Approaches
 
