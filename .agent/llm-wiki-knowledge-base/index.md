@@ -41,9 +41,13 @@ metadata:
 
 ## Song Metadata & Database
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
+- [[song-metadata-addressables-structure|Song Metadata & Addressables Structure]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, IL2CPP hook targets
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
 
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip
 - [[unitypy-serialization|save_typetree vs set_raw_data]] — set_raw_data causes serialization bugs for 3/5 objects
 - [[surrogateescape-encoding|Surrogateescape Encoding]] — latin-1 + utf-8 = corrupted binary data
+
+## Plans
+- [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles
