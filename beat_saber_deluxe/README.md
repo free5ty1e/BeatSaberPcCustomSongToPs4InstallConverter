@@ -47,9 +47,35 @@ python3 tools/full_custom_song_pipeline.py \
 
 ## Beatmap Mode Control
 
-In addition to Standard mode, you can enable alternative beatmap characteristics (OneSaber, 90Degree, etc.) for your custom song bundles. The pipeline clones the Standard beatmap assets into entries for the requested characteristics so they appear in the in-game mode selector.
+By default, custom song bundles only have the `"Standard"` characteristic in their `_difficultyBeatmapSets` array. The game hides the mode selector when there's only one option.
+
+Without `--enable-modes` (current behavior):
+```
+Song Select Screen:
+  ┌─────────────────────────────────┐
+  │  startmeup  [Standard]          │
+  │  ▸ Easy     ▸ Expert            │
+  │  ▸ Normal   ▸ Expert+          │  ← NO MODE SELECTOR VISIBLE
+  │  ▸ Hard                        │     (game hides it when
+  └─────────────────────────────────┘     only 1 mode exists)
+```
+
+With `--enable-modes OneSaber,90Degree`:
+```
+Song Select Screen:
+  ┌─────────────────────────────────┐
+  │  startmeup                      │
+  │  Mode: [Standard ▼]   ◄ CLICK  │  ← MODE DROPDOWN APPEARS
+  │  ▸ Easy     ▸ Expert            │     click to switch between
+  │  ▸ Normal   ▸ Expert+          │     Standard / One Saber /
+  │  ▸ Hard                        │     90 Degree
+  └─────────────────────────────────┘
+```
+
+### How to Use
 
 ```bash
+# Build & deploy a song with OneSaber and 90Degree modes enabled
 python3 tools/full_custom_song_pipeline.py \
   --song-dir <song_directory> \
   --target <slot_name> --pcm16 --no-pad \
@@ -57,7 +83,28 @@ python3 tools/full_custom_song_pipeline.py \
   --deploy
 ```
 
-This reuses the same beatmap notes as Standard mode. The game will automatically apply the mode modifier (e.g. one saber, 90-degree rotation) to the Standard notes. No separate mode-specific beatmap files are required.
+### How It Works
+
+The pipeline's `add_mode_characteristics()` function finds the `BeatmapLevel` object (class_id 114) in the bundle's CAB and reads its TypeTree. It clones the existing `"Standard"` entries in the `_difficultyBeatmapSets` array, creating new entries for each requested characteristic:
+
+```json
+"_difficultyBeatmapSets": [
+    {"_beatmapCharacteristicSerializedName": "Standard", ...},  // original, 5 diffs
+    {"_beatmapCharacteristicSerializedName": "OneSaber", ...},  // cloned, same beatmap refs
+    {"_beatmapCharacteristicSerializedName": "90Degree", ...}   // cloned, same beatmap refs
+]
+```
+
+Each cloned entry references the **same** `.beatmap.gz` and `.lightshow.gz` assets as the Standard characteristic (same path IDs). The game's engine applies the mode modifier (one saber, 90-degree rotation) to the Standard notes at runtime.
+
+**Important:** No separate mode-specific `.dat` files are needed. The feature works by cloning, not by generating new beatmap content. The mode selector appears in-game because the game reads `_difficultyBeatmapSets` to determine what mode options to show.
+
+### Verification
+
+To verify a bundle has the new characteristics, the save+reload test confirms:
+- Standard (5 diffs)
+- OneSaber (5 diffs)
+- 90Degree (5 diffs)
 
 ## Dynamic Redirect Config
 
