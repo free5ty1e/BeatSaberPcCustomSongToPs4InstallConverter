@@ -44,6 +44,15 @@ metadata:
   | PlayerData saved | Y/N | Clean exit vs crash |
   | Error lines | N | No unexpected issues |
 
+- **Store the log file permanently** — ALWAYS save a copy to `/workspace/screenshots/bs_log_<experiment>.txt`:
+  ```bash
+  cp /tmp/bs_log_<experiment>.txt /workspace/screenshots/bs_log_<experiment>.txt
+  # (if lftp-get /tmp/bs_log_<experiment>.txt was done first)
+  ```
+  The historical log archive at `/workspace/screenshots/` is a permanent reference. 
+  Every experiment that produces a log MUST have a copy stored there.
+  Use a descriptive experiment-specific name (e.g., `bs_log_exp112_crash.txt`).
+
 **2. `/workspace/.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`** (EVERY test cycle)
 
 - Add a new entry for each test/experiment with:

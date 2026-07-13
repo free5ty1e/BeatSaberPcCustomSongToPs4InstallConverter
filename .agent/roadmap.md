@@ -61,9 +61,10 @@
 - [x] Pack bundle redirect via `open_hook` — Exp 113 tested, redirect WORKS but modified bundle crashes game (CE-34878-0)
 - [x] **Root cause:** `UnityPy.save_typetree()` corrupts external reference table
 - [x] **Fix (Exp 115):** Binary patching via `set_raw_data()` preserves externals. 3 preview sets deployed.
-- [/] Pack bundle redirect with binary-patched bundle — deployed, awaiting test
-- [ ] Behind pack bundle redirect: verify `_previewDifficultyBeatmapSets` changes propagate to UI
-- [ ] Locate OneSaber/90Degree/NoArrows `BeatmapCharacteristicSO` PIDs in external CAB for proper mode labels
+- [x] Pack bundle redirect with binary-patched bundle — TESTED: game still crashes (UnityPy save incompatible)
+- [x] **Root cause (Exp 116):** UnityPy `bf.save()` produces bundles incompatible with PS4 Unity
+- [x] **IL2CPP dump (Exp 117):** Il2CppDumper successful. `get_previewDifficultyBeatmapSets()` at RVA 0x988E80
+- [ ] Implement IL2CPP hook in plugin to inject mode selector data at runtime
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

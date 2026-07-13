@@ -205,6 +205,30 @@ metadata:
 - **Verification:** Saved bundle re-loads correctly. 3 preview sets (Standard, OneSaber, 90Degree), all with correct BeatmapCharacteristicSO external references. Externals match original exactly.
 - **Status:** 🔄 DEPLOYED — pack bundle with 3 preview sets on PS4 AFR root, redirect entry reactivated in redirects.json. Awaiting test.
 
+### Experiment 116: Binary Patching Crashes — UnityPy Bundles Incompatible with PS4 Unity
+- **Date:** 2026-07-13
+- **What:** Tested the binary-patched pack bundle (Exp 115). Game crashed with CE-34878-0 — identical to Exp 113 crash.
+- **Log Analysis:** Plugin loaded (33 redirects). Pack bundle redirect FIRED. Game continued loading other packs, then crashed silently. 595 lines logged (shorter than Exp 113's 1334 lines).
+- **Root Cause:** `bf.save()` re-serializes the entire bundle file, even with `set_raw_data()`. The re-compressed LZ4 bundle produced by UnityPy is not byte-identical to the original. PS4 Unity's AssetBundle loader is strict about bundle format and rejects the modified bundle.
+- **Log saved to:** `screenshots/bs_log_exp115_crash.txt`
+- **Lesson:** UnityPy's bundle save (`bf.save()`) cannot produce a PS4-compatible bundle. ANY modification that requires re-saving the bundle will crash the game.
+
+### Experiment 117: IL2CPP Dump — Found get_previewDifficultyBeatmapSets Address
+- **Date:** 2026-07-13
+- **What:** Successfully ran Il2CppDumper on the game's `Il2CppUserAssemblies.prx` + `global-metadata.dat`.
+- **Results:**
+  - Generated `dump.cs` (32MB), `il2cpp.h` (52MB), `script.json` (93MB), and `DummyDll/` directory
+  - BeatmapLevelSO class found with `_previewDifficultyBeatmapSets` field at **offset 0x98**
+  - `get_previewDifficultyBeatmapSets()` property getter method has **RVA: 0x988E80**
+  - PreviewDifficultyBeatmapSet struct found with `_beatmapCharacteristic` (offset 0x10) and `_previewDifficultyBeatmaps` (offset 0x18)
+- **Next Step:** Implement IL2CPP hook in plugin. Hook `get_previewDifficultyBeatmapSets()` to return a modified array with OneSaber/90Degree entries for redirected songs.
+- **Hook Implementation Plan:**
+  1. Find `Il2CppUserAssemblies.prx` base address at runtime (via `sys_dynlib_dlsym` or module scan)
+  2. Calculate hook target: `base + 0x988E80`
+  3. Install Detour at that address
+  4. In detour: call original, check if BeatmapLevelSO is a redirect target, modify array if so
+  5. Return modified array to caller (game UI)
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

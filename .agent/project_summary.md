@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector: binary patching approach (Exp 115) deployed. Using `set_raw_data()` instead of `save_typetree()` to modify BeatmapLevelSO `_previewDifficultyBeatmapSets` while preserving external references. 3 preview sets (Standard, OneSaber, 90Degree) in patched pack bundle. Pack bundle redirect reactivated. Awaiting test.
+**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector approach pivoted to **IL2CPP hook** after binary patching proved incompatible (UnityPy bundle save crashes PS4 Unity). Il2CppDumper successfully generated class dump (32MB). `get_previewDifficultyBeatmapSets()` method found at RVA 0x988E80 in `Il2CppUserAssemblies.prx`. `_previewDifficultyBeatmapSets` field at offset 0x98 in BeatmapLevelSO. Plugin hook implementation planned.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,12 +449,11 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (115):** Binary patching — `set_raw_data()` preserves external references.
-- **Exp 113 crash root cause:** `save_typetree()` re-serializes the TypeTree, regenerating the external reference table incorrectly
-- **Exp 115 fix:** `set_raw_data()` replaces only the object's serialized bytes, preserving ALL original binary data including the external reference table
-- **How:** Changed `_previewDifficultyBeatmapSets` count from 1→3, appended 2×196 bytes for OneSaber/90Degree sets
-- **Status:** Deployed to PS4 — pack bundle with 3 preview sets + redirect entry active. Game should launch without crashing.
-- **Test:** Restart Beat Saber, select Start Me Up, check for mode buttons above difficulty list
+**Current Investigation (117):** IL2CPP hook approach for mode selector.
+- **Binary patching dead end:** `UnityPy.bf.save()` produces bundles incompatible with PS4 Unity (Exp 116)
+- **IL2CPP dump successful:** Il2CppDumper on `Il2CppUserAssemblies.prx` generated complete class dump
+- **Found targets:** `get_previewDifficultyBeatmapSets()` at RVA 0x988E80, field offset 0x98
+- **Next:** Implement the hook in the plugin (find module base, install detour, inject modified array)
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)
