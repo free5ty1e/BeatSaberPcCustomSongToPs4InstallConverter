@@ -223,11 +223,23 @@ metadata:
   - PreviewDifficultyBeatmapSet struct found with `_beatmapCharacteristic` (offset 0x10) and `_previewDifficultyBeatmaps` (offset 0x18)
 - **Next Step:** Implement IL2CPP hook in plugin. Hook `get_previewDifficultyBeatmapSets()` to return a modified array with OneSaber/90Degree entries for redirected songs.
 - **Hook Implementation Plan:**
-  1. Find `Il2CppUserAssemblies.prx` base address at runtime (via `sys_dynlib_dlsym` or module scan)
+  1. Find `Il2CppUserAssemblies.prx` base address at runtime (via `sceKernelGetModuleList`/`sceKernelGetModuleInfo`)
   2. Calculate hook target: `base + 0x988E80`
   3. Install Detour at that address
   4. In detour: call original, check if BeatmapLevelSO is a redirect target, modify array if so
   5. Return modified array to caller (game UI)
+
+### Experiment 118: IL2CPP Hook — get_previewDifficultyBeatmapSets Identity Hook Deployed
+- **Date:** 2026-07-13
+- **What:** Implemented and deployed the first IL2CPP hook — a "pass-through" (identity) detour on `BeatmapLevelSO.get_previewDifficultyBeatmapSets()` at RVA 0x988E80.
+- **Changes to `main.cpp`:**
+  1. Added `HOOK_INIT(hook_get_preview)` at file scope with forward declaration
+  2. Added `find_il2cpp_module_base()` — uses `sceKernelGetModuleList` + `sceKernelGetModuleInfo` with `strstr(info.name, "Il2Cpp")` to locate Il2CppUserAssemblies.prx at runtime
+  3. Added `maybe_install_il2cpp_hook()` — lazy init that computes `base + 0x988E80` and installs Detour
+  4. Added `get_preview_detour()` — the detour handler, currently passes through with `Detour_Stub` and logs via VERBOSE_LOG
+  5. Added lazy init call in `open_hook()` — tries to install IL2CPP hook on each `open()` call if not yet installed
+  6. Added eager init call in `module_start()` — tries immediately, falls back to lazy if module not loaded yet
+- **Status:** 🔄 DEPLOYED — pass-through identity hook. Game should launch without crashing. Next step: add array augmentation logic.
 
 ## Phase 1: Initial Research & Failed Approaches
 

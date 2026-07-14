@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector approach pivoted to **IL2CPP hook** after binary patching proved incompatible (UnityPy bundle save crashes PS4 Unity). Il2CppDumper successfully generated class dump (32MB). `get_previewDifficultyBeatmapSets()` method found at RVA 0x988E80 in `Il2CppUserAssemblies.prx`. `_previewDifficultyBeatmapSets` field at offset 0x98 in BeatmapLevelSO. Plugin hook implementation planned.
+**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector: **IL2CPP hook deployed** (Exp 118). Identity detour on `get_previewDifficultyBeatmapSets()` installed at runtime. Module base detection via `sceKernelGetModuleList`. Lazy init from `open_hook()` ensures hook installs even if module not loaded during `module_start()`. Array augmentation logic pending (Phase 3).
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

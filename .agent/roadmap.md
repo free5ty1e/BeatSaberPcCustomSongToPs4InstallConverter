@@ -64,7 +64,9 @@
 - [x] Pack bundle redirect with binary-patched bundle — TESTED: game still crashes (UnityPy save incompatible)
 - [x] **Root cause (Exp 116):** UnityPy `bf.save()` produces bundles incompatible with PS4 Unity
 - [x] **IL2CPP dump (Exp 117):** Il2CppDumper successful. `get_previewDifficultyBeatmapSets()` at RVA 0x988E80
-- [ ] Implement IL2CPP hook in plugin to inject mode selector data at runtime
+- [x] **Identity hook deployed (Exp 118):** Module base detection + Detour installed. Lazy init from open_hook().
+- [ ] **Phase 3:** Add array augmentation in detour — identify redirect targets and create augmented PreviewDifficultyBeatmapSet[] array
+- [ ] **Phase 4:** Test mode selector appearance on PS4
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

@@ -31,12 +31,17 @@ extern "C" int open(const char *path, int flags, ...);
 
 HOOK_INIT(hook_fopen);
 HOOK_INIT(hook_open);
+HOOK_INIT(hook_get_preview);
+
+static void* get_preview_detour(void* _this);
 
 static int in_hook = 0;
 static int log_ok = 0;
+static int il2cpp_hook_installed = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
+static int maybe_install_il2cpp_hook(void);
 
 // ── Minimal JSON parser ─────────────────────────────────────────────────────
 // Extracts key-value pairs from a flat JSON object like:
@@ -192,6 +197,12 @@ static FILE *fh(const char *p, const char *m) {
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
+
+    // Lazy init: install IL2CPP hook once module becomes available
+    if (!il2cpp_hook_installed) {
+        maybe_install_il2cpp_hook();
+    }
+
     const char *np = NULL;
     if (path) {
         char lower_path[MAX_PATH];
@@ -218,6 +229,52 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
+// ── IL2CPP hook (mode selector) ─────────────────────────────────────────────
+// Targets BeatmapLevelSO.get_previewDifficultyBeatmapSets()
+// RVA: 0x988E80 (in Il2CppUserAssemblies.prx)
+#define IL2CPP_GET_PREVIEW_RVA 0x988E80ULL
+
+static uint64_t find_il2cpp_module_base(void) {
+    OrbisKernelModule modules[64];
+    size_t available = 0;
+    if (sceKernelGetModuleList(modules, 64, &available) < 0) return 0;
+    for (size_t i = 0; i < available; i++) {
+        OrbisKernelModuleInfo info;
+        memset(&info, 0, sizeof(info));
+        info.size = sizeof(info);
+        if (sceKernelGetModuleInfo(modules[i], &info) < 0) continue;
+        if (strstr(info.name, "Il2Cpp") != NULL && info.segmentCount > 0)
+            return (uint64_t)info.segmentInfo[0].address;
+    }
+    return 0;
+}
+
+static int maybe_install_il2cpp_hook(void) {
+    if (il2cpp_hook_installed) return 1;
+    uint64_t base = find_il2cpp_module_base();
+    if (!base) return 0;
+    uint64_t target = base + IL2CPP_GET_PREVIEW_RVA;
+    Detour_Construct(&Detour_hook_get_preview, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_get_preview, target, (void*)get_preview_detour);
+    char buf[128];
+    snprintf(buf, sizeof(buf), "IL2CPP preview hook at %p", (void*)target);
+    log_write(buf);
+    il2cpp_hook_installed = 1;
+    return 1;
+}
+
+// Detour: intercepts BeatmapLevelSO.get_previewDifficultyBeatmapSets()
+// Returns a modified array with additional mode entries for redirect targets
+static void* get_preview_detour(void* _this) {
+    void* result = Detour_Stub(&Detour_hook_get_preview, void* (*)(void*), _this);
+#ifdef VERBOSE_LOG
+    char buf[256];
+    snprintf(buf, sizeof(buf), "preview_hook: this=%p ret=%p", _this, result);
+    log_write(buf);
+#endif
+    return result;
+}
+
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest notif;
@@ -241,6 +298,9 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
     log_write("hooks installed");
+
+    // Try to install IL2CPP hook (may fail if Il2CppUserAssemblies not loaded yet)
+    maybe_install_il2cpp_hook();
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
