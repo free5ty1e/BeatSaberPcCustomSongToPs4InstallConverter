@@ -273,7 +273,9 @@ metadata:
 - **Key Finding:** The per-song bundle (`startmeup_custom_v3_modes.bundle`) ALREADY has OneSaber/90Degree `_difficultyBeatmapSets` with 5 difficulties each. The mode selector doesn't show them because the BeatmapLevelSO's `_previewDifficultyBeatmapSets` only lists Standard.
 - **Hook approach:** Intercept the `beatmapCharacteristics` IEnumerable parameter to SetData. If it has only 1 element (Standard), create a new malloc'd array with 3 elements (same Standard SO reference ×3). This injects "Standard" ×3 into the mode selector.
 - **Pipeline versioning:** Created `beat_saber_deluxe/VERSION` (v0.50). The pipeline script now displays its version on run.
-- **Status:** 🔄 DEPLOYED — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons (all labeled "Standard") above difficulty list.
+- **Plugin version bumped to v0.58** for SetData hook feature (was still at v0.57 from merge of PR #2)
+- **Version-increment rule added** to `project-summary-update-rule.md` — ANY change to `main.cpp` requires a version increment
+- **Status:** 🔄 DEPLOYED (v0.58) — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons (all labeled "Standard") above difficulty list.
 
 ## Phase 1: Initial Research & Failed Approaches
 

@@ -184,6 +184,27 @@ Before reporting to the user:
 - Add installation to `setup_devcontainer.sh`
 - Add `.gitignore` entries for any large binary outputs
 
+## Plugin Version Increment Rule
+**ANY change to `main.cpp` or the plugin's hook logic REQUIRES a version increment.**
+
+The plugin version is defined at the top of `/workspace/beat_saber_deluxe/src/main.cpp`:
+```cpp
+#define PLUGIN_VERSION "v0.57"
+```
+
+### Versioning convention:
+- **Plugin version** (`main.cpp`): Increment MINOR version (v0.N → v0.N+1) for ANY change to plugin behavior. The plugin and pipeline share the same version counter but track independently — plugin increments when its code changes, pipeline increments when the toolset in `tools/` or `development/` changes.
+- **Pipeline version** (`beat_saber_deluxe/VERSION`): Increment when pipeline/toolset scripts change.
+- **Plugin != pipeline**: These are separate and can diverge (e.g., plugin v0.58 + pipeline v0.50).
+
+### Checklist before staging main.cpp:
+1. [ ] Was `main.cpp` modified? → increment `PLUGIN_VERSION`
+2. [ ] Was plugin behavior changed? → increment `PLUGIN_VERSION` (if not already done)
+3. [ ] Is the version consistent with the experiment log and summary? → update them too
+4. [ ] Was the plugin deployed? → version in the notification must match `PLUGIN_VERSION`
+
+This prevents the misleading situation where "v0.57" is deployed but has completely different code than what was tested as v0.57.
+
 ## Git Etiquette
 - The agent NEVER runs `git commit`. Stage only, present message for user review.
 - The agent NEVER stages compiled artifacts (.prx, .bundle, .oelf, .fsb5, etc.).

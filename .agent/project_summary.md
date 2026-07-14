@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 plugin / v0.50 pipeline — Dynamic redirect working. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
+**Status:** 🔄 **v0.58 plugin / v0.50 pipeline** — Dynamic redirect working. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
