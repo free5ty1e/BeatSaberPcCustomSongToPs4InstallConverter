@@ -373,7 +373,22 @@ metadata:
 - **Why constructor hook works:** Unlike get_previewDifficultyBeatmapSets (inlined), the constructor IS called through its function pointer by Unity's serialization system when ScriptableObjects are deserialized from AssetBundles.
 - **Limitations:**
   - All 5 preview sets reference the SAME Standard characteristic (need to find OneSaber/etc objects at runtime)
-- **Status:** 🔄 DEPLOYED (v0.62) — awaiting test. Mode selector should show 5 buttons (all Standard).
+- **Crash analysis — DetourMode_x64 instruction splitting:**
+  - First test (v0.61) with `DetourMode_x64` **crashed** with CE-34878-0
+  - **Root cause:** The constructor bytes at RVA 0x9891E0 were read from the dumped PRX:
+    ```
+    55          push rbp              ← byte 0
+    48 89 e5    mov rbp, rsp          ← bytes 1-3
+    53          push rbx              ← byte 4
+    50          push rax              ← byte 5
+    c7 87 a0 .. mov [rdi+0xA0], 1     ← byte 6 (10-byte instruction!)
+    ```
+  - `DetourMode_x64` uses a **14-byte absolute JMP** (ff 25 + 8-byte address). This overwrites bytes 0-13.
+  - Bytes 6-13 are the first 8 bytes of the 10-byte `mov dword [rdi+0xA0], 1` instruction. The trampoline executes the truncated 8-byte fragment as an invalid instruction → **immediate crash**.
+  - **Fix:** Changed to `DetourMode_x32` which uses a **5-byte near JMP** (E9 xx xx xx xx). This overwrites bytes 0-4 only (`push rbp; mov rbp, rsp; push rbx`) — all complete instructions. The trampoline executes them cleanly and jumps to byte 5.
+  - Condition for using `DetourMode_x32`: the target (IL2CPP module ~0x806C0000) and the plugin detour function (within ±2GB) must be reachable by a 5-byte near JMP. On PS4, all modules are in the same 0x80000000-0x90000000 range, so this is satisfied.
+- **Status:** 🔄 FIXED (v0.63 DetourMode_x32) — awaiting retest. Mode selector should show 5 buttons.
+- **Version note:** v0.62 was the crash version (constructor hook + DetourMode_x64). v0.63 is the DetourMode_x32 fix. Every plugin code change must increment the version.
 
 ## Phase 1: Initial Research & Failed Approaches
 

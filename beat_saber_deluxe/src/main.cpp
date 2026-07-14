@@ -11,7 +11,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.62"
+#define PLUGIN_VERSION "v0.63"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -302,10 +302,13 @@ static int maybe_install_il2cpp_hook(void) {
     log_write(buf);
 
     // Hook: BeatmapLevelSO..ctor() — capture _this for later augmentation
+    // Uses DetourMode_x32 (5-byte near JMP) because DetourMode_x64 uses a
+    // 14-byte absolute JMP that overwrites into the next instruction at this
+    // address (the `mov dword [rdi+0xA0], 1` instruction begins at byte 6).
     uint64_t ctor_target = base + IL2CPP_CTOR_RVA;
-    Detour_Construct(&Detour_hook_ctor, DetourMode_x64);
+    Detour_Construct(&Detour_hook_ctor, DetourMode_x32);
     Detour_DetourFunction(&Detour_hook_ctor, ctor_target, (void*)ctor_detour);
-    snprintf(buf, sizeof(buf), "IL2CPP ctor hook at %p", (void*)ctor_target);
+    snprintf(buf, sizeof(buf), "IL2CPP ctor hook at %p (5-byte JMP)", (void*)ctor_target);
     log_write(buf);
 
     il2cpp_hook_installed = 1;

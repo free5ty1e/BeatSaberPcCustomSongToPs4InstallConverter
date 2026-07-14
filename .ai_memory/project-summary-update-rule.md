@@ -16,6 +16,24 @@ metadata:
 
 **Enforcement:** After every task completion, deployment, experiment result, or significant discovery — and **before** reporting back to the user — update project documentation FIRST.
 
+### VERSION BUMP RULE — ALWAYS bump BEFORE deploying
+
+**Plugin version** (`PLUGIN_VERSION` in `src/main.cpp`):
+- ANY change to plugin code → ALWAYS increment by 0.01 (e.g. v0.62 → v0.63)
+- Even if the change is "minor" or "just a bugfix" — every deploy gets a new version
+- The version string IS the deployment identifier. Without a bump, old vs new build cannot be distinguished in the notification/log.
+
+**Pipeline version** (tracked in `project_summary.md`):
+- ANY change to pipeline scripts (`tools/` directory) → ALWAYS increment
+- Currently v0.50 — bump per major feature or bugfix batch
+
+**When bumping:**
+1. Bump in source code / config FIRST (before build)
+2. Add changelog entry (immediately after bump)
+3. Build + deploy
+4. Stage the changed files
+5. Update experiment_log.md and project_summary.md
+
 ### Documents to update:
 
 **1. Log retrieval & analysis** (EVERY test cycle — do FIRST, before any other docs)

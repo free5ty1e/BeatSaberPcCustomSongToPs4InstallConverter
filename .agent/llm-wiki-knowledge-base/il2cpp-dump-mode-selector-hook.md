@@ -183,6 +183,31 @@ Instead of hooking the property getter, hook the **default constructor** at RVA 
 | 0x10 | BeatmapCharacteristicSO* | _beatmapCharacteristic |
 | 0x18 | Il2CppArray* | _previewDifficultyBeatmaps |
 
+### CRITICAL: DetourMode Selection for IL2CPP Hooks
+
+When hooking IL2CPP functions, **`DetourMode_x64` can crash** due to instruction-splitting.
+
+`DetourMode_x64` uses a **14-byte absolute JMP** (`ff 25 xx xx xx xx` + 8 bytes of address). If the first 14 bytes at the target address span multiple instructions, the trampoline will execute a **truncated instruction fragment** and crash.
+
+**Example: BeatmapLevelSO..ctor() at RVA 0x9891E0 (confirmed by PRX disassembly):**
+```
+55          push rbp              ← byte 0 (1 byte)
+48 89 e5    mov rbp, rsp          ← byte 1 (3 bytes)
+53          push rbx              ← byte 4 (1 byte)
+50          push rax              ← byte 5 (1 byte)
+c7 87 a0 .. mov [rdi+0xA0], 1    ← byte 6 (10 bytes!)
+```
+`DetourMode_x64` overwrites bytes 0-13, but the instruction at byte 6 is 10 bytes. Bytes 6-13 are a **truncated instruction** → crash.
+
+**Fix:** Use `DetourMode_x32` which uses a **5-byte near JMP** (`E9 xx xx xx xx`). Range: ±2GB. The 5 bytes cover bytes 0-4 only — all complete instructions.
+
+**When DetourMode_x32 works:**
+- The target address (IL2CPP function) and the detour function (in the plugin) must be within ±2GB of each other
+- On PS4, all modules (game, IL2CPP, plugin) load in the 0x80000000-0x90000000 range, so this is **always satisfied** for PS4 plugins
+- For 32-bit ARM or other platforms, check address ranges
+
+**Rule of thumb:** Always check the first N bytes at the target RVA before choosing a DetourMode. Read bytes from the dumped PRX and disassemble them. If an instruction boundary falls within the JMP size, use a shorter mode or manual detour.
+
 ### Creating (Fake) Managed Objects from C++
 
 Since IL2CPP's `il2cpp_object_new()` and `il2cpp_array_new()` are not easily callable from C++, use `malloc()` to create fake managed objects:

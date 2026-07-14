@@ -6,14 +6,21 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 ### Changed
 - Added `__attribute__((ms_abi))` to all IL2CPP hooks (proved to be wrong — reverted in v0.60)
 
+## [v0.63] — 2026-07-14
+### Fixed
+- **DetourMode_x64 → DetourMode_x32** — The constructor hook at RVA 0x9891E0 crashed with CE-34878-0 because `DetourMode_x64` uses a 14-byte absolute JMP that overwrites into the next instruction (the `mov dword [rdi+0xA0], 1` instruction at byte 6 is 10 bytes; bytes 6-13 are truncated). Changed to `DetourMode_x32` (5-byte near JMP E9 xx xx xx xx) which only overwrites bytes 0-4 — all complete instructions.
+
 ## [v0.62] — 2026-07-14
 ### Added
-- **BeatmapLevelSO constructor hook** at RVA 0x9891E0 — captures `this` pointers when BeatmapLevelSO objects are deserialized from the pack bundle. Fields aren't populated yet at constructor time, so pointers are saved for deferred augmentation.
-- **Deferred preview array augmentation** — after the rolling stones pack bundle opens, waits 3 file-opens then iterates saved BeatmapLevelSO pointers, augments `_previewDifficultyBeatmapSets` from 1→5 entries. Creates 4 copies of the Standard PreviewDifficultyBeatmapSet (all reference the Standard characteristic for now).
+- **BeatmapLevelSO constructor hook** at RVA 0x9891E0 — captures `this` pointers when BeatmapLevelSO objects are deserialized from the pack bundle.
+- **Deferred preview array augmentation** — after the rolling stones pack bundle opens, waits 3 file-opens then augments `_previewDifficultyBeatmapSets` from 1→5 entries via malloc'd copies of the Standard preview set.
+
+### Known Crash
+- `DetourMode_x64` overwrote 14 bytes, truncating the instruction at byte 6 → CE-34878-0. Fixed in v0.63.
 
 ### Removed
-- **Pack bundle redirect** — caused CE-34878-0 crash (Unity validates bundle hashes; modified bundle size doesn't match)
-- **Memory scanning approach** — page-aligned scan would miss BeatmapLevelSO objects not at page boundaries
+- **Pack bundle redirect** — caused CE-34878-0 crash (Unity validates bundle hashes)
+- **Memory scanning approach** — page-aligned scan would miss BeatmapLevelSO objects
 
 ## [v0.61] — 2026-07-14
 ### Added
