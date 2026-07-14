@@ -317,7 +317,7 @@ metadata:
   - `set_data_detour` uses `TrampolinePtr` with ms_abi function pointer (instead of `Detour_Stub` which uses SysV)
   - `set_content_detour` re-added to hook song selection entry point
 - **Key insight:** The `ms_abi` attribute works on PS4's Clang toolchain! No assembly trampolines needed.
-- **Status:** 🔄 DEPLOYED (v0.58) — awaiting test. Restart Beat Saber, select Start Me Up, verify:
+- **Status:** 🔄 DEPLOYED (v0.59) — awaiting test. Restart Beat Saber, select Start Me Up, verify:
   1. ✅ Game doesn't crash (calling convention now matches)
   2. ✅ Mode selector shows 3 buttons (from get_preview augmentation)
   3. ✅ Song plays correctly

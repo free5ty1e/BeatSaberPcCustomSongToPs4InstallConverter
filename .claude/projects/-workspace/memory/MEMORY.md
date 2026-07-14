@@ -1,0 +1,1 @@
+- [IL2CPP Calling Convention](il2cpp-calling-convention.md) — PS4 IL2CPP uses MS x64; C hooks need `__attribute__((ms_abi))`
