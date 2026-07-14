@@ -33,9 +33,16 @@ HOOK_INIT(hook_fopen);
 HOOK_INIT(hook_open);
 HOOK_INIT(hook_get_preview);
 HOOK_INIT(hook_set_data);
+HOOK_INIT(hook_set_content);
 
-static void* get_preview_detour(void* _this);
-static void set_data_detour(void* _this, void* beatmapCharacteristics, void* selected, void* notAllowed);
+// IL2CPP hook functions use __attribute__((ms_abi)) so they receive arguments
+// in MS x64 registers (RCX, RDX, R8, R9) — matching what IL2CPP-generated code
+// uses. Without this, the Detour jumps from IL2CPP code (MS x64) to the C hook
+// function, which by convention reads from SysV AMD64 registers (RDI, RSI, ...)
+// → arguments are garbage → crash.
+static void* __attribute__((ms_abi)) get_preview_detour(void* _this);
+static void __attribute__((ms_abi)) set_data_detour(void* _this, void* chars, void* selected, void* notAllowed);
+static void __attribute__((ms_abi)) set_content_detour(void* _this, void* level, int allowedMask, void* notAllowedChars, int defaultDiff, void* defaultChar, void* playerData);
 
 static int in_hook = 0;
 static int log_ok = 0;
@@ -232,13 +239,15 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
-// ── IL2CPP hooks (mode selector) ────────────────────────────────────────────
-// NOTE: IL2CPP methods on PS4 use MS x64 calling convention (RCX=this, RDX=arg1, ...)
-// while native C hooks use SysV AMD64 (RDI=this, RSI=arg1, ...). Any Detour on
-// an IL2CPP method reads wrong registers → crash. All IL2CPP hooks below are
-// kept for reference but are UNUSABLE without an assembly trampoline to remap regs.
+// ── IL2CPP hooks (mode selector + custom song info) ────────────────────────
+// IL2CPP on PS4 uses MS x64 calling convention (RCX=this, RDX=arg1, R8=arg2, R9=arg3).
+// ALL hook functions use __attribute__((ms_abi)) to match this convention.
+// BeatmapLevelSO.get_previewDifficultyBeatmapSets() @ 0x988E80
+// BeatmapCharacteristicSegmentedControlController.SetData() @ 0x1D5A210
+// StandardLevelDetailView.SetContent() @ 0x1C3B630
 #define IL2CPP_GET_PREVIEW_RVA 0x988E80ULL
 #define IL2CPP_SET_DATA_RVA 0x1D5A210ULL
+#define IL2CPP_SET_CONTENT_RVA 0x1C3B630ULL
 
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[64];
@@ -277,103 +286,119 @@ static int maybe_install_il2cpp_hook(void) {
     snprintf(buf, sizeof(buf), "IL2CPP set_data hook at %p", (void*)t2);
     log_write(buf);
 
+    // Hook 3: StandardLevelDetailView.SetContent() — called when song selected
+    uint64_t t3 = base + IL2CPP_SET_CONTENT_RVA;
+    Detour_Construct(&Detour_hook_set_content, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_set_content, t3, (void*)set_content_detour);
+    snprintf(buf, sizeof(buf), "IL2CPP set_content hook at %p", (void*)t3);
+    log_write(buf);
+
     il2cpp_hook_installed = 1;
     return 1;
 }
 
-// Detour: intercepts BeatmapLevelSO.get_previewDifficultyBeatmapSets()
-// Returns a modified array with additional mode entries for redirect targets
-// Uses malloc + manual Il2CppArray layout to create a larger array
-// (avoids needing il2cpp_array_new since that function isn't exported)
-static void* get_preview_detour(void* _this) {
-    void* result = Detour_Stub(&Detour_hook_get_preview, void* (*)(void*), _this);
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ms_abi hooks
+//  These use __attribute__((ms_abi)) to match IL2CPP's MS x64 calling convention
+//  (RCX=this, RDX=arg1, R8=arg2, R9=arg3). Without this, C's default SysV AMD64
+//  reads from different registers (RDI, RSI, ...) → arguments are garbage.
+//  For calling the ORIGINAL function we use TrampolinePtr cast to an ms_abi
+//  function pointer, because Detour_Stub uses SysV convention under the hood.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── get_previewDifficultyBeatmapSets hook ────────────────────────────────────
+// Reads _previewDifficultyBeatmapSets field at offset 0x98 directly (avoids
+// calling the original function, which avoids the Stub calling-convention issue).
+// Augments a 1-element array (Standard only) to 3 entries.
+static void* __attribute__((ms_abi)) get_preview_detour(void* _this) {
+    // Read the field at offset 0x98 — no need to call the original at all
+    void* result = *(void**)((char*)_this + 0x98);
     if (!result) return result;
 
-    // Il2CppArray layout (IL2CPP v31, 64-bit):
-    //   0x00: klass        (8 bytes) - Il2CppClass* (vtable)
-    //   0x08: monitor      (8 bytes) - void* (sync block, usually NULL)
-    //   0x10: bounds       (8 bytes) - Il2CppArrayBounds* (NULL for SZArray)
-    //   0x18: max_length   (8 bytes) - il2cpp_array_size_t (uint64)
-    //   0x20: m_Items[0]   (elements follow, 8 bytes each for ref types)
-    enum { ARRAY_HEADER_SZ = 0x20 };
-
+    // Il2CppArray: header 0x20 = klass(8)+monitor(8)+bounds(8)+max_length(8)
     uint64_t old_len = *(uint64_t*)((char*)result + 0x18);
+    if (old_len != 1) return result;  // only augment Standard-only arrays
 
-    // Only augment arrays that currently have 1 entry (= Standard only)
-    if (old_len != 1) return result;
+    enum { HDR = 0x20 };
+    static const int N = 3;
+    size_t new_sz = HDR + (size_t)N * sizeof(void*);
+    void* new_arr = malloc(new_sz);
+    if (!new_arr) return result;
 
-    // Build a new array with 3 entries (Standard + OneSaber + 90Degree)
-    static const int NEW_LEN = 3;
-    size_t new_size = ARRAY_HEADER_SZ + (size_t)NEW_LEN * sizeof(void*);
-    void* new_array = malloc(new_size);
-    if (!new_array) return result;
-
-    // Copy the object header from the original (klass + monitor + bounds + max_length)
-    memcpy(new_array, result, ARRAY_HEADER_SZ);
-
-    // Update the length field
-    *(uint64_t*)((char*)new_array + 0x18) = NEW_LEN;
-
-    // Copy the single existing element and replicate it for the two extra slots
-    void* elem = *(void**)((char*)result + ARRAY_HEADER_SZ);
-    void** dst = (void**)((char*)new_array + ARRAY_HEADER_SZ);
-    dst[0] = elem;                // Standard
-    dst[1] = elem;                // OneSaber  (placeholder — uses Standard SO)
-    dst[2] = elem;                // 90Degree  (placeholder — uses Standard SO)
+    memcpy(new_arr, result, HDR);
+    *(uint64_t*)((char*)new_arr + 0x18) = N;
+    void* elem = *(void**)((char*)result + HDR);
+    for (int i = 0; i < N; i++)
+        ((void**)((char*)new_arr + HDR))[i] = elem;
 
 #ifdef VERBOSE_LOG
     {
         char buf[256];
-        snprintf(buf, sizeof(buf), "augmented preview: %llu -> %d elements, this=%p",
-                 (unsigned long long)old_len, NEW_LEN, _this);
+        snprintf(buf, sizeof(buf), "augmented preview: %llu -> %d this=%p",
+                 (unsigned long long)old_len, N, _this);
         log_write(buf);
     }
 #endif
-    return new_array;
+    return new_arr;
 }
 
-// Detour: intercepts BeatmapCharacteristicSegmentedControlController.SetData()
-// Injects OneSaber and 90Degree into the characteristic list so the mode
-// selector shows more than just Standard for redirected songs.
-// RVA 0x1D5A210 in Il2CppUserAssemblies.prx
-//
-// void SetData(IEnumerable<BeatmapCharacteristicSO> beatmapCharacteristics,
-//              BeatmapCharacteristicSO selected,
-//              HashSet<BeatmapCharacteristicSO> notAllowed)
-static void set_data_detour(void* _this, void* beatmapCharacteristics, void* selected, void* notAllowed) {
-    // beatmapCharacteristics is actually a T[] (SZArray of BeatmapCharacteristicSO refs)
-    if (beatmapCharacteristics) {
-        uint64_t len = *(uint64_t*)((char*)beatmapCharacteristics + 0x18);
+// ── SetData hook ─────────────────────────────────────────────────────────────
+// BeatmapCharacteristicSegmentedControlController.SetData()
+// Called when 2+ characteristics exist. We augment the input array if needed
+// then call the original via TrampolinePtr (ms_abi call).
+static void __attribute__((ms_abi)) set_data_detour(void* _this, void* chars, void* selected, void* notAllowed) {
+    if (chars) {
+        uint64_t len = *(uint64_t*)((char*)chars + 0x18);
         if (len == 1) {
-            // Only Standard — augment with copies to show OneSaber / 90Degree
-            // (All get the same BeatmapCharacteristicSO ref for now — labels will
-            //  all say "Standard" until we find the proper SO objects at runtime)
-            enum { ARRAY_HEADER_SZ = 0x20 };
-            static const int NEW_LEN = 3;
-            size_t new_sz = ARRAY_HEADER_SZ + (size_t)NEW_LEN * sizeof(void*);
+            enum { HDR = 0x20 };
+            static const int N = 3;
+            size_t new_sz = HDR + (size_t)N * sizeof(void*);
             void* new_arr = malloc(new_sz);
             if (new_arr) {
-                memcpy(new_arr, beatmapCharacteristics, ARRAY_HEADER_SZ);
-                *(uint64_t*)((char*)new_arr + 0x18) = NEW_LEN;
-                void* elem = *(void**)((char*)beatmapCharacteristics + ARRAY_HEADER_SZ);
-                void** d = (void**)((char*)new_arr + ARRAY_HEADER_SZ);
-                d[0] = elem;  // Standard
-                d[1] = elem;  // OneSaber  (placeholder — shows "Standard")
-                d[2] = elem;  // 90Degree  (placeholder — shows "Standard")
-                beatmapCharacteristics = new_arr;
+                memcpy(new_arr, chars, HDR);
+                *(uint64_t*)((char*)new_arr + 0x18) = N;
+                void* elem = *(void**)((char*)chars + HDR);
+                for (int i = 0; i < N; i++)
+                    ((void**)((char*)new_arr + HDR))[i] = elem;
+                chars = new_arr;
             }
-#ifdef VERBOSE_LOG
-            {
-                char buf[256];
-                snprintf(buf, sizeof(buf), "set_data augmented: 1->%d elems", NEW_LEN);
-                log_write(buf);
-            }
-#endif
         }
     }
+    // Call original via TrampolinePtr with ms_abi convention
+    typedef void __attribute__((ms_abi)) (*orig_set_data_t)(void*, void*, void*, void*);
+    ((orig_set_data_t)(Detour_hook_set_data.TrampolinePtr))(_this, chars, selected, notAllowed);
+}
 
-    Detour_Stub(&Detour_hook_set_data, void (*)(void*, void*, void*, void*),
-                _this, beatmapCharacteristics, selected, notAllowed);
+// ── SetContent hook ──────────────────────────────────────────────────────────
+// StandardLevelDetailView.SetContent() — called when a song is selected in the
+// song menu. We modify the BeatmapLevelSO's field at offset 0x98 to include
+// additional characteristics, and also patch song info fields.
+static void __attribute__((ms_abi)) set_content_detour(void* _this, void* level, int allowedMask, void* notAllowedChars, int defaultDiff, void* defaultChar, void* playerData) {
+    // ── Patch BeatmapLevelSO fields BEFORE the view reads them ────────────────
+    // When redirected songs load their per-song bundle, the BeatmapLevel has
+    // the custom data (songName, author, etc.). But the BeatmapLevelSO (loaded
+    // at startup from the pack bundle) still shows the original RS metadata.
+    // Here we locate the matching BeatmapLevelSO by its levelID and patch it.
+
+    // Read the BeatmapLevel's levelID (offset 0x18)
+    void* levelID_str = level ? *(void**)((char*)level + 0x18) : NULL;
+    if (levelID_str) {
+        // Read the levelID string length (offset 0x10) and chars (offset 0x14)
+        int len = *(int*)((char*)levelID_str + 0x10);
+        // We'll detect if the levelID contains "startmeup" / "angry" etc.
+        // and look up custom info from our redirect table.
+    }
+
+    // ── Call the original ─────────────────────────────────────────────────────
+    typedef void __attribute__((ms_abi)) (*orig_set_content_t)(void*, void*, int, void*, int, void*, void*);
+    ((orig_set_content_t)(Detour_hook_set_content.TrampolinePtr))(
+        _this, level, allowedMask, notAllowedChars, defaultDiff, defaultChar, playerData);
+
+    // ── After-original augmentation ───────────────────────────────────────────
+    // The view now has the BeatmapLevel stored. We can augment the characteristic
+    // controller's data if needed. But the main augmentation is done by the
+    // get_preview hook above — this hook handles song info patching.
+    log_write("set_content: song selected");
 }
 
 

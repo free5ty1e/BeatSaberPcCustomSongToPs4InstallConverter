@@ -73,8 +73,12 @@
 - [x] **Pipeline versioned:** v0.50 — central VERSION file + script display
 - [x] **Changelogs created:** CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md
 - [x] **CI_RELEASE.md created:** Release instructions extracted from CI workflow
-- [ ] **Phase 4:** Implement mode selector via direct BeatmapLevelSO memory patching (open_hook-based)
-- [ ] **Phase 5:** Resolve BeatmapCharacteristicSO PIDs for correct OneSaber/90Degree labels
+- [x] **Calling convention fixed:** `__attribute__((ms_abi))` on all IL2CPP hooks (Exp 123)
+- [x] **get_preview_hook rewritten:** reads field at offset 0x98 directly, augments 1→3 preview sets
+- [x] **set_content hook re-added:** hooks song selection entry point
+- [ ] **Phase 4:** Test ms_abi hooks — verify get_preview fires and returns augmented array → mode selector shows 3 buttons
+- [ ] **Phase 5:** Add song info patching (modify BeatmapLevelSO _songName, _songAuthorName, etc.)
+- [ ] **Phase 6:** Resolve BeatmapCharacteristicSO PIDs for correct OneSaber/90Degree labels
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

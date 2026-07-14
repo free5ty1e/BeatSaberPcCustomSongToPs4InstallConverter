@@ -449,14 +449,11 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (122):** Root cause identified — IL2CPP calling convention mismatch.
-- **Exp 119-121 revealed:** ALL three IL2CPP hooks fail:
-  - `get_previewDifficultyBeatmapSets()` — never fires (inlined by IL2CPP)
-  - `BeatmapCharacteristicSegmentedControlController.SetData()` — never fires (conditional on 2+ chars)
-  - `StandardLevelDetailView.SetContent()` — causes CE-34878-0 crash (calling convention mismatch)
-- **Root cause:** PS4 IL2CPP compiles C# to native code using the MS x64 calling convention (RCX=this, RDX=arg1, ...). Native C hooks compiled by the PS4 toolchain use SysV AMD64 (RDI=this, RSI=arg1, ...). When the Detour jumps from the IL2CPP method to the C hook function, the hook reads garbage from SysV registers instead of the MS x64 registers → crash.
-- **All IL2CPP hooks removed** from the plugin. Only native hooks (open, fopen) remain.
-- **Next approach:** Direct BeatmapLevelSO memory patching triggered from open_hook when a BeatmapLevelsData redirect fires. Or assembly-level hook wrapper to remap registers.
+**Current Experiment (123):** ms_abi IL2CPP hooks — calling convention fix deployed.
+- **Root cause (found in Exp 122):** PS4 IL2CPP uses MS x64 convention (RCX=this, ...) while native C uses SysV AMD64 (RDI=this, ...). Detour trampoline passes args in MS regs but C function reads from SysV regs → crash.
+- **Exp 123 fix:** Added `__attribute__((ms_abi))` to all IL2CPP hook functions. This makes Clang generate MS x64-conformant code that reads arguments from RCX/RDX/R8/R9 — matching what IL2CPP's callers put in those registers. No assembly trampolines needed.
+- **get_preview_detour** rewritten: reads `_previewDifficultyBeatmapSets` field at offset 0x98 directly (no Detour_Stub call to original). Augments 1-element arrays to 3 elements to show mode selector.
+- **set_data_detour** rewritten: uses `TrampolinePtr` with ms_abi function pointer (instead of `Detour_Stub`).
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

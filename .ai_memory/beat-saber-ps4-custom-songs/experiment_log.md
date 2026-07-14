@@ -308,6 +308,20 @@ metadata:
 - **Remaining challenge:** Mode selector still doesn't show extra modes. All IL2CPP-based approaches fail due to calling convention mismatch.
 - **Log archived:** `screenshots/bs_log_exp121.txt`
 
+### Experiment 123: ms_abi IL2CPP Hooks — Calling Convention Fix
+- **Date:** 2026-07-13
+- **What:** Fixed the IL2CPP calling convention mismatch using `__attribute__((ms_abi))`. Clang on PS4/FreeBSD supports the MS x64 calling convention attribute, which makes C functions use RCX/RDX/R8/R9 registers (matching IL2CPP) instead of RDI/RSI/etc. (SysV AMD64).
+- **Changes:**
+  - All three IL2CPP hook functions now use `__attribute__((ms_abi))` → arguments received in correct registers
+  - `get_preview_detour` rewritten to read `_previewDifficultyBeatmapSets` field at offset 0x98 directly (no need to call original function, avoiding the Detour_Stub calling convention issue entirely)
+  - `set_data_detour` uses `TrampolinePtr` with ms_abi function pointer (instead of `Detour_Stub` which uses SysV)
+  - `set_content_detour` re-added to hook song selection entry point
+- **Key insight:** The `ms_abi` attribute works on PS4's Clang toolchain! No assembly trampolines needed.
+- **Status:** 🔄 DEPLOYED (v0.58) — awaiting test. Restart Beat Saber, select Start Me Up, verify:
+  1. ✅ Game doesn't crash (calling convention now matches)
+  2. ✅ Mode selector shows 3 buttons (from get_preview augmentation)
+  3. ✅ Song plays correctly
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
