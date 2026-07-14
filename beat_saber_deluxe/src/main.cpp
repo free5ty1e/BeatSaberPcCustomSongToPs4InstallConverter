@@ -11,7 +11,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.60"
+#define PLUGIN_VERSION "v0.61"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -206,16 +206,31 @@ static int open_hook(const char *path, int flags, ...) {
     }
 
     const char *np = NULL;
+    static char bundle_redirect[MAX_PATH];
     if (path) {
         char lower_path[MAX_PATH];
         int len = strlen(path);
         if (len < MAX_PATH) {
             for (int i = 0; i < len; i++) lower_path[i] = (path[i] >= 'A' && path[i] <= 'Z') ? (path[i] + 32) : path[i];
             lower_path[len] = '\0';
-            for (int i = 0; i < REDIRECT_COUNT; i++) {
-                if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
-                    np = REDIRECT_VALS[i];
-                    break;
+
+            // ── Pack bundle redirect (hardcoded) ────────────────────────────
+            // The Rolling Stones pack bundle is redirected to a modified copy
+            // with augmented BeatmapLevelSO preview data for the mode selector.
+            if (strstr(lower_path, "therollingstones_pack_assets_all")) {
+                snprintf(bundle_redirect, sizeof(bundle_redirect),
+                         AFR_BASE "/" TITLE_ID "/rollingstones_pack_modified.bundle");
+                np = bundle_redirect;
+                log_write("redirecting rolling stones pack bundle");
+            }
+
+            // ── User redirects from redirects.json ────────────────────────────
+            if (!np) {
+                for (int i = 0; i < REDIRECT_COUNT; i++) {
+                    if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
+                        np = REDIRECT_VALS[i];
+                        break;
+                    }
                 }
             }
         }

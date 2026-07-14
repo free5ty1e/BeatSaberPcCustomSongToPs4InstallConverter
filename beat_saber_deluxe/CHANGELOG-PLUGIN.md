@@ -6,6 +6,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 ### Changed
 - Added `__attribute__((ms_abi))` to all IL2CPP hooks (proved to be wrong — reverted in v0.60)
 
+## [v0.61] — 2026-07-14
+### Added
+- **Pack bundle redirect for Rolling Stones** — The open_hook now redirects the rollingstones pack bundle to a modified version on AFR with augmented BeatmapLevelSO preview data. This adds OneSaber, NoArrows, 90Degree, and 360Degree to the mode selector.
+- **`tools/patch_pack_bundle.py`** — Binary patching script that modifies the Rolling Stones pack bundle's `_previewDifficultyBeatmapSets` from 1 to 5 entries. Uses UnityPy's `set_raw_data()` with direct byte manipulation to work around UnityPy's save limitations.
+
 ## [v0.60] — 2026-07-14
 ### Removed
 - **All `__attribute__((ms_abi))`** — PS4 IL2CPP uses **SysV AMD64** (same as native C), not MS x64. ms_abi caused hooks to read `this` from the wrong register (RCX instead of RDI) → crash on ANY song selection.

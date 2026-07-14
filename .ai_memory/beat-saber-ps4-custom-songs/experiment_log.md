@@ -335,6 +335,31 @@ metadata:
 - **Note:** Plugin could not be deployed to PS4 (console offline). User needs to deploy v0.60 from this build output before testing.
 - **Status:** 📦 READY TO DEPLOY — game should launch without crashing. Mode selector augmentation via get_preview may or may not fire (depends on whether get_preview is truly inlined by IL2CPP).
 
+### Experiment 125: Pack Bundle Binary Patching — Mode Selector via Preview Data
+- **Date:** 2026-07-14
+- **What:** Created a binary patching approach to modify the Rolling Stones pack bundle's BeatmapLevelSO preview data in-place. This is the only reliable way to augment `_previewDifficultyBeatmapSets` because:
+  - IL2CPP function hooks don't work (get_previewDifficultyBeatmapSets is inlined)
+  - UnityPy's `set_typetree()` + `save()` doesn't correctly serialize modified arrays
+  - Direct memory patching at runtime requires finding BeatmapLevelSO objects (too complex)
+- **Method:**
+  1. Use UnityPy to open the pack bundle and read BeatmapLevelSO raw data
+  2. Find the `_previewDifficultyBeatmapSets` array by searching for the int32=5 difficulty count + int32=0 (Easy) pattern
+  3. Trace back to find the array length (int32=1 for RS songs)
+  4. Change length to 5, append 4 new preview sets with PPtrs for OneSaber/NoArrows/90Degree/360Degree
+  5. Use `set_raw_data()` to replace the object bytes in-place (avoids UnityPy's broken TypeTree serialization)
+  6. Save via BundleFile.save() — this works correctly when using raw byte-level modifications
+- **PPtr references used** (fileID=2 for sharedassets2.assets):
+  - Standard: pathID=-7286399427822119286
+  - OneSaber: pathID=-8583864861369561029
+  - NoArrows: pathID=-5623662769225589684
+  - 90Degree: pathID=4533580413116749821
+  - 360Degree: pathID=1189643819550092755
+- **Infrastructure:**
+  - `tools/patch_pack_bundle.py` — script to patch the pack bundle
+  - `rollingstones_pack_modified.bundle` — output bundle (8.5 MB)
+  - Pack bundle redirect added to open_hook (hardcoded, not in redirects.json)
+- **Status:** 🔄 READY TO DEPLOY — plugin v0.61 built. PS4 was offline for deployment. Next session: deploy plugin + modified pack bundle to PS4, then test.
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
