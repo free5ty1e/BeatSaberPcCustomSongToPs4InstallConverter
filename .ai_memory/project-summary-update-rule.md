@@ -197,11 +197,24 @@ The plugin version is defined at the top of `/workspace/beat_saber_deluxe/src/ma
 - **Pipeline version** (`beat_saber_deluxe/VERSION`): Increment when pipeline/toolset scripts change.
 - **Plugin != pipeline**: These are separate and can diverge (e.g., plugin v0.58 + pipeline v0.50).
 
+### Changelog Management
+**Two changelogs MUST be maintained:**
+- `beat_saber_deluxe/CHANGELOG-PLUGIN.md` — tracks `main.cpp` / plugin behavior changes
+- `beat_saber_deluxe/CHANGELOG-PIPELINE.md` — tracks `tools/`, `development/scripts/`, `VERSION` changes
+
+Each changelog entry should include:
+- Version number and date
+- What changed (added/fixed/changed sections)
+- Relevant experiment numbers
+
+**Changelogs are part of every release** — update them BEFORE creating a tag.
+
 ### Checklist before staging main.cpp:
 1. [ ] Was `main.cpp` modified? → increment `PLUGIN_VERSION`
 2. [ ] Was plugin behavior changed? → increment `PLUGIN_VERSION` (if not already done)
 3. [ ] Is the version consistent with the experiment log and summary? → update them too
-4. [ ] Was the plugin deployed? → version in the notification must match `PLUGIN_VERSION`
+4. [ ] Were changelogs updated? (CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md)
+5. [ ] Was the plugin deployed? → version in the notification must match `PLUGIN_VERSION`
 
 This prevents the misleading situation where "v0.57" is deployed but has completely different code than what was tested as v0.57.
 

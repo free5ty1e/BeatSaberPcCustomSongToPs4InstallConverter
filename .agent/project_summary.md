@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 **v0.58 plugin / v0.50 pipeline** — Dynamic redirect working. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
+**Status:** 🔄 **v0.58 plugin / v0.50 pipeline** — Dynamic redirect working. Mode selector: **SetContent hook deployed** (Exp 121). Hooks `StandardLevelDetailView.SetContent()` to inject OneSaber/90Degree into the mode selector AFTER the view is set up. Previous GetPreview and SetData hooks both never fire (inlined/conditional). New approach calls SetData ourselves with an augmented array. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,12 +449,13 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (120):** SetData hook — injects modes at UI population point.
+**Current Experiment (121):** SetContent hook — injects modes at song selection entry point.
 - **Exp 119 revealed:** `get_previewDifficultyBeatmapSets()` is inlined by IL2CPP — not called at runtime via function calls. Game accesses field directly at offset 0x98.
-- **Exp 120 fix:** Hook `BeatmapCharacteristicSegmentedControlController.SetData()` at RVA 0x1D5A210 instead. This IS called when the mode selector is populated.
+- **Exp 120 revealed:** `SetData()` is ONLY called when there are 2+ characteristics to display. Since BeatmapLevelSO only has 1, it's never called. Mode selector is just hidden with `SetActive(false)`.
+- **Exp 121 fix:** Hook `StandardLevelDetailView.SetContent()` at RVA 0x1C3B630 (always called when song selected). After original runs, manually call `SetData()` on the controller with an augmented 3-element array (Standard SO ×3).
 - **Per-song bundle confirmed:** `_difficultyBeatmapSets` has OneSaber(5) + 90Degree(5) entries from `--add-mode-characteristics` pipeline flag.
-- **Pipeline versioned at v0.50:** VERSION file + script display on run.
-- **Test:** Restart Beat Saber, select Start Me Up. Look for 3 mode buttons (all "Standard" label) above difficulty list.
+- **Infrastructure:** Changelogs created (plugin + pipeline), CI updated to include pipeline tools in releases, rules updated.
+- **Test:** Restart Beat Saber, select Start Me Up. Look for 3 mode buttons above difficulty list.
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

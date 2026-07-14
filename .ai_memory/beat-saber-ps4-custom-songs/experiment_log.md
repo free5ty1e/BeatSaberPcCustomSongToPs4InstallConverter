@@ -275,7 +275,27 @@ metadata:
 - **Pipeline versioning:** Created `beat_saber_deluxe/VERSION` (v0.50). The pipeline script now displays its version on run.
 - **Plugin version bumped to v0.58** for SetData hook feature (was still at v0.57 from merge of PR #2)
 - **Version-increment rule added** to `project-summary-update-rule.md` — ANY change to `main.cpp` requires a version increment
-- **Status:** 🔄 DEPLOYED (v0.58) — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons (all labeled "Standard") above difficulty list.
+- **Status:** ❌ TESTED — SetData hook installed but NEVER called. Game only calls SetData when there are 2+ characteristics to show. Since BeatmapLevelSO only has 1 preview set (Standard), SetData is skipped entirely.
+- **Lesson:** Register-based IL2CPP hooks on the getter don't fire (inlined). UI population hooks on SetData don't fire (conditional on data count). Need to hook at a higher code path that's always called.
+- **Log archived:** `screenshots/bs_log_exp120.txt`
+
+### Experiment 121: SetContent Hook — Inject Modes Before View Renders
+- **Date:** 2026-07-13
+- **What:** Hooked `StandardLevelDetailView.SetContent()` at RVA 0x1C3B630. This is the entry point called when any song is selected in the pack. The hook:
+  1. Calls the original SetContent (view populates with Standard-only mode, hidden)
+  2. After original: gets the `_beatmapCharacteristicSegmentedControlController` from the view (offset 0x58)
+  3. Reads the controller's `_currentlyAvailableBeatmapCharacteristics` list (offset 0x38)
+  4. Extracts the first (Standard) BeatmapCharacteristicSO reference from the list's internal array
+  5. Builds a malloc'd 3-element array with the same reference repeated
+  6. Calls `SetData()` directly on the controller using the function at (base + RVA 0x1D5A210)
+- **Infrastructure:** 
+  - Notification text updated to "Beat Saber Deluxe vX.XX\nBy Chris Primeish"
+  - Plugin version: v0.58
+  - Pipeline version: v0.50
+  - Changelogs created (CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md)
+  - CI workflow updated to include pipeline tools + changelogs in releases
+  - Version increment rule + changelog management rule added to project-summary-update-rule.md
+- **Status:** 🔄 DEPLOYED — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons above difficulty list.
 
 ## Phase 1: Initial Research & Failed Approaches
 

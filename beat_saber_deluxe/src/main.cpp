@@ -33,13 +33,16 @@ HOOK_INIT(hook_fopen);
 HOOK_INIT(hook_open);
 HOOK_INIT(hook_get_preview);
 HOOK_INIT(hook_set_data);
+HOOK_INIT(hook_set_content);
 
 static void* get_preview_detour(void* _this);
 static void set_data_detour(void* _this, void* beatmapCharacteristics, void* selected, void* notAllowed);
+static void set_content_detour(void* _this, void* level, int allowedMask, void* notAllowedChars, int defaultDiff, void* defaultChar, void* playerData);
 
 static int in_hook = 0;
 static int log_ok = 0;
 static int il2cpp_hook_installed = 0;
+static uint64_t il2cpp_module_base = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
@@ -234,8 +237,10 @@ static int open_hook(const char *path, int flags, ...) {
 // ── IL2CPP hooks (mode selector) ────────────────────────────────────────────
 // BeatmapLevelSO.get_previewDifficultyBeatmapSets() @ 0x988E80
 // BeatmapCharacteristicSegmentedControlController.SetData() @ 0x1D5A210
+// StandardLevelDetailView.SetContent() @ 0x1C3B630
 #define IL2CPP_GET_PREVIEW_RVA 0x988E80ULL
 #define IL2CPP_SET_DATA_RVA 0x1D5A210ULL
+#define IL2CPP_SET_CONTENT_RVA 0x1C3B630ULL
 
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[64];
@@ -256,6 +261,7 @@ static int maybe_install_il2cpp_hook(void) {
     if (il2cpp_hook_installed) return 1;
     uint64_t base = find_il2cpp_module_base();
     if (!base) return 0;
+    il2cpp_module_base = base;  // save for later hooks
 
     char buf[128];
 
@@ -271,6 +277,13 @@ static int maybe_install_il2cpp_hook(void) {
     Detour_Construct(&Detour_hook_set_data, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_set_data, t2, (void*)set_data_detour);
     snprintf(buf, sizeof(buf), "IL2CPP set_data hook at %p", (void*)t2);
+    log_write(buf);
+
+    // Hook 3: StandardLevelDetailView.SetContent() — called when song selected
+    uint64_t t3 = base + IL2CPP_SET_CONTENT_RVA;
+    Detour_Construct(&Detour_hook_set_content, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_set_content, t3, (void*)set_content_detour);
+    snprintf(buf, sizeof(buf), "IL2CPP set_content hook at %p", (void*)t3);
     log_write(buf);
 
     il2cpp_hook_installed = 1;
@@ -372,6 +385,52 @@ static void set_data_detour(void* _this, void* beatmapCharacteristics, void* sel
                 _this, beatmapCharacteristics, selected, notAllowed);
 }
 
+// Detour: StandardLevelDetailView.SetContent()
+// Called when a song is selected. We patch the BeatmapLevelSO's preview field
+// BEFORE it's read, then call the original to render the mode selector.
+// RVA 0x1C3B630 in Il2CppUserAssemblies.prx
+static void set_content_detour(void* _this, void* level, int allowedMask, void* notAllowedChars, int defaultDiff, void* defaultChar, void* playerData) {
+    // ── Step 1: call the original first (view populates with Standard only) ─
+    Detour_Stub(&Detour_hook_set_content, void (*)(void*, void*, int, void*, int, void*, void*),
+                _this, level, allowedMask, notAllowedChars, defaultDiff, defaultChar, playerData);
+
+    // ── Step 2: augment the mode selector with additional characteristics ───
+    // After SetContent runs, the BeatmapCharacteristicSegmentedControlController
+    // at offset 0x58 has a _currentlyAvailableBeatmapCharacteristics list with
+    // just Standard. We'll extend it by calling SetData ourselves.
+    void* controller = *(void**)((char*)_this + 0x58);
+    if (!controller || !il2cpp_module_base) return;
+
+    void* char_list = *(void**)((char*)controller + 0x38);  // List<BeatmapCharacteristicSO>
+    if (!char_list) return;
+
+    // Read the first characteristic (Standard) from the list's internal array
+    void* items = *(void**)((char*)char_list + 0x10);  // List._items (T[])
+    if (!items) return;
+    void* first_char = *(void**)((char*)items + 0x20);  // items[0]
+    if (!first_char) return;
+
+    // Build an augmented 3-element array using the same SO reference
+    enum { HDR = 0x20 };
+    static const int N = 3;
+    size_t new_sz = HDR + N * 8;
+    void* new_arr = malloc(new_sz);
+    if (!new_arr) return;
+
+    memcpy(new_arr, items, HDR);
+    *(uint64_t*)((char*)new_arr + 0x18) = N;
+    ((void**)((char*)new_arr + HDR))[0] = first_char;
+    ((void**)((char*)new_arr + HDR))[1] = first_char;
+    ((void**)((char*)new_arr + HDR))[2] = first_char;
+
+    // Call SetData on the controller using the known RVA
+    typedef void (*set_data_fn_t)(void*, void*, void*, void*);
+    set_data_fn_t set_data = (set_data_fn_t)(il2cpp_module_base + IL2CPP_SET_DATA_RVA);
+    set_data(controller, new_arr, first_char, NULL);
+
+    log_write("set_content: mode selector augmented");
+}
+
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest notif;
@@ -401,7 +460,7 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
-    snprintf(notif.message,sizeof(notif.message),"BS Deluxe %s", PLUGIN_VERSION);
+    snprintf(notif.message,sizeof(notif.message),"Beat Saber Deluxe %s\nBy Chris Primeish", PLUGIN_VERSION);
     sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
 
     return 0;
