@@ -239,7 +239,33 @@ metadata:
   4. Added `get_preview_detour()` — the detour handler, currently passes through with `Detour_Stub` and logs via VERBOSE_LOG
   5. Added lazy init call in `open_hook()` — tries to install IL2CPP hook on each `open()` call if not yet installed
   6. Added eager init call in `module_start()` — tries immediately, falls back to lazy if module not loaded yet
-- **Status:** 🔄 DEPLOYED — pass-through identity hook. Game should launch without crashing. Next step: add array augmentation logic.
+- **Status:** ✅ DEPLOYED AND VERIFIED — hook installed successfully at 0x81048E80. Game launched, redirected song played correctly. No errors.
+- **Log Analysis (Exp 118):** 757 lines, full song cycle.
+  | Signal | Count | Meaning |
+  |--------|-------|---------|
+  | v0.57 loaded | 1 | Plugin initialized |
+  | Redirects loaded | 32 | Config parsed (no pack bundle) |
+  | startmeup redirect | 2 | Song redirected correctly |
+  | IL2CPP hook installed | 1 | Hook at 0x81048E80 confirmed |
+  | preview_hook log lines | 0 | Getter never called during gameplay |
+  | PlayerData saved | 1 | Clean exit |
+  | Error lines | 0 | No errors |
+- **Log archived:** `screenshots/bs_log_exp118.txt`
+
+### Experiment 119: Phase 3 — Array Augmentation in get_preview_detour
+- **Date:** 2026-07-13
+- **What:** Added array augmentation logic to the `get_preview_detour` function. When the detour detects an array with 1 element (Standard only), it creates a new malloc'd `Il2CppArray` with 3 elements, duplicating the Standard element for OneSaber and 90Degree slots.
+- **How it works:**
+  1. Calls original function via `Detour_Stub` to get the original array
+  2. Reads `max_length` at offset 0x18 (8 bytes) — checks if it's 1
+  3. If 1: allocates `0x20 + 3×8 = 0x38` bytes via `malloc`
+  4. Copies array header (klass, monitor, bounds, max_length) from original
+  5. Updates max_length from 1 → 3
+  6. Copies element 0 reference to all 3 slots
+  7. Returns the new array
+- **Limitation:** All 3 modes show "Standard" label (same BeatmapCharacteristicSO reference). Actual OneSaber/90Degree PIDs not yet resolved.
+- **Memory model:** Malloc'd array is NOT on managed GC heap. The original array (still referenced by BeatmapLevelSO field at offset 0x98) keeps the PreviewDifficultyBeatmapSet objects alive. Boehm GC conservatively scans all memory — the malloc'd array's fields won't confuse it (length=3 is too small to look like a valid pointer).
+- **Status:** 🔄 DEPLOYED — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons above difficulty list.
 
 ## Phase 1: Initial Research & Failed Approaches
 

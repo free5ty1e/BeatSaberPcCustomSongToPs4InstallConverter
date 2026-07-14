@@ -1,17 +1,26 @@
 # Beat Saber Deluxe 🎵⚡
 
-**Custom song replacement for PlayStation 4 Beat Saber (CUSA12878)**
+**Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
+
+> **📋 Prerequisites:**
+> - **Beat Saber PS4 version 2.04** (CUSA12878, patch 2.04) — this is the specific version all development targets
+> - **Full decrypted game dump** — place the dump in `/workspace/ps4_dump/` with the following structure:
+>   ```
+>   ps4_dump/CUSA12878-app/          # Base game (v1.00)
+>   ps4_dump/CUSA12878-patch/        # Game patch (v2.04)
+>   ```
+>   The dump must include the unpacked patch files (eboot.bin, Media/ directory, etc.). Tools like PS4 Dumper on a jailbroken PS4 create this via the `split=3` config option.
 
 Replace any Rolling Stones DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook.
 
 > **⚠️ Current limitations:**
 > - **Song menu is untouched** — song names, artists, and cover art still show the original Rolling Stones track. You must remember which custom song is mapped to which slot to find it in-game.
 > - **No note color customization** — left/right saber colors are the game's default red/blue. Custom color schemes are planned (M3 on roadmap).
-> - **No extra game modes** — custom songs only provide Standard beatmaps. 90-degree, 360-degree, and OneSaber modes are not added.
+> - **Extra game modes (OneSaber, 90Degree) are experimental** — mode selector buttons may appear via IL2CPP hook (Exp 119), but labels show "Standard" for all modes. Actual mode selection during gameplay works for OneSaber and 90Degree if modes are set via `--add-mode-characteristics` in the pipeline.
 
 ## Status
 
-🏆 **v0.53 ALPHA** — All 13 Rolling Stones slots replaced. Every song perfectly synchronized, both note colors working.
+🏆 **v0.57** — All 13 Rolling Stones slots replaced. IL2CPP hook infrastructure deployed for mode selector. Experimental OneSaber/90Degree support via `--add-mode-characteristics`.
 
 
 ### 🎥Demo Video of Redirecting a Rolling Stones Song to a Custom Song

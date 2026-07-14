@@ -265,14 +265,53 @@ static int maybe_install_il2cpp_hook(void) {
 
 // Detour: intercepts BeatmapLevelSO.get_previewDifficultyBeatmapSets()
 // Returns a modified array with additional mode entries for redirect targets
+// Uses malloc + manual Il2CppArray layout to create a larger array
+// (avoids needing il2cpp_array_new since that function isn't exported)
 static void* get_preview_detour(void* _this) {
     void* result = Detour_Stub(&Detour_hook_get_preview, void* (*)(void*), _this);
+    if (!result) return result;
+
+    // Il2CppArray layout (IL2CPP v31, 64-bit):
+    //   0x00: klass        (8 bytes) - Il2CppClass* (vtable)
+    //   0x08: monitor      (8 bytes) - void* (sync block, usually NULL)
+    //   0x10: bounds       (8 bytes) - Il2CppArrayBounds* (NULL for SZArray)
+    //   0x18: max_length   (8 bytes) - il2cpp_array_size_t (uint64)
+    //   0x20: m_Items[0]   (elements follow, 8 bytes each for ref types)
+    enum { ARRAY_HEADER_SZ = 0x20 };
+
+    uint64_t old_len = *(uint64_t*)((char*)result + 0x18);
+
+    // Only augment arrays that currently have 1 entry (= Standard only)
+    if (old_len != 1) return result;
+
+    // Build a new array with 3 entries (Standard + OneSaber + 90Degree)
+    static const int NEW_LEN = 3;
+    size_t new_size = ARRAY_HEADER_SZ + (size_t)NEW_LEN * sizeof(void*);
+    void* new_array = malloc(new_size);
+    if (!new_array) return result;
+
+    // Copy the object header from the original (klass + monitor + bounds + max_length)
+    memcpy(new_array, result, ARRAY_HEADER_SZ);
+
+    // Update the length field
+    *(uint64_t*)((char*)new_array + 0x18) = NEW_LEN;
+
+    // Copy the single existing element and replicate it for the two extra slots
+    void* elem = *(void**)((char*)result + ARRAY_HEADER_SZ);
+    void** dst = (void**)((char*)new_array + ARRAY_HEADER_SZ);
+    dst[0] = elem;                // Standard
+    dst[1] = elem;                // OneSaber  (placeholder — uses Standard SO)
+    dst[2] = elem;                // 90Degree  (placeholder — uses Standard SO)
+
 #ifdef VERBOSE_LOG
-    char buf[256];
-    snprintf(buf, sizeof(buf), "preview_hook: this=%p ret=%p", _this, result);
-    log_write(buf);
+    {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "augmented preview: %llu -> %d elements, this=%p",
+                 (unsigned long long)old_len, NEW_LEN, _this);
+        log_write(buf);
+    }
 #endif
-    return result;
+    return new_array;
 }
 
 extern "C" int module_start(size_t argc, const void *args) {

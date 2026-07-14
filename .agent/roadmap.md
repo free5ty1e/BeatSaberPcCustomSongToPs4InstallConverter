@@ -65,8 +65,9 @@
 - [x] **Root cause (Exp 116):** UnityPy `bf.save()` produces bundles incompatible with PS4 Unity
 - [x] **IL2CPP dump (Exp 117):** Il2CppDumper successful. `get_previewDifficultyBeatmapSets()` at RVA 0x988E80
 - [x] **Identity hook deployed (Exp 118):** Module base detection + Detour installed. Lazy init from open_hook().
-- [ ] **Phase 3:** Add array augmentation in detour — identify redirect targets and create augmented PreviewDifficultyBeatmapSet[] array
+- [x] **Array augmentation deployed (Exp 119):** Malloc-based 3-element array for preview sets
 - [ ] **Phase 4:** Test mode selector appearance on PS4
+- [ ] **Phase 5:** Resolve BeatmapCharacteristicSO PIDs for correct OneSaber/90Degree labels
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

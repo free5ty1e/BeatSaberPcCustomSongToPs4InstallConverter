@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector: **IL2CPP hook deployed** (Exp 118). Identity detour on `get_previewDifficultyBeatmapSets()` installed at runtime. Module base detection via `sceKernelGetModuleList`. Lazy init from `open_hook()` ensures hook installs even if module not loaded during `module_start()`. Array augmentation logic pending (Phase 3).
+**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector: **IL2CPP hook with array augmentation deployed** (Exp 119). Detour creates a 3-element array (Standard ×3) for BeatmapLevelSOs that previously had only 1 preview set. Hook confirmed installed at runtime (log line: `IL2CPP preview hook at 81048e80`). Malloc-based array allocation (avoids needing `il2cpp_array_new`). Awaiting mode selector appearance test.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,11 +449,11 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Investigation (117):** IL2CPP hook approach for mode selector.
-- **Binary patching dead end:** `UnityPy.bf.save()` produces bundles incompatible with PS4 Unity (Exp 116)
-- **IL2CPP dump successful:** Il2CppDumper on `Il2CppUserAssemblies.prx` generated complete class dump
-- **Found targets:** `get_previewDifficultyBeatmapSets()` at RVA 0x988E80, field offset 0x98
-- **Next:** Implement the hook in the plugin (find module base, install detour, inject modified array)
+**Current Experiment (119):** IL2CPP hook with array augmentation for mode selector.
+- **Exp 118 confirmed:** Hook installed at 0x81048E80. Game works fine.
+- **Exp 119 adds:** Array augmentation. When getter returns array of 1 element, creates malloc'd array with 3 elements (same reference ×3).
+- **Test:** Restart Beat Saber, select Start Me Up. Look for mode buttons above difficulty list (all 3 showing "Standard" label).
+- **Next:** If mode selector appears, resolve BeatmapCharacteristicSO references for proper OneSaber/90Degree labels. If not, investigate hook calling or try direct field patching.
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)
