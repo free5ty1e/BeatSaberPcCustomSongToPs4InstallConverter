@@ -3,6 +3,10 @@
 *.so
 .agent/llm-wiki-knowledge-base/.obsidian/
 .ai_working/
+il2cpp_output/
+dotnet/
+Il2CppDumper/
+*.zip
 .claude_config/
 .claude_config_zen/
 .claude_persist/

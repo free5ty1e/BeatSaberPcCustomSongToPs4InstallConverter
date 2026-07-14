@@ -65,6 +65,34 @@ if [ ! -d "rb4dx_repo" ]; then
 fi
 echo "   ✅ RB4 tools ready"
 
+# 7. Install IL2CPP analysis tools (Il2CppDumper + .NET SDK)
+echo ""
+echo "🧬 Setting up IL2CPP analysis tools..."
+cd /workspace
+if [ ! -d "dotnet" ]; then
+    echo "   - Installing .NET SDK..."
+    curl -sL "https://dot.net/v1/dotnet-install.sh" -o /tmp/dotnet-install.sh
+    chmod +x /tmp/dotnet-install.sh
+    /tmp/dotnet-install.sh --channel 6.0 --install-dir /workspace/dotnet 2>/dev/null
+    rm /tmp/dotnet-install.sh
+    echo "   ✅ .NET SDK installed"
+else
+    echo "   ✅ .NET SDK already present"
+fi
+export PATH="/workspace/dotnet:$PATH"
+if [ ! -d "Il2CppDumper" ]; then
+    echo "   - Downloading Il2CppDumper..."
+    curl -sL "https://github.com/Perfare/Il2CppDumper/releases/download/v6.7.46/Il2CppDumper-net6-v6.7.46.zip" -o /tmp/Il2CppDumper.zip
+    mkdir -p Il2CppDumper
+    cd Il2CppDumper && unzip -o /tmp/Il2CppDumper.zip 2>/dev/null
+    rm /tmp/Il2CppDumper.zip
+    cd /workspace
+    echo "   ✅ Il2CppDumper downloaded"
+else
+    echo "   ✅ Il2CppDumper already present"
+fi
+echo "   ✅ IL2CPP tools ready"
+
 echo ""
 echo "=========================================="
 echo "✅ Dev container ready!"

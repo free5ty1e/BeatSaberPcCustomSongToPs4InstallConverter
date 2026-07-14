@@ -160,6 +160,30 @@ Before reporting to the user:
 **See also:** [[research-index-update]] for keeping RESEARCH_INDEX.md in sync.
 
 
+## Tool Persistence Rule
+**Any installed tool, SDK, runtime, or prerequisite MUST be persisted in the devcontainer definition** so the toolset survives a container rebuild.
+
+### Required approach:
+1. **For tools installable via script**: Add installation commands to `/workspace/.devcontainer/setup_devcontainer.sh`. This runs on every container creation.
+2. **For pre-compiled binaries**: Store the download and extraction in the setup script. Cache the zip/tarball at `/workspace/.tools/<tool-name>/` if size permits.
+3. **For experimental scripts**: NEVER put utility scripts in `/tmp/`. All utility scripts must be:
+   - Created at `/workspace/scripts/development/<script-name>`
+   - Documented in `/workspace/scripts/development/index.md`
+   - Staged and committed with the related experiment
+4. **For large analysis output** (IL2CPP dumps >10MB): Store key findings in the knowledge base instead of committing raw output. Keep the raw output in a non-committed directory (e.g., `/workspace/il2cpp_output/`).
+
+### Currently persisted tools:
+| Tool | Location in Workspace | Installed By |
+|------|----------------------|--------------|
+| .NET SDK 6.0 | `/workspace/dotnet/` | `setup_devcontainer.sh` |
+| Il2CppDumper v6.7.46 | `/workspace/Il2CppDumper/` | `setup_devcontainer.sh` |
+| Il2CPP dump output | `/workspace/il2cpp_output/` (gitignored) | run `scripts/development/regen_il2cpp_dump.sh` |
+
+### When a new tool is installed:
+- Update this table
+- Add installation to `setup_devcontainer.sh`
+- Add `.gitignore` entries for any large binary outputs
+
 ## Git Etiquette
 - The agent NEVER runs `git commit`. Stage only, present message for user review.
 - The agent NEVER stages compiled artifacts (.prx, .bundle, .oelf, .fsb5, etc.).

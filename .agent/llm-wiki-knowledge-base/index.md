@@ -42,6 +42,7 @@ metadata:
 ## Song Metadata & Database
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
 - [[song-metadata-addressables-structure|Song Metadata & Addressables Structure]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, IL2CPP hook targets
+- [[il2cpp-dump-mode-selector-hook|IL2CPP Dump & Mode Selector Hook]] — BeatmapLevelSO class layout, get_previewDifficultyBeatmapSets at RVA 0x988E80, field offsets, hook implementation plan
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
 
 ## Key Root Causes Found
