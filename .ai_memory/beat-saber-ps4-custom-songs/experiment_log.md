@@ -265,7 +265,15 @@ metadata:
   7. Returns the new array
 - **Limitation:** All 3 modes show "Standard" label (same BeatmapCharacteristicSO reference). Actual OneSaber/90Degree PIDs not yet resolved.
 - **Memory model:** Malloc'd array is NOT on managed GC heap. The original array (still referenced by BeatmapLevelSO field at offset 0x98) keeps the PreviewDifficultyBeatmapSet objects alive. Boehm GC conservatively scans all memory — the malloc'd array's fields won't confuse it (length=3 is too small to look like a valid pointer).
-- **Status:** 🔄 DEPLOYED — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons above difficulty list.
+- **Status:** ❌ TESTED — hook installed (log confirmed) but getter never called. Game accesses field directly via IL2CPP offset 0x98. **Log archived:** `screenshots/bs_log_exp119.txt`
+
+### Experiment 120: SetData Hook — Inject Modes at UI Population Point
+- **Date:** 2026-07-13
+- **What:** After discovering `get_previewDifficultyBeatmapSets()` is inlined and never called, pivoted to hooking `BeatmapCharacteristicSegmentedControlController.SetData()` at RVA 0x1D5A210. This is the method that populates the mode selector buttons.
+- **Key Finding:** The per-song bundle (`startmeup_custom_v3_modes.bundle`) ALREADY has OneSaber/90Degree `_difficultyBeatmapSets` with 5 difficulties each. The mode selector doesn't show them because the BeatmapLevelSO's `_previewDifficultyBeatmapSets` only lists Standard.
+- **Hook approach:** Intercept the `beatmapCharacteristics` IEnumerable parameter to SetData. If it has only 1 element (Standard), create a new malloc'd array with 3 elements (same Standard SO reference ×3). This injects "Standard" ×3 into the mode selector.
+- **Pipeline versioning:** Created `beat_saber_deluxe/VERSION` (v0.50). The pipeline script now displays its version on run.
+- **Status:** 🔄 DEPLOYED — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons (all labeled "Standard") above difficulty list.
 
 ## Phase 1: Initial Research & Failed Approaches
 

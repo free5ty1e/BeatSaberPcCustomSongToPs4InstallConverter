@@ -32,8 +32,10 @@ extern "C" int open(const char *path, int flags, ...);
 HOOK_INIT(hook_fopen);
 HOOK_INIT(hook_open);
 HOOK_INIT(hook_get_preview);
+HOOK_INIT(hook_set_data);
 
 static void* get_preview_detour(void* _this);
+static void set_data_detour(void* _this, void* beatmapCharacteristics, void* selected, void* notAllowed);
 
 static int in_hook = 0;
 static int log_ok = 0;
@@ -229,10 +231,11 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
-// ── IL2CPP hook (mode selector) ─────────────────────────────────────────────
-// Targets BeatmapLevelSO.get_previewDifficultyBeatmapSets()
-// RVA: 0x988E80 (in Il2CppUserAssemblies.prx)
+// ── IL2CPP hooks (mode selector) ────────────────────────────────────────────
+// BeatmapLevelSO.get_previewDifficultyBeatmapSets() @ 0x988E80
+// BeatmapCharacteristicSegmentedControlController.SetData() @ 0x1D5A210
 #define IL2CPP_GET_PREVIEW_RVA 0x988E80ULL
+#define IL2CPP_SET_DATA_RVA 0x1D5A210ULL
 
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[64];
@@ -253,12 +256,23 @@ static int maybe_install_il2cpp_hook(void) {
     if (il2cpp_hook_installed) return 1;
     uint64_t base = find_il2cpp_module_base();
     if (!base) return 0;
-    uint64_t target = base + IL2CPP_GET_PREVIEW_RVA;
-    Detour_Construct(&Detour_hook_get_preview, DetourMode_x64);
-    Detour_DetourFunction(&Detour_hook_get_preview, target, (void*)get_preview_detour);
+
     char buf[128];
-    snprintf(buf, sizeof(buf), "IL2CPP preview hook at %p", (void*)target);
+
+    // Hook 1: get_previewDifficultyBeatmapSets (inlined, may not be called)
+    uint64_t t1 = base + IL2CPP_GET_PREVIEW_RVA;
+    Detour_Construct(&Detour_hook_get_preview, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_get_preview, t1, (void*)get_preview_detour);
+    snprintf(buf, sizeof(buf), "IL2CPP preview hook at %p", (void*)t1);
     log_write(buf);
+
+    // Hook 2: BeatmapCharacteristicSegmentedControlController.SetData()
+    uint64_t t2 = base + IL2CPP_SET_DATA_RVA;
+    Detour_Construct(&Detour_hook_set_data, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_set_data, t2, (void*)set_data_detour);
+    snprintf(buf, sizeof(buf), "IL2CPP set_data hook at %p", (void*)t2);
+    log_write(buf);
+
     il2cpp_hook_installed = 1;
     return 1;
 }
@@ -312,6 +326,50 @@ static void* get_preview_detour(void* _this) {
     }
 #endif
     return new_array;
+}
+
+// Detour: intercepts BeatmapCharacteristicSegmentedControlController.SetData()
+// Injects OneSaber and 90Degree into the characteristic list so the mode
+// selector shows more than just Standard for redirected songs.
+// RVA 0x1D5A210 in Il2CppUserAssemblies.prx
+//
+// void SetData(IEnumerable<BeatmapCharacteristicSO> beatmapCharacteristics,
+//              BeatmapCharacteristicSO selected,
+//              HashSet<BeatmapCharacteristicSO> notAllowed)
+static void set_data_detour(void* _this, void* beatmapCharacteristics, void* selected, void* notAllowed) {
+    // beatmapCharacteristics is actually a T[] (SZArray of BeatmapCharacteristicSO refs)
+    if (beatmapCharacteristics) {
+        uint64_t len = *(uint64_t*)((char*)beatmapCharacteristics + 0x18);
+        if (len == 1) {
+            // Only Standard — augment with copies to show OneSaber / 90Degree
+            // (All get the same BeatmapCharacteristicSO ref for now — labels will
+            //  all say "Standard" until we find the proper SO objects at runtime)
+            enum { ARRAY_HEADER_SZ = 0x20 };
+            static const int NEW_LEN = 3;
+            size_t new_sz = ARRAY_HEADER_SZ + (size_t)NEW_LEN * sizeof(void*);
+            void* new_arr = malloc(new_sz);
+            if (new_arr) {
+                memcpy(new_arr, beatmapCharacteristics, ARRAY_HEADER_SZ);
+                *(uint64_t*)((char*)new_arr + 0x18) = NEW_LEN;
+                void* elem = *(void**)((char*)beatmapCharacteristics + ARRAY_HEADER_SZ);
+                void** d = (void**)((char*)new_arr + ARRAY_HEADER_SZ);
+                d[0] = elem;  // Standard
+                d[1] = elem;  // OneSaber  (placeholder — shows "Standard")
+                d[2] = elem;  // 90Degree  (placeholder — shows "Standard")
+                beatmapCharacteristics = new_arr;
+            }
+#ifdef VERBOSE_LOG
+            {
+                char buf[256];
+                snprintf(buf, sizeof(buf), "set_data augmented: 1->%d elems", NEW_LEN);
+                log_write(buf);
+            }
+#endif
+        }
+    }
+
+    Detour_Stub(&Detour_hook_set_data, void (*)(void*, void*, void*, void*),
+                _this, beatmapCharacteristics, selected, notAllowed);
 }
 
 extern "C" int module_start(size_t argc, const void *args) {

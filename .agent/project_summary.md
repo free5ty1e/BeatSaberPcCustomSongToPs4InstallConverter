@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 v0.57 — Dynamic redirect working. Mode selector: **IL2CPP hook with array augmentation deployed** (Exp 119). Detour creates a 3-element array (Standard ×3) for BeatmapLevelSOs that previously had only 1 preview set. Hook confirmed installed at runtime (log line: `IL2CPP preview hook at 81048e80`). Malloc-based array allocation (avoids needing `il2cpp_array_new`). Awaiting mode selector appearance test.
+**Status:** 🔄 v0.57 plugin / v0.50 pipeline — Dynamic redirect working. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,11 +449,12 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (119):** IL2CPP hook with array augmentation for mode selector.
-- **Exp 118 confirmed:** Hook installed at 0x81048E80. Game works fine.
-- **Exp 119 adds:** Array augmentation. When getter returns array of 1 element, creates malloc'd array with 3 elements (same reference ×3).
-- **Test:** Restart Beat Saber, select Start Me Up. Look for mode buttons above difficulty list (all 3 showing "Standard" label).
-- **Next:** If mode selector appears, resolve BeatmapCharacteristicSO references for proper OneSaber/90Degree labels. If not, investigate hook calling or try direct field patching.
+**Current Experiment (120):** SetData hook — injects modes at UI population point.
+- **Exp 119 revealed:** `get_previewDifficultyBeatmapSets()` is inlined by IL2CPP — not called at runtime via function calls. Game accesses field directly at offset 0x98.
+- **Exp 120 fix:** Hook `BeatmapCharacteristicSegmentedControlController.SetData()` at RVA 0x1D5A210 instead. This IS called when the mode selector is populated.
+- **Per-song bundle confirmed:** `_difficultyBeatmapSets` has OneSaber(5) + 90Degree(5) entries from `--add-mode-characteristics` pipeline flag.
+- **Pipeline versioned at v0.50:** VERSION file + script display on run.
+- **Test:** Restart Beat Saber, select Start Me Up. Look for 3 mode buttons (all "Standard" label) above difficulty list.
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

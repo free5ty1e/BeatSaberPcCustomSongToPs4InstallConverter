@@ -1204,6 +1204,17 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
 # ============================================================================
 
 def main():
+    # Print pipeline version
+    ver_path = os.path.join(PROJECT_ROOT, 'VERSION')
+    if os.path.exists(ver_path):
+        with open(ver_path) as f:
+            ver = f.read().strip()
+    else:
+        ver = "unknown"
+    print(f"🎵 Beat Saber Deluxe Pipeline {ver}")
+    print(f"   Project: {PROJECT_ROOT}")
+    print()
+
     parser = argparse.ArgumentParser(
         description="Full Custom Song Pipeline for PS4 Beat Saber",
         formatter_class=argparse.RawDescriptionHelpFormatter,

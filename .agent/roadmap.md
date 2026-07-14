@@ -66,6 +66,8 @@
 - [x] **IL2CPP dump (Exp 117):** Il2CppDumper successful. `get_previewDifficultyBeatmapSets()` at RVA 0x988E80
 - [x] **Identity hook deployed (Exp 118):** Module base detection + Detour installed. Lazy init from open_hook().
 - [x] **Array augmentation deployed (Exp 119):** Malloc-based 3-element array for preview sets
+- [x] **SetData hook deployed (Exp 120):** Intercepts `BeatmapCharacteristicSegmentedControlController.SetData()` to inject characteristics into mode selector
+- [x] **Pipeline versioned:** v0.50 — central VERSION file + script display
 - [ ] **Phase 4:** Test mode selector appearance on PS4
 - [ ] **Phase 5:** Resolve BeatmapCharacteristicSO PIDs for correct OneSaber/90Degree labels
 
