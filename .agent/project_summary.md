@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 **v0.58 plugin / v0.50 pipeline** — Dynamic redirect working. Mode selector: **SetContent hook deployed** (Exp 121). Hooks `StandardLevelDetailView.SetContent()` to inject OneSaber/90Degree into the mode selector AFTER the view is set up. Previous GetPreview and SetData hooks both never fire (inlined/conditional). New approach calls SetData ourselves with an augmented array. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
+**Status:** 🔄 **v0.58 plugin / v0.50 pipeline** — Dynamic redirect working. Mode selector: **blocked on IL2CPP calling convention mismatch**. All three IL2CPP hooks (get_preview, set_data, set_content) failed — two never fire, one causes startup crash. Root cause: PS4 IL2CPP uses MS x64 convention, native C hooks use SysV AMD64. Detour trampoline registers don't match, corrupting `this` pointer. Requires assembly-level register remapping or direct memory patching via open_hook. Mode selector: **SetData hook deployed** (Exp 120). Hooks `BeatmapCharacteristicSegmentedControlController.SetData()` to inject OneSaber/90Degree into the mode selector UI. Per-song bundle confirmed to have OneSaber/90Degree difficulty data (5 diffs each). Log shows previous get_preview hook was never called (field accessed directly via IL2CPP offset). New SetData hook intercepts the ACTUAL UI population point.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 
@@ -449,13 +449,14 @@ Save to `/workspace/screenshots/bs_log_v0.51.txt`.
 ### Phase 5: Iterate
 See `.ai_memory/experiment-workflow.md` for the full detailed cycle.
 
-**Current Experiment (121):** SetContent hook — injects modes at song selection entry point.
-- **Exp 119 revealed:** `get_previewDifficultyBeatmapSets()` is inlined by IL2CPP — not called at runtime via function calls. Game accesses field directly at offset 0x98.
-- **Exp 120 revealed:** `SetData()` is ONLY called when there are 2+ characteristics to display. Since BeatmapLevelSO only has 1, it's never called. Mode selector is just hidden with `SetActive(false)`.
-- **Exp 121 fix:** Hook `StandardLevelDetailView.SetContent()` at RVA 0x1C3B630 (always called when song selected). After original runs, manually call `SetData()` on the controller with an augmented 3-element array (Standard SO ×3).
-- **Per-song bundle confirmed:** `_difficultyBeatmapSets` has OneSaber(5) + 90Degree(5) entries from `--add-mode-characteristics` pipeline flag.
-- **Infrastructure:** Changelogs created (plugin + pipeline), CI updated to include pipeline tools in releases, rules updated.
-- **Test:** Restart Beat Saber, select Start Me Up. Look for 3 mode buttons above difficulty list.
+**Current Experiment (122):** Root cause identified — IL2CPP calling convention mismatch.
+- **Exp 119-121 revealed:** ALL three IL2CPP hooks fail:
+  - `get_previewDifficultyBeatmapSets()` — never fires (inlined by IL2CPP)
+  - `BeatmapCharacteristicSegmentedControlController.SetData()` — never fires (conditional on 2+ chars)
+  - `StandardLevelDetailView.SetContent()` — causes CE-34878-0 crash (calling convention mismatch)
+- **Root cause:** PS4 IL2CPP compiles C# to native code using the MS x64 calling convention (RCX=this, RDX=arg1, ...). Native C hooks compiled by the PS4 toolchain use SysV AMD64 (RDI=this, RSI=arg1, ...). When the Detour jumps from the IL2CPP method to the C hook function, the hook reads garbage from SysV registers instead of the MS x64 registers → crash.
+- **All IL2CPP hooks removed** from the plugin. Only native hooks (open, fopen) remain.
+- **Next approach:** Direct BeatmapLevelSO memory patching triggered from open_hook when a BeatmapLevelsData redirect fires. Or assembly-level hook wrapper to remap registers.
 
 ## File Reference
 - `/workspace/beat_saber_deluxe/src/main.cpp` - Plugin entry point (now defines `module_start`/`module_stop` directly, no crtlib.o)

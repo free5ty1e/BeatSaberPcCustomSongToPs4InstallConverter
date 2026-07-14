@@ -68,10 +68,12 @@
 - [x] **Array augmentation deployed (Exp 119):** Malloc-based 3-element array for preview sets
 - [x] **SetData hook deployed (Exp 120):** Intercepts `BeatmapCharacteristicSegmentedControlController.SetData()` to inject characteristics into mode selector
 - [x] **SetContent hook deployed (Exp 121):** Hooks `StandardLevelDetailView.SetContent()` — calls SetData manually after view renders
+- [x] **Root cause identified (Exp 122):** IL2CPP uses MS x64 convention, native C uses SysV AMD64 — ALL IL2CPP hooks UNUSABLE without assembly trampoline
+- [x] **All IL2CPP hooks removed** (set_content crashed startup)
 - [x] **Pipeline versioned:** v0.50 — central VERSION file + script display
 - [x] **Changelogs created:** CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md
-- [x] **CI updated:** Pipeline tools + changelogs included in releases
-- [ ] **Phase 4:** Test set_content hook — select Start Me Up, verify mode buttons appear
+- [x] **CI_RELEASE.md created:** Release instructions extracted from CI workflow
+- [ ] **Phase 4:** Implement mode selector via direct BeatmapLevelSO memory patching (open_hook-based)
 - [ ] **Phase 5:** Resolve BeatmapCharacteristicSO PIDs for correct OneSaber/90Degree labels
 
 ## M5 — Polishing (Future)

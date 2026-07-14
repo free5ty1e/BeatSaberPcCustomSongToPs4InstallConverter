@@ -156,6 +156,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repo (for CI_RELEASE.md)
+        uses: actions/checkout@v4
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -166,32 +169,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Beat Saber Deluxe ${{ github.ref_name }}
-          body: |
-            ## Beat Saber Deluxe ${{ github.ref_name }}
-
-            ### 📦 Plugin
-            - `beat_saber_deluxe.prx` — Release build (no verbose logging)
-            - `beat_saber_deluxe_debug.prx` — Debug build (verbose PS4 logging)
-            - `redirects.json` — Song redirect config (edit to add/change slot mappings)
-            - `plugins.ini` — GoldHEN configuration for CUSA12878
-
-            ### 🎵 Song Conversion Pipeline
-            - `tools/full_custom_song_pipeline.py` — Main pipeline script
-            - `tools/*.py` — Supporting tools (downloader, audio encoder)
-            - `development/scripts/` — Development scripts
-            - `VERSION` — Pipeline version v0.50+
-            - **Requires:** Python 3.8+, `pip install UnityPy`, .NET SDK (for Il2CppDumper), vgmstream-cli
-            - **Instructions:** See `README.md` in the repo root
-
-            ### 📋 Changelogs
-            - [Plugin Changelog](CHANGELOG-PLUGIN.md)
-            - [Pipeline Changelog](CHANGELOG-PIPELINE.md)
-
-            ### 🎮 Plugin Installation
-            1. Copy `beat_saber_deluxe.prx` to `/data/GoldHEN/plugins/` on your PS4
-            2. Copy `redirects.json` to `/data/GoldHEN/AFR/CUSA12878/redirects.json` (edit to customize)
-            3. Copy `plugins.ini` to `/data/GoldHEN/plugins.ini` (merge with existing entries)
-            4. Launch Beat Saber — notification confirms plugin loaded
+          bodyPath: ./CI_RELEASE.md
           files: |
             release-artifacts/beat_saber_deluxe.prx
             release-artifacts/beat_saber_deluxe_debug.prx

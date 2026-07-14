@@ -295,7 +295,18 @@ metadata:
   - Changelogs created (CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md)
   - CI workflow updated to include pipeline tools + changelogs in releases
   - Version increment rule + changelog management rule added to project-summary-update-rule.md
-- **Status:** 🔄 DEPLOYED — awaiting test. Restart Beat Saber, select Start Me Up, look for 3 mode buttons above difficulty list.
+- **Status:** 🔄 v0.58 deployed — game launches without crashing. Mode selector not yet resolved.
+
+### Experiment 122: Root Cause Identified — IL2CPP Calling Convention Mismatch
+- **Date:** 2026-07-13
+- **What:** Identified the root cause of all IL2CPP hook crashes. PS4 IL2CPP methods use MS x64 calling convention (RCX=this, RDX=arg1, ...) while native C hooks use SysV AMD64 (RDI=this, RSI=arg1, ...). The Detour jumps to the hook function with MS x64 register state, but the C function reads from SysV registers → `this` is garbage → crash.
+- **Removed:** SetContent hook (caused CE-34878-0 during startup). All three IL2CPP hooks (get_preview, set_data, set_content) documented as UNUSABLE without an assembly trampoline to remap registers.
+- **Infrastructure:**
+  - Created `beat_saber_deluxe/CI_RELEASE.md` — release instructions extracted from CI workflow
+  - CI workflow updated to use `bodyPath: ./CI_RELEASE.md` instead of inline release body
+  - `project-summary-update-rule.md` updated: CI_RELEASE.md added to required documents + pre-stage checklist
+- **Remaining challenge:** Mode selector still doesn't show extra modes. All IL2CPP-based approaches fail due to calling convention mismatch.
+- **Log archived:** `screenshots/bs_log_exp121.txt`
 
 ## Phase 1: Initial Research & Failed Approaches
 
