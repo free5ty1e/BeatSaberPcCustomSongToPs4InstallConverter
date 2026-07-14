@@ -107,3 +107,7 @@ This rule also applies to any pipeline changes that affect deployment.
 
 The knowledge base is described in this document: `.agent/llm-wiki.md`
 The knowledge base itself is located here: `.agent/llm-wiki-knowledge-base`
+# --- DANGER GUARDRAILS START ---
+- Prohibit all write operations with 'az' azure CLI (e.g., az resource create, az vm start, az group delete). Read operations are permitted.
+- Prohibit all write operations with 'gh' (GitHub CLI) except for 'gh edit' when updating a PR description. All other mutations (create, delete, merge, etc.) are prohibited.
+# --- DANGER GUARDRAHILS END ---
