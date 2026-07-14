@@ -6,10 +6,18 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 ### Changed
 - Added `__attribute__((ms_abi))` to all IL2CPP hooks (proved to be wrong — reverted in v0.60)
 
+## [v0.62] — 2026-07-14
+### Added
+- **BeatmapLevelSO constructor hook** at RVA 0x9891E0 — captures `this` pointers when BeatmapLevelSO objects are deserialized from the pack bundle. Fields aren't populated yet at constructor time, so pointers are saved for deferred augmentation.
+- **Deferred preview array augmentation** — after the rolling stones pack bundle opens, waits 3 file-opens then iterates saved BeatmapLevelSO pointers, augments `_previewDifficultyBeatmapSets` from 1→5 entries. Creates 4 copies of the Standard PreviewDifficultyBeatmapSet (all reference the Standard characteristic for now).
+
+### Removed
+- **Pack bundle redirect** — caused CE-34878-0 crash (Unity validates bundle hashes; modified bundle size doesn't match)
+- **Memory scanning approach** — page-aligned scan would miss BeatmapLevelSO objects not at page boundaries
+
 ## [v0.61] — 2026-07-14
 ### Added
-- **Pack bundle redirect for Rolling Stones** — The open_hook now redirects the rollingstones pack bundle to a modified version on AFR with augmented BeatmapLevelSO preview data. This adds OneSaber, NoArrows, 90Degree, and 360Degree to the mode selector.
-- **`tools/patch_pack_bundle.py`** — Binary patching script that modifies the Rolling Stones pack bundle's `_previewDifficultyBeatmapSets` from 1 to 5 entries. Uses UnityPy's `set_raw_data()` with direct byte manipulation to work around UnityPy's save limitations.
+- **Pack bundle redirect for Rolling Stones** — redirected to modified bundle with augmented preview data. Crashed due to bundle hash mismatch.
 
 ## [v0.60] — 2026-07-14
 ### Removed

@@ -131,3 +131,80 @@ Each `PreviewDifficultyBeatmap` struct (at object offset 0x10):
 - [[song-metadata-addressables-structure]] — Overall Addressables structure
 - [[plans/song-list-modes]] — Implementation plan with all option comparisons
 - [[../../experiment_log]] — Experiments 113-117 documenting the investigation path
+
+---
+
+## UPDATE: Calling Convention Corrected (Exp 124-126)
+
+### Calling Convention
+
+**PS4 IL2CPP uses SysV AMD64** (same as native C), NOT MS x64. This was confirmed by crash testing:
+- Hooks WITH `__attribute__((ms_abi))` crashed on any song selection (read `this` from RCX instead of RDI)
+- Hooks WITHOUT `ms_abi` work correctly (read `this` from RDI, which matches IL2CPP)
+
+### Why IL2CPP Function Hooks Don't Work for get_previewDifficultyBeatmapSets
+
+The property getter at RVA 0x988E80 is **inlined by the IL2CPP optimizer**. The function body is copied to every call site, so the original function address is never called at runtime. Hooking it does nothing.
+
+### Constructor Hook — The Working Approach (Exp 126)
+
+Instead of hooking the property getter, hook the **default constructor** at RVA **0x9891E0** (`BeatmapLevelSO..ctor()`). Unlike the getter, the constructor IS called through its function pointer by Unity's serialization system when ScriptableObjects are deserialized from AssetBundles.
+
+**Flow:**
+1. Hook constructor (no ms_abi — SysV convention)
+2. Save `_this` pointer (fields not populated yet at constructor time)
+3. In open_hook, detect rollingstones pack bundle → set `patch_pending = 1`
+4. After 3 more file opens → run `patch_beatmap_level_sos()`
+5. Iterate saved pointers, check for populated `_previewDifficultyBeatmapSets` (offset 0x98)
+6. Augment 1→5 entries
+
+**BeatmapLevelSO field layout (IL2CPP runtime):**
+| Offset | Type | Field |
+|--------|------|-------|
+| 0x00 | Il2CppObject* | klass |
+| 0x08 | void* | monitor |
+| 0x10 | Il2CppString* | m_Name (inherited from Object) |
+| 0x18 | int32 | _version |
+| 0x20 | Il2CppString* | _levelID |
+| 0x28 | Il2CppString* | _songName |
+| 0x30 | Il2CppString* | _songSubName |
+| 0x38 | Il2CppString* | _songAuthorName |
+| 0x40 | Il2CppString* | _levelAuthorName |
+| 0x48 | AudioClip* | _previewAudioClip |
+| 0x50 | float | _beatsPerMinute |
+| 0x98 | Il2CppArray* | _previewDifficultyBeatmapSets |
+| 0xA0 | int32 | _contentRating |
+
+**PreviewDifficultyBeatmapSet layout (IL2CPP runtime, 0x20 bytes):**
+| Offset | Type | Field |
+|--------|------|-------|
+| 0x00 | Il2CppObject* | klass |
+| 0x08 | void* | monitor |
+| 0x10 | BeatmapCharacteristicSO* | _beatmapCharacteristic |
+| 0x18 | Il2CppArray* | _previewDifficultyBeatmaps |
+
+### Creating (Fake) Managed Objects from C++
+
+Since IL2CPP's `il2cpp_object_new()` and `il2cpp_array_new()` are not easily callable from C++, use `malloc()` to create fake managed objects:
+
+```c
+// Il2CppArray header: 0x20 bytes (klass + monitor + bounds + max_length)
+void *new_arr = malloc(0x20 + N * sizeof(void*));
+memcpy(new_arr, existing_arr, 0x20);  // copy klass pointer
+*(uint64_t*)(new_arr + 0x18) = N;      // set max_length
+
+// Fake PreviewDifficultyBeatmapSet: 0x20 bytes
+void *set = malloc(0x20);
+memcpy(set, existing_set, 0x20);  // copy klass, maintain ref count
+```
+
+The Boehm GC (conservative) scans these malloc'd regions and won't crash because:
+1. The klass pointer is valid and points to alive memory
+2. The difficulty array reference points to alive memory
+3. Any faux-pointer values in the PPtr fields don't match heap regions
+
+### Next Steps: Finding Real Characteristic Objects
+
+Currently all 5 preview sets reference Standard. To find OneSaber/NoArrows/90Degree/360Degree objects:
+- Scan memory for Il2CppStrings matching characteristic serialized names
+- Or follow from `BeatmapCharacteristicCollection` singleton

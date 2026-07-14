@@ -360,6 +360,21 @@ metadata:
   - Pack bundle redirect added to open_hook (hardcoded, not in redirects.json)
 - **Status:** 🔄 READY TO DEPLOY — plugin v0.61 built. PS4 was offline for deployment. Next session: deploy plugin + modified pack bundle to PS4, then test.
 
+### Experiment 126: Constructor Hook — Capture BeatmapLevelSO for Deferred Augmentation
+- **Date:** 2026-07-14
+- **What:** Replaced the pack bundle redirect (crashed due to hash mismatch) with a constructor hook approach. Hooks `BeatmapLevelSO..ctor()` at RVA 0x9891E0 (default constructor, called when objects are deserialized from the bundle). Saves `this` pointers, then after the pack bundle opens and Unity populates the fields, augments `_previewDifficultyBeatmapSets` from 1→5 entries.
+- **Method:**
+  1. Hook the default constructor (no ms_abi, SysV convention matches PS4 IL2CPP)
+  2. In the hook, save `_this` pointer and call through to original via TrampolinePtr
+  3. When open_hook detects rollingstones pack bundle → set `patch_pending = 1`
+  4. After 3 more file opens → run `patch_beatmap_level_sos()`
+  5. Iterate saved pointers, check each for populated `_previewDifficultyBeatmapSets` at offset 0x98
+  6. Augment 1→5, creating 4 malloc'd copies of Standard set (all reference Standard characteristic)
+- **Why constructor hook works:** Unlike get_previewDifficultyBeatmapSets (inlined), the constructor IS called through its function pointer by Unity's serialization system when ScriptableObjects are deserialized from AssetBundles.
+- **Limitations:**
+  - All 5 preview sets reference the SAME Standard characteristic (need to find OneSaber/etc objects at runtime)
+- **Status:** 🔄 DEPLOYED (v0.62) — awaiting test. Mode selector should show 5 buttons (all Standard).
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite

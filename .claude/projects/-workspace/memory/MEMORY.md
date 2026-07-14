@@ -1,3 +1,3 @@
-- [IL2CPP Calling Convention](il2cpp-calling-convention.md) — PS4 IL2CPP uses SysV AMD64 (same as native C) — confirmed by crash testing
+- [IL2CPP Calling Convention](il2cpp-calling-convention.md) — PS4 IL2CPP uses SysV AMD64 (same as native C) — confirmed by crash testing. **Also recorded in:** `.agent/llm-wiki-knowledge-base/il2cpp-dump-mode-selector-hook.md`
 - [Mode Selector → Difficulty Flow](mode-selector-difficulty-flow.md) — How mode selection reveals difficulties in the song menu
 - [BeatmapLevelSO Field Offsets](beatmap-levelso-field-offsets.md) — Field offsets for BeatmapLevelSO and related objects in IL2CPP memory
