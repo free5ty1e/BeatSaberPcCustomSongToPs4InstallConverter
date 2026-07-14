@@ -3,13 +3,17 @@
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
 ## [v0.59] — 2026-07-13
-### Fixed
-- **IL2CPP calling convention mismatch** — added `__attribute__((ms_abi))` to all IL2CPP hook functions. PS4's Clang supports the MS x64 calling convention attribute, making C functions use RCX/RDX/R8/R9 registers (matching IL2CPP generated code) instead of SysV AMD64 RDI/RSI/... Previously all IL2CPP hooks crashed because the Detour jumped from IL2CPP code (MS x64) to C hook functions (SysV) → arguments read from wrong registers → crash.
+### Changed
+- Added `__attribute__((ms_abi))` to all IL2CPP hooks (proved to be wrong — reverted in v0.60)
+
+## [v0.60] — 2026-07-14
+### Removed
+- **All `__attribute__((ms_abi))`** — PS4 IL2CPP uses **SysV AMD64** (same as native C), not MS x64. ms_abi caused hooks to read `this` from the wrong register (RCX instead of RDI) → crash on ANY song selection.
+- **`set_data_detour`** hook — never fires (SetData called only with 2+ characteristics).
+- **`set_content_detour`** hook — causes startup/song-selection crash at RVA 0x1C3B630.
 
 ### Changed
-- **`get_preview_detour`** — rewritten to read `_previewDifficultyBeatmapSets` field at offset 0x98 directly from the `this` pointer, eliminating the need to call the original function (and avoiding the Detour_Stub calling convention issue entirely). Augments 1-element arrays to 3 elements for the mode selector.
-- **`set_data_detour`** — now uses `TrampolinePtr` with ms_abi function pointer instead of `Detour_Stub`.
-- **`set_content_detour`** — re-added (was removed in v0.58 debug) with proper ms_abi attribute.
+- **`get_preview_detour`** — default C convention (no ms_abi). Reads `_previewDifficultyBeatmapSets` at offset 0x98 directly. The ONLY IL2CPP hook installed. Won't crash if inlined; should work if called.
 
 ## [v0.58] — 2026-07-13
 ### Added

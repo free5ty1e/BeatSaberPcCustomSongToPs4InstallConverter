@@ -322,6 +322,19 @@ metadata:
   2. ✅ Mode selector shows 3 buttons (from get_preview augmentation)
   3. ✅ Song plays correctly
 
+### Experiment 124: Calling Convention Corrected — SysV AMD64, Not MS x64
+- **Date:** 2026-07-14
+- **What:** Tested v0.59 with `__attribute__((ms_abi))` on all hooks → game crashed on ANY song selection (CE-34878-0). This PROVES PS4 IL2CPP uses **SysV AMD64** (same as native C), not MS x64. Using ms_abi made hooks read `this` from RCX instead of RDI → crash.
+- **Changes in v0.60:**
+  - Removed ALL `__attribute__((ms_abi))` from all hook functions
+  - Removed `set_data_detour` (never fires — only called when 2+ characteristics exist)
+  - Removed `set_content_detour` (causes crash at RVA 0x1C3B630 — function may not be SetContent, or Detour at that address corrupts adjacent code)
+  - Kept only `get_preview_detour` with default C convention — reads field at offset 0x98 directly, no function call needed
+  - Knowledge base updated with corrected calling convention info
+- **Key lesson:** MS x64 is Windows-only for IL2CPP. On PS4/FreeBSD, IL2CPP uses the platform's native ABI (SysV AMD64). Default C convention is correct.
+- **Note:** Plugin could not be deployed to PS4 (console offline). User needs to deploy v0.60 from this build output before testing.
+- **Status:** 📦 READY TO DEPLOY — game should launch without crashing. Mode selector augmentation via get_preview may or may not fire (depends on whether get_preview is truly inlined by IL2CPP).
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
