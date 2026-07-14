@@ -79,6 +79,17 @@ A new `add_mode_characteristics(cab, enable_modes: list)` function has been adde
 - OneSaber (5 diffs) 
 - 90Degree (5 diffs)
 
+### ✅ Experiment 127: IL2CPP Approaches Definitively Dead
+
+All IL2CPP-based mode control methods have been conclusively proven dead by experimental evidence:
+
+| Approach | Status | Evidence |
+|----------|--------|----------|
+| Constructor hook @ RVA 0x9891E0 | ❌ Never fires | DetourMode_x32 installs cleanly, but `saved_so_count = 0` despite pack bundle opening 3×. Unity deserializes via raw memory copy, never calls IL2CPP constructor. |
+| get_preview getter @ RVA 0x988E80 | ❌ Inlined by optimizer | Code is inlined at every call site — no function to hook. Even without DetMode crash, it would be a no-op. |
+| SetData hook | ❌ Conditional | Only called when 2+ characteristics already exist. Circular dependency. |
+| SetContent hook | ❌ Crash | mprotect at RVA 0x1C3B630 corrupts adjacent game code. |
+
 ## Updated Order of Implementation
 
 ### Phase 1: Investigation & Root Cause Analysis

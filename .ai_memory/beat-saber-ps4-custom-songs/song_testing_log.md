@@ -36,6 +36,7 @@ Records which custom songs have been tested on PS4, their sync status, and any i
 | 2026-06-28 | Bruises | Fox Stevenson | 174 | 224.8s | PCM16 FSB5 | ❌ | N/A | Desynced — beatmap appears poorly authored. |
 | 2026-06-28 | Bruises (lapped) | Fox Stevenson | 174 | 678.6s | PCM16 FSB5 | ❌ | N/A | Lapped version — wrongfully extended audio. |
 | 2026-07-11 | 360 | Charli xcx | 120 | ~203s | PCM16 FSB5 | ❌ | N/A | **Removed.** Song has 360-degree characteristics. Not suitable for PS4 VR. Replaced with Duvet. |
+| 2026-07-14 | Espresso (Start Me Up slot) | Sabrina Carpenter | 104 | ~177s | PCM16 FSB5 | ✅ Perfect | ✅ | **v0.64 redirect test** — No crash, full gameplay verified on Hard difficulty. v0.64 removes all IL2CPP hooks; redirect-only stable. |
 
 ### Billie Eilish Replacements (Deployed 2026-07-11, Not Yet Tested)
 

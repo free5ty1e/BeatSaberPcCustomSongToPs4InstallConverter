@@ -2,6 +2,20 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.64] — 2026-07-14
+### Removed
+- **All IL2CPP hooks** (`get_preview_detour`, `ctor_detour`, `maybe_install_il2cpp_hook`) — constructor hook at RVA 0x9891E0 proved definitively dead: Unity deserializes BeatmapLevelSO objects via raw memory copy from AssetBundles, never calling the IL2CPP constructor. DetourMode_x32 (5-byte JMP) was correct and stable, but the hook target simply never fires.
+
+### Verified
+- **Redirect-only system is stable** — v0.64 confirms that with IL2CPP hooks removed, no crash occurs at any point: startup, song select, or gameplay. Start Me Up correctly plays Espresso (Hard difficulty verified).
+
+## [v0.64] — 2026-07-14
+### Removed
+- **All IL2CPP hooks** (`get_preview_detour`, `ctor_detour`, `maybe_install_il2cpp_hook`) — constructor hook at RVA 0x9891E0 proved definitively dead: Unity deserializes BeatmapLevelSO objects via raw memory copy from AssetBundles, never calling the IL2CPP constructor. DetourMode_x32 (5-byte JMP) was correct and stable, but the hook target simply never fires.
+
+### Verified
+- **Redirect-only system is stable** — v0.64 confirms that with IL2CPP hooks removed, no crash occurs at any point: startup, song select, or gameplay. Start Me Up correctly plays Espresso (Hard difficulty verified).
+
 ## [v0.59] — 2026-07-13
 ### Changed
 - Added `__attribute__((ms_abi))` to all IL2CPP hooks (proved to be wrong — reverted in v0.60)

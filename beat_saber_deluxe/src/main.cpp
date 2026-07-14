@@ -1,6 +1,7 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.64: Removed all IL2CPP hooks (constructor hook never fires for bundle deserialized objects). Redirect-only stable.
 
 #include <stddef.h>
 #include <stdint.h>

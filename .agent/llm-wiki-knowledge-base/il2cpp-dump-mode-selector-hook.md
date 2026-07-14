@@ -142,13 +142,28 @@ Each `PreviewDifficultyBeatmap` struct (at object offset 0x10):
 - Hooks WITH `__attribute__((ms_abi))` crashed on any song selection (read `this` from RCX instead of RDI)
 - Hooks WITHOUT `ms_abi` work correctly (read `this` from RDI, which matches IL2CPP)
 
-### Why IL2CPP Function Hooks Don't Work for get_previewDifficultyBeatmapSets
+### Constructor Hook — Dead End (Exp 126-127)
 
-The property getter at RVA 0x988E80 is **inlined by the IL2CPP optimizer**. The function body is copied to every call site, so the original function address is never called at runtime. Hooking it does nothing.
+The constructor hook approach was the final IL2CPP method attempted. It was proven dead by experimental evidence:
 
-### Constructor Hook — The Working Approach (Exp 126)
+**Test:** Constructor hook at RVA 0x9891E0 with DetourMode_x32 installs cleanly, but `saved_so_count` remains 0 despite the pack bundle opening 3× (verified via bs_log.txt). The constructor genuinely doesn't fire for AssetBundle-deserialized objects.
 
-Instead of hooking the property getter, hook the **default constructor** at RVA **0x9891E0** (`BeatmapLevelSO..ctor()`). Unlike the getter, the constructor IS called through its function pointer by Unity's serialization system when ScriptableObjects are deserialized from AssetBundles.
+**Root cause:** Unity's AssetBundle deserializer does not call IL2CPP constructors. It creates objects via raw memory copy and then populates fields individually. There is no `BeatmapLevelSO..ctor()` execution during bundle loading.
+
+### get_previewDifficultyBeatmapSets Hook — Dead End (Exp 119-124)
+
+The property getter at RVA 0x988E80 is **inlined by the IL2CPP optimizer**. The function body is copied to every call site, so the original function address is never called at runtime. Hooking it does nothing — even if `DetourMode_x64` didn't crash (which it did), it would be a no-op.
+
+### Summary: All IL2CPP Mode Selector Approaches Exhausted
+
+| Approach | Target | Status | Reason |
+|----------|--------|--------|--------|
+| Constructor hook (Exp 126-127) | BeatmapLevelSO..ctor() @ RVA 0x9891E0 | ❌ Never fires | Unity deserializes via raw memory copy |
+| get_preview getter hook (Exp 119-124) | get_previewDifficultyBeatmapSets() @ RVA 0x988E80 | ❌ Inlined by IL2CPP optimizer | No function to hook — code is inlined at call sites |
+| SetData hook (Exp 120) | BeatmapCharacteristicSegmentedControlController.SetData() | ❌ Conditional | Only called when 2+ characteristics exist; circular dependency |
+| SetContent hook (Exp 121-122) | StandardLevelDetailView.SetContent() @ RVA 0x1C3B630 | ❌ Crash at Detour install | mprotect conflicts with game code in same region |
+
+**Conclusion:** Mode selector control via IL2CPP runtime hooks is not feasible. Remaining options are per-song metadata bundles or GoldHEN cheat code memory injection after game initialization.
 
 **Flow:**
 1. Hook constructor (no ms_abi — SysV convention)

@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-11
-**Status:** 🔄 **v0.63 plugin / v0.50 pipeline** — Dynamic redirect + constructor hook (Exp 126). Mode selector: **BeatmapLevelSO constructor hook at RVA 0x9891E0** captures `this` pointers during deserialization, then augments `_previewDifficultyBeatmapSets` from 1→5 after the rolling stones pack bundle opens. Uses `DetourMode_x32` (5-byte near JMP) to avoid instruction-splitting crash from `DetourMode_x64`. All 5 preview sets reference Standard characteristic for now (OneSaber/90Degree/etc object finding TBD).
+**Status:** ✅ **v0.64 plugin / v0.50 pipeline** — Dynamic redirect system is stable and fully working. IL2CPP hooks **definitively dead** (Exp 127): constructor hook at RVA 0x9891E0 installs cleanly with DetourMode_x32 but fires zero times — Unity deserializes BeatmapLevelSO via raw memory copy from AssetBundles, never calling the IL2CPP constructor. All mode selector attempts exhausted. **Next viable approach:** per-song metadata bundles (adding BeatmapLevelSO with 5 preview sets to per-song bundle we already redirect) or GoldHEN cheat code memory injection after game init.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

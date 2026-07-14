@@ -390,6 +390,15 @@ metadata:
 - **Status:** 🔄 FIXED (v0.63 DetourMode_x32) — awaiting retest. Mode selector should show 5 buttons.
 - **Version note:** v0.62 was the crash version (constructor hook + DetourMode_x64). v0.63 is the DetourMode_x32 fix. Every plugin code change must increment the version.
 
+### Experiment 127: IL2CPP Hooks Confirmed Dead — v0.64 Redirect-Only Stable
+- **Date:** 2026-07-14
+- **What:** Removed ALL IL2CPP hooks (constructor hook at 0x9891E0, get_preview hook at 0x988E80, maybe_install_il2cpp_hook) from v0.63. Deployed as v0.64 DEBUG build to confirm redirect system is stable on its own.
+- **Prior finding (Exp 126):** Constructor hook installs fine with DetourMode_x32 but never fires — `saved_so_count = 0` every time despite pack bundle opening. Confirmed via log that Unity deserializes BeatmapLevelSO objects via raw memory copy from AssetBundles, bypassing the constructor entirely.
+- **Deploy:** v0.64 debug plugin + all 32 song bundles + redirects.json on PS4 AFR.
+- **Test result:** ✅ **PERFECT — no crash.** Notification shows "Beat Saber Deluxe v0.64". Start Me Up plays Espresso custom song (Hard difficulty). Full song playback confirmed working. No crash log generated (game stable).
+- **Conclusion:** IL2CPP hooks are definitively dead for mode control. The constructor genuinely doesn't fire during AssetBundle deserialization. get_previewDifficultyBeatmapSets is inlined by the IL2CPP optimizer. This ends the mode-selector-in-code approach.
+- **Next viable approaches:** Per-song metadata bundles (adding BeatmapLevelSO with 5 preview sets to per-song bundle), or GoldHEN cheat code memory injection after game initialization completes.
+
 ## Phase 1: Initial Research & Failed Approaches
 
 ### Experiment 1: Direct FTP Overwrite
