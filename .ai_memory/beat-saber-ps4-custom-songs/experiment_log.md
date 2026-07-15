@@ -2120,3 +2120,33 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **inject_pack_bundle.py** now generates complete patched CAB files (not just blobs) with verified Espresso/Duvet/Time Lapse BeatmapLevelSO content at correct byte offsets for deployment via AFR redirect or direct file replacement.
 - **Pipeline version bumped to v0.52** — new CAB injection feature added.
 - **Deploy status:** Still blocked by offline PS4 (Exp 130). Patched CABs ready on disk: `beat_saber_deluxe/_patched_{Song}.cab`.
+
+
+### Experiment 132: Mode Selector — UnityPy save() Breakthrough (5-mode BeatmapLevelSO Patch)
+- **Date:** 2026-07-15
+- **What:** Successfully patched the Rolling Stones pack bundle with 5-mode preview data (Standard, OneSaber, NoArrows, 90Degree, 360Degree) using UnityPy's `save("original")` method. This replaces the broken `inject_pack_bundle.py` CAB injection approach with a working UnityFS round-trip.
+- **Key breakthrough:** UnityPy's `bf.save("original")` produces valid UnityFS bundles that can be read back. Previous attempts failed because:
+  - `bf.save(path)` treats the argument as a packer type, not a file path, raising `NotImplementedError("UnityFS - Packer")`
+  - `save_fs(writer, ...)` writes only from the file_size field onward, missing the "UnityFS\0" signature + version + engine strings
+  - Manual bundle building had bugs: wrong BlockInfoNeedPaddingAtStart alignment, wrong node_count position, wrong per-block compression flags
+- **m_Script PPtr bug found and fixed:** `build_beatmap_levelso_blob()` in `inject_pack_bundle.py` was using `_CHAR_PATH_IDS["Standard"]` (-7286399427822119286) for the m_Script PPtr pathID instead of the correct MonoScript pathID (2140275054477726686, fileID=1). This caused Unity deserialization to fail silently.
+- **5-mode BeatmapLevelSO generated:** Modified StartMeUp's serialized tree via UnityPy's `read_typetree()` + `save_typetree()` to add 4 new preview difficulty beatmap sets. Each set references the correct BeatmapCharacteristicSO via PPtr (fileID=3).
+  - Standard:  pathID=-7286399427822119286
+  - OneSaber:  pathID=-8583864861369561029
+  - NoArrows:  pathID=-5623662769225589684
+  - 90Degree:  pathID=4533580413116749821
+  - 360Degree: pathID=1189643819550092755
+- **Bundle patching flow:**
+  1. Open original pack bundle with `Environment(ORIGINAL_BUNDLE)`
+  2. Get BeatmapLevelSO object (pathID=2287600824654271910) from CAB
+  3. `obj.read_typetree()` -> add 4 more `_previewDifficultyBeatmapSets` entries
+  4. `obj.save_typetree(tree)` -> modifies in-memory serialized data
+  5. `bf.save("original")` -> writes complete UnityFS bundle with correct headers, blocks info, and LZ4HC-compressed data
+  6. Verify with fresh `Environment(OUTPUT_BUNDLE)` -> 5 modes confirmed
+- **Bundle spec:**
+  - Output: `rollingstones_pack_patched.bundle` - 7,905,243 bytes (orig: 7,902,803)
+  - Modified object: StartMeUpBeatmapLevelSO -> 1 album art + 5 preview difficulty sets
+  - Format: UnityFS v8, LZ4HC (flags 0x243), BlocksAndDirectoryInfoCombined
+- **Planned deployment:** AFR redirect. Copy patched bundle to `/data/GoldHEN/AFR/CUSA12878/rollingstones_pack_patched.bundle`, add redirect key `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c` -> `rollingstones_pack_patched.bundle` in `redirects.json`
+- **Plugin version bumped to v0.65** for mode selector support
+- **Status:** :package: BUILD COMPLETE - Bundle verified by UnityPy. Waiting PS4 power-on + FTP access to deploy.

@@ -15,7 +15,7 @@ metadata:
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset
-- [[m-script-gzip-format|m_Script = Just Gzip]] — The critical format of beatmap data storage (no decompressed_size prefix!)
+- [[pack-bundle-patching|Pack Bundle Patching via UnityPy save()]] — How to patch UnityFS pack bundles: `bf.save("original")` breakthrough, 5-mode mode selector, m_Script PPtr bug fix
 - [[unitypy-serialization|UnityPy Serialization]] — save_typetree vs set_raw_data, surrogateescape encoding
 
 ## Beatmap Formats, Conversion & Sync

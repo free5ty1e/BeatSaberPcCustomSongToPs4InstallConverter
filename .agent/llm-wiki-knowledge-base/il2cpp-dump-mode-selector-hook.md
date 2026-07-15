@@ -9,7 +9,15 @@ metadata:
 
 ## Overview
 
-After bundle patching approaches repeatedly crashed the game (UnityPy `bf.save()` produces PS4-incompatible bundles), the mode selector modification approach pivoted to **IL2CPP hooking** — intercepting the game's C# method at runtime to inject additional preview difficulty beatmap sets.
+**UPDATE (Exp 132, 2026-07-15):** The mode selector has been achieved via **bundle patching** after all! UnityPy's `bf.save("original")` produces valid UnityFS bundles when called correctly with the packer string `"original"` (not a file path). The Rolling Stones pack bundle was successfully patched with 5-mode preview data (Standard, OneSaber, NoArrows, 90Degree, 360Degree) and verified by UnityPy. See [pack-bundle-patching](pack-bundle-patching.md) for details.
+
+**Historical context:** Earlier bundle patching approaches failed because:
+- `bf.save(path)` was called with a file path argument, which treated it as a packer type and raised `NotImplementedError`
+- `save_fs(writer, ...)` wrote only header fields (missing "UnityFS\0" signature + version strings)
+- Manual bundle building had format bugs (alignment, node count position, compression flags)
+- `set_raw_data()` returns False when blob sizes differ, making resize impossible
+
+The **original IL2CPP hooking approach** (documented below) was the fallback plan after these failures — intercepting the game's C# method at runtime to inject additional preview difficulty beatmap sets. The hook was never actually tested because by the time the infrastructure was ready, the bundle patching breakthrough was found.
 
 ## How the IL2CPP Dump Was Done
 
