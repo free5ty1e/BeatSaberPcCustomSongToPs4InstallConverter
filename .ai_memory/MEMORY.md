@@ -55,3 +55,4 @@
 
 ## ⚙️ Operating Rules
 - [Project Summary Update Rule](project-summary-update-rule.md) — **Enforcement:** Always update project_summary.md after every task completion or before reporting to user.
+- [Pack Bundle Patching](pack-bundle-patching.md) — How to patch UnityFS pack bundles with UnityPy save() for PS4 AFR
