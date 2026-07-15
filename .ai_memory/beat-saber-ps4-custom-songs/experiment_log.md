@@ -2078,3 +2078,20 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Blob verified byte-by-byte against a real BeatmapLevelSO from therollingstones pack bundle — structure matches.
   - Added `--song-name` and `--artist` CLI overrides for metadata injection.
 - **Status:** ✅ Code complete, blob builder verified. Plugin toggle logic verified (FTP test timed out because PS4 offline). BeatmapLevelSO CAB file injection needs UnityPy type support before it can actually inject — currently logs blob to disk for inspection. Needs real PS4 testing to verify UI display.
+
+### Experiment 129 — Live PS4 Test: Plugin Toggle + BeatmapLevelSO Blob Verification
+- **Date:** 2026-07-15
+- **Plugin toggle tested live on PS4** (PS4 was turned on):
+  - `--enable-plugin`: Downloaded plugins.ini → uncommented entry → uploaded ✅ VERIFIED ON CONSOLE
+  - `--disable-plugin`: Found both release + debug entries → commented with `#;` → uploaded ✅ VERIFIED ON CONSOLE
+  - Both flags work correctly and idempotently. Game needs restart or PS+Triangle to reload plugin list.
+- **BeatmapLevelSO blob format verified byte-for-byte against StartMeUp:**
+  - Downloaded StartMeUp BeatmapLevelSO raw bytes (440B, obj#2287600824654271910)
+  - Mapped exact serialization: m_GameObject(PPtr), classID(int32=1), m_Script(PPtr→BeatmapCharacteristicSO), m_Name(UTF-8), _version(int32), _levelID, _songName, _songSubName, _songAuthorName, _levelAuthorName, preview floats (7 doubles), PPtrs for AudioClip/coverImage, environment strings, _previewDifficultyBeatmapSets[1]
+  - New blob format verified: uses m_Script PPtr(1, Standard pathID=-7286399427822119286) matching StartMeUp exactly
+  - Generated blobs for Espresso (1259B), Duvet (1224B), Time Lapse (1253B) — all saved to `/workspace/beat_saber_deluxe/_beatmap_level_so_*.blob`
+- **set_raw_data() via typetree FAILS:** UnityPy's save_typetree() regenerates IL2CPP-internal PPtr references that don't match the game's type registry. The typetree approach cannot produce valid BeatmapLevelSO objects for the PS4 game.
+- **CAB injection path forward (requires future work):**
+  - Option A: Raw SerializedFile manipulation — parse StartMeUp blob as binary template, modify strings in-place at known byte offsets, append new preview set data with offset recalculation
+  - Option B: UnityPy type registry extension — add BeatmapLevelSO to UnityPy's types map so save_typetree() produces correct IL2CPP output
+  - Both approaches need PS4 testing to verify the game resolves the injected objects correctly

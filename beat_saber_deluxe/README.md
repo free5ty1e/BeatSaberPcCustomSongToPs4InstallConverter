@@ -44,6 +44,24 @@ python3 tools/full_custom_song_pipeline.py \
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) |
 | `--generate-config` | Update `redirects.json` config on PS4 |
 | `--enable-modes` | Comma-separated list of extra beatmap modes to enable (e.g. `OneSaber,90Degree`). Clones Standard beatmaps into the new characteristics so they appear in the in-game mode selector. |
+| `--enable-plugin` | Enable the Beat Saber Deluxe plugin on PS4 (uncomments .prx entry in plugins.ini under [CUSA12878]) — tested and verified live on console |
+| `--disable-plugin` | Disable the Beat Saber Deluxe plugin on PS4 (play original Rolling Stones songs) — comments out entries with `#;` |
+| `--song-name NAME` | Override song display name for metadata injection into per-song bundle |
+| `--artist NAME` | Override artist/song-author name for metadata injection |
+
+## Plugin Toggle (v0.51+)
+
+The `--enable-plugin` and `--disable-plugin` flags let you quickly switch between custom songs and original Rolling Stones tracks without editing files manually:
+
+```bash
+# Enable the plugin (play custom songs)
+python3 tools/full_custom_song_pipeline.py --enable-plugin
+
+# Disable the plugin (play originals)
+python3 tools/full_custom_song_pipeline.py --disable-plugin
+```
+
+Both work standalone (no `--song-dir` needed). After toggling, restart the game or press PS+Triangle to reload plugins.
 
 ## Beatmap Mode Control — CAUTION: EARLY STAGE (v0.57 experimental)
 

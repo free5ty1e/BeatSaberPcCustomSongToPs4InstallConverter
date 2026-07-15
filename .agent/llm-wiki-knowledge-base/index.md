@@ -50,5 +50,9 @@ metadata:
 - [[unitypy-serialization|save_typetree vs set_raw_data]] — set_raw_data causes serialization bugs for 3/5 objects
 - [[surrogateescape-encoding|Surrogateescape Encoding]] — latin-1 + utf-8 = corrupted binary data
 
+## Pipeline Tooling
+- [[pipeline-plugin-toggle-cli-flags|Pipeline Plugin Toggle CLI Flags]] — `--enable-plugin`/`--disable-plugin` flags for toggling the Beat Saber Deluxe plugin on PS4 without rebuilding files. Tested and verified live on console.
+- [[pipeline-song-metadata-blob-injection|BeatmapLevelSO Metadata Blob Injection]] — Serialized blob builder producing IL2CPP-compatible format verified byte-for-byte against StartMeUp pack bundle. set_raw_data() via typetree FAILS; raw SerializedFile manipulation or UnityPy type registry extension needed for actual CAB file injection.
+
 ## Plans
-- [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles
+- [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles. Updated with Exp 129 findings: typetree approach dead-end, blob format verified via hex dump against StartMeUp.

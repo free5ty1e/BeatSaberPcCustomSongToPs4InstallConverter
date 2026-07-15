@@ -79,3 +79,10 @@ Records which custom songs have been tested on PS4, their sync status, and any i
 - BEATS→seconds conversion: `time_seconds = time_beats * (60.0 / bpm)`
 - `--download-beat-saver-song <key>` downloads from BeatSaver CDN (requires map key from beatsaver.com/maps/<key>)
 - `--deploy` now auto-generates and auto-deploys redirects.json (no separate --deploy-config needed)
+
+---
+### 2026-07-15 — Plugin Toggle System Test (Exp 129)
+| Date | Feature | Method | Result | Notes |
+|------|---------|--------|--------|-------|
+| 2026-07-15 | `--enable-plugin` | Pipeline CLI flag → FTP plugins.ini edit | ✅ Verified on PS4 | Uncommented entry under [CUSA12878] |
+| 2026-07-15 | `--disable-plugin` | Pipeline CLI flag → FTP plugins.ini edit | ✅ Verified on PS4 | Commented out release + debug entries with `#;` |

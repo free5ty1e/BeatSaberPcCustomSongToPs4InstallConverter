@@ -12,8 +12,12 @@ All notable changes to the song conversion pipeline (`tools/`, `development/scri
 ### Changed
 - Pipeline now injects BeatmapLevelSO metadata blob into per-song CAB bundles by default (every song build). Blob is saved to `_beatmap_level_so_<song>.blob` for inspection.
 
+### Verified
+- **Plugin toggle LIVE on PS4** (Exp 129): `--enable-plugin` and `--disable-plugin` tested and verified on console — both flags correctly update plugins.ini under [CUSA12878]. Enable uncomments the .prx entry; disable comments out release + debug entries with `#;`.
+- **BeatmapLevelSO blob format verified byte-for-byte** against StartMeUp pack bundle hex dump (440B). Exact serialization mapped: m_GameObject(PPtr), classID(int32=1), m_Script(PPtr→BeatmapCharacteristicSO, Standard pathID=-7286399427822119286), m_Name(UTF-8), _version, _levelID, _songName, _songSubName, _songAuthorName, _levelAuthorName, 7 preview doubles, coverImage/coverClip PPtrs, environment strings, _previewDifficultyBeatmapSets[5]. Test blobs generated for Espresso (1259B), Duvet (1224B), Time Lapse (1253B).
+
 ### Known Limitations
-- **CAB file injection not yet operational** — UnityPy lacks type info for BeatmapLevelSO. The blob is constructed correctly but cannot be injected into the built CAB without corrupting external references. Work items: (A) post-save raw CAB patching, (B) UnityPy type registry extension, or (C) separate Addressables entry creation. Needs PS4 testing once injection mechanism is resolved.
+- **CAB file injection not yet operational** — set_raw_data() via UnityPy typetree FAILS with "read_str out of bounds" (IL2CPP PPtr mismatch). Work items: (A) Raw SerializedFile manipulation — modify StartMeUp blob as binary template at known byte offsets; (B) UnityPy type registry extension for BeatmapLevelSO; (C) separate Addressables manifest entry.
 
 ## [v0.50] — 2026-07-13
 ### Added
