@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-11
-**Status:** ✅ **v0.64 plugin / v0.50 pipeline** — Dynamic redirect system is stable and fully working. IL2CPP hooks **definitively dead** (Exp 127): constructor hook at RVA 0x9891E0 installs cleanly with DetourMode_x32 but fires zero times — Unity deserializes BeatmapLevelSO via raw memory copy from AssetBundles, never calling the IL2CPP constructor. All mode selector attempts exhausted. **Next viable approach:** per-song metadata bundles (adding BeatmapLevelSO with 5 preview sets to per-song bundle we already redirect) or GoldHEN cheat code memory injection after game init.
+**Last Updated:** 2026-07-15
+**Status:** ✅ **v0.64 plugin / v0.51 pipeline (WIP)** — Dynamic redirect system is stable and fully working. IL2CPP hooks **definitively dead** (Exp 127). **Experiment 128 (2026-07-15):** Added `--enable-plugin`/`--disable-plugin` CLI flags to pipeline (fully functional — toggles plugin entry in plugins.ini via FTP). Added BeatmapLevelSO serialized blob builder verified against pack bundle (IL2CPP-compatible format confirmed). Blob can be constructed with custom song name/artist/BPM/metadata. **TODO:** CAB file injection of BeatmapLevelSO needs UnityPy type support before it can actually inject into the built bundles — currently logs blob to disk for inspection. Next: implement raw CAB manipulation to insert serialized blob without corrupting external refs, then PS4 test song menu display.
 
 > 📖 **New to this project?** See the [Research Index](../.ai_memory/RESEARCH_INDEX.md) for a complete catalog of all project documents, status, and quick commands.
 

@@ -67,20 +67,41 @@ Only the following **Staging & Read** operations are allowed:
 You MUST follow these rules for every task in this project. These rules are
 enforced by the files they reference — read them if you haven't already.
 
-## 1. MANDATORY Documentation Before Reporting
+## 1. MANDATORY Documentation Before Performing Work
 
 **Rule file:** `/workspace/.ai_memory/project-summary-update-rule.md`
 
-Before presenting results to the user, you MUST update ALL of these:
+Before proceeding with work, upon receiving experiment results, you MUST update ALL of these with experiment results and findings:
 
-1. Download & analyze the PS4 log first
-2. Update `experiment_log.md` with a new sequential experiment entry
-3. Update `song_testing_log.md` if testing songs
-4. Update `project_summary.md` with current status
-5. Update knowledge base files if new findings affect durable knowledge
-6. Stage everything in git
+1. Download & analyze the PS4 log first, then archive the log with an appropriate file name for historical purposes in `experiment_logs`
+2. Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with experiment results
+3. Update `.ai_memory/beat-saber-ps4-custom-songs/song_testing_log.md` if received new song testing results
+4. Update `.agent/project_summary.md` with current status
+5. Update llm-wiki style knowledge base files in `.agent/llm-wiki-knowledge-base/` if new findings affect durable knowledge
+6. Update `.agent/roadmap.md` if appropriate
 
-## 2. Follow the Experiment Workflow
+## 2. Rules For Performing Work
+
+- If making changes to the Beat Saber Deluxe Plugin, you must bump the version in `main.cpp` and create an appropriate entry in `beat_saber_deluxe/CHANGELOG-PLUGIN.md`
+- If making changes to the Beat Saber Deluxe Song Conversion Pipeline, you must bump the version in `beat_saber_deluxe/VERSION` and create an appropriate entry in `beat_saber_deluxe/CHANGELOG-PIPELINE.md`
+- If any new tools or prerequisites are needed, you have permission to install them; we are in a devcontainer so it is safe. If the tool is useful at all, please persist it along with its prerequisites in the devcontainer definition files so that our full toolset survives a devcontainer rebuild.
+- If it makes sense to do so, attempt to deploy latest changes to the PS4 for experimentation
+
+## 3. MANDATORY Documentation Updates Before Presenting
+
+Before presenting a message to the user after performing work or research:
+
+- Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with a new sequential experiment entry describing what we are attempting
+- Update `.agent/project_summary.md` with current status
+- Update `README.md` to reflect any new user-facing features, limitations, requirements, parameters, or usage notes
+- Update llm-wiki style knowledge base files in `.agent/llm-wiki-knowledge-base/` if new work or research affects durable knowledge
+- Update `.agent/roadmap.md` if appropriate
+- Update `beat_saber_deluxe/CHANGELOG-PIPELINE.md` and `beat_saber_deluxe/CHANGELOG-PLUGIN.md` as appropriate
+- Update `current-song-replacements-on-chris-ps4.md` when deployed custom songs change. This is the mapping file that lets the user find custom songs in-game manually.
+- Stage all relevant changes in git
+- Suggest a detailed commit message that describe the staged changes as part of the report / message to the user, for the user to review and possibly use
+
+## 4. Follow the Experiment Workflow
 
 **Rule file:** `/workspace/.ai_memory/experiment-workflow.md`
 
@@ -89,25 +110,14 @@ Prepare for User Test → Analyze Results → Iterate
 
 Read both rule files above before starting any work cycle.
 
-## 3. ALWAYS Bump Version on Plugin Changes
-
-Every change to `/workspace/beat_saber_deluxe/src/main.cpp` MUST increment
-the `PLUGIN_VERSION` number. No exceptions. Format: `v0.<major>.<minor>`.
-
-This rule also applies to any pipeline changes that affect deployment.
-
-## 4. Keep All Docs Current
-
-- `current-song-replacements-on-chris-ps4.md` — update when songs change
-- `song_testing_log.md` — update after every PS4 test
-- `experiment_log.md` — sequential entries for every cycle
-- `project_summary.md` — keep the one-line status current
-
 ## 5. Mine conversation / results for durable, useful knowledge and capture / update in our llm-wiki knowledge base
 
 The knowledge base is described in this document: `.agent/llm-wiki.md`
 The knowledge base itself is located here: `.agent/llm-wiki-knowledge-base`
+
 # --- DANGER GUARDRAILS START ---
+
 - Prohibit all write operations with 'az' azure CLI (e.g., az resource create, az vm start, az group delete). Read operations are permitted.
 - Prohibit all write operations with 'gh' (GitHub CLI) except for 'gh edit' when updating a PR description. All other mutations (create, delete, merge, etc.) are prohibited.
+
 # --- DANGER GUARDRAHILS END ---

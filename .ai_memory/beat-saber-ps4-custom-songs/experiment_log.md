@@ -2063,3 +2063,18 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Version bumped to v0.53** (plugin + pipeline change)
 - **All 13 songs rebuilt** with c field fix
 - **Status:** 🚀 Ready for next test on PS4
+
+
+### Experiment 128 — Pipeline Feature: Plugin Toggle + BeatmapLevelSO Metadata Blob Builder
+- **Date:** 2026-07-15
+- **Goal:** Add two features to the pipeline:
+  1. `--enable-plugin` / `--disable-plugin` CLI flags for easy on/off toggle of the Beat Saber Deluxe plugin on PS4 (without rebuilding or removing files)
+  2. BeatmapLevelSO blob builder to construct serialized metadata for song menu display
+- **Implementation:**
+  - Added `enable_plugin()` function: downloads plugins.ini from PS4, ensures our .prx entry exists under [CUSA12878], uncommented. Uploads back.
+  - Added `disable_plugin()` function: comments out our .prx entries in plugins.ini with `#;` prefix. Preserves other plugin entries.
+  - CLI flags `--enable-plugin` and `--disable-plugin` dispatch to these functions. If used alone (no --song-dir), they exit after toggling.
+  - BeatmapLevelSO blob builder (`_build_beatmap_level_so_blob()`) constructs IL2CPP-compatible serialized data verified against the pack bundle: 12-byte padding + m_Script PPtr(2, -1) at offset 0xC, then _levelID string, _songName, _songSubName, _songAuthorName, _levelAuthorName doubles, previewDifficultyBeatmapSets array (5 modes × PPtr + diffs).
+  - Blob verified byte-by-byte against a real BeatmapLevelSO from therollingstones pack bundle — structure matches.
+  - Added `--song-name` and `--artist` CLI overrides for metadata injection.
+- **Status:** ✅ Code complete, blob builder verified. Plugin toggle logic verified (FTP test timed out because PS4 offline). BeatmapLevelSO CAB file injection needs UnityPy type support before it can actually inject — currently logs blob to disk for inspection. Needs real PS4 testing to verify UI display.

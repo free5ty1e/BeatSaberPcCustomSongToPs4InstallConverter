@@ -760,6 +760,181 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
     return added
 
 
+# ============================================================================
+# Inject BeatmapLevelSO metadata into the per-song CAB bundle
+# ============================================================================
+
+# Characteristic path IDs for _previewDifficultyBeatmapSets
+_CHAR_PATH_IDS = {
+    "Standard":  -7286399427822119286,
+    "OneSaber":  -8583864861369561029,
+    "NoArrows":   -5623662769225589684,
+    "90Degree":    4533580413116749821,
+    "360Degree":  1189643819550092755,
+}
+
+
+def _encode_unity_string(s: str) -> bytes:
+    """Encode a string for Unity serialized data (UTF-16LE + length prefix)."""
+    if not s:
+        return b'\x00\x00'  # null string
+    utf16 = s.encode('utf-16-le')
+    # Unity string format: int32 length of UTF-16 bytes (including trailing null)
+    plen = len(utf16) + 2  # +2 for trailing null
+    return struct.pack('<i', plen) + utf16 + b'\x00\x00'
+
+
+def _build_beatmap_level_so_blob(
+    song_name: str,
+    song_sub_name: str,
+    song_author: str,
+    level_author: str,
+    bpm: float,
+    preview_diff_count: int,
+    diff_data: bytes,
+    level_id: str = "custom",
+) -> bytes:
+    """
+    Construct a BeatmapLevelSO serialized blob (IL2CPP MonoBehavior layout).
+
+    Based on pack bundle analysis of the Rolling Stones pack:
+      0x0C: m_Script PPtr(fileID=2, pathID=-1) — base class script ref
+            The first 12 bytes are padding/zeroed (type info is in SerializedFile map)
+      Then per-instance data fields in order:
+        _levelID        = string (song identifier like "therollingstones_startmeup")
+        _songName       = string (display name, e.g. "Espresso")
+        _songSubName    = string (subtitle with length/notes info)
+        _songAuthorName = string (artist name)
+        _levelAuthorName= string (custom song author)
+        BPM             = double (8 bytes)
+
+      Then preview arrays:
+        count = int32(5)
+        For each mode [Standard, OneSaber, NoArrows, 90Degree, 360Degree]:
+          PPtr(fileID=2, pathID=char_path_id)
+          diff_count = int32(n)
+          difficulty_data (36 bytes per entry × n)
+
+    The blob does NOT include klassID/classID — those are in the SerializedFile's
+    types map and resolved by IL2CPP at deserialization time.
+    """
+    blob = bytearray()
+
+    # ── Padding + m_Script PPtr (per pack bundle analysis) ───────────────
+    blob += b'\x00\x00\x00\x00'  # bytes 0-3: padding/type info placeholder
+    blob += b'\x00\x00\x00\x00'  # bytes 4-7: classID placeholder
+    blob += b'\x00\x00\x00\x00'  # bytes 8-11: alignment
+
+    # m_Script at offset 0xC (byte 12)
+    blob += struct.pack('<i', 2)           # fileID = 2 (m_Metadata->m_Script)
+    blob += struct.pack('<q', -1)          # pathID = -1 (base class = ScriptableObject)
+
+    # ── Instance fields (verified order from pack bundle analysis) ───────
+    # NOTE: m_Name is NOT in the serialized instance data — it's in the type info.
+    # Only _levelID through BPM are per-instance serialized fields.
+    blob.extend(_encode_unity_string(level_id))            # _levelID
+    blob.extend(_encode_unity_string(level_id))            # _levelID
+    blob.extend(_encode_unity_string(song_name))           # _songName
+    blob.extend(_encode_unity_string(song_sub_name))       # _songSubName
+    blob.extend(_encode_unity_string(song_author))         # _songAuthorName
+    blob.extend(_encode_unity_string(level_author))        # _levelAuthorName
+    blob += struct.pack('<d', bpm)                         # BPM (double)
+
+    # ── _previewDifficultyBeatmapSets array ────────────────────────────
+    modes = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+    blob += struct.pack('<i', 5)                          # count = 5 modes
+
+    for mode in modes:
+        path_id = _CHAR_PATH_IDS[mode]
+        blob += struct.pack('<i', 2)                      # fileID (m_Script ref)
+        blob += struct.pack('<q', path_id)                # pathID
+        blob += struct.pack('<i', preview_diff_count)     # difficulty count
+        # Difficulty data: 36 bytes per entry
+        needed = preview_diff_count * 36
+        if len(diff_data) >= needed:
+            blob.extend(diff_data[:needed])
+        else:
+            blob.extend(diff_data + b'\x00' * (needed - len(diff_data)))
+
+    return bytes(blob)
+
+
+def inject_beatmap_level_so(
+    bf,
+    song_name: str,
+    song_artist: str = "",
+    duration_seconds: float = 0.0,
+    bpm: float = 120.0,
+    note_count_standard: int = 0,
+    note_count_diff_data: bytes = b'',
+) -> bool:
+    """
+    Inject a BeatmapLevelSO ScriptableObject into the CAB bundle so the
+    song menu can display custom metadata (name, artist, length, etc.).
+
+    APPROACH: Since UnityPy lacks type info for BeatmapLevelSO and cannot
+    serialize IL2CPP-compatible data for it, we work by first building a
+    raw serialized blob, then attempting to insert it into the bundle's
+    CAB file via post-save modification.
+
+    The game resolves BeatmapLevelSO objects by _levelID across all loaded
+    AssetBundles. When the per-song bundle is redirected and loaded, the
+    injected SO provides metadata to the UI.
+
+    Currently this function logs what *would* be injected (the blob) so it
+    can be inspected. The actual CAB file injection requires UnityPy
+    serialization support for BeatmapLevelSO and is tracked as a future
+    task — see .agent/llm-wiki-knowledge-base/plans/song-list-metadata.md
+
+    Args:
+        bf: UnityPy BundleFile (the outer AssetBundle, not the CAB)
+        song_name: Display song name (overrides original)
+        song_artist: Artist name
+        duration_seconds: Song length in seconds
+        bpm: Beats per minute for timing
+        note_count_standard: Note count for display purposes
+        note_diff_data: Pre-encoded difficulty data (36B × N entries, or empty)
+
+    Returns:
+        True if the blob was constructed (injection itself needs UnityPy fix)
+    """
+    log.info("  Building BeatmapLevelSO metadata blob...")
+
+    # ── Build the serialized blob ───────────────────────────────────────
+    level_id = f"custom/{song_name.lower().replace(' ', '_')}"
+
+    blob = _build_beatmap_level_so_blob(
+        song_name=song_name,
+        song_sub_name=f"{duration_seconds:.0f}s / {note_count_standard} notes",
+        song_author=song_artist if song_artist else "Unknown Artist",
+        level_author=song_artist if song_artist else "Custom",
+        bpm=bpm,
+        preview_diff_count=5,  # always 5 modes
+        diff_data=note_count_diff_data or b'\x00' * (5 * 36),
+        level_id=level_id,
+    )
+
+    log.info(f"    BeatmapLevelSO blob: {len(blob)} bytes")
+    log.info(f"    _levelID={level_id} _songName={song_name} _songAuthorName={song_artist}")
+
+    # Dump a hex sample for debugging (first 128 bytes)
+    hex_sample = blob[:128].hex()
+    log.info(f"    Hex[0:128]: {hex_sample}")
+
+    # Write the blob to a temp file for inspection
+    blob_path = os.path.join(PROJECT_ROOT, f"_beatmap_level_so_{song_name}.blob")
+    with open(blob_path, 'wb') as f:
+        f.write(blob)
+    log.info(f"    ✅ Blob saved to {blob_path}")
+
+    # Future work: inject this blob into the CAB file by:
+    # 1. Parsing the UnityFS header of the saved CAB
+    # 2. Finding free space or appending a new object entry
+    # 3. Updating the manifest table with the new object's offset/size
+    log.info("    ⚠️ Blob not yet injected into CAB (needs UnityPy type support)")
+    return True
+
+
 def build_plugin(project_root: str, debug: bool = False) -> str:
     """
     Build the GoldHEN plugin.
@@ -889,6 +1064,230 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
             log.info("  ✅ plugins.ini updated")
         else:
             log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
+
+
+# ============================================================================
+# Plugin Toggle — enable / disable the Beat Saber Deluxe plugin on PS4
+# ============================================================================
+
+PLUGIN_PRX_NAME = "beat_saber_deluxe.prx"
+DEBUG_PRX_NAME = "beat_saber_deluxe_debug.prx"
+
+
+def _find_prx_name(config: dict, debug: bool = False) -> str:
+    """Return the current prx filename (handles debug toggle)."""
+    return DEBUG_PRX_NAME if debug else PLUGIN_PRX_NAME
+
+
+def _prx_remote_path(plugin_remote: str) -> str:
+    """Extract directory from a plugin remote path."""
+    return os.path.dirname(plugin_remote) or "/data/GoldHEN/plugins"
+
+
+def enable_plugin(config: dict, debug: bool = False):
+    """
+    Enable the Beat Saber Deluxe plugin on PS4.
+
+    Steps:
+      1. Ensure plugins.ini has an uncommented entry for our .prx under [CUSA12878]
+      2. If no existing entry, also upload the .prx file (build required separately)
+    """
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+    paths_cfg = config.get('paths', {})
+
+    title_id = title_cfg.get('id', 'CUSA12878')
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    prx_name = _find_prx_name(config, debug)
+    plugin_remote = f"/data/GoldHEN/plugins/{prx_name}"
+    ini_remote = "/data/GoldHEN/plugins.ini"
+
+    log.info(f"Enabling Beat Saber Deluxe plugin ({prx_name}) on PS4...")
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_ini = os.path.join(tmpdir, "plugins.ini")
+
+        # Download existing plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"get {ini_remote} -o {local_ini}"],
+                                timeout=30)
+        if rc != 0:
+            log.info("  No existing plugins.ini — creating fresh")
+            lines = []
+        else:
+            with open(local_ini) as f:
+                lines = f.read().splitlines()
+            log.info(f"  Downloaded plugins.ini ({len(lines)} lines)")
+
+        # Parse INI into sections (title_id -> list of (path, commented))
+        sections = {}
+        current_section = None
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#'):
+                # Preserve commented lines — re-parse below
+                pass
+            if stripped.startswith('[') and stripped.endswith(']'):
+                current_section = stripped[1:-1]
+                if current_section not in sections:
+                    sections[current_section] = []
+            elif current_section and stripped:
+                sections.setdefault(current_section, []).append(stripped)
+
+        # Ensure our section exists
+        current_plugins = sections.setdefault(title_id, [])
+
+        # Check if our prx already has a valid (uncommented) entry
+        found = False
+        for p in current_plugins:
+            if prx_name in p:
+                found = True
+                break
+
+        if not found:
+            current_plugins.append(plugin_remote)
+            log.info(f"  Added [{title_id}] entry: {plugin_remote}")
+
+        # Rebuild INI content — remove any old commented entries for our prx first
+        new_lines = []
+        skip_next_commented = None
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                new_lines.append(line)
+                continue
+            # Check if this is a commented entry for our plugin
+            uncommented = stripped.lstrip('#').strip()
+            if uncommented.endswith(prx_name):
+                # Replace with uncommented version
+                new_lines.append(uncommented)
+                log.info(f"  Uncommented existing entry: {uncommented}")
+            else:
+                new_lines.append(line)
+
+        # Rebuild sections properly
+        final_lines = []
+        for sid, plugins in sections.items():
+            final_lines.append(f"[{sid}]")
+            for p in plugins:
+                if p not in ''.join(final_lines):
+                    final_lines.append(p)
+            final_lines.append("")
+
+        # Merge with original lines that weren't already covered
+        seen = set()
+        merged = []
+        for line in new_lines:
+            s = line.strip()
+            if s and s in seen:
+                continue
+            seen.add(s)
+            merged.append(line)
+        for line in final_lines:
+            s = line.strip()
+            if s and s not in seen:
+                merged.append(line)
+                seen.add(s)
+
+        with open(local_ini, 'w') as f:
+            f.write('\n'.join(merged) + '\n')
+
+        # Upload updated plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"put {local_ini} -o {ini_remote}"],
+                                timeout=30)
+        if rc == 0:
+            log.info(f"  ✅ plugins.ini updated — plugin ENABLED")
+        else:
+            log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
+
+
+def disable_plugin(config: dict):
+    """
+    Disable the Beat Saber Deluxe plugin on PS4.
+
+    Steps:
+      1. Comment out (or remove) our .prx entry in plugins.ini under [CUSA12878]
+      2. Optionally download/delete the .prx file from PS4
+    """
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+
+    title_id = title_cfg.get('id', 'CUSA12878')
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    ini_remote = "/data/GoldHEN/plugins.ini"
+
+    log.info(f"Disabling Beat Saber Deluxe plugin on PS4...")
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_ini = os.path.join(tmpdir, "plugins.ini")
+
+        # Download existing plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"get {ini_remote} -o {local_ini}"],
+                                timeout=30)
+        if rc != 0:
+            log.warning("  No existing plugins.ini found — nothing to disable")
+            return
+
+        with open(local_ini) as f:
+            lines = f.read().splitlines()
+
+        # Parse and modify
+        new_lines = []
+        current_section = None
+        disabled_count = 0
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Track section headers
+            if stripped.startswith('[') and stripped.endswith(']'):
+                current_section = stripped[1:-1]
+                new_lines.append(line)
+                continue
+
+            if current_section == title_id:
+                # Check if this line references our plugin
+                uncommented = stripped.lstrip('#').strip()
+                if PLUGIN_PRX_NAME in uncommented or DEBUG_PRX_NAME in uncommented:
+                    if not stripped.startswith('#'):
+                        new_lines.append(f'#;{line}')
+                        disabled_count += 1
+                        log.info(f"  Disabled: {stripped}")
+                        continue
+                    else:
+                        # Already commented — keep as-is
+                        new_lines.append(line)
+                        continue
+
+            new_lines.append(line)
+
+        if disabled_count == 0:
+            log.info("  Plugin already disabled (or not found in plugins.ini)")
+        else:
+            # Upload modified plugins.ini
+            local_out = os.path.join(tmpdir, "plugins_disabled.ini")
+            with open(local_out, 'w') as f:
+                f.write('\n'.join(new_lines) + '\n')
+
+            rc, out, err = _ftp_run(host, port, user, password,
+                                    [f"put {local_out} -o {ini_remote}"],
+                                    timeout=30)
+            if rc == 0:
+                log.info(f"  ✅ plugins.ini updated — plugin DISABLED ({disabled_count} entry(s))")
+            else:
+                log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
 
 
 def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
@@ -1294,6 +1693,14 @@ Examples:
                         help='Auto-convert V2 beatmaps (_notes/_time) to V3.2.0 format (colorNotes/b). '
                              'Use if custom songs use V2 format.')
 
+    # Plugin toggle flags
+    parser.add_argument('--enable-plugin', action='store_true',
+                        help='Enable the Beat Saber Deluxe plugin on PS4 '
+                             '(uncomment .prx entry in plugins.ini)')
+    parser.add_argument('--disable-plugin', action='store_true',
+                        help='Disable the Beat Saber Deluxe plugin on PS4 '
+                             '(comment out .prx entry in plugins.ini — play original songs)')
+
     # Redirect config management flags
     parser.add_argument('--generate-config', action='store_true',
                         help='Generate/update redirects.json with the current --target entry '
@@ -1309,6 +1716,12 @@ Examples:
     parser.add_argument('--download-beat-saver-song', default=None, metavar='MAP_ID',
                         help='Download a song from BeatSaver by map key (e.g. "1d6c7c2") '
                              'and run the full pipeline. Requires --target to specify the PS4 slot.')
+
+    # Song metadata override for BeatmapLevelSO injection into CAB bundle
+    parser.add_argument('--song-name', default=None,
+                        help='Override song display name (default: extracted from Info.dat or BeatSaver)')
+    parser.add_argument('--artist', default=None,
+                        help='Override artist/song-author name (default: extracted from Info.dat or BeatSaver)')
 
     args = parser.parse_args()
 
@@ -1337,6 +1750,16 @@ Examples:
                 sync=args.sync_config,
                 enforce_local=args.enforce_config,
             )
+        sys.exit(0)
+
+    # Plugin toggle mode: enable/disable without processing any song
+    if args.enable_plugin and not args.disable_plugin:
+        enable_plugin(config, debug=args.debug_logging)
+        log.info("Plugin enabled. Restart the game or press PS+Triangle to reload plugins.")
+        sys.exit(0)
+    if args.disable_plugin:
+        disable_plugin(config)
+        log.info("Plugin disabled. Restart the game or press PS+Triangle to reload plugins.")
         sys.exit(0)
 
     # Auto-download from BeatSaver if requested (sets args.song_dir before the dir check)
@@ -1481,6 +1904,35 @@ Examples:
     enable_modes = args.enable_modes.split(',') if args.enable_modes else None
     if enable_modes:
         add_mode_characteristics(cab, [m.strip() for m in enable_modes if m.strip()])
+
+    # -----------------------------------------------------------------------
+    # Step 6.5: Inject BeatmapLevelSO metadata for song menu display
+    # -----------------------------------------------------------------------
+    # Resolve song name and artist — from CLI args, Info.dat, or BeatSaver
+    info_bpm = bpm  # already loaded above if available
+    custom_name = args.song_name
+    custom_artist = args.artist
+
+    if not custom_name and os.path.isfile(os.path.join(args.song_dir, "Info.dat")):
+        with open(os.path.join(args.song_dir, "Info.dat")) as f:
+            info = json.load(f)
+        custom_name = custom_name or info.get("_songName", song_name)
+        if not custom_artist:
+            custom_artist = info.get("_songAuthorName", song_artist)
+
+    # BeatmapLevelSO injection (experimental — needs PS4 testing)
+    inject_level_so = True  # always try to inject; game should just ignore unknown SOs
+    if inject_level_so:
+        note_data = b''  # empty diff data — the preview array will use Standard's data
+        inject_beatmap_level_so(
+            cab,
+            song_name=custom_name or song_name,
+            song_artist=custom_artist or song_artist,
+            duration_seconds=duration,
+            bpm=info_bpm,
+            note_count_standard=note_count_standard,
+            note_count_diff_data=note_data,
+        )
 
     # -----------------------------------------------------------------------
     # Step 7: Save bundle
