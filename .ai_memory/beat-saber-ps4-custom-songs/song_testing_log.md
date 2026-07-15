@@ -86,3 +86,4 @@ Records which custom songs have been tested on PS4, their sync status, and any i
 |------|---------|--------|--------|-------|
 | 2026-07-15 | `--enable-plugin` | Pipeline CLI flag → FTP plugins.ini edit | ✅ Verified on PS4 | Uncommented entry under [CUSA12878] |
 | 2026-07-15 | `--disable-plugin` | Pipeline CLI flag → FTP plugins.ini edit | ✅ Verified on PS4 | Commented out release + debug entries with `#;` |
+| 2026-07-15 | BeatmapLevelSO CAB binary injection | inject_pack_bundle.py → raw byte replacement at CAB offset 79924 | 📦 Build complete / deploy blocked | Patched Espresso(1257B), Duvet(1222B), Time Lapse(1251B) CABs verified on disk. PS4 offline — needs AFR redirect or direct bundle patching when powered on.

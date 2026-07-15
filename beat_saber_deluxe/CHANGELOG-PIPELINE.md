@@ -2,6 +2,24 @@
 
 All notable changes to the song conversion pipeline (`tools/`, `development/scripts/`) are documented here.
 
+## [v0.52] — 2026-07-15
+### Added
+- **BeatmapLevelSO CAB binary injection** — Raw byte-level replacement of StartMeUp's BeatmapLevelSO blob at verified CAB offset 79924, with size delta handling by extending the CAB file. Patched CAB files generated for Espresso (89997B), Duvet (89962B), and Time Lapse (89991B) — each with custom song name, artist, BPM, and 5-mode preview sets at correct serialized offsets.
+- **inject_pack_bundle.py full pipeline** — Blob builder + CAB patching in single tool: finds StartMeUp blob via UnityPy typetree anchors, patches all 5 string fields at verified byte offsets, writes patched standalone CAB files for deployment via AFR redirect or direct file replacement.
+
+### Changed
+- Pipeline version bumped from v0.51 to v0.52.
+- inject_pack_bundle.py rewritten: now generates complete patched CAB files (not just blobs) with verified Espresso/Duvet/TimeLapse BeatmapLevelSO content at correct byte offsets.
+
+### Verified
+- **Blob format verified against StartMeUp hex dump** — all fields match: m_GameObject(PPtr), class=1, m_Script PPtr(Standard char pathID), m_Name(string), _version(type=0x78), _levelID, _songName, _songAuthorName, BPM(double=126.5), 8 preview doubles, coverImage PPtr(zeroed), environments, 5-mode _previewDifficultyBeatmapSets with Standard pathID=-7286399427822119286
+- **Espresso blob on disk**: 1257B, m_Name="EspressoCustomBeatmapLevel" (size=27), BPM=126.5, _levelID="custom/espresso" ✓ all critical fields verified byte-by-byte
+- **CAB delta handling**: Espresso+817B, Duvet+782B, Time Lapse+811B — CAB grows naturally with delta shifting all subsequent objects forward
+
+### Known Limitations
+- **No PS4 deployment yet** (PS4 offline as of Exp 130) — patched CABs available for testing when console is powered on
+- **UnityPy save_bundle() cannot be used** (Exp 116) — any UnityPy re-saved bundle crashes game with CE-34878-0; raw binary replacement required
+
 ## [v0.51] — 2026-07-15
 ### Added
 - **Plugin toggle CLI flags** — `--enable-plugin` and `--disable-plugin` for toggling the Beat Saber Deluxe plugin on PS4 without recompiling or removing files. Enable comments out/uncomments the .prx entry in plugins.ini under [CUSA12878]. Disable comments it out with `#;`. Both work standalone (no --song-dir needed).
