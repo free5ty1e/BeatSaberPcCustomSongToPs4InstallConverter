@@ -2150,3 +2150,23 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Planned deployment:** AFR redirect. Copy patched bundle to `/data/GoldHEN/AFR/CUSA12878/rollingstones_pack_patched.bundle`, add redirect key `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c` -> `rollingstones_pack_patched.bundle` in `redirects.json`
 - **Plugin version bumped to v0.65** for mode selector support
 - **Status:** :package: BUILD COMPLETE - Bundle verified by UnityPy. Waiting PS4 power-on + FTP access to deploy.
+
+
+### Experiment 133: Mode Selector PS4 Test — Log Analysis + Redirect Diagnosis
+- **Date:** 2026-07-15
+- **What:** Downloaded and analyzed PS4 bs_log.txt (1805 lines, 3 game sessions). Investigated why pack bundle redirect didn't trigger after deployment.
+- **Log analysis results:**
+  - Session 1: v0.63 startup, "loaded 32 redirects from config" — pre-existing config (no pack bundle key)
+  - Session 2: v0.63 startup, "loaded 32 redirects from config" — same config
+  - Session 3: v0.64 startup, "loaded 32 redirects from config" — user test session, Standard only
+  - **NO "loaded 33 redirects" ever logged** — meaning the game never launched with the new redirects.json
+- **Key finding:** REDIRECT NOT YET TESTED — the patched bundle and updated redirects.json were uploaded AFTER all 3 game sessions. The game was never restarted to pick them up. The user's "Standard only" result was from the OLD config (32 redirects, no pack bundle key).
+- **Parse_json_pairs analysis:** Simulated the C parser in Python — correctly returns 33 entries from the updated redirects.json. No parsing bug found. The MAX_REDIRECTS=256 limit is not hit.
+- **Redirect path verification:** The game opens the pack bundle via open() at paths:
+  - /archive/mount/point/Media/.../therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+  - /app0/Media/.../therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+  - Both paths contain the redirect key as a substring. The strstr hook matching should work.
+- **Bundles confirmed on PS4 (FTP verify):**
+  - rollingstones_pack_patched.bundle — 7,905,243 bytes
+  - redirects.json — 2,019 bytes, 33 entries incl. pack bundle redirect
+- **Status:** REDIRECT DEPLOYED / UNTESTED — Files on PS4 but game needs restart. User needs to relaunch Beat Saber and check if 5-mode selector appears. After test, re-download bs_log.txt to confirm "loaded 33 redirects from config".
