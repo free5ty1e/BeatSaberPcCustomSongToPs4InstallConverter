@@ -50,35 +50,40 @@
 - [ ] Inject custom color scheme into the song's data structures
 - [ ] Test color injection on PS4
 
-## M4 — Advanced Song Manipulation (Planned)
-- [ ] Modify existing song entries in the in-game song list (needs IL2CPP hook for `get_DisplayName`)
-- [ ] Add new songs to existing album packs
-- [ ] Create custom album pack definition
-- [x] Per-song `_difficultyBeatmapSets` modification — `add_mode_characteristics()` function added to pipeline (Exp 110)
-- [x] Addressables `BeatmapLevelSO._previewDifficultyBeatmapSets` modification — pack bundle patched (Exp 111)
-- [x] Pack bundle redirect attempt via AFR root (Exp 112) — FAILED. **Root cause:** plugin hardcoded `"BeatmapLevelsData/"` prefix on all keys
-- [x] Plugin key matching fix (Exp 113) — removed hardcoded prefix, keys now used as-is from JSON
-- [x] Pack bundle redirect via `open_hook` — Exp 113 tested, redirect WORKS but modified bundle crashes game (CE-34878-0)
-- [x] **Root cause:** `UnityPy.save_typetree()` corrupts external reference table
-- [x] **Fix (Exp 115):** Binary patching via `set_raw_data()` preserves externals. 3 preview sets deployed.
-- [x] Pack bundle redirect with binary-patched bundle — TESTED: game still crashes (UnityPy save incompatible)
-- [x] **Root cause (Exp 116):** UnityPy `bf.save()` produces bundles incompatible with PS4 Unity
-- [x] **IL2CPP dump (Exp 117):** Il2CppDumper successful. `get_previewDifficultyBeatmapSets()` at RVA 0x988E80
-- [x] **Identity hook deployed (Exp 118):** Module base detection + Detour installed. Lazy init from open_hook().
-- [x] **Array augmentation deployed (Exp 119):** Malloc-based 3-element array for preview sets
-- [x] **SetData hook deployed (Exp 120):** Intercepts `BeatmapCharacteristicSegmentedControlController.SetData()` to inject characteristics into mode selector
-- [x] **SetContent hook deployed (Exp 121):** Hooks `StandardLevelDetailView.SetContent()` — calls SetData manually after view renders
-- [x] **Root cause identified (Exp 122):** IL2CPP uses MS x64 convention, native C uses SysV AMD64 — ALL IL2CPP hooks UNUSABLE without assembly trampoline
-- [x] **All IL2CPP hooks removed** (set_content crashed startup)
-- [x] **Pipeline versioned:** v0.50 — central VERSION file + script display
-- [x] **Changelogs created:** CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md
-- [x] **CI_RELEASE.md created:** Release instructions extracted from CI workflow
-- [x] **Calling convention fixed:** `__attribute__((ms_abi))` on all IL2CPP hooks (Exp 123)
-- [x] **get_preview_hook rewritten:** reads field at offset 0x98 directly, augments 1→3 preview sets
-- [x] **set_content hook re-added:** hooks song selection entry point
-- [ ] **Phase 4:** Test ms_abi hooks — verify get_preview fires and returns augmented array → mode selector shows 3 buttons
-- [ ] **Phase 5:** Add song info patching (modify BeatmapLevelSO _songName, _songAuthorName, etc.)
-- [ ] **Phase 6:** Resolve BeatmapCharacteristicSO PIDs for correct OneSaber/90Degree labels
+## M4 — Advanced Song Manipulation (In Progress / Partially Blocked)
+
+### Objective
+Add mode selector buttons (OneSaber, 90Degree) and change song display info for custom songs on PS4.
+
+### Completed
+- [x] Per-song `_difficultyBeatmapSets` modification — `add_mode_characteristics()` function added to pipeline (Exp 110) ✅
+- [x] **Root cause found — ALL pack bundle approaches blocked by CRC check (Exp 136):**
+  - Addressables catalog `m_ExtraDataString` contains per-bundle CRC32 + file size + MD5 hash
+  - `m_UseCrcForCachedBundles: true` enables validation at load time
+  - Any modified bundle fails CRC check → CE-34878-0 crash
+  - Catalog is plain JSON (not AssetBundle) → AFR plugin cannot redirect it
+- [x] All IL2CPP hook approaches conclusively dead (Exp 117-131):
+  - Constructor hook: never fires for Addressables-deserialized objects
+  - `get_DisplayName`/`get_songName`: inlined by IL2CPP — hook never fires
+  - `SetData`/`SetContent`: never reached or crashes
+  - ms_abi calling convention fix applied — no improvement
+- [x] UnityPy approaches all dead:
+  - `bf.save("original")` — produces incompatible CAB format (+4 bytes)
+  - `cab.save()` — same incompatibility
+  - `save_typetree()` — silently ignores BeatmapLevelSO modifications
+- [x] Manual bundle building code corrected (LZ4HC flag=3, separate writes, explicit alignment)
+- [x] Per-song bundle mode selector built and deployed (`startmeup_custom_v3_modes.bundle` ⏳)
+
+### Blocked
+- [ ] Song name/artist display change → requires pack bundle modification → CRC blocked
+- [ ] All pack bundle modification approaches — CRC validated by Addressables catalog
+- [ ] IL2CPP hooks for display string interception — all proven dead
+- [ ] No known way to bypass or redirect the catalog
+
+### In Progress
+- [ ] **Test per-song bundle mode selector** — Does `startmeup_custom_v3_modes.bundle` (built with `--enable-modes OneSaber,90Degree`) show extra modes when user selects Start Me Up?
+- [ ] If mode selector works → one goal achieved without pack bundle modification
+- [ ] If mode selector doesn't work → explore alternative approaches (resources.assets for base songs, string interception)
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

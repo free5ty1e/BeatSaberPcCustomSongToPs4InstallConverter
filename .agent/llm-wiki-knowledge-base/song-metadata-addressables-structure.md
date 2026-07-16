@@ -86,16 +86,64 @@ Each characteristic has its own set of difficulty beatmaps. If a characteristic 
 
 The game does NOT dynamically generate a Standard → OneSaber mapping. Each mode requires its own set of mapped notes in a `.beatmap.gz` asset.
 
-## Hooking Strategy
+## Addressables Catalog CRC Validation — BLOCKER for Pack Bundle Modification
 
-To change song list metadata at runtime, hook options:
-1. `get_DisplayName()` — return custom strings for redirected songs
-2. `get_songName()` — return custom song identifiers
-3. Hook the Addressables bundle load for `BeatmapLevelSO` assets
+**Experiment 136 (2026-07-15) discovered that the Addressables catalog validates per-bundle integrity using CRC32 checksums, file sizes, and MD5 hashes.**
 
-## Current Custom Bundles
+The catalog (`aa/catalog.json`) is NOT loaded via `AssetBundle.LoadFromFile` — it's loaded as a plain JSON file by Unity's `ContentCatalogProvider`. This means the AFR plugin (which only hooks `LoadFromFile`) **cannot redirect or patch it**.
 
-Our pipeline creates `BeatmapLevel` objects with only `"Standard"` characteristics. To add other modes, we would need to:
+### Catalog Storage Format (m_ExtraDataString)
+
+The catalog's `m_ExtraDataString` field (116,334 bytes) contains **concatenated UTF-16 LE encoded JSON blocks**, one per bundle. Example for the Rolling Stones pack:
+
+```json
+{"m_Hash":"a99482a8a3da9e991e5ae36f2fea209c","m_Crc":3700109647,
+ "m_BundleSize":7902803,"m_UseCrcForCachedBundles":true,
+ "m_BundleName":"51dc790300eb3d900786837beb3ac335",
+ "m_UseUWRForLocalBundles":false,"m_ClearOtherCachedVersionsWhenLoaded":false}
+```
+
+Key fields:
+- `m_Hash` — MD5 of the bundle file (also used as part of the filename)
+- `m_Crc` — CRC32 of the bundle file (validated at load time when `m_UseCrcForCachedBundles=true`)
+- `m_BundleSize` — Expected file size of the bundle
+- `m_UseCrcForCachedBundles` — When `true`, the game validates CRC on load
+
+### Impact
+
+- **Any modification** to a bundle file changes its CRC and file size → game detects mismatch → CE-34878-0 crash
+- The ORIGINAL bundle works via redirect because its CRC/size still match the catalog values
+- The catalog cannot be redirected (not loaded via AssetBundle.LoadFromFile)
+- Only options: (a) match original CRC via collision, or (b) bypass pack bundle entirely
+
+## Hooking Strategy — ALL IL2CPP Approaches DEAD
+
+Previous hooking attempts have ALL failed experimentally:
+
+| Approach | Experiment | Result |
+|----------|-----------|--------|
+| `get_DisplayName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
+| `get_songName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
+| Constructor hook | Exp 123-131 | Never fires for Addressables-deserialized objects |
+| `SetData` hook | Exp 131 | Conditional in code — never reaches our payload |
+| `SetContent` hook | Exp 131 | Crashes the game |
+
+## Current Strategy — Per-Song Bundle Modifications (Bypassing Pack Bundle)
+
+Since pack bundle modification is blocked by CRC validation, and IL2CPP hooks are proven dead, the current approach is to modify **per-song bundles** instead:
+
+1. **Mode Selector** (Exp 138): Build per-song bundles with `--enable-modes OneSaber,90Degree,...` to add extra characteristic modes. These bundles are loaded per-song, not at startup, and their redirects work independently of the pack bundle.
+2. **Song Name Display**: The BeatmapLevelSO with display info is in the pack bundle, not in per-song bundles. Changing display names requires pack bundle modification, which is currently blocked.
+3. The pipeline's `add_mode_characteristics()` in `full_custom_song_pipeline.py` adds mode entries to per-song bundles.
+
+## Per-Song Bundle Mode Support
+
+Our pipeline creates `BeatmapLevel` objects with only `"Standard"` characteristics by default. The `--enable-modes` flag adds additional entries:
+```bash
+python3 full_custom_song_pipeline.py --song-dir ./MySong --enable-modes OneSaber,90Degree --deploy
+```
+
+To add other modes, we would need to:
 1. Add `_difficultyBeatmapSets` entries for OneSaber/90Degree/etc.
 2. Create (or proxy) the `.beatmap.gz` and `.lightshow.gz` assets for those modes
 3. The game uses class ID 114 for `BeatmapLevel` objects

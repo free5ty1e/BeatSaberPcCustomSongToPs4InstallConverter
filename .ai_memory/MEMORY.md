@@ -53,6 +53,12 @@
 - [Conversation History](beat-saber-ps4-custom-songs/conversation_history.md) — Full conversation history from initial pipeline phase
 - [Session Persistence Fix](beat-saber-ps4-custom-songs/session-persistence-fix.md) — Fixed session discoverability: added cz-recent, cz-last, cz-resume commands to setup script
 
+### Pack Bundle Patching — ALL BLOCKED by CRC Check
+- [📌 Addressables Catalog CRC Validation](addressables-catalog-crc-validation.md) — **ROOT CAUSE FOUND!** Catalog stores per-bundle CRC32. Any modified bundle fails validation. All pack bundle modification approaches currently blocked.
+- [Pack Bundle Patching](pack-bundle-patching.md) — Pack bundle patching reference (LZ4HC requirement, CAB format, current blocked state, UnityPy limitations)
+- [PS4 UnityFS Compression Requirements](ps4-unityfs-compression-requirements.md) — PS4 requires LZ4HC (flag=3) for ALL UnityFS blocks. LZ4 (flag=2) crashes.
+- [UnityPy Serialization Limitations](unitypy-serialization-limitations.md) — UnityPy save_typetree() ignores BeatmapLevelSO modifications in Unity 2022.3. cab.save() produces incompatible CAB.
+- [v22+ CAB Header Format](v22plus-cab-header-format.md) — Unity 2022.3 SerializedFile header layout (big-endian fields, object table format)
+
 ## ⚙️ Operating Rules
 - [Project Summary Update Rule](project-summary-update-rule.md) — **Enforcement:** Always update project_summary.md after every task completion or before reporting to user.
-- [Pack Bundle Patching](pack-bundle-patching.md) — How to patch UnityFS pack bundles with UnityPy save() for PS4 AFR

@@ -15,7 +15,7 @@ metadata:
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset
-- [[pack-bundle-patching|Pack Bundle Patching via UnityPy save()]] — How to patch UnityFS pack bundles: `bf.save("original")` breakthrough, 5-mode mode selector, m_Script PPtr bug fix
+- [[pack-bundle-patching|Pack Bundle Patching (ALL BLOCKED)]] — Every approach tried results in CE-34878-0. All blocked by Addressables catalog CRC validation (Exp 136). LZ4HC requirement, CAB format, m_Script PPtr fix documentation.
 - [[unitypy-serialization|UnityPy Serialization]] — save_typetree vs set_raw_data, surrogateescape encoding
 
 ## Beatmap Formats, Conversion & Sync
@@ -41,7 +41,7 @@ metadata:
 
 ## Song Metadata & Database
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
-- [[song-metadata-addressables-structure|Song Metadata & Addressables Structure]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, IL2CPP hook targets
+- [[song-metadata-addressables-structure|Song Metadata & Addressables Structure (incl. CRC Blocker)]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, **CRC validation discovery (Exp 136)**, IL2CPP hook targets (all dead)
 - [[il2cpp-dump-mode-selector-hook|IL2CPP Dump & Mode Selector Hook]] — BeatmapLevelSO class layout, get_previewDifficultyBeatmapSets at RVA 0x988E80, field offsets, hook implementation plan
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
 

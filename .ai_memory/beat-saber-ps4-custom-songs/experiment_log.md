@@ -2270,4 +2270,12 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Date:** 2026-07-15
 - **What:** Build a per-song bundle for Start Me Up with `--enable-modes OneSaber,90Degree` and deploy to PS4. Test if the mode selector shows extra modes without any pack bundle modification.
 - **Goal:** Determine if mode selection can be achieved purely through per-song bundle modifications.
-- **Status:** IN PROGRESS — Building... Bundle exists at `startmeup_custom_v3_modes.bundle`. Deployment BLOCKED (PS4 offline).
+- **Status:** COMPLETED — Bundle built and exists at `startmeup_custom_v3_modes.bundle`. Deployment attempted but crash prevented testing.
+
+### Experiment 139: Analyze Log & Remove Pack Redirect (Modes Test Blocked)
+- **Date:** 2026-07-16
+- **What:** Downloaded and analyzed PS4 bs_log.txt (63351 bytes, 595 lines). Found that the rollingstones pack redirect was STILL active (`rollingstones_pack_assets_all_a99482a8... -> rollingstones_pack_patched.bundle`), causing the LZ4HC-rebuilt pack bundle to load at startup → CRC mismatch → CE-34878-0 crash. This blocked the modes bundle test because the game crashed before any per-song bundle loading.
+- **Log analysis:** Lines 3-5 show plugin loaded "34 redirects". Line 298 is the LAST load attempt before crash: rollingstones pack bundle redirect. No crash/error messages in log (game just dies with PS4's generic CE-34878-0 handler).
+- **Fix applied:** Removed the rollingstones pack redirect from redirects.json. Game now loads ORIGINAL pack bundle. Modes bundle redirect (startmeup_custom_v3 -> startmeup_custom_v3_modes.bundle) remains active.
+- **Log archived:** `.ai_memory/experiment_logs/ps4_bs_log_20260716_1052.txt`
+- **Status:** ⏳ **AWAITING TEST** — User needs to restart Beat Saber and select Start Me Up to test if mode selector shows extra modes.

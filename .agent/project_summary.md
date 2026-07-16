@@ -1,6 +1,12 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-15
-**Status:** 🔴 **v0.65 plugin / v0.52 pipeline** — **ROOT CAUSE FOUND!** The Addressables catalog (`aa/catalog.json`) stores `m_Hash` (MD5), `m_Crc` (CRC32), and `m_BundleSize` per bundle with `m_UseCrcForCachedBundles: true`. Any modified pack bundle fails CRC/size validation → CE-34878-0 crash. The catalog is loaded as a plain JSON file (not via AssetBundle.LoadFromFile), so the AFR plugin (which hooks LoadFromFile) cannot redirect it. **Complete blocker:** No known way to patch or redirect the catalog, making ANY pack bundle modification impossible without either (a) patching the catalog in-game or (b) matching the original CRC/size.
+**Status:** 🟡 **v0.65 plugin / v0.52 pipeline** — **Exp 139:** Pack redirect REMOVED from PS4. Crash at startup was from rollingstones pack redirect pointing to LZ4HC-rebuilt bundle (CRC mismatch). Game should now load normally with original pack bundle. **Exp 138:** Modes bundle (startmeup_custom_v3_modes.bundle) deployed with `--enable-modes OneSaber,90Degree`. Awaiting test: does mode selector show extra modes when user selects Start Me Up?
+
+**Active knowledge gaps for pack bundle modification:**
+1. Addressables catalog CRC check (`m_UseCrcForCachedBundles=true`) blocks ANY modified bundle
+2. Catalog is plain JSON, can't be redirected via AFR (only hooks LoadFromFile)
+3. All UnityPy serialization approaches produce incompatible CABs (4 bytes off)
+4. Only option: bypass pack bundle entirely (current approach) or find CRC collision
 
 **Exp 134a (2026-07-15) — ✅ Diagnostic PASSED:** Original pack bundle via redirect works.
 **Exp 134b (2026-07-15) — ❌ CRASHED:** Text-only patched bundle (LZ4 flag=2) crashed.

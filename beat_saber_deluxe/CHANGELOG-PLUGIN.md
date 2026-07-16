@@ -69,24 +69,34 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 - Debug logging to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
 - Two IL2CPP hooks installed (get_preview + SetData) but not yet reaching the mode selector
 
+## v0.67 — ROOT CAUSE FOUND: Addressables Catalog CRC Check (2026-07-16)
+
+### Critical Discovery
+- **Exp 136 — Addressables catalog CRC validation:** Found per-bundle CRC32 checksums in `aa/catalog.json`'s `m_ExtraDataString` (UTF-16 LE encoded JSON). Each bundle entry includes `m_Crc`, `m_BundleSize`, `m_Hash`, and `m_UseCrcForCachedBundles=true`.
+- **This is why ALL modified pack bundles crash:** Any change to the bundle file changes its CRC. The game validates the CRC against the catalog at load time → mismatch → CE-34878-0.
+- **Catalog cannot be redirected:** It's loaded as a plain JSON file by Unity's ContentCatalogProvider, NOT via `AssetBundle.LoadFromFile`. The AFR plugin only hooks LoadFromFile.
+
+### Experiments Concluded
+- **Exp 134b** — LZ4-rebuilt text-only pack bundle: ❌ CRASHED (CRC mismatch)
+- **Exp 135** — LZ4HC-rebuilt text-only pack bundle: ❌ CRASHED (CRC mismatch, not compression flag)
+- **Exp 136** — Catalog parsed, CRC mechanism identified: ✅ Root cause found
+- **Exp 139** — Log analysis confirmed pack redirect was active, removed it
+
+### New Approach — Per-Song Bundle Modes
+- **Exp 138 — Mode selector via per-song bundle:** Built `startmeup_custom_v3_modes.bundle` with `--enable-modes OneSaber,90Degree`. Deployed to PS4. Pack redirect removed. Awaiting test.
+- This bypasses the pack bundle entirely (per-song bundles are not CRC-checked against catalog).
+
 ## v0.66 — Bundle Building Fix + Text Patching (2026-07-15)
 
 ### Critical Fixes
 - **Bundle building bug:** Concatenated `f.write(b'...' + b'...')` caused alignment issues. Fixed with separate `f.write()` calls + explicit `b'\x00' * pad_needed` padding + `f.flush()`. This was causing "Decompression failed: corrupt input" errors in UnityPy.
-- **Pack bundle text patching:** Finally working approach found! Byte-level string replacement in the original 440-byte BeatmapLevelSO blob. No object table update needed when blob size is unchanged.
+- **Pack bundle text patching:** Byte-level string replacement in the original 440-byte BeatmapLevelSO blob. Works for UnityPy verification, BLOCKED by catalog CRC on PS4.
 
 ### Discoveries
-- **UnityPy save_typetree() IGNORES modifications for BeatmapLevelSO** in Unity 2022.3. The TypeTree serializer reads but doesn't properly write back modified tree data.
-- **UnityPy cab.save() produces incompatible CAB** (4 bytes larger than original). The PS4's Unity runtime rejects UnityPy-re-serialized CABs.
-
-### New Capabilities
-- **build_patched_pack_bundle.py** — Rebuilt from scratch with:
-  - Manual blob builder (struct packing) for BeatmapLevelSO with 5 modes
-  - v22+ CAB header parsing (metadata_size at 0x14, file_size at 0x1C, data_offset = align16(48+meta))
-  - Object table entry search and update (pathID + relative offset + size)
-  - Fixed bundle building with proper alignment
+- **UnityPy save_typetree() IGNORES modifications for BeatmapLevelSO** in Unity 2022.3.
+- **UnityPy cab.save() produces incompatible CAB** (4 bytes larger than original).
 
 ### Status
 - Pack bundle redirect works (original bundle) ✅
-- Song info text patching deployed (Espresso name + Sabrina Carpenter artist) ⏳ UNTESTED
-- Mode selector (5 modes) BLOCKED by blob format issue
+- Pack bundle modification IMPOSSIBLE due to catalog CRC check ❌
+- Per-song bundle mode selector deployed, awaiting test ⏳
