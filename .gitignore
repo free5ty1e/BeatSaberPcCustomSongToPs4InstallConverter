@@ -35,3 +35,6 @@ ps4_dump/
 rb4dx_installer/
 temp/
 .pr_temp/
+*.blob
+*.cab
+*.bundle

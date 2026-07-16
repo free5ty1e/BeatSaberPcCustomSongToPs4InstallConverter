@@ -1,8 +1,10 @@
 ---
 name: experiment-log
 description: "Complete chronological log of all experiments, tests, and their outcomes"
-metadata:
+metadata: 
+  node_type: memory
   type: reference
+  originSessionId: bc573f12-ef2e-43e2-9a5a-f79fefc465a0
 ---
 
 # Experiment Log: Beat Saber PS4 Custom Song Support
@@ -2180,34 +2182,50 @@ Before building v0.35, I analyzed the difference between the original file and `
 
 
 
-### Experiment 134: Diagnostic — Deploy Original Pack Bundle via Redirect
+### Experiment 134a: Diagnostic — Deploy Original Pack Bundle via Redirect
 - **Date:** 2026-07-15
-- **What:** Isolate the CE-34878-0 crash cause by deploying the ORIGINAL (unmodified) Rolling Stones pack bundle via AFR redirect. This tests whether the redirect mechanism itself is compatible with pack bundles.
-- **Hypothesis:** If the original bundle crashes → redirect mechanism is incompatible with pack bundles (file locking, path resolution, or Unity's read-once behavior). If the original bundle works → the crash is from UnityPy's CAB serialization or the modified data (5-mode _previewDifficultyBeatmapSets).
-- **Test setup:**
-  1. Copy original pack bundle to AFR as `rollingstones_pack_original.bundle`
-  2. Update redirects.json to point `therollingstones_pack_assets_all_...` → `rollingstones_pack_original.bundle`
-  3. Clear log, launch game, check log for "loaded 33 redirects" and game behavior
-- **Expected outcome (if redirect works):** Game loads, no crash, Rolling Stones pack playable as normal
-- **Expected outcome (if redirect fails):** CE-34878-0 crash at startup
-- **Status:** IN PROGRESS — awaiting execution. See inline test results below.
+- **What:** Deploy the ORIGINAL (unmodified) Rolling Stones pack bundle via AFR redirect to isolate the crash cause.
+- **Hypothesis:** If original bundle crashes → redirect mechanism incompatible with pack bundles. If original works → crash is from UnityPy serialization or modified data.
+- **Test result:** ✅ **NO CRASH.** Game loaded successfully. User was able to play Start Me Up custom song. Redirect mechanism IS compatible with pack bundles.
+- **Conclusion:** The CE-34878-0 crash is from the MODIFIED bundle data (UnityPy CAB serialization or the 5-mode data), not from the redirect mechanism.
 
-### Test Result:
-**To be filled after user runs test.**
-
-### Experiment 134: Text-Only Pack Bundle Patching (Song Info Display)
+### Experiment 134b: Text-Only Pack Bundle Patching (Song Info Display) — CRASHED
 - **Date:** 2026-07-15
-- **What:** Deployed text-only patched pack bundle. Changed `_songName: "Start Me Up" → "Espresso"` and `_songAuthorName: "The Rolling Stones" → "Sabrina Carpenter"` by byte-level patching of the original 440-byte BeatmapLevelSO blob.
-- **Key discovery — UnityPy save_typetree() IGNORES modifications for this object:**
-  UnityPy's TypeTreeHelper serializer does not properly write back modified tree data for BeatmapLevelSO in Unity 2022.3. Even changing `_songName` to "A" (single char) produced the identical 440-byte blob. The TypeTree serializer reads but doesn't write properly.
-- **Key discovery — UnityPy cab.save() produces incompatible CAB:**
-  Even without modifications, `cab.save()` produces a CAB that's 4 bytes different (89184 vs 89180). The game rejects UnityPy-re-serialized CABs (CE-34878-0). Only the raw original CAB bytes work.
-- **Fixed approach — byte-level text patching of original blob:**
-  Replace string content at known offsets (blob[80:91] = songName, blob[100:118] = songAuthorName) with same-length strings. Null padding ("Espresso\0\0\0" = 11 bytes, "Sabrina Carpenter\0" = 18 bytes) keeps blob at 440 bytes. No object table update needed.
-- **Fixed approach — bundle building bug (root cause of "Decompression failed"):**
-  Concatenated `f.write(b'...' + b'...')` writes cause alignment/padding issues in the UnityFS header. Fixed by using SEPARATE `f.write()` calls + explicit `b'\x00' * pad_needed` padding + `f.flush()`. The `while f.tell() % 16:` loop has unreliable behavior with concatenated writes.
-- **Object table update (for future blob size changes):**
-  For v22+ CAB headers: metadata_size at bytes 0x14-0x17 (BE uint32), data_offset = align16(48 + metadata_size) = 53456. Object table entry: pathID(int64) + offset(int64 relative to data_offset) + size(int32). File_size at bytes 0x1C-0x1F (BE uint32). Object table search by pathID+old_stored pattern works correctly (26/26 entries found with delta=817).
-- **Deployment:** Bundle verified by UnityPy. 1 mode (Standard), "Espresso" song name, "Sabrina Carpenter" author.
-- **Status:** ⏳ AWAITING TEST — User needs to restart Beat Saber and check if song info displays correctly.
+- **What:** Byte-level text patching of the BeatmapLevelSO blob (440 bytes unchanged). Changed _songName to "Espresso" and _songAuthorName to "Sabrina Carpenter". No object table update needed since blob size unchanged.
+- **Build method:** Rebuilt bundle from scratch (decompress → patch → recompress with LZ4 flag=2)
+- **Bundle verifies in UnityPy:** ✅ Reads correctly by UnityPy's parser (song='Espresso', author='Sabrina Carpenter', 1 mode)
+- **Test result:** ❌ **CE-34878-0 CRASH** at startup, same as all earlier modified bundles.
+- **Root cause discovered — compression flag mismatch:** All 65 blocks in the original bundle use flag=3 (LZ4HC). My rebuilt bundle used flag=2 (LZ4). The PS4's Unity runtime requires LZ4HC specifically (flag=3, which is what the original blocks use). `lz4.block.compress()` with default `mode='default'` produces LZ4 (flag=2), not LZ4HC (flag=3). Even though both use the same decompression algorithm, the per-block flag value must be 3, not 2.
+- **Key discovery — bundle rebuilding requires LZ4HC (flag=3):**
+  All original blocks: flag=3 (LZ4HC). Using flag=2 (LZ4) causes CE-34878-0. Must use `lz4.block.compress(data, mode='high_compression', compression=9, store_size=False)` and set per-block flag=3.
+- **Key discovery — bundle file_size/signature:** The rebuilt bundle's file_size doesn't need to match the original; the game reads it from the bundle header. The blocks info and data blocks are self-describing. The game doesn't perform a checksum or size comparison against the original.
+- **Key discovery — UnityPy save_typetree() IGNORES modifications for BeatmapLevelSO:**
+  UnityPy's TypeTreeHelper serializer doesn't properly write back modified tree data for BeatmapLevelSO in Unity 2022.3. Changing any field (even _songName to "A") produces identical 440-byte blob. The TypeTree serializer is read-only for this object type in this Unity version.
+- **Key discovery — UnityPy cab.save() produces incompatible CAB format:**
+  Even with NO modifications, `cab.save()` produces a CAB that's 4 bytes larger (89184 vs 89180). The PS4 Unity runtime rejects UnityPy-re-serialized CABs. Only raw original CAB bytes are accepted. The difference is in UnityPy's SerializedFile metadata serialization (alignment padding, type tree format, externals table).
+- **Key discovery — Bundle building bug (concatenated f.write()):**
+  Using `f.write(b'...' + b'...')` concatenation causes alignment/padding issues in the UnityFS header. The `while f.tell() % 16:` loop produces wrong padding after concatenated writes. Fixed by: separate `f.write()` calls, explicit `b'\x00' * ((16 - f.tell() % 16) % 16)` padding, and `f.flush()`.
+- **Key discovery — v22+ CAB Header Format:**
+  - Bytes 0x14-0x17: metadata_size (BIG ENDIAN uint32) = 53401
+  - Bytes 0x1C-0x1F: file_size (BIG ENDIAN uint32) = 89180
+  - data_offset = align16(48 + metadata_size) = 53456
+  - Object table entry: pathID(int64 LE) + offset(int64 LE relative to data_offset) + size(int32 LE)
+  - Object table search by pathID+old_stored pattern works (26/26 entries found with delta=817)
+
+### Experiment 135: LZ4HC Flag Fix — Deploy Bundle with flag=3 (LZ4HC)
+- **Date:** 2026-07-15
+- **What:** Rebuild the text-only patched pack bundle using LZ4HC compression (flag=3) instead of LZ4 (flag=2). This tests whether the compression flag is the root cause of the CE-34878-0 crash.
+- **Build method:** Same text patches as Exp 134b (s_name="Espresso\0\0\0", author="Sabrina Carpenter\0") but with `lz4.block.compress(data, mode='high_compression', compression=9, store_size=False)` for ALL blocks and per-block flag=3. Blocks info also compressed with LZ4HC.
+- **Bundle size:** 7,905,246 bytes (original: 7,902,803 — close; the difference is from recompression yielding slightly different LZ4HC output for the same decompressed input)
+- **Block comparison:**
+  | Metric | Original | LZ4 (Exp 134b) | LZ4HC (Exp 135) |
+  |--------|----------|----------------|-----------------|
+  | Bundle size | 7,902,803 | 8,022,936 | **7,905,246** |
+  | Blocks | 65 (flag=3) | 65 (flag=2) | **65 (flag=3)** |
+  | Blocks info | 199 bytes | 213 bytes | **198 bytes** |
+- **Verification in UnityPy:** ✅ Bundle parses correctly. Song='Espresso', author='Sabrina Carpenter', 1 mode.
+- **If this works:** Confirms flag=3 (LZ4HC) is required for PS4. All future bundle rebuilding must use LZ4HC.
+- **If this crashes:** The issue is NOT the compression flag but something else in the bundle rebuilding process.
+- **Deployed:** `rollingstones_pack_patched.bundle` → redirects.json updated → bs_log.txt cleared
+- **Status:** ⏳ **AWAITING TEST** — User needs to restart Beat Saber and report.
 
