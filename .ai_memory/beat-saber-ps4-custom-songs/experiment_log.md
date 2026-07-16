@@ -2152,34 +2152,45 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Status:** :package: BUILD COMPLETE - Bundle verified by UnityPy. Waiting PS4 power-on + FTP access to deploy.
 
 
-### Experiment 133: Mode Selector PS4 Test — Log Analysis + Redirect Diagnosis
+### Experiment 133: Crash Analysis + Plugin Enablement Fix
 - **Date:** 2026-07-15
-- **What:** Downloaded and analyzed PS4 bs_log.txt (1805 lines, 3 game sessions). Investigated why pack bundle redirect didn't trigger after deployment.
-- **Log analysis results:**
-  - Session 1: v0.63 startup, "loaded 32 redirects from config" — pre-existing config (no pack bundle key)
-  - Session 2: v0.63 startup, "loaded 32 redirects from config" — same config
-  - Session 3: v0.64 startup, "loaded 32 redirects from config" — user test session, Standard only
-  - **NO "loaded 33 redirects" ever logged** — meaning the game never launched with the new redirects.json
-- **Key finding:** REDIRECT NOT YET TESTED — the patched bundle and updated redirects.json were uploaded AFTER all 3 game sessions. The game was never restarted to pick them up. The user's "Standard only" result was from the OLD config (32 redirects, no pack bundle key).
-- **Parse_json_pairs analysis:** Simulated the C parser in Python — correctly returns 33 entries from the updated redirects.json. No parsing bug found. The MAX_REDIRECTS=256 limit is not hit.
-- **Redirect path verification:** The game opens the pack bundle via open() at paths:
-  - /archive/mount/point/Media/.../therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
-  - /app0/Media/.../therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
-  - Both paths contain the redirect key as a substring. The strstr hook matching should work.
-- **Bundles confirmed on PS4 (FTP verify):**
-  - rollingstones_pack_patched.bundle — 7,905,243 bytes
-  - redirects.json — 2,019 bytes, 33 entries incl. pack bundle redirect
-- **Status:** REDIRECT DEPLOYED / UNTESTED — Files on PS4 but game needs restart. User needs to relaunch Beat Saber and check if 5-mode selector appears. After test, re-download bs_log.txt to confirm "loaded 33 redirects from config".
+- **What:** Downloaded and analyzed PS4 bs_log.txt (1805 lines, 3 sessions). Found that plugin was NOT loading because plugins.ini had the .prx line commented with `;`. Then investigated CE-34878-0 crash after enabling the plugin.
 
-### Experiment 133 — MODIFIED: Crash Analysis + Root Cause Found
+### Phase 1 — Plugin Enablement Fix
+- **Root cause:** `enable_plugin()` in pipeline parsed `;/data/GoldHEN/plugins/beat_saber_deluxe.prx` as a valid plugin entry (only `#` was treated as comment). Then `prx_name in p` matched via substring → `found = True` → no new entry added. `lstrip('#')` in uncommenting code didn't strip `;` → line stayed commented.
+- **Pipeline bug fixed:** Added `;` to comment handling in both `enable_plugin()` and `disable_plugin()`. Changed `found` from substring match to exact path match.
+- **Manual fix verified:** Removed `;` from plugins.ini via FTP. Confirmed by re-download.
+
+### Phase 2 — CE-34878-0 Crash (All Bundle-Building Approaches)
+- **User test (save("original") bundle, 7,905,243B):** Notification appeared → CE-34878-0 crash shortly after.
+- **Log findings:** 33 redirects loaded. Pack bundle redirect fired at lines 319 and 889. IL2CPP hooks still in deployed binary.
+- **Attempted fix #1 — m_Script PPtr bug:** Found `inject_pack_bundle.py` used `_CHAR_PATH_IDS["Standard"]` for m_Script pathID instead of correct MonoScript pathID (2140275054477726686). Fixed.
+- **Attempted fix #2 — Manual bundle:** Built `build_patched_pack_bundle.py` using `cab.save()` (UnityPy for CAB only) + manual UnityFS wrapper. Verified by UnityPy — 5 modes confirmed. Deployed 8,022,956B (replaced old bundle).
+- **User test (manual bundle):** Same CE-34878-0 crash. Both approaches fail identically.
+
+### Root Cause Analysis
+- Crash is NOT from UnityPy's bundle wrapper (manual build doesn't use UnityPy's save_fs). 
+- Crash is NOT from m_Script PPtr (was correct in tree approach).
+- Most likely: UnityPy's `cab.save()` re-serializes the CAB in a format that differs from the original in subtle ways (alignment, type tree format, externals table) that PS4 Unity rejects. OR the 5-mode _previewDifficultyBeatmapSets contains PPtrs the game can't resolve at load time.
+
+### Next Steps
+- **Experiment 134:** Deploy ORIGINAL (unmodified) pack bundle via redirect to test if the redirect mechanism itself works for pack bundles.
+- If original bundle works: the issue is UnityPy's CAB serialization.
+- If original bundle crashes: redirect mechanism is incompatible with pack bundles (e.g., file locking, path resolution).
+
+
+
+### Experiment 134: Diagnostic — Deploy Original Pack Bundle via Redirect
 - **Date:** 2026-07-15
-- **What:** Downloaded and analyzed CE-34878-0 crash log. Determined root cause of the pack bundle redirect crash.
-- **Log analysis:** 3 game sessions found. The user's test session (#3, v0.64) had "loaded 32 redirects from config" — the pack bundle redirect (33rd entry) was NEVER loaded. The plugin was disabled (commented in plugins.ini), so the notification didn't appear and no redirects fired.
-- **Root cause of plugin not loading:** The `enable_plugin` function in `full_custom_song_pipeline.py` was buggy — it didn't handle `;` as a comment character in plugins.ini. Lines starting with `;` were parsed as regular plugins, and the commented path `;/data/GoldHEN/plugins/beat_saber_deluxe.prx` was detected as a valid entry (via substring match `prx_name in p`). The function skipped adding the uncommented version, and the `lstrip('#')` uncommenting code didn't strip `;`, so the file was left unchanged.
-- **Pipeline bug fixed:** Added `;` to comment handling in both `enable_plugin()` and `disable_plugin()` functions. Also added `continue` for comment lines in the parsing loop to prevent them from being added as plugin entries. The `found` check now uses exact path matching (`p == plugin_remote`) instead of substring matching.
-- **Crash after plugin enabled:** After fixing plugins.ini manually, plugin loaded with "loaded 33 redirects" — but then the game crashed with CE-34878-0 when loading the pack bundle via the UnityPy save("original") redirect.
-- **Root cause of CE-34878-0:** UnityPy's `bf.save("original")` re-serializes the entire bundle including all CAB data, blocks info, and directory info. The save format differs from the original in subtle ways (block compression flags, blocks info format) that the PS4's Unity runtime rejects. The crash is NOT from the m_Script PPtr bug (which was already correct in the tree approach) but from the bundle wrapper format.
-- **m_Script PPtr bug confirmed:** The `inject_pack_bundle.py` blob builder used `_CHAR_PATH_IDS["Standard"]` (-7286399427822119286) for the m_Script PPtr pathID instead of the correct MonoScript pathID (2140275054477726686). This was a SECOND bug in the inject approach (not reached due to the bundle format crash). Now fixed.
-- **Fix deployed:** New bundle building approach: use `cab.save()` (UnityPy serialization for CAB only) + manual bundle building (preserves original UnityFS structure). This avoids UnityPy's broken bundle-level serialization. Bundle: 8,022,956 bytes (overwrites the old crashing bundle).
-- **Pipeline fix also deployed:** The plugins.ini parsing bug is fixed. `--enable-plugin` now works correctly.
-- **Status:** ⏳ NEW BUNDLE DEPLOYED — Needs user to restart Beat Saber and test. If no crash and 5-mode selector appears, the cab.save() + manual bundle approach works.
+- **What:** Isolate the CE-34878-0 crash cause by deploying the ORIGINAL (unmodified) Rolling Stones pack bundle via AFR redirect. This tests whether the redirect mechanism itself is compatible with pack bundles.
+- **Hypothesis:** If the original bundle crashes → redirect mechanism is incompatible with pack bundles (file locking, path resolution, or Unity's read-once behavior). If the original bundle works → the crash is from UnityPy's CAB serialization or the modified data (5-mode _previewDifficultyBeatmapSets).
+- **Test setup:**
+  1. Copy original pack bundle to AFR as `rollingstones_pack_original.bundle`
+  2. Update redirects.json to point `therollingstones_pack_assets_all_...` → `rollingstones_pack_original.bundle`
+  3. Clear log, launch game, check log for "loaded 33 redirects" and game behavior
+- **Expected outcome (if redirect works):** Game loads, no crash, Rolling Stones pack playable as normal
+- **Expected outcome (if redirect fails):** CE-34878-0 crash at startup
+- **Status:** IN PROGRESS — awaiting execution. See inline test results below.
+
+### Test Result:
+**To be filled after user runs test.**
