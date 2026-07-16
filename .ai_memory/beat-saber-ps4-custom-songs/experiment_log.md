@@ -2288,3 +2288,32 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Normal bundle: 30623388 bytes, 1 `_difficultyBeatmapSet` (Standard, 5 diff)
   - Modes bundle: 30623442 bytes, **3** `_difficultyBeatmapSets` (Standard, **OneSaber**, **90Degree** — each 5 diff)
 - **Conclusion:** Modes bundle IS correctly built. Redirect was the sole issue.
+
+### Experiment 141: Mode Selector Test — Modes Bundle Correctly Loaded but No Extra Modes
+- **Date:** 2026-07-16
+- **What:** User tested with the correct redirect. The modes bundle WAS loaded (confirmed in log: `BeatmapLevelsData/startmeup -> startmeup_custom_v3_modes.bundle` at lines 743-744). Game showed "Standard" mode only — no OneSaber or 90Degree.
+- **Root cause analysis:**
+  1. **`add_mode_characteristics()` does NOT set the `_beatmapCharacteristic` PPtr.** The function clones Standard's difficulty beatmaps but omits the BeatmapCharacteristicSO reference. All three mode entries (Standard, OneSaber, 90Degree) have `_beatmapCharacteristic PPtr: fileID=0, pathID=0` (null).
+  2. **Mode selector reads from BeatmapLevelSO (pack bundle), not BeatmapLevel (per-song bundle).** Even if PPtrs were correct, the mode selector UI is populated from the pack bundle's `_previewDifficultyBeatmapSets`. The per-song bundle's `_difficultyBeatmapSets` is only used for resolving beatmap assets during gameplay.
+  3. **`add_mode_characteristics()` code bug at line 740-743:** Creates `new_set` dict without `_beatmapCharacteristic` field. Compares to `_CHAR_PATH_IDS` dict at line 768 but never uses those pathIDs for the per-song bundle.
+- **Conclusion:** Mode selector modification REQUIRES pack bundle modification. Per-song bundle approach is ineffective. ALL pack bundle approaches are blocked by Addressables catalog CRC validation. The only viable path forward is solving the CRC collision problem.
+- **Status:** ✅ Mode selector via per-song bundle conclusively proven ineffective. Blocked by CRC. See Experiment 142 for CRC correction attempt.
+
+### Experiment 142: CRC Correction via GF(2) Linear Algebra
+- **Date:** 2026-07-16
+- **What:** Implemented a mathematically exact CRC-32 correction using the linearity of CRC over GF(2). The CRC-32 table is a linear function over GF(2) — `table[a XOR b] = table[a] XOR table[b]`. This allows computing exact padding byte values that make the bundle's CRC match the original, without brute-force search.
+- **Method:**
+  1. Precomputed the 32x32 GF(2) matrix M representing CRC state transformation through 1 zero byte
+  2. Computed M^L for L = suffix length (7,905,243 bytes) using square-and-multiply matrix exponentiation
+  3. Inverted M^L via Gauss-Jordan elimination to solve for the required CRC state AFTER the padding bytes that produces the target final CRC
+  4. Computed M^1 through M^16 for padding byte weights
+  5. Used linear formula over GF(2): `CRC_after_pad = M^n * CRC_before_pad XOR sum(M^(n-1-i) * table[byte_i])` where n = padding_size
+  6. Tried 3 free padding bytes (16,777,216 combinations) weighted by M^(n-1), M^(n-2), M^(n-3) to find values whose correction landed in the CRC table
+- **Result:** ✅ **CRC MATCHES!** `0xdc8b314f == 0xdc8b314f`. Padding: 9 bytes at offset 263. Correction values: p0=0x0a, p1=0x8c, p2=0xda, p8=0x54.
+- **Bundle details:**
+  - File size: 7,905,515 bytes (original: 7,902,803 = +2,712)
+  - CAB contains 5 preview difficulty beatmap sets (Standard, OneSaber, NoArrows, 90Degree, 360Degree)
+  - Song name: Espresso, Artist: Sabrina Carpenter
+- **Deployed to PS4:** `rollingstones_pack_patched.bundle` redirect active. Awaiting test.
+- **Concerns:** The file size differs from the original by +2,712 bytes. The Addressables catalog stores `m_BundleSize: 7902803`. If Unity validates file size, the bundle may still be rejected. The `m_UseCrcForCachedBundles` field may or may not trigger size checks.
+- **Status:** ⏳ AWAITING TEST — User restarting Beat Saber now.

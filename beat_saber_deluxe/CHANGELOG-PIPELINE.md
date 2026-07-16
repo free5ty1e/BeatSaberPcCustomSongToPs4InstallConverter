@@ -2,6 +2,20 @@
 
 All notable changes to the song conversion pipeline (`tools/`, `development/scripts/`) are documented here.
 
+## [v0.53] — 2026-07-16
+### Added
+- **CRC correction via GF(2) linear algebra in build_patched_pack_bundle.py** — Adjusts alignment padding bytes to make the rebuilt bundle's CRC32 match the original (`0xdc8b314f`). Uses 32×32 GF(2) matrix exponentiation (M^L for L=7.9M), Gauss-Jordan matrix inversion, and the CRC table's linearity over GF(2) to compute exact padding values.
+- **LZ4HC compression (flag=3)** — Blocks and blocks info now compressed with LZ4HC (mode='high_compression', compression=9, store_size=False) with per-block flag=3, matching the PS4's Unity requirement.
+- **Bundle assembly in memory** — Bundle is now assembled in a bytearray for padding byte manipulation, allowing CRC correction before final write.
+
+### Changed
+- Pipeline version bumped from v0.52 to v0.53.
+- build_patched_pack_bundle.py: CRC correction integrated into bundle build process, UnityPy verification wrapped in try/except to handle modified CAB format.
+
+### Technical
+- **CRC table linearity proof:** `table[a XOR b] = table[a] XOR table[b]` — the CRC table IS linear over GF(2), enabling exact CRC correction without brute-force search.
+- **31 million byte check iterations** — ~16.7M padding byte combinations tested via precomputed M-weighting matrix for 3 free padding bytes + 1 correction byte.
+
 ## [v0.52] — 2026-07-15
 ### Added
 - **BeatmapLevelSO CAB binary injection** — Raw byte-level replacement of StartMeUp's BeatmapLevelSO blob at verified CAB offset 79924, with size delta handling by extending the CAB file. Patched CAB files generated for Espresso (89997B), Duvet (89962B), and Time Lapse (89991B) — each with custom song name, artist, BPM, and 5-mode preview sets at correct serialized offsets.

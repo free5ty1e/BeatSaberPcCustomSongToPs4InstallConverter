@@ -5,11 +5,13 @@ metadata:
   type: reference
 ---
 
-# Pack Bundle Patching — ALL APPROACHES BLOCKED
+# Pack Bundle Patching — CRC Correction Achieved via GF(2) Linear Algebra
 
 ## Summary
 
-**Modifying the Rolling Stones pack bundle (`therollingstones_pack_assets_all_*.bundle`) is currently IMPOSSIBLE due to the Addressables catalog's CRC validation.** Every approach tried produces a CE-34878-0 crash at startup.
+The Addressables catalog's CRC32 validation can be overcome by adjusting alignment padding bytes. CRC32 is a **linear function over GF(2)**: `table[a XOR b] = table[a] XOR table[b]`. This allows computing exact padding values that produce the desired CRC.
+
+**Exp 142 (2026-07-16):** CRC correction SUCCESSFUL. Bundle CRC matches original `0xdc8b314f`. Awaiting gameplay test (file size differs by +2,712 bytes — `m_BundleSize` check unknown).
 
 ## Blocking Root Cause: Addressables Catalog CRC Check
 
@@ -24,16 +26,38 @@ Any modification to a bundle file changes its CRC → validation fails → crash
 
 See [[song-metadata-addressables-structure#Addressables Catalog CRC Validation]] for full details.
 
-## All Failed Approaches
+## All Approaches (including Successful CRC Correction)
 
-| Approach | Experiment | Why It Failed |
-|----------|-----------|---------------|
-| UnityPy `bf.save("original")` | Exp 132 | CAB format differs from original (+4 bytes) → CRC mismatch |
-| UnityPy `cab.save()` + manual bundle | Exp 133 | CAB serialization incompatible (+4 bytes) → CRC mismatch |
-| UnityPy `save_typetree()` | Exp 134 | Silently ignores modifications for BeatmapLevelSO |
-| Byte-level text patch + LZ4 rebuild | Exp 134b | Recompression changes compressed bytes → CRC mismatch |
-| Byte-level text patch + LZ4HC rebuild | Exp 135 | Recompression changes compressed bytes → CRC mismatch |
-| Original bundle (diagnostic) | Exp 134a | ✅ WORKS — CRC unchanged, no crash |
+| Approach | Experiment | Result |
+|----------|-----------|--------|
+| UnityPy `bf.save("original")` | Exp 132 | ❌ CAB format differs (+4 bytes) → CRC mismatch |
+| UnityPy `cab.save()` + manual bundle | Exp 133 | ❌ CAB serialization incompatible (+4 bytes) |
+| UnityPy `save_typetree()` | Exp 134 | ❌ Silently ignores BeatmapLevelSO modifications |
+| Byte-level text patch + LZ4 rebuild | Exp 134b | ❌ Compressed bytes different → CRC mismatch |
+| Byte-level text patch + LZ4HC rebuild | Exp 135 | ❌ Compressed bytes different → CRC mismatch |
+| Original bundle (diagnostic) | Exp 134a | ✅ WORKS — CRC unchanged |
+| **CRC correction via GF(2) linear algebra** | **Exp 142** | **✅ CRC matches! 0xdc8b314f** (size +2,712B, awaiting test) |
+
+## CRC Correction Method
+
+The CRC-32 table is a **linear function over GF(2)**: `table[a XOR b] = table[a] XOR table[b]`. This allows computing the exact padding byte values needed to make the bundle's CRC match the original, using a 32×32 GF(2) matrix approach.
+
+### Algorithm
+
+1. **Precompute M matrix** (32×32 GF(2)): each column j = CRC state after processing 1 zero byte starting from state = (1 << j)
+2. **Compute M^L** (L = suffix length): using square-and-multiply matrix exponentiation over GF(2)
+3. **Invert M^L** via Gauss-Jordan elimination to solve: `CRC_after_pad = M^(-L) * (CRC_target XOR crc_suf_from_0) XOR 0xFFFFFFFF`
+4. **Compute padding byte contributions**: `M^(n-1) * table[p0] XOR M^(n-2) * table[p1] XOR ... XOR table[p_{n-1}] = target`
+5. **Search 3 free bytes** (M^(n-1), M^(n-2), M^(n-3) weighted) to find a combination that lands in the inverse CRC table, fixing the last byte exactly
+
+### Key Formula
+
+```
+CRC_new = M * CRC_old XOR table[byte]
+         (affine transformation; M = (CRC >> 8) ^ table[CRC & 0xFF])
+CRC_after_pad = M^n * CRC_before_pad XOR sum(M^(n-1-i) * table[pad[i]])
+zlib.crc32(suf, crc) = M^L * (crc XOR 0xFFFFFFFF) XOR zlib.crc32(suf, 0)
+```
 
 ## LZ4HC Requirement (Flag=3)
 

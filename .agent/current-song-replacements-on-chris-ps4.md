@@ -3,7 +3,7 @@
 > **Plugin:** Beat Saber Deluxe v0.65  
 > **All 32 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo) with custom community songs.  
 > **Last rebuilt:** 2026-07-16 (v0.65 — modes bundle deployed for Start Me Up)  
-> **Status:** ✅ All songs deployed. Mode selector test pending (Start Me Up → `startmeup_custom_v3_modes.bundle` with OneSaber,90Degree).
+> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). Mode selector + song name display test pending.
 
 ## Rolling Stones Replacements (13 songs)
 
