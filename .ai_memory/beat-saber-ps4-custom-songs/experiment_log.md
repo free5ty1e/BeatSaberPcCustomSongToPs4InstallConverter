@@ -2170,3 +2170,16 @@ Before building v0.35, I analyzed the difference between the original file and `
   - rollingstones_pack_patched.bundle — 7,905,243 bytes
   - redirects.json — 2,019 bytes, 33 entries incl. pack bundle redirect
 - **Status:** REDIRECT DEPLOYED / UNTESTED — Files on PS4 but game needs restart. User needs to relaunch Beat Saber and check if 5-mode selector appears. After test, re-download bs_log.txt to confirm "loaded 33 redirects from config".
+
+### Experiment 133 — MODIFIED: Crash Analysis + Root Cause Found
+- **Date:** 2026-07-15
+- **What:** Downloaded and analyzed CE-34878-0 crash log. Determined root cause of the pack bundle redirect crash.
+- **Log analysis:** 3 game sessions found. The user's test session (#3, v0.64) had "loaded 32 redirects from config" — the pack bundle redirect (33rd entry) was NEVER loaded. The plugin was disabled (commented in plugins.ini), so the notification didn't appear and no redirects fired.
+- **Root cause of plugin not loading:** The `enable_plugin` function in `full_custom_song_pipeline.py` was buggy — it didn't handle `;` as a comment character in plugins.ini. Lines starting with `;` were parsed as regular plugins, and the commented path `;/data/GoldHEN/plugins/beat_saber_deluxe.prx` was detected as a valid entry (via substring match `prx_name in p`). The function skipped adding the uncommented version, and the `lstrip('#')` uncommenting code didn't strip `;`, so the file was left unchanged.
+- **Pipeline bug fixed:** Added `;` to comment handling in both `enable_plugin()` and `disable_plugin()` functions. Also added `continue` for comment lines in the parsing loop to prevent them from being added as plugin entries. The `found` check now uses exact path matching (`p == plugin_remote`) instead of substring matching.
+- **Crash after plugin enabled:** After fixing plugins.ini manually, plugin loaded with "loaded 33 redirects" — but then the game crashed with CE-34878-0 when loading the pack bundle via the UnityPy save("original") redirect.
+- **Root cause of CE-34878-0:** UnityPy's `bf.save("original")` re-serializes the entire bundle including all CAB data, blocks info, and directory info. The save format differs from the original in subtle ways (block compression flags, blocks info format) that the PS4's Unity runtime rejects. The crash is NOT from the m_Script PPtr bug (which was already correct in the tree approach) but from the bundle wrapper format.
+- **m_Script PPtr bug confirmed:** The `inject_pack_bundle.py` blob builder used `_CHAR_PATH_IDS["Standard"]` (-7286399427822119286) for the m_Script PPtr pathID instead of the correct MonoScript pathID (2140275054477726686). This was a SECOND bug in the inject approach (not reached due to the bundle format crash). Now fixed.
+- **Fix deployed:** New bundle building approach: use `cab.save()` (UnityPy serialization for CAB only) + manual bundle building (preserves original UnityFS structure). This avoids UnityPy's broken bundle-level serialization. Bundle: 8,022,956 bytes (overwrites the old crashing bundle).
+- **Pipeline fix also deployed:** The plugins.ini parsing bug is fixed. `--enable-plugin` now works correctly.
+- **Status:** ⏳ NEW BUNDLE DEPLOYED — Needs user to restart Beat Saber and test. If no crash and 5-mode selector appears, the cab.save() + manual bundle approach works.

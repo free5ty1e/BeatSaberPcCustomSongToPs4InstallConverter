@@ -23,6 +23,8 @@ CUSTOM_SONGS = [
     ("Time Lapse", "The Fat Rat", 140.0, "custom/time_lapse"),
 ]
 
+_CORRECT_MONOSCRIPT_PATHID = 2140275054477726686
+
 _CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
     "OneSaber":  -8583864861369561029,
@@ -50,8 +52,8 @@ def build_beatmap_levelso_blob(song_name, song_artist, bpm, level_id):
     blob += struct.pack('<i', 0)                          # m_GameObject fileID
     blob += struct.pack('<q', 0)                          # m_GameObject pathID
     blob += struct.pack('<I', 1)                          # class/metadata
-    blob += struct.pack('<i', 1)                          # m_Script fileID (in CAB)
-    blob += struct.pack('<q', _CHAR_PATH_IDS["Standard"])  # m_Script pathID
+    blob += struct.pack('<i', 1)                              # m_Script fileID (first external)
+    blob += struct.pack('<q', _CORRECT_MONOSCRIPT_PATHID)     # m_Script pathID (MonoScript, NOT char!)
 
     # m_Name: [size int32][content + null]
     blob.extend(encode_utf8_string(f"{song_name}CustomBeatmapLevel"))

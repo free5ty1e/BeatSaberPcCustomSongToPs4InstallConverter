@@ -1028,7 +1028,8 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
         current_section = None
         for line in lines:
             stripped = line.strip()
-            if not stripped or stripped.startswith('#'):
+            # GoldHEN supports both ; and # as comment markers
+            if not stripped or stripped.startswith('#') or stripped.startswith(';'):
                 continue
             if stripped.startswith('[') and stripped.endswith(']'):
                 current_section = stripped[1:-1]
@@ -1124,19 +1125,19 @@ def enable_plugin(config: dict, debug: bool = False):
                 lines = f.read().splitlines()
             log.info(f"  Downloaded plugins.ini ({len(lines)} lines)")
 
-        # Parse INI into sections (title_id -> list of (path, commented))
+        # Parse INI into sections (title_id -> list of plugin paths)
         sections = {}
         current_section = None
         for line in lines:
             stripped = line.strip()
-            if not stripped or stripped.startswith('#'):
-                # Preserve commented lines — re-parse below
-                pass
+            # Skip blank lines and comment lines (both # and ;)
+            if not stripped or stripped.startswith('#') or stripped.startswith(';'):
+                continue
             if stripped.startswith('[') and stripped.endswith(']'):
                 current_section = stripped[1:-1]
                 if current_section not in sections:
                     sections[current_section] = []
-            elif current_section and stripped:
+            elif current_section:
                 sections.setdefault(current_section, []).append(stripped)
 
         # Ensure our section exists
@@ -1145,7 +1146,7 @@ def enable_plugin(config: dict, debug: bool = False):
         # Check if our prx already has a valid (uncommented) entry
         found = False
         for p in current_plugins:
-            if prx_name in p:
+            if p == plugin_remote:
                 found = True
                 break
 
@@ -1153,46 +1154,33 @@ def enable_plugin(config: dict, debug: bool = False):
             current_plugins.append(plugin_remote)
             log.info(f"  Added [{title_id}] entry: {plugin_remote}")
 
-        # Rebuild INI content — remove any old commented entries for our prx first
+        # Rebuild INI content — filter out old commented/duplicate entries for our prx
         new_lines = []
-        skip_next_commented = None
         for line in lines:
             stripped = line.strip()
             if not stripped:
                 new_lines.append(line)
                 continue
-            # Check if this is a commented entry for our plugin
-            uncommented = stripped.lstrip('#').strip()
-            if uncommented.endswith(prx_name):
-                # Replace with uncommented version
-                new_lines.append(uncommented)
-                log.info(f"  Uncommented existing entry: {uncommented}")
-            else:
-                new_lines.append(line)
+            # Skip any line that is solely a comment for our prx (; or #)
+            if (stripped.startswith(';') or stripped.startswith('#')):
+                bare = stripped.lstrip(';#').strip()
+                if bare == plugin_remote:
+                    log.info(f"  Uncommented existing entry: {stripped}")
+                    continue  # skip the commented version; will add uncommented below
+            new_lines.append(line)
 
-        # Rebuild sections properly
-        final_lines = []
-        for sid, plugins in sections.items():
-            final_lines.append(f"[{sid}]")
-            for p in plugins:
-                if p not in ''.join(final_lines):
-                    final_lines.append(p)
-            final_lines.append("")
-
-        # Merge with original lines that weren't already covered
-        seen = set()
-        merged = []
-        for line in new_lines:
-            s = line.strip()
-            if s and s in seen:
-                continue
-            seen.add(s)
-            merged.append(line)
-        for line in final_lines:
-            s = line.strip()
-            if s and s not in seen:
+        # Now add the uncommented entry under the correct section (only if not already present)
+        if not found:
+            section_header = f"[{title_id}]"
+            inserted = False
+            merged = []
+            for line in new_lines:
                 merged.append(line)
-                seen.add(s)
+                if not inserted and line.strip() == section_header:
+                    merged.append(plugin_remote)
+                    inserted = True
+        else:
+            merged = new_lines
 
         with open(local_ini, 'w') as f:
             f.write('\n'.join(merged) + '\n')
@@ -1258,10 +1246,11 @@ def disable_plugin(config: dict):
                 continue
 
             if current_section == title_id:
-                # Check if this line references our plugin
-                uncommented = stripped.lstrip('#').strip()
-                if PLUGIN_PRX_NAME in uncommented or DEBUG_PRX_NAME in uncommented:
-                    if not stripped.startswith('#'):
+                # Check if this line references our plugin (handle both # and ; comments)
+                bare = stripped.lstrip(';#').strip()
+                if PLUGIN_PRX_NAME in bare or DEBUG_PRX_NAME in bare:
+                    already_commented = stripped.startswith(';') or stripped.startswith('#')
+                    if not already_commented:
                         new_lines.append(f'#;{line}')
                         disabled_count += 1
                         log.info(f"  Disabled: {stripped}")
