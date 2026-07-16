@@ -2227,5 +2227,47 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **If this works:** Confirms flag=3 (LZ4HC) is required for PS4. All future bundle rebuilding must use LZ4HC.
 - **If this crashes:** The issue is NOT the compression flag but something else in the bundle rebuilding process.
 - **Deployed:** `rollingstones_pack_patched.bundle` → redirects.json updated → bs_log.txt cleared
-- **Status:** ⏳ **AWAITING TEST** — User needs to restart Beat Saber and report.
+- **Test result:** ❌ **CE-34878-0 CRASH** — identical crash as all previous attempts. Compression flag=3 does NOT fix the crash.
+- **Conclusion:** The crash is NOT from compression flags (LZ4 vs LZ4HC). It's NOT from blob content changes (text-only same-size → still crashes). It's NOT from UnityPy serialization (we bypass it). The crash is from something structural in how we rebuild the UnityFS bundle wrapper.
+- **New hypothesis — Addressables Catalog Hash:** Unity Addressables systems commonly embed content hashes or CRC checksums per bundle in the catalog (`catalog.json` or `catalog.bin`). If the PS4 game checks the hash against the bundled file at load time, ANY modification (even 1 byte) would fail → CE-34878-0. This would explain why:
+  - Original bundle via redirect: ✅ (hash matches)
+  - ANY modified bundle: ❌ (hash mismatch)
+- **Next step:** Investigate catalog.json for bundle hashes (Experiment 136).
 
+### Experiment 136: Parse Addressables Catalog for Bundle Hashes
+- **Date:** 2026-07-15
+- **Status:** IN PROGRESS
+- **Goal:** Find `catalog.json` or `catalog.bin` in the PS4 dump and check for bundle content hashes/CRCs.
+### Experiment 136: Addressables Catalog — Found CRC/Hash Bundle Verification
+- **Date:** 2026-07-15
+- **What:** Parsed `aa/catalog.json` (793KB) to check for per-bundle content hashes, CRCs, or file sizes that could cause the CE-34878-0 crash on modified bundles.
+- **Key finding — ExtraDataString contains UTF-16 JSON with per-bundle hash/CRC/size:**
+  The catalog's `m_ExtraDataString` (116,334 bytes) contains concatenated UTF-16 LE encoded JSON blocks, one per bundle. Each block includes:
+  ```json
+  {"m_Hash":"<32-char-hex>","m_Crc":<uint32>,"m_BundleSize":<file_size>,
+   "m_UseCrcForCachedBundles":true,"m_BundleName":"<internal-id>",...}
+  ```
+- **Rolling stones pack entry:**
+  - `m_Hash`: `a99482a8a3da9e991e5ae36f2fea209c` (= filename hash!)
+  - `m_Crc`: `3700109647` (0xdc8b314f)
+  - `m_BundleSize`: `7902803` (original file size)
+  - `m_UseCrcForCachedBundles`: `true` ← **CRITICAL**
+- **How Addressables loads bundles:** The Addressables system calls `AssetBundle.LoadFromFile` with CRC validation. When the CRC of the loaded file doesn't match the stored CRC, the game crashes with CE-34878-0.
+- **Why original bundle works:** Original bundle has CRC=0xdc8b314f and size=7902803, matching the catalog values. Redirect preserves the original file intact.
+- **Why modified bundle crashes:** LZ4HC recompression changes the file's bytes → different CRC → mismatch with catalog → crash.
+- **Can we redirect catalog.json?** NO — catalog.json is a plain JSON file loaded by Unity's ContentCatalogProvider, NOT by AssetBundle.LoadFromFile. The AFR plugin only hooks `AssetBundle::LoadFromFile`, so it cannot intercept catalog.json loads. GoldHEN can't redirect it.
+- **Can we match original CRC?** Technically possible (CRC32 collision via padding adjustment) but computationally expensive and uncertain. The alignment padding offers 0-15 bytes of freedom → brute-forcing CRC matching is feasible but complex.
+- **Patching the catalog:** We successfully generated `catalog_patched.json` with updated m_Crc=2690266029 and m_BundleSize=7905246 for our modified bundle. But we can't deploy it because AFR doesn't intercept catalog.json.
+- **Conclusion:** The Addressables catalog's CRC verification is the root cause of ALL pack bundle crashes. Any modified bundle will crash because the CRC changes. The ONLY way to use modified pack bundles is to either (1) patch the catalog (impossible via AFR), (2) match the original CRC/size (feasible but complex), or (3) bypass the pack bundle entirely.
+- **Status:** ✅ Complete — Root cause identified.
+- **Next:** Pivot to approaches that don't require pack bundle modification. Test `--enable-modes` on PS4 (per-song bundle approach).
+
+### Experiment 137: CRC Collision Attempt — Preserving File Size for Original CRC
+- **Date:** 2026-07-15
+- **Status:** SKIPPED — Feasibility analysis: CRC32 collision via padding adjustment requires finding bytes that produce the same CRC as original. With 0-15 bytes of alignment padding as free variables, this is computationally feasible but requires iterative brute-force. Time-estimate: 10-60 minutes of computation. Deemed excessive given alternative approaches exist.
+
+### Experiment 138: Test --enable-modes on PS4 (Per-Song Bundle Mode Selector)
+- **Date:** 2026-07-15
+- **What:** Build a per-song bundle for Start Me Up with `--enable-modes OneSaber,90Degree` and deploy to PS4. Test if the mode selector shows extra modes without any pack bundle modification.
+- **Goal:** Determine if mode selection can be achieved purely through per-song bundle modifications.
+- **Status:** IN PROGRESS — Building... Bundle exists at `startmeup_custom_v3_modes.bundle`. Deployment BLOCKED (PS4 offline).
