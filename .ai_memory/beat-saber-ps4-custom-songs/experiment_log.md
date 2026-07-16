@@ -2272,10 +2272,19 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Goal:** Determine if mode selection can be achieved purely through per-song bundle modifications.
 - **Status:** COMPLETED — Bundle built and exists at `startmeup_custom_v3_modes.bundle`. Deployment attempted but crash prevented testing.
 
-### Experiment 139: Analyze Log & Remove Pack Redirect (Modes Test Blocked)
+### Experiment 139: Analyze Log — Modes Redirect Was Wrong
 - **Date:** 2026-07-16
-- **What:** Downloaded and analyzed PS4 bs_log.txt (63351 bytes, 595 lines). Found that the rollingstones pack redirect was STILL active (`rollingstones_pack_assets_all_a99482a8... -> rollingstones_pack_patched.bundle`), causing the LZ4HC-rebuilt pack bundle to load at startup → CRC mismatch → CE-34878-0 crash. This blocked the modes bundle test because the game crashed before any per-song bundle loading.
-- **Log analysis:** Lines 3-5 show plugin loaded "34 redirects". Line 298 is the LAST load attempt before crash: rollingstones pack bundle redirect. No crash/error messages in log (game just dies with PS4's generic CE-34878-0 handler).
-- **Fix applied:** Removed the rollingstones pack redirect from redirects.json. Game now loads ORIGINAL pack bundle. Modes bundle redirect (startmeup_custom_v3 -> startmeup_custom_v3_modes.bundle) remains active.
-- **Log archived:** `.ai_memory/experiment_logs/ps4_bs_log_20260716_1052.txt`
-- **Status:** ⏳ **AWAITING TEST** — User needs to restart Beat Saber and select Start Me Up to test if mode selector shows extra modes.
+- **What:** Downloaded and analyzed PS4 bs_log.txt (v2, 160089 bytes, 1495 lines). Found that the per-song bundle redirect still pointed to `startmeup_v3` (non-modes bundle). The redirect `startmeup_custom_v3 -> startmeup_custom_v3_modes.bundle` was a separate entry that never fired because the game loads `BeatmapLevelsData/startmeup` (not `startmeup_custom_v3`).
+- **Root cause:** Game loads path `BeatmapLevelsData/startmeup` → matches redirect key `BeatmapLevelsData/startmeup` → loads `startmeup_v3` (Standard only). The `startmeup_custom_v3` key was never triggered.
+- **Fix:** Changed `BeatmapLevelsData/startmeup` target from `startmeup_v3` to `startmeup_custom_v3_modes.bundle`. Removed dead `startmeup_custom_v3` redirect (now 32 redirects total).
+- **Modes bundle verified:** UnityPy confirms 3 `_difficultyBeatmapSets` (Standard, OneSaber, 90Degree) with 5 difficulties each
+- **Log archived:** `experiment_logs/ps4_bs_log_20260716_1052_v2.txt`
+- **Status:** ⏳ **AWAITING TEST** — Modes bundle now correctly wired. Restart and test.
+
+### Experiment 140: Verify Modes Bundle Content
+- **Date:** 2026-07-16
+- **What:** Used UnityPy to compare the normal and modes bundles.
+- **Results:**
+  - Normal bundle: 30623388 bytes, 1 `_difficultyBeatmapSet` (Standard, 5 diff)
+  - Modes bundle: 30623442 bytes, **3** `_difficultyBeatmapSets` (Standard, **OneSaber**, **90Degree** — each 5 diff)
+- **Conclusion:** Modes bundle IS correctly built. Redirect was the sole issue.

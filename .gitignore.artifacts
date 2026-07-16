@@ -1,0 +1,10 @@
+# PS4 log files
+beat_saber_deluxe/ps4_bs_log*.txt
+
+# Temporary/blob build artifacts
+beat_saber_deluxe/_beatmap_level_so_*.blob
+beat_saber_deluxe/_patched_*.cab
+
+# Build output bundles
+beat_saber_deluxe/rollingstones_pack_patched.bundle
+beat_saber_deluxe/catalog_patched.json

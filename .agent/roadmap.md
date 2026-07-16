@@ -72,7 +72,9 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
   - `cab.save()` — same incompatibility
   - `save_typetree()` — silently ignores BeatmapLevelSO modifications
 - [x] Manual bundle building code corrected (LZ4HC flag=3, separate writes, explicit alignment)
-- [x] Per-song bundle mode selector built and deployed (`startmeup_custom_v3_modes.bundle` ⏳)
+- [x] Per-song bundle mode selector built and deployed (`startmeup_custom_v3_modes.bundle` with OneSaber,90Degree)
+- [x] **Modes bundle content verified:** 3 `_difficultyBeatmapSets` (Standard, OneSaber, 90Degree) each with 5 difficulties ✅
+- [x] **Modes redirect fixed:** `BeatmapLevelsData/startmeup` now points to modes bundle (was pointing to non-modes bundle)
 
 ### Blocked
 - [ ] Song name/artist display change → requires pack bundle modification → CRC blocked

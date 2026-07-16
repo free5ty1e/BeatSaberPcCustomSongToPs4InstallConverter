@@ -2,6 +2,8 @@
 **Last Updated:** 2026-07-15
 **Status:** 🟡 **v0.65 plugin / v0.52 pipeline** — **Exp 139:** Pack redirect REMOVED from PS4. Crash at startup was from rollingstones pack redirect pointing to LZ4HC-rebuilt bundle (CRC mismatch). Game should now load normally with original pack bundle. **Exp 138:** Modes bundle (startmeup_custom_v3_modes.bundle) deployed with `--enable-modes OneSaber,90Degree`. Awaiting test: does mode selector show extra modes when user selects Start Me Up?
 
+**Exp 139:** Modes redirect was wrong — game loaded `startmeup_v3` (Standard only) instead of modes bundle. Fixed: `BeatmapLevelsData/startmeup` now points to `startmeup_custom_v3_modes.bundle`. Modes bundle verified: 3 mode sets (Standard, OneSaber, 90Degree). Awaiting test.
+
 **Active knowledge gaps for pack bundle modification:**
 1. Addressables catalog CRC check (`m_UseCrcForCachedBundles=true`) blocks ANY modified bundle
 2. Catalog is plain JSON, can't be redirected via AFR (only hooks LoadFromFile)
