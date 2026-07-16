@@ -68,3 +68,25 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 - Per-song bundle redirects with full audio/beatmap sync
 - Debug logging to `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
 - Two IL2CPP hooks installed (get_preview + SetData) but not yet reaching the mode selector
+
+## v0.66 — Bundle Building Fix + Text Patching (2026-07-15)
+
+### Critical Fixes
+- **Bundle building bug:** Concatenated `f.write(b'...' + b'...')` caused alignment issues. Fixed with separate `f.write()` calls + explicit `b'\x00' * pad_needed` padding + `f.flush()`. This was causing "Decompression failed: corrupt input" errors in UnityPy.
+- **Pack bundle text patching:** Finally working approach found! Byte-level string replacement in the original 440-byte BeatmapLevelSO blob. No object table update needed when blob size is unchanged.
+
+### Discoveries
+- **UnityPy save_typetree() IGNORES modifications for BeatmapLevelSO** in Unity 2022.3. The TypeTree serializer reads but doesn't properly write back modified tree data.
+- **UnityPy cab.save() produces incompatible CAB** (4 bytes larger than original). The PS4's Unity runtime rejects UnityPy-re-serialized CABs.
+
+### New Capabilities
+- **build_patched_pack_bundle.py** — Rebuilt from scratch with:
+  - Manual blob builder (struct packing) for BeatmapLevelSO with 5 modes
+  - v22+ CAB header parsing (metadata_size at 0x14, file_size at 0x1C, data_offset = align16(48+meta))
+  - Object table entry search and update (pathID + relative offset + size)
+  - Fixed bundle building with proper alignment
+
+### Status
+- Pack bundle redirect works (original bundle) ✅
+- Song info text patching deployed (Espresso name + Sabrina Carpenter artist) ⏳ UNTESTED
+- Mode selector (5 modes) BLOCKED by blob format issue

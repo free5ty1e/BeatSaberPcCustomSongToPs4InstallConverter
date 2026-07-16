@@ -2194,3 +2194,20 @@ Before building v0.35, I analyzed the difference between the original file and `
 
 ### Test Result:
 **To be filled after user runs test.**
+
+### Experiment 134: Text-Only Pack Bundle Patching (Song Info Display)
+- **Date:** 2026-07-15
+- **What:** Deployed text-only patched pack bundle. Changed `_songName: "Start Me Up" → "Espresso"` and `_songAuthorName: "The Rolling Stones" → "Sabrina Carpenter"` by byte-level patching of the original 440-byte BeatmapLevelSO blob.
+- **Key discovery — UnityPy save_typetree() IGNORES modifications for this object:**
+  UnityPy's TypeTreeHelper serializer does not properly write back modified tree data for BeatmapLevelSO in Unity 2022.3. Even changing `_songName` to "A" (single char) produced the identical 440-byte blob. The TypeTree serializer reads but doesn't write properly.
+- **Key discovery — UnityPy cab.save() produces incompatible CAB:**
+  Even without modifications, `cab.save()` produces a CAB that's 4 bytes different (89184 vs 89180). The game rejects UnityPy-re-serialized CABs (CE-34878-0). Only the raw original CAB bytes work.
+- **Fixed approach — byte-level text patching of original blob:**
+  Replace string content at known offsets (blob[80:91] = songName, blob[100:118] = songAuthorName) with same-length strings. Null padding ("Espresso\0\0\0" = 11 bytes, "Sabrina Carpenter\0" = 18 bytes) keeps blob at 440 bytes. No object table update needed.
+- **Fixed approach — bundle building bug (root cause of "Decompression failed"):**
+  Concatenated `f.write(b'...' + b'...')` writes cause alignment/padding issues in the UnityFS header. Fixed by using SEPARATE `f.write()` calls + explicit `b'\x00' * pad_needed` padding + `f.flush()`. The `while f.tell() % 16:` loop has unreliable behavior with concatenated writes.
+- **Object table update (for future blob size changes):**
+  For v22+ CAB headers: metadata_size at bytes 0x14-0x17 (BE uint32), data_offset = align16(48 + metadata_size) = 53456. Object table entry: pathID(int64) + offset(int64 relative to data_offset) + size(int32). File_size at bytes 0x1C-0x1F (BE uint32). Object table search by pathID+old_stored pattern works correctly (26/26 entries found with delta=817).
+- **Deployment:** Bundle verified by UnityPy. 1 mode (Standard), "Espresso" song name, "Sabrina Carpenter" author.
+- **Status:** ⏳ AWAITING TEST — User needs to restart Beat Saber and check if song info displays correctly.
+
