@@ -187,3 +187,39 @@ If the Size + CRC co-solver fails, fallback approaches:
 ```bash
 python3 /workspace/beat_saber_deluxe/tools/build_patched_pack_bundle.py
 ```
+
+## Size + CRC Validation — Both Required (2026-07-17)
+
+**Critical Finding:** The Addressables catalog validates BOTH `m_BundleSize` AND `m_Crc`. Either mismatch causes CE-34878-0 crash.
+
+### Validation Rules
+| Field | Catalog Value | Must Match? |
+|-------|--------------|-------------|
+| `m_BundleSize` | 7,902,803 bytes | ✅ YES — size validation enforced |
+| `m_Crc` | `0xdc8b314f` (CRC-32) | ✅ YES — CRC validation enforced |
+
+### Experimental Evidence
+
+**Test 1: Correct CRC, Wrong Size**
+- Bundle: `rollingstones_pack_patched.bundle` (size=7,905,515 bytes, CRC=`0xdc8b314f`)
+- Result: ❌ CE-34878-0 crash
+- Conclusion: Size validation enforced even with correct CRC
+
+**Test 2: Correct Size, Wrong CRC**
+- Bundle: `espresso_pack_patched.bundle` (size=7,902,803 bytes, CRC=`0x7218b959`)
+- Result: ❌ CE-34878-0 crash
+- Conclusion: CRC validation enforced even with correct size
+
+### Solution Requirements
+To successfully modify the pack bundle, we MUST:
+1. Keep file_size EXACTLY at 7,902,803 bytes (no change)
+2. Match CRC exactly to `0xdc8b314f`
+
+### Viable Approach: Uncompressed Block Injection
+The 49 uncompressed blocks (flag=0) provide ~6.1 MB of free variables with ZERO size impact:
+- Each block is exactly 131,072 bytes stored as raw data
+- Changing CONTENT affects CRC but NOT file_size
+- Provides massive degrees of freedom for CRC control
+
+**Status:** Tool built in `development/scripts/crc_corrector.py` — needs refinement for convergence.
+

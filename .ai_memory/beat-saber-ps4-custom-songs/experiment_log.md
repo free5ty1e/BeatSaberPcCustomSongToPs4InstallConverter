@@ -2375,3 +2375,27 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Key insight:** 49 uncompressed blocks provide ~6.1 MB of free CRC control variables with ZERO size impact. Each block is exactly 131,072 bytes stored as raw data — changing content affects CRC but NOT file_size.
 - **Status:** Tool built (`crc_corrector.py` in `development/scripts/`), ready to test. Next step: inject blob into uncompressed block + apply GF(2) correction to alignment padding bytes at offset 263.
 
+
+### Experiment 148: Size Validation Test — Confirms CRC is Also Required
+- **Date:** 2026-07-17 (afternoon)
+- **What:** Deployed `espresso_pack_patched.bundle` (size=7,902,803 ✅, CRC=0x7218b959 ❌) to PS4 to test if size validation passes when size matches catalog.
+- **Result:** ❌ CE-34878-0 crash — confirms CRC validation ALSO fails when CRC doesn't match.
+- **Key Insight:** Both conditions must be met simultaneously:
+  - ✅ File size MUST equal `m_BundleSize` in catalog (7,902,803 bytes)
+  - ✅ CRC MUST equal `m_Crc` in catalog (`0xdc8b314f`)
+- **Conclusion:** Uncompressed block injection approach is the only viable path forward. Need to inject blob into uncompressed blocks (no size change) AND use GF(2) linear algebra on alignment padding bytes for CRC correction simultaneously.
+- **Status:** Tool built in `development/scripts/crc_corrector.py` but needs refinement — current GF(2) implementations don't converge due to CRC's affine nature.
+
+### Experiment 149: Next Steps — Refined Uncompressed Block Approach
+- **Date:** 2026-07-17
+- **What:** Plan to refine crc_corrector.py with better convergence strategy.
+- **Key Insight from Previous Attempts:** 
+  - GF(2) linear algebra reduces error but doesn't converge to zero
+  - CRC is affine (not purely linear) due to initial state XOR 0xFFFFFFFF in zlib.crc32
+  - Need hybrid approach: use GF(2) to get CLOSE, then brute-force remaining bits
+- **Proposed Approach:** 
+  1. Inject Espresso blob into uncompressed block (no size change)
+  2. Use first 6 alignment padding bytes with GF(2) to reduce CRC delta significantly
+  3. Brute-force search last 3 padding bytes (16M combinations — feasible)
+- **Status:** Implementation in progress in `development/scripts/build_espresso_v8.py`
+

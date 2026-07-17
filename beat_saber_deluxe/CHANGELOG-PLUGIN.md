@@ -139,3 +139,20 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 - Implement uncompressed block injection approach (zero size impact)
 - Test with GF(2) CRC correction on alignment padding bytes
 
+
+## v0.60 — Size + CRC Validation Both Required (2026-07-17)
+
+### Test Results
+| Bundle | Size | CRC | Result |
+|--------|------|-----|--------|
+| rollingstones_pack_patched.bundle | 7,905,515 (+2,712) | 0xdc8b314f ✅ | ❌ CE-34878-0 (size validation) |
+| espresso_pack_patched.bundle | 7,902,803 ✅ | 0x7218b959 ❌ | ❌ CE-34878-0 (CRC validation) |
+
+### Key Finding
+Both `m_BundleSize` AND `m_Crc` are validated by the Addressables catalog. Either mismatch causes crash.
+
+### Next Steps
+- Implement uncompressed block injection approach (zero size impact)
+- Use GF(2) linear algebra on alignment padding bytes for CRC correction
+- Deploy to PS4 and test with both conditions met
+

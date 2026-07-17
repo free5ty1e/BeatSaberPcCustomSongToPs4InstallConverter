@@ -635,3 +635,38 @@ The crash is NOT from CRC validation (we've proven CRC matching works). Two like
 
 ### Critical Insight
 The fundamental blocker (CRC validation) is SOLVED. The remaining blocker is EITHER size validation OR data structure validity — both are testable and fixable with the uncompressed block approach.
+
+## 2026-07-17: Size Validation Test Results — Both CRC AND Size Required
+
+**Test Result:** ❌ CE-34878-0 crash with correct size but wrong CRC
+
+### What Was Tested
+- Bundle: `espresso_pack_patched.bundle` (size=7,902,803 bytes ✅, CRC=0x7218b959 ❌)
+- Deployed to: `/data/GoldHEN/AFR/CUSA12878/rollingstones_pack_patched.bundle`
+
+### Key Findings
+**BOTH conditions must be met simultaneously:**
+1. **File size MUST equal `m_BundleSize` in catalog** (7,902,803 bytes) — tested and confirmed ✅
+2. **CRC MUST equal `m_Crc` in catalog** (`0xdc8b314f`) — tested and confirmed ❌ when wrong
+
+### Implications
+- The rollingstones_pack_patched.bundle (CRC=0xdc8b314f, size +2,712 bytes) crashes due to SIZE validation
+- The espresso_pack_patched.bundle (size correct, CRC wrong) crashes due to CRC validation
+- **Solution:** Need BOTH correct simultaneously
+
+### Viable Approach: Uncompressed Block Injection
+The 49 uncompressed blocks (flag=0) provide ~6.1 MB of free variables with ZERO size impact:
+- Each block is exactly 131,072 bytes stored as raw data
+- Changing CONTENT affects CRC but NOT file_size
+- Provides massive degrees of freedom for CRC control
+
+### Current Status
+- Tool built in `development/scripts/crc_corrector.py`
+- GF(2) implementations don't converge due to CRC's affine nature
+- Need hybrid approach: GF(2) + brute-force search on last few bytes
+
+### Next Steps
+1. Refine crc_corrector.py with better convergence (hybrid GF(2) + brute-force)
+2. Test with actual Espresso blob injection
+3. Deploy to PS4 and verify both size AND CRC pass validation
+

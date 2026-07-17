@@ -93,3 +93,25 @@ All notable changes to the song conversion pipeline (`tools/`, `development/scri
 
 ### Key Files Archived
 - `/workspace/.ai_memory/beat-saber-ps4-custom-songs/experiment_logs/ps4_bs_log_20260717_1030_crash_test.txt`
+
+## v1.47 — Size + CRC Validation Both Required (2026-07-17)
+
+### Critical Discovery
+The Addressables catalog validates BOTH `m_BundleSize` AND `m_Crc`. Either mismatch causes CE-34878-0 crash.
+
+### Test Results
+| Bundle | Size | CRC | Result |
+|--------|------|-----|--------|
+| rollingstones_pack_patched.bundle | 7,905,515 (+2,712) | 0xdc8b314f ✅ | ❌ CRASH (size validation) |
+| espresso_pack_patched.bundle | 7,902,803 ✅ | 0x7218b959 ❌ | ❌ CRASH (CRC validation) |
+
+### Conclusion
+Both conditions must be met simultaneously:
+- File size MUST equal `m_BundleSize` in catalog (7,902,803 bytes)
+- CRC MUST equal `m_Crc` in catalog (`0xdc8b314f`)
+
+### Next Steps
+- Implement uncompressed block injection approach (zero size impact)
+- Use GF(2) linear algebra on alignment padding bytes for CRC correction
+- Tool built in `development/scripts/crc_corrector.py` — needs refinement for convergence
+
