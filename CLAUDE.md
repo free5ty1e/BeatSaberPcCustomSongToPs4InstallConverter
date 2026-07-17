@@ -20,6 +20,7 @@ Before proceeding with work, upon receiving experiment results, you MUST update 
 
 - If making changes to the Beat Saber Deluxe Plugin, you must bump the version in `main.cpp` and create an appropriate entry in `beat_saber_deluxe/CHANGELOG-PLUGIN.md`
 - If making changes to the Beat Saber Deluxe Song Conversion Pipeline, you must bump the version in `beat_saber_deluxe/VERSION` and create an appropriate entry in `beat_saber_deluxe/CHANGELOG-PIPELINE.md`
+- **Development scripts go in `beat_saber_deluxe/development/scripts/`.** Only after a script is proven to work correctly should it be integrated into the production pipeline (e.g., moved to `tools/`, `full_custom_song_pipeline.py`, or the plugin source). This keeps the codebase clean and prevents experimental code from being accidentally deployed or committed as production.
 - If any new tools or prerequisites are needed, you have permission to install them; we are in a devcontainer so it is safe. If the tool is useful at all, please persist it along with its prerequisites in the devcontainer definition files so that our full toolset survives a devcontainer rebuild.
 - If it makes sense to do so, attempt to deploy latest changes to the PS4 for experimentation
 

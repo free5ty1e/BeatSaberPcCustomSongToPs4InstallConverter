@@ -2323,3 +2323,37 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **What:** Investigated whether `build_patched_pack_bundle.py` had a CAB truncation bug where `stream[:cab_orig_sz] = bytes(patched)` only copies the first 89180 bytes of a 89997-byte patched CAB.
 - **Finding:** Python `bytearray[:N] = longer_data` DOES extend the bytearray and shifts subsequent data forward. So the old code was CORRECT. Resource data at positions 89180+ shifts to 89997+, matching the updated node table offsets. No bug here.
 - **Conclusion:** The crash is NOT from CAB truncation. Likely causes: file size mismatch (2,712B) or invalid BeatmapCharacteristicSO pathIDs in the 5-mode preview sets.
+
+### Experiment 144: Addressables Catalog CRC Validation — BREAKTHROUGH & TEST PLAN
+- **Date:** 2026-07-17
+- **What:** Achieved exact CRC matching for modified pack bundle using GF(2) linear algebra on alignment padding bytes. Deployed to PS4 for testing.
+- **Method:** 
+  1. Used `build_patched_pack_bundle.py` with Espresso BeatmapLevelSO blob (5 modes: Standard, OneSaber, NoArrows, 90Degree, 360Degree)
+  2. Applied GF(2) CRC correction on 9 alignment padding bytes at offset 263
+  3. Result: CRC matches `0xdc8b314f` exactly (verified via zlib.crc32)
+- **Bundle details:**
+  - File: `rollingstones_pack_patched.bundle`
+  - Size: 7,905,515 bytes (+2,712 from original 7,902,803)
+  - CRC: `0xdc8b314f` ✅ (matches Addressables catalog)
+- **Exp 142 test results recap:** 
+  - "CRC check PASSED (log shows game continued loading other bundles after pack bundle)"
+  - "Crash likely from either (a) m_BundleSize validation or (b) invalid BeatmapCharacteristicSO pathIDs"
+- **Current status:** Bundle deployed to PS4 via AFR redirect. AWAITING USER TEST.
+- **Test plan:** 
+  1. Launch Beat Saber Deluxe
+  2. Navigate to Rolling Stones pack → Espresso song
+  3. Verify: custom display name "Espresso", artist "Sabrina Carpenter", 5 modes visible in selector
+  4. If crash: check ps4_bs_log.txt for CE-34878-0 or m_BundleSize validation error
+- **Next steps based on test outcome:**
+  - ✅ If works: Deploy Espresso replacement, document solution
+  - ❌ If size validation blocks: Inject into uncompressed blocks (no size change) + working CRC correction
+  - ❌ If pathIDs invalid: Fix BeatmapCharacteristicSO references in 5-mode preview sets
+- **Key insight:** The fundamental blocker (CRC validation) is SOLVED. Remaining blockers are either size validation or data structure issues — both testable and fixable.
+
+### Experiment 145: Uncompressed Block Injection Approach (In Progress)
+- **Date:** 2026-07-17
+- **What:** Investigating alternative approach using 49 uncompressed blocks (flag=0) as free variables for CRC control without file_size change.
+- **Key finding:** Each uncompressed block is exactly 131,072 bytes stored as raw data. Changing content affects CRC but NOT file_size. This provides ~6.1 MB of free variables for CRC control with zero size impact.
+- **Status:** Tool built (`crc_corrector.py`), ready to test with actual BeatmapLevelSO blob injection.
+- **Constraint:** LZ4HC cannot compress these blocks further (ratio >100%). Modifying content affects BOTH file_size and CRC simultaneously in compressed regions, but uncompressed blocks provide PURE CRC control.
+

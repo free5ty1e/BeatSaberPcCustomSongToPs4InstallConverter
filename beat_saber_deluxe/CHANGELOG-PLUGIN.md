@@ -100,3 +100,25 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 - Pack bundle redirect works (original bundle) ✅
 - Pack bundle modification IMPOSSIBLE due to catalog CRC check ❌
 - Per-song bundle mode selector deployed, awaiting test ⏳
+
+## v0.58 — Pack Bundle CRC Validation Workaround (2026-07-17)
+
+### New Features
+- **Pack Bundle Redirect Support**: Added redirect for `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c` → `rollingstones_pack_patched.bundle` in `redirects.json`
+
+### Technical Details
+- Bundle contains Espresso BeatmapLevelSO with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree)
+- CRC matched to `0xdc8b314f` via GF(2) linear algebra on alignment padding bytes
+- File size: 7,905,515 bytes (+2,712 from original); may trigger `m_BundleSize` validation
+
+### Known Issues
+- CE-34878-0 crash at startup despite CRC match (likely m_BundleSize validation or invalid pathIDs)
+- Pack redirect removed after test failure; game works without it
+
+### Test Results (Exp 142)
+- "CRC check PASSED (log shows game continued loading other bundles after pack bundle)"
+- Crash likely from: (a) `m_BundleSize` validation rejection, or (b) invalid BeatmapCharacteristicSO pathIDs in 5-mode preview sets
+
+### Next Steps
+- Test uncompressed block injection approach (zero size impact) + GF(2) CRC correction
+- If successful, deploy Espresso replacement with display name + mode selector support

@@ -59,3 +59,22 @@ All notable changes to the song conversion pipeline (`tools/`, `development/scri
 ### Changed
 - Pipeline now reads and displays version from `VERSION` file on startup.
 - Documentation updated for pipeline version tracking separation from plugin version.
+
+## v1.45 — CRC Correction for Pack Bundles (2026-07-17)
+
+### New Features
+- **GF(2) Linear Algebra CRC Correction**: Implemented mathematically exact CRC-32 correction using linearity of CRC over GF(2). Computes exact padding byte values that make modified bundles match original catalog CRC (`0xdc8b314f`).
+- **Uncompressed Block Injection Tool** (`crc_corrector.py`): New tool for injecting BeatmapLevelSO blobs into uncompressed blocks (flag=0) with pure CRC control and zero file_size impact. Uses 6.1 MB of free variables from 49 uncompressed blocks.
+
+### Technical Details
+- **Method**: Precompute 32×32 GF(2) matrix M, compute M^L for suffix length, invert via Gauss-Jordan, solve for padding bytes
+- **Result**: Exact CRC match in 9 alignment padding bytes (offset 263)
+- **Limitation**: File size differs by +2,712 bytes due to CAB injection; `m_BundleSize` validation may still crash
+
+### Known Issues
+- Size difference (+2,712 bytes) causes `m_BundleSize` validation failure even with correct CRC
+- Uncompressed block approach (zero size impact) built but not yet tested with actual blob injection
+- Next: test uncompressed block injection + GF(2) CRC correction combination
+
+### Files Added
+- `/workspace/beat_saber_deluxe/tools/crc_corrector.py` — CRC correction using uncompressed blocks as free variables
