@@ -2316,4 +2316,10 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Song name: Espresso, Artist: Sabrina Carpenter
 - **Deployed to PS4:** `rollingstones_pack_patched.bundle` redirect active. Awaiting test.
 - **Concerns:** The file size differs from the original by +2,712 bytes. The Addressables catalog stores `m_BundleSize: 7902803`. If Unity validates file size, the bundle may still be rejected. The `m_UseCrcForCachedBundles` field may or may not trigger size checks.
-- **Status:** ⏳ AWAITING TEST — User restarting Beat Saber now.
+- **Status:** ❌ CRASH — Pack redirect caused CE-34878-0 at startup despite CRC matching. Diagnosis: Python `bytearray[:N] = longer_data` correctly extends the array (verified), so the CAB/resource data layout is correct. The CRC check PASSED (log shows the game continued loading other bundles after the pack bundle). Crash likely from either (a) Addressables `m_BundleSize: 7902803` vs actual `7,905,515` (+2,712B) causing validation rejection, or (b) modified BeatmapLevelSO with 5 preview sets referencing incorrect BeatmapCharacteristicSO pathIDs. Pack redirect removed. Game works without it.
+
+### Experiment 143: CAB Truncation Bug Investigation
+- **Date:** 2026-07-16
+- **What:** Investigated whether `build_patched_pack_bundle.py` had a CAB truncation bug where `stream[:cab_orig_sz] = bytes(patched)` only copies the first 89180 bytes of a 89997-byte patched CAB.
+- **Finding:** Python `bytearray[:N] = longer_data` DOES extend the bytearray and shifts subsequent data forward. So the old code was CORRECT. Resource data at positions 89180+ shifts to 89997+, matching the updated node table offsets. No bug here.
+- **Conclusion:** The crash is NOT from CAB truncation. Likely causes: file size mismatch (2,712B) or invalid BeatmapCharacteristicSO pathIDs in the 5-mode preview sets.

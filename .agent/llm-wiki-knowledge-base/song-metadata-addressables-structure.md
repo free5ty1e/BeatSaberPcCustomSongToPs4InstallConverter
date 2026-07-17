@@ -92,6 +92,10 @@ The game does NOT dynamically generate a Standard → OneSaber mapping. Each mod
 
 The catalog (`aa/catalog.json`) is NOT loaded via `AssetBundle.LoadFromFile` — it's loaded as a plain JSON file by Unity's `ContentCatalogProvider`. This means the AFR plugin (which only hooks `LoadFromFile`) **cannot redirect or patch it**.
 
+**Exp 142 (2026-07-16):** Achieved exact CRC match via GF(2) linear algebra — but file_size mismatch (+2,712 bytes vs original 7,902,803) still crashes due to `m_BundleSize` validation.
+
+**Priority A (In Progress):** Co-solving size + CRC simultaneously using 49 uncompressed blocks as free variables. See [[pack-bundle-patching#Size+CRC+Co-Solver+Approach]] for details. The UnityFS v8 bundle structure is documented in [[unityfs-v8-bundle-layout]].
+
 ### Catalog Storage Format (m_ExtraDataString)
 
 The catalog's `m_ExtraDataString` field (116,334 bytes) contains **concatenated UTF-16 LE encoded JSON blocks**, one per bundle. Example for the Rolling Stones pack:
