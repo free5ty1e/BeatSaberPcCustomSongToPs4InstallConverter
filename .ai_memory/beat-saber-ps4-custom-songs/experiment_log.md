@@ -2399,3 +2399,47 @@ Before building v0.35, I analyzed the difference between the original file and `
   3. Brute-force search last 3 padding bytes (16M combinations — feasible)
 - **Status:** Implementation in progress in `development/scripts/build_espresso_v8.py`
 
+
+### Experiment 150: Failed CRC Convergence Attempts (v9, v10)
+- **Date:** 2026-07-17 (evening)
+- **What:** Attempted multiple approaches to converge on correct CRC while maintaining file_size at 7,902,803 bytes:
+  - v9: Hybrid GF(2) + brute-force (timed out — brute-force too slow)
+  - v10: Direct backward CRC computation (error=8 bits remaining)
+- **Result:** ❌ Both approaches failed to converge on exact CRC match
+- **Root cause:** CRC is affine (not purely linear) due to initial state XOR 0xFFFFFFFF in zlib.crc32. Weight matrices for 9 padding bytes with ~7.9M bytes after them are too complex for simple GF(2) approximation.
+- **Key insight:** Theoretical solution exists but practical implementation requires:
+  - Properly accounting for affine component (initial state XOR)
+  - Using exact weight computation (not approximation)
+  - Processing bytes in correct order with proper state tracking
+
+### Experiment 151: Alternative Approach — Modify build_patched_pack_bundle.py
+- **Date:** 2026-07-17
+- **What:** Plan to modify existing working script (`build_patched_pack_bundle.py`) to inject into uncompressed blocks instead of CAB, maintaining zero size impact.
+- **Key insight from build_patched_pack_bundle.py:** It successfully achieves CRC=0xdc8b314f by using alignment padding bytes for correction. The +2,712 byte difference comes from CAB injection shifting offsets. If we inject into uncompressed blocks instead of CAB, we avoid the size shift entirely.
+- **Status:** Implementation needed — modify build_patched_pack_bundle.py to use uncompressed block injection instead of CAB modification.
+
+### Experiment 152: Next Steps — Modify Existing Working Script
+- **Date:** 2026-07-17
+- **What:** 
+  1. Take `build_patched_pack_bundle.py` (proven CRC correction)
+  2. Replace CAB injection with uncompressed block overlay (no size change)
+  3. Keep alignment padding CRC correction (works for CRC)
+  4. Verify file_size stays at 7,902,803 bytes
+- **Expected outcome:** Both size AND CRC match catalog simultaneously
+
+
+### Experiment 153: Size Difference Root Cause Analysis
+- **Date:** 2026-07-17 (evening)
+- **What:** Analyzed why rollingstones_pack_patched.bundle is +2,712 bytes larger than original despite matching CRC.
+- **Key Finding:** Decompressed streams differ by **+817 bytes** (original: 8,511,228 → patched: 8,512,045). This matches the blob size difference: original BeatmapLevelSO (440 bytes) replaced with Espresso blob (1,257 bytes) = +817 bytes.
+- **Remaining ~1,895 bytes** come from bundle rebuild overhead (object table shifts, compression ratio changes, alignment).
+- **Conclusion:** Cannot inject into stream without changing file_size. Need alternative approach:
+  - Option A: Find unused/padding regions to remove equivalent bytes elsewhere
+  - Option B: Use uncompressed block injection (no stream size change) + working CRC correction
+
+### Experiment 154: Next Steps — Uncompressed Block Approach with Working CRC
+- **Date:** 2026-07-17
+- **What:** Implement uncompressed block injection that maintains zero stream size impact, combined with GF(2) linear algebra CRC correction.
+- **Challenge:** Previous GF(2) attempts didn't converge due to CRC's affine nature (not purely linear).
+- **Proposed Solution:** Hybrid approach — use GF(2) to get CLOSE, then brute-force search remaining bits. With 9 alignment padding bytes and proper implementation, should be feasible.
+
