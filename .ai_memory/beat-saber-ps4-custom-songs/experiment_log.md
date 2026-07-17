@@ -2443,3 +2443,45 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Challenge:** Previous GF(2) attempts didn't converge due to CRC's affine nature (not purely linear).
 - **Proposed Solution:** Hybrid approach — use GF(2) to get CLOSE, then brute-force search remaining bits. With 9 alignment padding bytes and proper implementation, should be feasible.
 
+### Experiment 155: Size Difference Root Cause Confirmed + Option B Decision
+- **Date:** 2026-07-17 (afternoon session continued)
+- **What:** Detailed analysis of why rollingstones_pack_patched.bundle is +2,712 bytes larger than original. Decompressed stream differs by exactly +817 bytes — matching the blob size difference: original BeatmapLevelSO (440B) → Espresso blob (1,257B). Remaining ~1,895 bytes from bundle rebuild overhead (object table shifts, compression ratio changes).
+- **Key Finding:** ANY modification to decompressed stream changes file_size. Cannot inject into stream without size impact.
+- **Decision:** Option B confirmed — uncompressed block injection is the only viable approach:
+  - 49 uncompressed blocks (flag=0) are stored as raw data with FIXED sizes (131,072 bytes each)
+  - Changing CONTENT of these blocks affects CRC but NOT file_size
+  - Provides ~6.1 MB of free variables for pure CRC control
+- **Next Steps:** Build working script that:
+  1. Injects Espresso blob into uncompressed block overlay (no size change)
+  2. Uses GF(2) linear algebra on alignment padding bytes for CRC correction (proven to work in build_patched_pack_bundle.py)
+  3. Properly accounts for affine nature of CRC (initial state XOR 0xFFFFFFFF)
+- **Status:** ⏳ Implementing Option B script
+
+### Experiment 156: Claude Hooks Documentation Enforcement — Planning
+- **Date:** 2026-07-17
+- **What:** User requested converting documentation rules into Claude Code hooks for better behavioral enforcement. Also requested auto-compaction at 90%+ context usage and KB mining on compaction.
+- **Key Requirements:**
+  - Hooks that trigger before presenting results to user (auto-update experiment_log, project_summary, README, knowledge base)
+  - Auto-compaction when approaching 90% context limit — mine conversation for durable knowledge first
+  - Documentation management plugin with rules and hooks
+- **Next Steps:** Research Claude Code hooks system architecture, design documentation enforcement plugin
+
+
+
+### Experiment 157: Uncompressed Block Independence Test — FAILED
+- **Date:** 2026-07-17 (evening session continued)
+- **What:** Tested whether modifying uncompressed block content changes file_size. Expected: NO change (independent storage). Actual: YES, size changed by +817 to +2,177 bytes due to cascading compression ratio effects in shared decompressed stream.
+- **Result:** ❌ Uncompressed blocks are NOT independent storage — they're part of a concatenated decompressed stream that gets LZ4HC compressed as one unit. Modifying any block shifts downstream byte positions and alters all subsequent compression ratios.
+- **Key Insight:** This means Option B (uncompressed block injection for pure CRC control) cannot achieve zero size impact. Any blob injection changes file_size by ~817-2,177 bytes.
+- **Conclusion:** Need alternative approach — memory injection (patch BeatmapLevelSO in RAM after Addressables load) or find truly unused regions in original bundle.
+
+### Experiment 158: Memory Injection Approach — Planning
+- **Date:** 2026-07-17
+- **What:** User approved exploration of all approaches including memory injection as fallback if pack bundle modification fails.
+- **Key Insight:** Addressables validates CRC when loading bundles. If we can patch BeatmapLevelSO in RAM AFTER the pack bundle loads but BEFORE validation runs, we bypass catalog check entirely.
+- **Feasibility Check:** Need to determine:
+  1. When does Addressables validate CRC? (during LoadFromFile or after?)
+  2. Can we hook into the deserialization process?
+  3. Where is BeatmapLevelSO stored in memory after deserialization?
+- **Next Steps:** Research Unity Addressables loading pipeline on PS4, identify hook points for memory injection.
+
