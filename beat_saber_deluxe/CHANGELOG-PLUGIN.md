@@ -122,3 +122,20 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 ### Next Steps
 - Test uncompressed block injection approach (zero size impact) + GF(2) CRC correction
 - If successful, deploy Espresso replacement with display name + mode selector support
+
+## v0.59 — Pack Bundle Test Results (2026-07-17)
+
+### Test Summary
+- **Bundle deployed:** `rollingstones_pack_patched.bundle` via AFR redirect
+- **CRC verified:** `0xdc8b314f` ✅ (matches Addressables catalog)
+- **Result:** ❌ CE-34878-0 crash shortly after launch
+- **Notification:** User reported v0.64 plugin update notification
+
+### Analysis
+- CRC validation PASSES (confirmed via bundle verification on PS4)
+- Crash likely from `m_BundleSize` validation (+2,712 byte difference) OR invalid BeatmapCharacteristicSO pathIDs in 5-mode preview sets
+
+### Next Steps
+- Implement uncompressed block injection approach (zero size impact)
+- Test with GF(2) CRC correction on alignment padding bytes
+

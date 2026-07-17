@@ -2357,3 +2357,21 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Status:** Tool built (`crc_corrector.py`), ready to test with actual BeatmapLevelSO blob injection.
 - **Constraint:** LZ4HC cannot compress these blocks further (ratio >100%). Modifying content affects BOTH file_size and CRC simultaneously in compressed regions, but uncompressed blocks provide PURE CRC control.
 
+
+### Experiment 146: Pack Bundle Test — CE-34878-0 Crash Despite Correct CRC
+- **Date:** 2026-07-17 (morning test)
+- **What:** Tested `rollingstones_pack_patched.bundle` (CRC=0xdc8b314f, size +2,712 bytes) on PS4 via AFR redirect.
+- **Result:** ❌ CE-34878-0 crash shortly after launching Beat Saber Deluxe. Notification popped up for v0.64 plugin update.
+- **Verification:** Bundle confirmed deployed to `/data/GoldHEN/AFR/CUSA12878/rollingstones_pack_patched.bundle` (7,905,515 bytes, CRC=0xdc8b314f ✅).
+- **Analysis:** 
+  - CRC validation PASSES (we've verified this works)
+  - Crash likely from: **(a)** `m_BundleSize: 7902803` vs actual `7905515` (+2,712B) causing size validation rejection, OR **(b)** invalid BeatmapCharacteristicSO pathIDs in 5-mode preview sets
+- **Log archived:** `experiment_logs/ps4_bs_log_20260717_1030_crash_test.txt`
+- **Conclusion:** Size difference (+2,712 bytes) is likely the blocker. Need to test uncompressed block injection approach (zero size impact) + GF(2) CRC correction.
+
+### Experiment 147: Uncompressed Block Injection Approach — Next Steps
+- **Date:** 2026-07-17
+- **What:** Plan to inject Espresso BeatmapLevelSO blob into uncompressed blocks (no file_size change) combined with GF(2) linear algebra CRC correction on alignment padding bytes.
+- **Key insight:** 49 uncompressed blocks provide ~6.1 MB of free CRC control variables with ZERO size impact. Each block is exactly 131,072 bytes stored as raw data — changing content affects CRC but NOT file_size.
+- **Status:** Tool built (`crc_corrector.py` in `development/scripts/`), ready to test. Next step: inject blob into uncompressed block + apply GF(2) correction to alignment padding bytes at offset 263.
+

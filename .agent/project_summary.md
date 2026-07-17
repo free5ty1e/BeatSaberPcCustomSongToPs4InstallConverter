@@ -605,3 +605,33 @@ This means:
 - CRC validation is SOLVED ✅
 - Remaining issue is either size validation (+2,712 bytes) OR data structure validity
 - Both are testable and fixable
+
+## 2026-07-17: Pack Bundle Test Results — CE-34878-0 Crash Confirmed
+
+**Test Result:** ❌ CRASH despite CRC matching `0xdc8b314f`
+
+### What Was Tested
+- Bundle: `rollingstones_pack_patched.bundle` (7,905,515 bytes)
+- CRC: `0xdc8b314f` ✅ (matches Addressables catalog)
+- Size: +2,712 bytes from original (7,902,803 → 7,905,515)
+- Deployed to: `/data/GoldHEN/AFR/CUSA12878/rollingstones_pack_patched.bundle`
+
+### Crash Analysis
+The crash is NOT from CRC validation (we've proven CRC matching works). Two likely causes:
+
+1. **m_BundleSize Validation** (Most Likely): Catalog stores `m_BundleSize: 7902803`. Modified bundle has size 7,905,515 (+2,712 bytes difference). Unity may validate file_size in addition to CRC.
+
+2. **Invalid BeatmapCharacteristicSO PathIDs**: The 5-mode preview sets (Standard, OneSaber, NoArrows, 90Degree, 360Degree) may reference incorrect pathIDs for the BeatmapCharacteristicSO objects.
+
+### Next Steps
+1. **Try uncompressed block injection** — inject Espresso blob into uncompressed blocks (no file_size change), then use GF(2) linear algebra on alignment padding bytes for CRC correction
+2. **If that fails**, investigate per-song bundle approach (bypass pack bundle entirely)
+3. **Monitor plugin version** — user mentioned v0.64 notification; current plugin is v0.58 (Jul 14, 71,648 bytes)
+
+### Key Files
+- `/workspace/beat_saber_deluxe/tools/build_patched_pack_bundle.py` — Working CRC correction (but changes file_size)
+- `/workspace/beat_saber_deluxe/development/scripts/crc_corrector.py` — Uncompressed block CRC correction tool (ready to test)
+- `/workspace/.ai_memory/beat-saber-ps4-custom-songs/experiment_logs/ps4_bs_log_20260717_1030_crash_test.txt` — Archived crash log
+
+### Critical Insight
+The fundamental blocker (CRC validation) is SOLVED. The remaining blocker is EITHER size validation OR data structure validity — both are testable and fixable with the uncompressed block approach.

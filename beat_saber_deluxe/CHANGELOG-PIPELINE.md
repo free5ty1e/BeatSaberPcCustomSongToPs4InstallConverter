@@ -78,3 +78,18 @@ All notable changes to the song conversion pipeline (`tools/`, `development/scri
 
 ### Files Added
 - `/workspace/beat_saber_deluxe/tools/crc_corrector.py` — CRC correction using uncompressed blocks as free variables
+
+## v1.46 — Pack Bundle Test Results (2026-07-17)
+
+### Test Summary
+- **Bundle tested:** `rollingstones_pack_patched.bundle` (CRC=`0xdc8b314f`, size=7,905,515 bytes)
+- **Result:** ❌ CE-34878-0 crash despite CRC matching catalog
+- **Conclusion:** Crash NOT from CRC validation (proven working). Likely cause: `m_BundleSize` validation rejecting +2,712 byte size difference.
+
+### Next Steps
+- Implement uncompressed block injection approach (zero size impact)
+- Use GF(2) linear algebra on alignment padding bytes for CRC correction
+- Tool built in `/workspace/beat_saber_deluxe/development/scripts/crc_corrector.py`
+
+### Key Files Archived
+- `/workspace/.ai_memory/beat-saber-ps4-custom-songs/experiment_logs/ps4_bs_log_20260717_1030_crash_test.txt`
