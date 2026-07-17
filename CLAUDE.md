@@ -28,15 +28,77 @@ Before proceeding with work, upon receiving experiment results, you MUST update 
 
 Before presenting a message to the user after performing work or research:
 
-- Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with a new sequential experiment entry describing what we are attempting
-- Update `.agent/project_summary.md` with current status
-- Update `README.md` to reflect any new user-facing features, limitations, requirements, parameters, or usage notes
-- Update llm-wiki style knowledge base files in `.agent/llm-wiki-knowledge-base/` if new work or research affects durable knowledge
-- Update `.agent/roadmap.md` if appropriate
-- Update `beat_saber_deluxe/CHANGELOG-PIPELINE.md` and `beat_saber_deluxe/CHANGELOG-PLUGIN.md` as appropriate
-- Update `current-song-replacements-on-chris-ps4.md` when deployed custom songs change. This is the mapping file that lets the user find custom songs in-game manually.
-- Stage all relevant changes in git
-- Suggest a detailed commit message that describe the staged changes as part of the report / message to the user, for the user to review and possibly use
+### 3.1 Documentation Checklist (MUST Complete All Items)
+
+You MUST complete ALL of the following documentation updates BEFORE presenting results to the user. This is non-negotiable and must be done in order:
+
+**A. Experiment Log Update**
+- [ ] Append a new sequential experiment entry to `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`
+- [ ] Include: Date, What was attempted, Key findings/results, Next steps/status
+- [ ] Use the format from previous entries for consistency
+
+**B. Project Summary Update**
+- [ ] Update `.agent/project_summary.md` with current status
+- [ ] Reflect any new blockers, breakthroughs, or changes in approach
+- [ ] Keep the "Experiment Timeline" table current
+
+**C. README.md Update (if applicable)**
+- [ ] Update if new user-facing features were added
+- [ ] Update if new limitations, requirements, or parameters were introduced
+- [ ] Update status section to reflect current milestone
+
+**D. Knowledge Base Update (if applicable)**
+- [ ] Update `.agent/llm-wiki-knowledge-base/*.md` files if new durable knowledge was discovered
+- [ ] Create new pages in the knowledge base for significant findings that should persist across sessions
+- [ ] Cross-reference related knowledge base pages with `[[page-name]]` syntax
+
+**E. Changelog Updates (if applicable)**
+- [ ] Update `beat_saber_deluxe/CHANGELOG-PIPELINE.md` if pipeline/tools changed
+- [ ] Update `beat_saber_deluxe/CHANGELOG-PLUGIN.md` if plugin changed
+- [ ] Include version bump and date in new entry
+
+**F. Song Replacements Mapping (if applicable)**
+- [ ] Update `current-song-replacements-on-chris-ps4.md` when deployed custom songs change
+- [ ] This is the mapping file that lets the user find custom songs in-game manually
+
+**G. Git Staging & Commit Suggestion**
+- [ ] Stage all relevant changes with `git add` (fine-grained, not `-A`)
+- [ ] Suggest a detailed commit message describing the staged changes
+- [ ] Present this to the user for review before they decide to commit
+
+### 3.2 Versioning Triggers (MANDATORY)
+
+When ANY of the following changes occur, you MUST bump versions and update changelogs:
+
+**Plugin Version Bump Required When:**
+- Adding new features or capabilities to `beat_saber_deluxe.prx`
+- Modifying plugin source code (`main.cpp`, `.h` files, etc.)
+- Changing plugin behavior (hooks, redirections, etc.)
+- Fixing bugs in the plugin
+
+**Pipeline Version Bump Required When:**
+- Adding new features to conversion pipeline scripts
+- Modifying `full_custom_song_pipeline.py` or tools in `tools/`
+- Changing song processing logic (audio, beatmaps, metadata)
+- Fixing bugs in the pipeline
+
+**Version Bump Format:**
+- Plugin: `v0.XX` → increment last digit for patch, middle for minor, first for major
+- Pipeline: `v1.XX` → same convention
+- Update both `CHANGELOG-PLUGIN.md` and `CHANGELOG-PIPELINE.md` with date and description
+
+**Example:**
+```markdown
+## [v0.66] — 2026-07-17
+### Added
+- New feature or capability description
+
+### Fixed
+- Bug fix description
+
+### Changed
+- Behavior change description (with reason if non-obvious)
+```
 
 ## 4. Follow the Experiment Workflow
 
@@ -52,6 +114,32 @@ Read both rule files above before starting any work cycle.
 The knowledge base is described in this document: `.agent/llm-wiki.md`
 The knowledge base itself is located here: `.agent/llm-wiki-knowledge-base`
 
+### 5.1 Auto-Compaction Trigger (MANDATORY)
+
+**When context usage approaches 90% of available context window, you MUST:**
+
+1. **Pause current work immediately** — Do not continue with new experiments or complex tasks
+2. **Mine the conversation for durable knowledge:**
+   - Identify root causes, breakthroughs, and key technical findings
+   - Extract reusable patterns, algorithms, and formulas
+   - Capture "what worked" and "what didn't work" lessons learned
+3. **Store in knowledge base:**
+   - Write to `.agent/llm-wiki-knowledge-base/*.md` with proper frontmatter
+   - Create new pages if the knowledge is substantial enough to warrant it
+   - Cross-reference related pages with `[[page-name]]` syntax
+4. **Update index:**
+   - Add entry to `.agent/llm-wiki-knowledge-base/index.md` if new pages created
+5. **Proceed with compaction** — Only after durable knowledge is captured should you compact the conversation
+
+### 5.2 Knowledge Base Writing Standards
+
+All knowledge base entries MUST include:
+- `---` frontmatter with `name`, `description`, and `metadata.type`
+- Clear, self-contained content that can be understood without session context
+- Cross-references to related pages using `[[page-name]]` syntax
+- Examples or code snippets where helpful
+
+### 5.3 Prohibited Operations
 - Prohibit all write operations with 'az' azure CLI (e.g., az resource create, az vm start, az group delete). Read operations are permitted.
 - Prohibit all write operations with 'gh' (GitHub CLI) except for 'gh edit' when updating a PR description. All other mutations (create, delete, merge, etc.) are prohibited.
 

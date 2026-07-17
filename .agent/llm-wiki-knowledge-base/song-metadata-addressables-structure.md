@@ -94,7 +94,7 @@ The catalog (`aa/catalog.json`) is NOT loaded via `AssetBundle.LoadFromFile` —
 
 **Exp 142 (2026-07-16):** Achieved exact CRC match via GF(2) linear algebra — but file_size mismatch (+2,712 bytes vs original 7,902,803) still crashes due to `m_BundleSize` validation.
 
-**Priority A (In Progress):** Co-solving size + CRC simultaneously using 49 uncompressed blocks as free variables. See [[pack-bundle-patching#Size+CRC+Co-Solver+Approach]] for details. The UnityFS v8 bundle structure is documented in [[unityfs-v8-bundle-layout]].
+**Exp 157 (2026-07-17):** Critical finding that uncompressed blocks are part of a shared decompressed stream, NOT independent storage. Modifying their content changes file_size by ~817-2,177 bytes due to cascading compression ratio effects. **Option B (uncompressed block injection) is BLOCKED.**
 
 ### Catalog Storage Format (m_ExtraDataString)
 
@@ -118,7 +118,26 @@ Key fields:
 - **Any modification** to a bundle file changes its CRC and file size → game detects mismatch → CE-34878-0 crash
 - The ORIGINAL bundle works via redirect because its CRC/size still match the catalog values
 - The catalog cannot be redirected (not loaded via AssetBundle.LoadFromFile)
-- Only options: (a) match original CRC via collision, or (b) bypass pack bundle entirely
+- Only options: (a) match original CRC AND size simultaneously, or (b) bypass pack bundle entirely via memory injection
+
+## Memory Injection Approach — Viable Fallback (Exp 158)
+
+If pack bundle modification fails entirely (which appears likely given current blockers), fallback to **memory injection**:
+
+**Concept:** Patch BeatmapLevelSO in RAM after Addressables loads the pack bundle but BEFORE validation runs. This bypasses catalog CRC validation entirely.
+
+**Feasibility Check Needed:**
+1. When does Addressables validate CRC? (during LoadFromFile or after?)
+2. Can we hook into the deserialization process on PS4?
+3. Where is BeatmapLevelSO stored in memory after deserialization?
+
+**Exp 142 showed game continued loading other bundles after pack bundle loaded**, suggesting there may be a window for interception.
+
+**Hook Points to Investigate:**
+- `SerializedFile.ReadObject` — Unity's serialization layer
+- `MonoScriptableObject.InstantiateFromData` — ScriptableObject instantiation
+- `AssetBundle.LoadFromFile` — Bundle loading (already hooked by AFR plugin)
+- Addressables' internal deserialization methods
 
 ## Hooking Strategy — ALL IL2CPP Approaches DEAD
 

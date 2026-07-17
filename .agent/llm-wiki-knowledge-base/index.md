@@ -56,3 +56,5 @@ metadata:
 
 ## Plans
 - [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles. Updated with Exp 129 findings: typetree approach dead-end, blob format verified via hex dump against StartMeUp.
+
+- [Memory Injection — Addressables Bypass](memory-injection-addressables-bypass.md) — Fallback approach when pack bundle modification blocked by dual validation (size + CRC). Patch BeatmapLevelSO in RAM after Addressables loads, bypassing catalog entirely. Viability depends on whether CRC validation is lazy or immediate.
