@@ -2,9 +2,53 @@
 
 ## Executive Summary
 
-**Status:** ✅ Viable fallback approach identified and partially implemented  
-**Blocker Resolved:** Option B (uncompressed block injection) BLOCKED due to shared decompressed stream  
+**Status:** ✅ Implementation complete — prototype integrated into plugin v0.66  
+**Previous Blocker:** Option B (uncompressed block injection) BLOCKED due to shared decompressed stream  
 **New Approach:** Memory injection bypasses Addressables CRC validation entirely  
+**Current Phase:** Code integrated, awaiting PS4 hardware testing
+
+## Architecture
+
+```
+module_start()
+  ├── load_redirects()              — file redirection table
+  ├── install_fopen_hook()
+  ├── install_open_hook()
+  ├── register_song_metadata()      — 13 Rolling Stones entries
+  ├── memory_inject_init()          ← NEW
+  │     └── pthread_create()        — detached worker thread
+  │           └── patch_worker()
+  │                 ├── usleep(30s)  — wait for game init
+  │                 ├── find_beatmap_level_so_klass()  — locate class by string search
+  │                 ├── scan_for_beatmap_level_objects() — memory scan by klass ptr
+  │                 └── patch_beatmap_level_object()  — in-place string overwrite
+  └── notification
+```
+
+## Key Technical Details
+
+### Finding BeatmapLevelSO Class Metadata
+1. Use `sceKernelGetModuleList()` to find Il2CppUserAssemblies module base
+2. Search module segments for C string "BeatmapLevelSO"
+3. Search for 8-byte pointer references to that string → these are `name` fields at Il2CppClass_1+0x10
+4. Validate by checking surrounding fields (namespaze, byval_arg)
+5. Result: the `BeatmapLevelSO_c` klass pointer
+
+### Finding Objects in Memory
+1. Search process memory (0x100000000–0x800000000) in 64KB pages
+2. For each readable page, scan for 8-byte-aligned values matching klass pointer
+3. Validate candidates by checking:
+   - `_version` at +0x18 is a small integer (1–100)
+   - `_levelID` at +0x20 is a valid pointer
+   - String klass at _levelID[0] is a valid class pointer
+   - `_songName` at +0x28 and `_songAuthorName` at +0x38 are valid pointers
+
+### In-Place String Patching
+- Managed strings (System_String_o) have format: klass(8) + monitor(8) + length(4) + chars(variable)
+- Character data starts at offset 0x14 in UTF-16LE
+- New string MUST fit within old capacity (length ≤ original)
+- Write new length at +0x10, new chars at +0x14, zero-fill remainder
+- This avoids GC complications entirely
 
 ## Progress Summary
 
@@ -14,98 +58,38 @@
 - [x] **Test Script Created** — `development/scripts/memory_inject_test.py` verifies scanning and patching logic
 - [x] **Plugin Skeleton Created** — `development/scripts/memory_inject_plugin.cpp` provides framework
 - [x] **Implementation Plan Documented** — `development/scripts/memory_scan_implementation.md` details approach
+- [x] **Full Implementation** — `src/memory_inject.h` + `src/memory_inject.cpp` integrated into plugin v0.66
+  - Worker thread with 30s delay
+  - BeatmapLevelSO klass finding via string search in Il2CppUserAssemblies
+  - Process memory scan for BeatmapLevelSO instances
+  - In-place string patching (song name, artist, level ID, sub name, mapper)
+  - 13 Rolling Stones metadata entries registered
 
-### In Progress
-- [ ] Heap scanning implementation (find IL2CPP heap base, scan for BeatmapLevelSO objects)
-- [ ] Field patching with proper IL2CPP string allocation
-- [ ] Integration with AFR plugin bundle loading hooks
-- [ ] Testing on PS4 hardware
+### In Progress / Pending Testing
+- [ ] **PS4 Hardware Test** — Deploy v0.66 and verify:
+  - Game does not crash
+  - Metadata is correctly patched in song selection menu
+  - All 13 Rolling Stones songs show correct names + artists
+  - Mode selector still works (5 modes)
+- [ ] **Edge Cases** — Handle songs with names longer than original capacity
+- [ ] **Cover Image Patching** — Replace album art in BeatmapLevelSO
 
-## Key Technical Findings
+## Implementation Files
 
-### Addressables CRC Validation Timing
-**Finding:** Addressables validates CRC LAZILY — when bundle contents are accessed, NOT during LoadFromFile.  
-**Evidence:** Exp 142 showed other bundles continued loading after pack bundle loaded with mismatched size/CRC.  
-**Implication:** Window exists for interception between load and use → memory injection is feasible!
+| File | Purpose |
+|------|---------|
+| `src/memory_inject.h` | Public API: init, register, SongMetadataEntry |
+| `src/memory_inject.cpp` | Full implementation (~550 lines) |
+| `src/main.cpp` | Integration: v0.66, includes metadata registration |
+| `development/scripts/memory_inject_test.py` | Test script (Python simulation) |
+| `development/scripts/memory_scan_implementation.md` | Design document |
 
-### Uncompressed Blocks Finding (Exp 157)
-**Finding:** 49 uncompressed blocks are part of shared decompressed stream, NOT independent storage.  
-**Impact:** Option B BLOCKED — any blob injection changes file_size by ~817-2,177 bytes due to cascading compression ratio effects.  
-**Conclusion:** Cannot achieve both size=7,902,803 AND CRC=0xdc8b314f simultaneously via bundle modification.
+## Verification
 
-### Memory Injection Approach
-**Concept:** Patch BeatmapLevelSO in RAM after Addressables loads the pack bundle but BEFORE validation runs.  
-**Mechanism:** 
-1. Hook into bundle loading pipeline (after load completes)
-2. Scan IL2CPP heap for BeatmapLevelSO objects by type signature
-3. Patch their fields (song name, artist, modes) with Espresso metadata
-4. Return patched object to game — bypasses catalog validation entirely
-
-## Implementation Details
-
-### BeatmapLevelSO Field Offsets (from il2cpp dump)
-```c
-#define FIELD_VERSION         0x18   // int32
-#define FIELD_LEVEL_ID        0x20   // string*
-#define FIELD_SONG_NAME       0x28   // string*
-#define FIELD_ARTIST_NAME     0x38   // string*
-```
-
-### IL2CPP Type IDs
-- BeatmapLevelSO: 11680
-- System.String: 4
-- System.Single (float): 7
-- System.Int32: 5
-
-### Heap Scanning Algorithm
-```c
-for (uint64_t objAddr = heapBase; objAddr < heapEnd; objAddr += sizeof(Il2CppObjectHeader)) {
-    Il2CppObjectHeader* obj = (Il2CppObjectHeader*)objAddr;
-    
-    if (obj->klass == BEATMAP_LEVEL_SO_VTABLE) {
-        // Found a BeatmapLevelSO! Patch it.
-        patch_beatmap_level((BeatmapLevelSO*)obj);
-    }
-}
-```
-
-## Next Steps (Priority Order)
-
-1. **Implement heap finding logic** — Find IL2CPP heap base address in running game
-2. **Implement field patching** — Allocate new managed strings and patch BeatmapLevelSO fields
-3. **Test with simple patch** — Change song name only (doesn't require blob injection)
-4. **Integrate into main plugin** — Add memory injection as fallback when pack bundle modification fails
-5. **Deploy to PS4** — Test on actual hardware
-
-## Files Created/Updated
-
-### Development Scripts
-- `development/scripts/memory_inject_test.py` — Test script (✅ verified working)
-- `development/scripts/memory_inject_plugin.cpp` — Plugin skeleton (⏳ needs implementation)
-- `development/scripts/memory_scan_implementation.md` — Implementation plan document
-
-### Knowledge Base Updates
-- `.agent/llm-wiki-knowledge-base/addressables-crc-validation-timing.md` — CRC validation timing analysis
-- `.agent/llm-wiki-knowledge-base/memory-injection-addressables-bypass.md` — Memory injection approach details
-- `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` — Added Exp 157-160
-
-### Project Documentation
-- `.agent/project_summary.md` — Updated with latest findings (Option B blocked, memory injection viable)
-- `README.md` — Updated status section
-- `CHANGELOG-PIPELINE.md` — Updated to v1.49
-- `CHANGELOG-PLUGIN.md` — Updated (still v0.65 — no plugin changes yet)
-
-## Risks and Mitigations
-
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Heap layout changes between game versions | Medium | High | Make heap scanning configurable/patchable |
-| String patching breaks reference counting | Medium | High | Use IL2CPP runtime API for string allocation |
-| Hook timing issues (bundle not fully loaded) | Medium | Medium | Add delay or callback mechanism |
-| Memory corruption from unsafe patches | Low | Critical | Validate object integrity after patching |
-
-## Conclusion
-
-Memory injection is a **viable fallback approach** when pack bundle modification is blocked by dual validation. The key insight is that Addressables validates CRC LAZILY, giving us a window to intercept and patch objects in RAM before the game uses them.
-
-Next priority: Implement heap scanning logic and test with simple field patching (song name only).
+The implementation uses the **exact** struct layouts verified from the IL2CPP dump:
+- `BeatmapLevelSO_Fields` at `il2cpp.h:381156`
+- `BeatmapLevelSO_o` at `il2cpp.h:381195`
+- `System_String_Fields` at `il2cpp.h:67167`
+- `System_String_o` at `il2cpp.h:67207`
+- `Il2CppClass_1` at `il2cpp.h:38`
+- `Il2CppObject` at `il2cpp.h:19`

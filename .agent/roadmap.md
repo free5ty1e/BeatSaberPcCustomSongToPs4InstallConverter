@@ -42,6 +42,8 @@
 - [ ] Difficulty metadata extraction from all 306 bundles
 - [x] DLC song name extraction from addressables packs — BeatmapLevelSO objects found in `aa/PS4/therollingstones_pack_assets_all_*.bundle` (Exp 111)
 - [ ] DLC song `BeatmapCharacteristicSO` references — need to locate OneSaber/90Degree PIDs in external CAB `CAB-cb38b3e2985c65d4cf8a63437da74a89` (Exp 111)
+- [x] **(NEW) Memory injection metadata patching** — v0.66 plugin patches BeatmapLevelSO fields (song name, artist) in RAM after Addressables load, bypassing CRC validation. Implemented in `src/memory_inject.cpp`.
+- [ ] **(PENDING TESTING)** Deploy v0.66 to PS4 and verify: (1) game doesn't crash, (2) custom song names/artists display correctly in song list, (3) mode selector still works
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors

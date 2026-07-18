@@ -2567,3 +2567,54 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Added knowledge base writing standards with frontmatter requirements and cross-references
 - **Status:** ✅ Implemented. Will enforce documentation updates before presenting results to user going forward.
 
+
+### Experiment 164: Option B Final Analysis — No Unused Regions Found (DEAD END)
+- **Date:** 2026-07-17 (current session continued)
+- **What:** Comprehensive analysis of original bundle to find unused/padding regions that could compensate for size changes from blob injection.
+- **Finding:** NO waste found in original bundle — all 7,902,531 bytes of stored data are accounted for. Last block (Block 64) is intentionally smaller (122,620 vs standard 131,072), but this is not waste.
+- **Conclusion:** Option B is FUNDAMENTALLY BLOCKED — cannot find unused regions to remove because there are none. Any modification to decompressed stream changes file_size due to cascading compression ratio effects with no way to compensate.
+- **Status:** ❌ Option B is a DEAD END. Moving to Option A (memory injection) as the viable approach.
+
+### Experiment 165: Decision — Move to Memory Injection Approach
+- **Date:** 2026-07-17 (current session)
+- **What:** User confirmed plan: explore Option B fully first, then move to Option A if dead end, then Option C if all else fails.
+- **Decision:** Option B is blocked (no unused regions to remove). Move forward with memory injection approach (Option A) which has verified prototype.
+- **Next Steps:** 
+  1. Implement heap scanning logic in memory_inject_plugin.cpp
+  2. Test with simple field patching (song name only)
+  3. Deploy to PS4 if powered on
+
+### Experiment 166: Plan Document Created
+- **Date:** 2026-07-17 (current session)
+- **What:** Created comprehensive plan document at `.agent/plans/pack-bundle-metadata-patching.md` documenting all approaches, findings, and next steps.
+- **Status:** ✅ Complete
+
+### Experiment 167: Memory Injection Implementation — Plugin v0.66
+- **Date:** 2026-07-17 (continuation session)
+- **What:** Implemented full memory injection pipeline in the plugin source code, integrating the previously-designed heap scanning and patching approach directly into `src/memory_inject.cpp`.
+- **Key Implementation Details:**
+  - **Il2CppUserAssemblies module scanning** — `find_module_segments()` locates the module's data segments; `find_beatmap_level_so_klass()` searches for the "BeatmapLevelSO" string then finds `Il2CppClass_1` structs where `name` field (+0x10) references it
+  - **Memory scanning** — `scan_for_beatmap_level_objects()` reads process memory in 64KB pages, looking for 8-byte-aligned values matching the BeatmapLevelSO_c klass pointer; validates candidates by checking _version, _levelID string pointer, and _songName pointer integrity
+  - **In-place string patching** — `patch_il2cpp_string()` writes new UTF-16LE text directly into existing System_String_o objects (format: klass[8] + monitor[8] + length[4] + chars starting at +0x14). New text MUST fit within original capacity; remaining bytes zero-filled.
+  - **Metadata table** — 13 Rolling Stones replacement songs registered with level_id, song_name, song_author_name
+  - **Worker thread** — `pthread_create()` with detached thread; waits 30s via `usleep()`, scans and patches all matching objects, then returns
+  - **Field offsets** verified from actual IL2CPP dump: `_version` at 0x18, `_levelID` at 0x20, `_songName` at 0x28, `_songSubName` at 0x30, `_songAuthorName` at 0x38, `_levelAuthorName` at 0x40
+  - **CRT compatibility** — Switched from `sceKernelCreateThread` (not in public headers) to `pthread_create` (available via FreeBSD compat layer in toolchain)
+  - **`log_write()` exposed** as non-static for shared use by memory injection module
+- **Files Created/Modified:**
+  - NEW: `src/memory_inject.h` — Public API header
+  - NEW: `src/memory_inject.cpp` — Full implementation (~550 lines)
+  - MODIFIED: `src/main.cpp` — v0.66, includes metadata registration + init call
+  - MODIFIED: `beat_saber_deluxe/CHANGELOG-PLUGIN.md` — v0.66 entry
+  - MODIFIED: `beat_saber_deluxe/MEMORY_INJECTION_STATUS.md` — Full implementation documented
+- **Files Superseded (still in dev/scripts for reference):**
+  - `development/scripts/memory_inject_plugin.cpp` — Skeleton (now implemented in src/)
+  - `development/scripts/memory_scan_implementation.cpp` — Design prototype (now implemented in src/)
+- **Status:** ✅ Implementation complete in v0.66. **Critical next step: PS4 hardware deployment and testing to verify:**
+  1. Game does not crash on launch
+  2. BeatmapLevelSO objects are correctly identified and patched
+  3. Song selection screen shows custom names and artists
+  4. Mode selector still displays 5 preview modes
+  5. Edge case: what happens when custom name is longer than original (truncation) — needs handling
+
+

@@ -120,46 +120,51 @@ Key fields:
 - The catalog cannot be redirected (not loaded via AssetBundle.LoadFromFile)
 - Only options: (a) match original CRC AND size simultaneously, or (b) bypass pack bundle entirely via memory injection
 
-## Memory Injection Approach — Viable Fallback (Exp 158)
+## Memory Injection — IMPLEMENTED in v0.66 (Exp 167)
 
-If pack bundle modification fails entirely (which appears likely given current blockers), fallback to **memory injection**:
+The memory injection approach is now fully implemented and integrated into the plugin.
 
-**Concept:** Patch BeatmapLevelSO in RAM after Addressables loads the pack bundle but BEFORE validation runs. This bypasses catalog CRC validation entirely.
+### How It Works
 
-**Feasibility Check Needed:**
-1. When does Addressables validate CRC? (during LoadFromFile or after?)
-2. Can we hook into the deserialization process on PS4?
-3. Where is BeatmapLevelSO stored in memory after deserialization?
+1. **Worker thread** is created in `module_start()` via `pthread_create` (detached)
+2. **30-second delay** (`usleep`) allows the game to fully initialize and Addressables to load the pack bundle
+3. **Find BeatmapLevelSO klass** — search Il2CppUserAssemblies module for the "BeatmapLevelSO" C string, then locate `Il2CppClass_1` structs where the `name` field (+0x10) references it
+4. **Scan memory** — read process memory in 64KB pages from 0x100000000 to 0x800000000, looking for 8-byte-aligned values matching the klass pointer
+5. **Validate candidates** — check `_version` (0x18) in range [1,100], `_levelID` (0x20) and `_songName` (0x28) are valid pointers
+6. **Match by _levelID** — compare each object's _levelID string against a metadata table
+7. **In-place string patching** — overwrite managed string fields with new UTF-16LE data
 
-**Exp 142 showed game continued loading other bundles after pack bundle loaded**, suggesting there may be a window for interception.
+### Verified IL2CPP Struct Offsets (from il2cpp_output/il2cpp.h)
 
-**Hook Points to Investigate:**
-- `SerializedFile.ReadObject` — Unity's serialization layer
-- `MonoScriptableObject.InstantiateFromData` — ScriptableObject instantiation
-- `AssetBundle.LoadFromFile` — Bundle loading (already hooked by AFR plugin)
-- Addressables' internal deserialization methods
+**BeatmapLevelSO_o (il2cpp.h:381195):**
+```
+0x00: klass (BeatmapLevelSO_c*)
+0x08: monitor (void*)
+0x10: m_CachedPtr (intptr_t)
+0x18: _version (int32_t)
+0x20: _levelID (System_String_o*)
+0x28: _songName (System_String_o*)
+0x30: _songSubName (System_String_o*)
+0x38: _songAuthorName (System_String_o*)
+0x40: _levelAuthorName (System_String_o*)
+```
 
-## Hooking Strategy — ALL IL2CPP Approaches DEAD
+**System_String_o (il2cpp.h:67207):**
+```
+0x00: klass (System_String_c*)
+0x08: monitor (void*)
+0x10: _stringLength (int32_t)
+0x14: _firstChar + rest (uint16_t[])
+```
 
-Previous hooking attempts have ALL failed experimentally:
+### Next Steps
 
-| Approach | Experiment | Result |
-|----------|-----------|--------|
-| `get_DisplayName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| `get_songName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| Constructor hook | Exp 123-131 | Never fires for Addressables-deserialized objects |
-| `SetData` hook | Exp 131 | Conditional in code — never reaches our payload |
-| `SetContent` hook | Exp 131 | Crashes the game |
+1. Deploy v0.66 to PS4 and verify no crash
+2. Verify custom song names/artists display correctly
+3. Verify mode selector still works
+4. Extend to Billie Eilish + Lizzo packs
 
-## Current Strategy — Per-Song Bundle Modifications (Bypassing Pack Bundle)
-
-Since pack bundle modification is blocked by CRC validation, and IL2CPP hooks are proven dead, the current approach is to modify **per-song bundles** instead:
-
-1. **Mode Selector** (Exp 138): Build per-song bundles with `--enable-modes OneSaber,90Degree,...` to add extra characteristic modes. These bundles are loaded per-song, not at startup, and their redirects work independently of the pack bundle.
-2. **Song Name Display**: The BeatmapLevelSO with display info is in the pack bundle, not in per-song bundles. Changing display names requires pack bundle modification, which is currently blocked.
-3. The pipeline's `add_mode_characteristics()` in `full_custom_song_pipeline.py` adds mode entries to per-song bundles.
-
-## Per-Song Bundle Mode Support
+## Per-Song Bundle## Per-Song Bundle Mode Support
 
 Our pipeline creates `BeatmapLevel` objects with only `"Standard"` characteristics by default. The `--enable-modes` flag adds additional entries:
 ```bash

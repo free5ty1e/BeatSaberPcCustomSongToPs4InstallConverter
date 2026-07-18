@@ -61,45 +61,45 @@ Once we intercept deserialization:
      - Constructor hook: Never fires for AssetBundle-deserialized objects (Unity uses raw memory copy)
      - get_previewDifficultyBeatmapSets(): Inlined by IL2CPP optimizer
      - SetData/SetContent hooks: Conditional or crash on install
-   - **Remaining option:** GoldHEN cheat code memory injection after game initialization OR hook into bundle loading pipeline
-3. Implement memory injection prototype (Task #14) — **IN PROGRESS**
+   - **Selected approach:** Thread-based delayed scanning + klass pointer matching
+3. Implement memory injection prototype (Task #14) — **COMPLETED in v0.66 plugin**
 
-### Implementation Progress
+### Implementation Status — v0.66 Plugin (Exp 167)
 
-**Test Script Created:** `development/scripts/memory_inject_test.py`
-- Simulates IL2CPP heap with BeatmapLevelSO objects
-- Tests scanning logic to find objects by type signature
-- Tests patching logic for field modification
-- **Status:** ✅ Logic verified working
+**Memory injection is now fully implemented and integrated into the plugin:**
+- `src/memory_inject.h` / `src/memory_inject.cpp` — New files added to the plugin source
+- Worker thread (pthread) waits 30s for game init, then scans
+- Finds BeatmapLevelSO klass by searching Il2CppUserAssemblies for the "BeatmapLevelSO" string
+- Scans process memory for objects with matching klass pointer
+- Patches string fields in-place (UTF-16LE overwrite)
 
-**Plugin Skeleton Created:** `development/scripts/memory_inject_plugin.cpp`
-- Framework for actual plugin implementation
-- Includes hook installation and logging infrastructure
-- **Status:** ⏳ Needs heap scanning implementation
+**Implementation Details:**
+| Component | Approach |
+|-----------|----------|
+| Thread | `pthread_create` + `pthread_detach`, 30s delay via `usleep` |
+| Klass finding | Search module data for "BeatmapLevelSO" C string, find Il2CppClass_1 references via name pointer |
+| Object scanning | 64KB page reads from 0x100000000–0x800000000, search for 8-byte klass ptr values |
+| Validation | Check _version(0x18) in range, _levelID(0x20) is valid string ptr, _songName(0x28) valid |
+| String patching | Write new length at +0x10, UTF-16LE chars at +0x14, zero-fill remainder |
+| Metadata table | 13 Rolling Stones slots mapped to custom names/artists |
 
-### Key Implementation Details
+### Key Design Decisions
 
-**BeatmapLevelSO Field Offsets (from il2cpp dump):**
-```c
-#define FIELD_VERSION         0x18   // int32
-#define FIELD_LEVEL_ID        0x20   // string*
-#define FIELD_SONG_NAME       0x28   // string*
-#define FIELD_ARTIST_NAME     0x38   // string*
-#define FIELD_PREVIEW_SETS    0x98   // PreviewDifficultyBeatmapSet[]*
-```
-
-**IL2CPP Type IDs:**
-- BeatmapLevelSO: 11680
-- System.String: 4
-- System.Single (float): 7
-- System.Int32: 5
+1. **No heap scanning** — Instead of finding the GC heap base, we scan a broad memory range for klass pointers. Simpler but slower (mitigated by coarse 64KB page scanning).
+2. **In-place string patching** — Avoids GC complexity by overwriting existing managed strings. New text MUST fit within original capacity.
+3. **Thread-based delay** — 30s delay ensures Addressables has loaded the pack bundle and deserialized BeatmapLevelSO objects before we scan.
+4. **Level ID matching** — We match objects by their _levelID string (e.g., "startmeup") against a registered metadata table, rather than positional assumptions.
 
 ### Next Steps
 
-1. **Implement heap scanning logic** — Find IL2CPP heap base and scan for BeatmapLevelSO objects by type signature
-2. **Test with simple patch** — Change song name only (doesn't require blob injection)
-3. **Integrate into main plugin** — Add memory injection as fallback when pack bundle modification fails
-4. **Deploy to PS4** — Test on actual hardware
+1. **PS4 hardware testing** — Deploy v0.66 and verify:
+   - Game doesn't crash on launch
+   - Custom song names/artists display correctly in song selection
+   - Mode selector still works (5 preview modes)
+   - All 13 Rolling Stones songs show correct metadata
+2. **Edge case handling** — Handle songs where custom name is longer than original (alloc new string)
+3. **Cover image patching** — Replace album art in BeatmapLevelSO (Sprite* at offset 0x70)
+4. **Expand to Billie Eilish + Lizzo packs** — Register metadata for all 32 slots
 
 See [[song-metadata-addressables-structure#Memory-Injection-Approach-Viable-Fallback]] for full details.
 

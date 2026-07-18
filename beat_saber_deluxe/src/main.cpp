@@ -1,6 +1,7 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.66: Memory injection — patch BeatmapLevelSO in RAM bypassing CRC validation.
 // v0.65: Mode selector — replace StartMeUp BeatmapLevelSO in pack bundle with 5-mode preview data.
 
 #include <stddef.h>
@@ -12,7 +13,9 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.65"
+#include "memory_inject.h"
+
+#define PLUGIN_VERSION "v0.66"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -36,7 +39,7 @@ static int in_hook = 0;
 static int log_ok = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
-static int log_write(const char *msg);
+int log_write(const char *msg);
 
 // ── Minimal JSON parser ─────────────────────────────────────────────────────
 static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], char vals[][MAX_PATH]) {
@@ -145,7 +148,7 @@ static void ensure_dir(void) {
     sceKernelMkdir(AFR_BASE "/" TITLE_ID, 0777);
 }
 
-static int log_write(const char *msg) {
+int log_write(const char *msg) {
     if (!log_ok) ensure_dir();
     int fd = sceKernelOpen(LOG_PATH, O_WRONLY|O_CREAT|O_APPEND, 0644);
     if (fd < 0) { log_ok = 0; return 0; }
@@ -219,6 +222,36 @@ static uint64_t find_il2cpp_module_base(void) {
     return 0;
 }
 
+// ── Register Song Metadata for Memory Injection ─────────────────────────
+// Matches the 13 Rolling Stones pack replacement slots.
+// level_id must match the _levelID in the BeatmapLevelSO for the slot.
+static void register_song_metadata(void) {
+    SongMetadataEntry entries[] = {
+        {"startmeup",               "Espresso",           "", "Sabrina Carpenter",       ""},
+        {"angry",                   "Rhythm Is A Dancer", "", "Pegboard Nerds",          ""},
+        {"bitemyheadoff",           "Escaping the Ruins", "", "MDK / Gareth Coker",      ""},
+        {"cantyouhearmeknocking",   "Spicy",              "", "aespa",                   ""},
+        {"deadmanwalking",          "Finesse (Remix)",    "", "Various",                 ""},
+        {"gimmeshelter",            "Yes I'm A Mess",     "", "AJR",                     ""},
+        {"icantgetnosatisfaction",  "Dreams Come True",   "", "Various",                 ""},
+        {"livebythesword",          "Take Me to the Beach","", "Imagine Dragons",         ""},
+        {"messitup",                "Powersnake",         "", "Brothers of Metal",       ""},
+        {"paintitblack",            "Time Lapse",         "", "TheFatRat",               ""},
+        {"sugarsoaker",             "Venom of Venus",     "", "Powerwolf",               ""},
+        {"sympathyforthedevil",     "LIT",                "", "Polyphia",                ""},
+        {"wholewideworld",          "VOLUPTE",            "", "REZZ / Tare",             ""},
+    };
+
+    int count = sizeof(entries) / sizeof(entries[0]);
+    for (int i = 0; i < count; i++) {
+        memory_inject_register(&entries[i]);
+    }
+
+    char buf[128];
+    snprintf(buf, sizeof(buf), "Registered %d song metadata entries for memory injection", count);
+    log_write(buf);
+}
+
 
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
@@ -239,6 +272,10 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
     log_write("hooks installed");
+
+    // Memory injection — register song metadata and start patcher thread
+    register_song_metadata();
+    memory_inject_init();
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;

@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-17
-**Status:** 🟡 **v0.65 plugin / v0.52 pipeline** — Pack bundle metadata patching blocked by Addressables catalog dual validation (size + CRC). Option B (uncompressed block injection) BLOCKED. **Memory injection identified as viable fallback approach — prototype created.**
+**Status:** 🟢 **v0.66 plugin / v0.52 pipeline** — Memory injection IMPLEMENTED and integrated. BeatmapLevelSO objects found in RAM by klass pointer scanning; string fields patched in-place with custom metadata. **Awaits PS4 hardware testing.**
 
 ## Current Blocker: Addressables Catalog Dual Validation
 
@@ -22,25 +22,21 @@ Both fields must match exactly. The catalog is loaded as plain JSON (not via `As
 
 **Conclusion:** Option B cannot achieve zero size impact. The approach is BLOCKED.
 
-### Memory Injection — 🟡 IN PROGRESS (Exp 160-162)
+### Memory Injection — ✅ IMPLEMENTED (v0.66, Exp 167)
 
-If pack bundle modification fails entirely, fallback to **memory injection**:
-- Patch BeatmapLevelSO in RAM after Addressables loads the pack bundle but BEFORE validation runs
-- Bypass catalog CRC validation entirely
-- Exp 142 showed game continued loading other bundles after pack bundle loaded — suggests window for interception exists
+Memory injection approach now implemented and integrated into the plugin:
+- **How it works:** Worker thread waits 30s for game init, then scans the IL2CPP heap via klass pointer matching
+- **Finding objects:** Searches process memory for 8-byte-aligned `BeatmapLevelSO_c` klass pointers, validates by checking field integrity
+- **Patching:** In-place overwrite of managed string fields (song name, artist, level ID) — new text must fit within original capacity
+- **Metadata table:** 13 Rolling Stones replacement songs registered with custom names and artists
 
-**Key Insight (Exp 160):** Evidence suggests Addressables validates CRC LAZILY — when bundle contents are accessed, NOT during LoadFromFile. This makes memory injection feasible!
+**Implementation Details:**
+- `src/memory_inject.h` — Public API: `memory_inject_init()`, `memory_inject_register()`, `SongMetadataEntry`
+- `src/memory_inject.cpp` — Full implementation (~550 lines) with thread, scanning, and patching
+- Field offsets verified from actual IL2CPP dump (`BeatmapLevelSO_Fields` at `il2cpp.h:381156`)
+- System_String format: klass(8) + monitor(8) + length(4) + UTF-16LE chars starting at +0x14
 
-**Prototype Created (Exp 162):**
-- `development/scripts/memory_inject_test.py` — Test script verifying scanning/patching logic (✅ verified working)
-- `development/scripts/memory_inject_plugin.cpp` — Plugin skeleton with framework
-- `development/scripts/memory_scan_implementation.md` — Detailed implementation plan
-
-**Status:** Prototype created. Needs:
-1. Heap finding implementation (find IL2CPP heap base in running game)
-2. IL2CPP runtime string allocation integration (for safe field patching)
-3. Integration with AFR plugin bundle loading hooks
-4. Testing on PS4 hardware
+**Status:** ✅ Code complete. Awaiting PS4 hardware deployment and testing.
 
 ## Size Difference Root Cause (Exp 155)
 

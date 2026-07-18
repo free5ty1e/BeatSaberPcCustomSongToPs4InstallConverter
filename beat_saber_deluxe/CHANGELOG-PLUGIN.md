@@ -2,6 +2,16 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.66] — 2026-07-17
+### Added
+- **Memory Injection subsystem** — BeatmapLevelSO objects are now patched in RAM after Addressables loads the pack bundle, bypassing catalog CRC validation entirely.
+  - Worker thread waits 30s for game initialization, then scans the IL2CPP heap for BeatmapLevelSO instances by klass pointer matching.
+  - In-place string patching: custom song name/artist metadata is written directly into managed string objects (UTF-16LE), preserving GC integrity.
+  - Song metadata table for 13 Rolling Stones replacement slots (level_id → custom song name, artist).
+  - `src/memory_inject.h` / `src/memory_inject.cpp` — modular injection subsystem.
+- **Plugin version bumped to v0.66**.
+- **`log_write()` exposed as extern** for use by memory injection module.
+
 ## [v0.65] — 2026-07-14
 ### Added
 - **Mode selector — 5 preview difficulty modes** — StartMeUp BeatmapLevelSO in pack bundle patched with 5-mode preview data (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Each mode references the correct BeatmapCharacteristicSO via PPtr (fileID=3).
