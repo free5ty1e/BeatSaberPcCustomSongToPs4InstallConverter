@@ -2650,3 +2650,20 @@ Before building v0.35, I analyzed the difference between the original file and `
   - CHANGELOG-PLUGIN.md — v0.67 entry
 - **Version:** v0.67
 - **Status:** Awaiting PS4 test results
+
+### Experiment 170: Memory Injection Never Fired — Guard Timer + Trigger Fixed
+- **Date:** 2026-07-17 (continuation)
+- **What:** Game works with v0.68 (no crash, custom songs play) but song names unchanged. Log showed only plugin init lines — memory_inject_try_patch() was never called.
+- **Root Causes Found:**
+  1. **Guard timer locked before objects existed:** g_boot_start_ms was set on first call (during preload). elapsed=0 → guard returned -1. Function was locked by __sync_lock_test_and_set BEFORE the guard check in an earlier version. In the current version, the guard check is before the lock — but the guard still prevented scanning during preload. Since bundles are cached after preload, no subsequent call happened.
+  2. **Trigger condition too strict:** Required BOTH np (redirect) AND "beatmaplevelsdata/" in path. Changed to fire on ANY redirect since all 32 redirects target per-song bundles.
+- **Fixes Applied (v0.69):**
+  1. Removed guard timer entirely (MIN_BOOT_TIME_MS, g_boot_start_ms, get_time_ms())
+  2. Changed trigger from "np && beatmaplevelsdata/" to just "np" (any redirect)
+  3. Simplified scan flow: fires on every per-song bundle open, locks only on success, re-tries on failure
+- **Files Changed:**
+  - src/memory_inject.cpp — Removed guard timer, get_time_ms(), simplified init/try_patch
+  - src/main.cpp — Changed trigger to fire on any redirect
+  - CHANGELOG-PLUGIN.md — v0.69 entry
+- **Version:** v0.69
+- **Status:** Ready to deploy and test

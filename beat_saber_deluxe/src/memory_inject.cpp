@@ -54,7 +54,6 @@
 #define SCAN_START_ADDR 0x0000000200000000ULL
 #define SCAN_END_ADDR   0x0000000400000000ULL
 #define SCAN_STEP       0x10000ULL    // 64KB pages
-#define MIN_BOOT_TIME_MS 15000       // Min ms since first open() before scanning
 
 // ── BeatmapLevelSO Field Offsets (from il2cpp dump) ──────────────────────
 #define OFFSET_VERSION         0x18   // int32
@@ -84,8 +83,7 @@ static void meminj_log(const char* msg) {
 // ── Song Metadata Table ──────────────────────────────────────────────────
 static SongMetadataEntry g_metadata_table[MAX_METADATA_ENTRIES];
 static int g_metadata_count = 0;
-static volatile int g_patching_done = 0;
-static volatile uint64_t g_boot_start_ms = 0;  // Timestamp of first open_hook call
+static volatile int g_patching_done = 0;  // 0=not yet, 1=success, -1=attempted but failed
 
 // ── IL2CPP Structs ───────────────────────────────────────────────────────
 typedef struct {
@@ -113,7 +111,6 @@ static int patch_il2cpp_string(uint64_t string_addr, const char* new_text);
 static int find_module_segments(const char* module_name,
                                 ModuleSegment* segments, int max_segments);
 static int try_read_mem(uint64_t addr, void* buf, size_t size);
-static uint64_t get_time_ms(void);
 
 // ══════════════════════════════════════════════════════════════════════════
 // Public API
@@ -132,7 +129,7 @@ void memory_inject_register(const SongMetadataEntry* entry) {
 }
 
 int memory_inject_init(void) {
-    meminj_log("[MEMINJ] Initialized (hook-triggered mode)");
+    meminj_log("[MEMINJ] Initialized (no guard timer, fires on any redirect)");
     if (g_metadata_count == 0) {
         meminj_log("[MEMINJ] WARNING: No metadata registered");
     }
@@ -143,25 +140,15 @@ int memory_inject_init(void) {
 // Runs synchronously inside the open() callback.
 // Returns 0 on success, -1 if not yet time or already done.
 int memory_inject_try_patch(void) {
-    if (g_patching_done) return -1;  // Already patched
+    // If already succeeded (1) or failed in the past (-1), skip
+    if (g_patching_done) return -1;
 
-    // Set initial boot timestamp if not set
-    if (!g_boot_start_ms) {
-        g_boot_start_ms = get_time_ms();
-    }
-
-    // Check if enough time has passed since game boot
-    uint64_t elapsed = get_time_ms() - g_boot_start_ms;
-    if (elapsed < MIN_BOOT_TIME_MS) {
-        return -1;  // Not yet time
-    }
-
-    // Lock to prevent re-entry
+    // Lock to prevent re-entry during scan
     if (__sync_lock_test_and_set(&g_patching_done, 1)) {
         return -1;  // Another caller already doing this
     }
 
-    meminj_log("[MEMINJ] Triggered — beginning scan");
+    meminj_log("[MEMINJ] Scanning...");
 
     // Step 1: Find BeatmapLevelSO class metadata
     uint64_t klass_addr = 0;
@@ -227,16 +214,6 @@ int memory_inject_try_patch(void) {
 
     g_patching_done = patched ? patched : -1;
     return patched > 0 ? 0 : -1;
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// Time Tracking
-// ══════════════════════════════════════════════════════════════════════════
-
-// Returns current time in milliseconds from a monotonic source.
-// Uses sceKernelGetProcessTime() which returns microseconds since boot.
-static uint64_t get_time_ms(void) {
-    return sceKernelGetProcessTime() / 1000;
 }
 
 // ══════════════════════════════════════════════════════════════════════════

@@ -1,6 +1,7 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.69: Memory injection — fixed. Removed guard timer, trigger on any redirect.
 // v0.68: Memory injection — fixed CE-34878-0 crash. Removed pack bundle redirect from redirects.json (the real crash cause).
 // v0.66: Memory injection — patch BeatmapLevelSO in RAM bypassing CRC validation.
 // v0.65: Mode selector — replace StartMeUp BeatmapLevelSO in pack bundle with 5-mode preview data.
@@ -16,7 +17,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.68"
+#define PLUGIN_VERSION "v0.69"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -194,11 +195,11 @@ static int open_hook(const char *path, int flags, ...) {
                 }
             }
 
-            // ── Trigger memory injection when a per-song bundle is opened ──────
-            // Per-song bundles start with "BeatmapLevelsData/" — this runs
-            // after the pack bundle has been loaded, so BeatmapLevelSO objects
-            // should exist in memory. Runs once, has internal time guard.
-            if (np && strstr(lower_path, "beatmaplevelsdata/")) {
+            // ── Trigger memory injection on any redirect ─────────────────────
+            // All 32 redirects are per-song bundles (BeatmapLevelsData/*).
+            // Fires every time a song bundle is opened; memory_inject_try_patch
+            // has internal re-entrancy guard and only scans once.
+            if (np) {
                 memory_inject_try_patch();
             }
         }

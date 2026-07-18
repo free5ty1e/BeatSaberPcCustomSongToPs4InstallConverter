@@ -2,6 +2,13 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.69] — 2026-07-17
+### Fixed
+- **Memory injection never fired** — Two root causes fixed:
+  1. **Guard timer removed** — The 15-second guard timer started counting from the first per-song bundle open (preload), then locked the function permanently even when the timer returned -1. Since bundles are cached after preload, `memory_inject_try_patch()` was called once during preload (too early → -1), then never again. Removed guard timer entirely — objects exist by the time any bundle opens.
+  2. **Trigger too restrictive** — The trigger required BOTH `np` (redirect match) AND `beatmaplevelsdata/` in the path. Changed to fire on ANY redirect (all 32 redirects are per-song bundles). This ensures the function fires on every song bundle open.
+- **Version bumped to v0.69**.
+
 ## [v0.68] — 2026-07-17
 ### Fixed
 - **CE-34878-0 crash root cause identified** — The crash was NOT from memory injection code at all. The `redirects.json` contained a pack bundle redirect (`therollingstones_pack_assets_all_* → rollingstones_pack_patched.bundle`) left over from earlier CRC experiments. The patched bundle has a different size/CRC from the original, causing Addressables to reject it → CE-34878-0 on every boot.
