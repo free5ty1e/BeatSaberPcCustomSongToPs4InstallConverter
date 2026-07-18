@@ -2,6 +2,12 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.68] — 2026-07-17
+### Fixed
+- **CE-34878-0 crash root cause identified** — The crash was NOT from memory injection code at all. The `redirects.json` contained a pack bundle redirect (`therollingstones_pack_assets_all_* → rollingstones_pack_patched.bundle`) left over from earlier CRC experiments. The patched bundle has a different size/CRC from the original, causing Addressables to reject it → CE-34878-0 on every boot.
+- **Removed pack bundle redirect** from `redirects.json` (33 → 32 entries). Game now loads the ORIGINAL pack bundle with correct CRC. Memory injection patches metadata in RAM instead.
+- **Restored v0.67 memory injection code** — All previous changes (log_write back to static, own logger, hook-triggered injection, mincore-based safe scanning) preserved.
+
 ## [v0.67] — 2026-07-17
 ### Fixed
 - **CE-34878-0 crash during game boot** — Restored `log_write()` to static linkage (v0.66 made it extern, which may have caused symbol conflicts). Memory injection now uses its own `meminj_log()` function.
