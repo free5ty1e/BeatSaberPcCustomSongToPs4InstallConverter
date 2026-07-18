@@ -3,7 +3,7 @@
 > **Plugin:** Beat Saber Deluxe v0.66  
 > **All 32 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo) with custom community songs.  
 > **Last rebuilt:** 2026-07-17 (v0.66 — memory injection for song metadata patching)  
-> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). **Memory injection implemented** (v0.66) — BeatmapLevelSO fields patched in RAM to display custom song names/artists. **Pending PS4 test to verify metadata display.**
+> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). **Memory injection deployed** (v0.66) — BeatmapLevelSO fields patched in RAM to display custom song names/artists. **Deployed 2026-07-17 — awaiting PS4 test results.**
 
 ## Rolling Stones Replacements (13 songs)
 

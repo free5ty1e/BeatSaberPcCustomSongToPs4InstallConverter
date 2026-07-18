@@ -2618,3 +2618,19 @@ Before building v0.35, I analyzed the difference between the original file and `
   5. Edge case: what happens when custom name is longer than original (truncation) — needs handling
 
 
+
+### Experiment 168: CE-34878-0 Crash — Thread Removed, mincore-Based Scanning Added
+- **Date:** 2026-07-17 (continuation)
+- **What:** v0.66 caused CE-34878-0 crash during game boot. Log analysis showed plugin initialized, metadata registered, and worker thread started then crash during boot.
+- **Root Cause:** pthread_create during early game boot (inside module_start) interferes with PS4 process initialization.
+- **Fix Applied:**
+  1. Removed pthread entirely — injection now triggers from open_hook when a per-song bundle is first opened
+  2. Added memory_inject_try_patch() with 15-second guard timer before scanning
+  3. Added mincore()-based safe memory reading — try_read_mem() checks all pages mapped before memcpy
+  4. Narrowed scan range to 0x200000000-0x400000000 (IL2CPP heap region)
+- **Key Files:**
+  - src/memory_inject.cpp — Complete rewrite: thread removed, hook-triggered, mincore-based safety
+  - src/memory_inject.h — Added memory_inject_try_patch()
+  - src/main.cpp — Calls memory_inject_try_patch() from open_hook on per-song bundle open
+- **Deployment:** Deployed v0.66 (revised) to PS4, old log cleared
+- **Status:** Awaiting PS4 test results

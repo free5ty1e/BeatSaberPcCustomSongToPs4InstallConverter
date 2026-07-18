@@ -5,24 +5,25 @@
 
 // ── Initialization ──────────────────────────────────────────────────────────
 // Called from module_start after hooks are installed.
-// Creates a delayed worker thread that will scan for BeatmapLevelSO objects
-// and patch them with custom metadata once the game has fully initialized.
 int memory_inject_init(void);
 
+// ── Hook-Triggered Patching ────────────────────────────────────────────────
+// Called from open_hook when a per-song bundle open is detected.
+// Runs synchronously inside the open() callback.
+// Checks internal timer (15s min since boot) before scanning.
+int memory_inject_try_patch(void);
+
 // ── Song Metadata ───────────────────────────────────────────────────────────
-// One entry per song slot that needs its metadata patched.
 #define MAX_METADATA_ENTRIES 64
 
 typedef struct {
-    const char* level_id;           // e.g. "custom/espresso"
-    const char* song_name;          // e.g. "Espresso"
-    const char* song_sub_name;      // e.g. "" (optional)
-    const char* song_author_name;   // e.g. "Sabrina Carpenter"
-    const char* level_author_name;  // e.g. "Mapper Name" (optional)
+    const char* level_id;
+    const char* song_name;
+    const char* song_sub_name;
+    const char* song_author_name;
+    const char* level_author_name;
 } SongMetadataEntry;
 
-// Register song metadata for patching.
-// Call before memory_inject_init() to populate the patch table.
 void memory_inject_register(const SongMetadataEntry* entry);
 
 #endif // MEMORY_INJECT_H

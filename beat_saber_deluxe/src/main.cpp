@@ -192,6 +192,14 @@ static int open_hook(const char *path, int flags, ...) {
                     }
                 }
             }
+
+            // ── Trigger memory injection when a per-song bundle is opened ──────
+            // Per-song bundles start with "BeatmapLevelsData/" — this runs
+            // after the pack bundle has been loaded, so BeatmapLevelSO objects
+            // should exist in memory. Runs once, has internal time guard.
+            if (np && strstr(lower_path, "beatmaplevelsdata/")) {
+                memory_inject_try_patch();
+            }
         }
     }
 #ifdef VERBOSE_LOG
