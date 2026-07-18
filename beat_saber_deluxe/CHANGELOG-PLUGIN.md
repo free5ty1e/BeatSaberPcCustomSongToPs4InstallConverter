@@ -2,6 +2,17 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.67] — 2026-07-17
+### Fixed
+- **CE-34878-0 crash during game boot** — Restored `log_write()` to static linkage (v0.66 made it extern, which may have caused symbol conflicts). Memory injection now uses its own `meminj_log()` function.
+- **Thread removed** — Previous pthread-based approach replaced with hook-triggered scanning from `open_hook` callback to avoid PS4/FreeBSD process initialization conflicts.
+- **`mincore()`-based safe memory scanning** — `try_read_mem()` now uses `mincore()` syscall to verify pages are mapped before accessing, preventing crashes from unmapped page access during heap scan.
+
+### Changed
+- `src/memory_inject.cpp` — Complete rewrite: no threads, hook-triggered, independent logger, mincore-based page validation.
+- `src/memory_inject.h` — Added `memory_inject_try_patch()` for hook-triggered injection.
+- `src/main.cpp` — `log_write()` restored to static. Hook calls `memory_inject_try_patch()` when per-song bundles are opened.
+
 ## [v0.66] — 2026-07-17
 ### Added
 - **Memory Injection subsystem** — BeatmapLevelSO objects are now patched in RAM after Addressables loads the pack bundle, bypassing catalog CRC validation entirely.

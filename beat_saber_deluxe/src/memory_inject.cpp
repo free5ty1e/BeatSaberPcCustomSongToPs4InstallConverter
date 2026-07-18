@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <fcntl.h>
 #include <orbis/libkernel.h>
 #include <sys/mman.h>
 #include <GoldHEN/Common.h>
@@ -66,9 +67,19 @@
 // ── Il2CppClass_1 field offsets ─────────────────────────────────────────
 #define CLASS1_OFFSET_NAME         0x10  // const char* — class name
 
-// ── Logging (extern from main.cpp) ───────────────────────────────────────
-extern int log_write(const char* msg);
-extern uint64_t find_il2cpp_module_base(void);
+// ── Independent logging ──────────────────────────────────────────────────
+// Uses its own sceKernelOpen/sceKernelWrite calls (not main.cpp's static
+// log_write) to avoid exporting symbols from the plugin.
+#define MEMINJ_LOG_PATH "/data/GoldHEN/AFR/CUSA12878/bs_log.txt"
+
+static void meminj_log(const char* msg) {
+    int fd = sceKernelOpen(MEMINJ_LOG_PATH, O_WRONLY|O_CREAT|O_APPEND, 0644);
+    if (fd < 0) return;
+    sceKernelFchmod(fd, 0644);
+    sceKernelWrite(fd, msg, strlen(msg));
+    sceKernelWrite(fd, "\n", 1);
+    sceKernelClose(fd);
+}
 
 // ── Song Metadata Table ──────────────────────────────────────────────────
 static SongMetadataEntry g_metadata_table[MAX_METADATA_ENTRIES];
@@ -114,16 +125,16 @@ void memory_inject_register(const SongMetadataEntry* entry) {
         snprintf(buf, sizeof(buf),
                  "[MEMINJ] WARNING: metadata table full (%d entries)",
                  MAX_METADATA_ENTRIES);
-        log_write(buf);
+        meminj_log(buf);
         return;
     }
     g_metadata_table[g_metadata_count++] = *entry;
 }
 
 int memory_inject_init(void) {
-    log_write("[MEMINJ] Initialized (hook-triggered mode)");
+    meminj_log("[MEMINJ] Initialized (hook-triggered mode)");
     if (g_metadata_count == 0) {
-        log_write("[MEMINJ] WARNING: No metadata registered");
+        meminj_log("[MEMINJ] WARNING: No metadata registered");
     }
     return 0;
 }
@@ -150,26 +161,26 @@ int memory_inject_try_patch(void) {
         return -1;  // Another caller already doing this
     }
 
-    log_write("[MEMINJ] Triggered — beginning scan");
+    meminj_log("[MEMINJ] Triggered — beginning scan");
 
     // Step 1: Find BeatmapLevelSO class metadata
     uint64_t klass_addr = 0;
     if (find_beatmap_level_so_klass(&klass_addr) < 0) {
-        log_write("[MEMINJ] ERROR: Could not find BeatmapLevelSO klass");
+        meminj_log("[MEMINJ] ERROR: Could not find BeatmapLevelSO klass");
         g_patching_done = -1;
         return -1;
     }
 
     char buf[256];
     snprintf(buf, sizeof(buf), "[MEMINJ] Klass at 0x%lX", klass_addr);
-    log_write(buf);
+    meminj_log(buf);
 
     // Step 2: Scan for BeatmapLevelSO objects
     uint64_t obj_addrs[256];
     int found = scan_for_beatmap_level_objects(klass_addr, obj_addrs, 256);
 
     snprintf(buf, sizeof(buf), "[MEMINJ] Found %d candidates", found);
-    log_write(buf);
+    meminj_log(buf);
 
     // Step 3: Patch matching objects
     int patched = 0;
@@ -201,7 +212,7 @@ int memory_inject_try_patch(void) {
                 strcmp(level_id_str, g_metadata_table[m].level_id) == 0) {
                 snprintf(buf, sizeof(buf),
                          "[MEMINJ] Patching 0x%lX: %s", obj_addrs[i], level_id_str);
-                log_write(buf);
+                meminj_log(buf);
 
                 if (patch_beatmap_level_object(obj_addrs[i], &g_metadata_table[m]) == 0) {
                     patched++;
@@ -212,7 +223,7 @@ int memory_inject_try_patch(void) {
     }
 
     snprintf(buf, sizeof(buf), "[MEMINJ] Patched %d/%d objects", patched, g_metadata_count);
-    log_write(buf);
+    meminj_log(buf);
 
     g_patching_done = patched ? patched : -1;
     return patched > 0 ? 0 : -1;
@@ -290,7 +301,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
     ModuleSegment segs[4];
     int seg_count = find_module_segments(MODULE_NAME, segs, 4);
     if (seg_count < 0) {
-        log_write("[MEMINJ] ERROR: Module not found");
+        meminj_log("[MEMINJ] ERROR: Module not found");
         return -1;
     }
 
@@ -303,7 +314,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
     }
 
     if (!class_string_addr) {
-        log_write("[MEMINJ] ERROR: Class string not found");
+        meminj_log("[MEMINJ] ERROR: Class string not found");
         return -1;
     }
 
@@ -334,7 +345,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
         }
     }
 
-    log_write("[MEMINJ] ERROR: Klass not found in module data");
+    meminj_log("[MEMINJ] ERROR: Klass not found in module data");
     return -1;
 }
 
@@ -365,7 +376,7 @@ static int scan_for_beatmap_level_objects(uint64_t klass_addr,
     int found = 0;
     char buf[256];
     snprintf(buf, sizeof(buf), "[MEMINJ] Scanning (klass=0x%lX)...", klass_addr);
-    log_write(buf);
+    meminj_log(buf);
 
     uint8_t page[SCAN_STEP];
     for (uint64_t page_addr = SCAN_START_ADDR;
@@ -455,7 +466,7 @@ static int patch_beatmap_level_object(uint64_t obj_addr,
                     patched++; \
                     snprintf(buf, sizeof(buf), \
                              "[MEMINJ]   %s -> '%s'", field_name, value); \
-                    log_write(buf); \
+                    meminj_log(buf); \
                 } \
             } \
         } while(0)
@@ -479,6 +490,6 @@ static int patch_beatmap_level_object(uint64_t obj_addr,
 
     snprintf(buf, sizeof(buf),
              "[MEMINJ] Object 0x%lX: %d fields patched", obj_addr, patched);
-    log_write(buf);
+    meminj_log(buf);
     return patched > 0 ? 0 : -1;
 }

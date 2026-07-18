@@ -1,6 +1,7 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.67: Memory injection — fix CE-34878-0 crash. Static log_write restored, own logger.
 // v0.66: Memory injection — patch BeatmapLevelSO in RAM bypassing CRC validation.
 // v0.65: Mode selector — replace StartMeUp BeatmapLevelSO in pack bundle with 5-mode preview data.
 
@@ -15,7 +16,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.66"
+#define PLUGIN_VERSION "v0.67"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -39,7 +40,7 @@ static int in_hook = 0;
 static int log_ok = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
-int log_write(const char *msg);
+static int log_write(const char *msg);
 
 // ── Minimal JSON parser ─────────────────────────────────────────────────────
 static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], char vals[][MAX_PATH]) {
@@ -148,7 +149,7 @@ static void ensure_dir(void) {
     sceKernelMkdir(AFR_BASE "/" TITLE_ID, 0777);
 }
 
-int log_write(const char *msg) {
+static int log_write(const char *msg) {
     if (!log_ok) ensure_dir();
     int fd = sceKernelOpen(LOG_PATH, O_WRONLY|O_CREAT|O_APPEND, 0644);
     if (fd < 0) { log_ok = 0; return 0; }

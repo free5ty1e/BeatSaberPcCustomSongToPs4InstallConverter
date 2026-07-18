@@ -2634,3 +2634,19 @@ Before building v0.35, I analyzed the difference between the original file and `
   - src/main.cpp — Calls memory_inject_try_patch() from open_hook on per-song bundle open
 - **Deployment:** Deployed v0.66 (revised) to PS4, old log cleared
 - **Status:** Awaiting PS4 test results
+
+### Experiment 169: CE-34878-0 Debug — Static log_write Restored, v0.67
+- **Date:** 2026-07-17 (continuation)
+- **What:** Both v0.66 builds (thread and hook-triggered) caused CE-34878-0 crash at game boot after module_start returned. Logs showed plugin init completed, then immediate crash.
+- **Root Cause Hypothesis:** `log_write` was changed from `static` to non-static (extern) in v0.66. As a GoldHEN PRX (shared library), non-static symbols are exported to the dynamic linker. This may conflict with system library symbols, causing undefined behavior during game initialization.
+- **Fix:**
+  1. Reverted `log_write` to `static` in main.cpp
+  2. memory_inject.cpp now uses its own `meminj_log()` function with direct sceKernelOpen/sceKernelWrite calls
+  3. Removed unused `extern uint64_t find_il2cpp_module_base(void);` declaration
+  4. Added `<fcntl.h>` include for O_WRONLY/O_CREAT/O_APPEND
+- **Files Changed:**
+  - src/main.cpp — log_write static again, v0.67
+  - src/memory_inject.cpp — own logger (meminj_log), no extern dependencies on main
+  - CHANGELOG-PLUGIN.md — v0.67 entry
+- **Version:** v0.67
+- **Status:** Awaiting PS4 test results
