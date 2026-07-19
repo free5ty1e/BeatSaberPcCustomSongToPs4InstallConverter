@@ -131,15 +131,16 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size);
 #define PATTERN_SCAN_STEP 0x100000ULL     // 1MB pages (coarse, ~65536 pages total)
 
 static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
-    int scan_count = 0;
+    int scan_count = 0, mapped_pages = 0;
+    int chk_klass = 0, chk_version = 0, chk_ptrs = 0, chk_strlen = 0;
     uint8_t page[PATTERN_SCAN_STEP];
 
     for (uint64_t page_addr = PATTERN_SCAN_MIN; page_addr < PATTERN_SCAN_MAX; page_addr += PATTERN_SCAN_STEP) {
         scan_count++;
         if (!try_read_mem(page_addr, page, PATTERN_SCAN_STEP))
             continue;
+        mapped_pages++;
 
-        // Scan every 32 bytes (coarse) to find potential objects quickly
         for (uint64_t offset = 0; offset < PATTERN_SCAN_STEP - 64; offset += 32) {
             uint64_t klass_ptr = *(uint64_t*)(page + offset + 0x00);
             int32_t version   = *(int32_t*)(page + offset + 0x18);
@@ -147,23 +148,35 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             uint64_t sn       = *(uint64_t*)(page + offset + 0x28);
             uint64_t an       = *(uint64_t*)(page + offset + 0x38);
 
-            // Klass ptr must be in module data segment range (0x84AC0000 +- margin)
             if (klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) continue;
+            chk_klass++;
             if (version < 1 || version > 50) continue;
+            chk_version++;
             if (lid < 0x1000000ULL || lid > 0x8000000000ULL) continue;
             if (sn  < 0x1000000ULL || sn  > 0x8000000000ULL) continue;
             if (an  < 0x1000000ULL || an  > 0x8000000000ULL) continue;
+            chk_ptrs++;
 
-            // Quick string length validation
             int32_t lid_len = 0, sn_len = 0;
             if (!try_read_mem(lid + 0x10, &lid_len, 4)) continue;
             if (!try_read_mem(sn  + 0x10, &sn_len,  4)) continue;
             if (lid_len <= 0 || lid_len > 255) continue;
             if (sn_len  <= 0 || sn_len  > 255) continue;
+            chk_strlen++;
 
             *klass_out = klass_ptr;
             return 0;
         }
+    }
+
+    // Log diagnostics
+    {   char buf[256];
+        snprintf(buf, sizeof(buf),
+                 "[MEMINJ] Pattern diag: %d pages (%d mapped). "
+                 "klass=%d ver=%d ptrs=%d strlen=%d",
+                 scan_count, mapped_pages,
+                 chk_klass, chk_version, chk_ptrs, chk_strlen);
+        meminj_log(buf);
     }
     return -1;
 }

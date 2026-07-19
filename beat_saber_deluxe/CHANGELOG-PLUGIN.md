@@ -2,6 +2,10 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.77] — 2026-07-19
+### Added
+- **Pattern matcher diagnostic counters** — Added per-check failure counters (klass, version, ptrs, strlen) to identify which field validation check is rejecting BeatmapLevelSO candidates. Output: `[MEMINJ] Pattern diag: N pages (M mapped). klass=K ver=V ptrs=P strlen=S`
+
 ## [v0.76] — 2026-07-19
 ### Fixed
 - **String pointer validation threshold lowered from 4GB to 16MB** — The IL2CPP heap on PS4 may be below 4GB. The pattern matcher's validation rejected ALL objects because their string field pointers (lid, sn, an) were below the 0x100000000 (4GB) threshold. Changed to 0x1000000 (16MB) to match try_read_mem bounds.
