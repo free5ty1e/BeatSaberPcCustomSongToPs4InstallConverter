@@ -2,11 +2,21 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
-## [v0.71] — 2026-07-19
+## [v0.72] — 2026-07-19
 ### Fixed
-- **Class string "BeatmapLevelSO" still not found** — `msync(MS_ASYNC)` from v0.70 was also broken on PS4 (likely a stub like `mincore`). Replaced with signal-handler-based memory probing: installs SIGSEGV/SIGBUS handlers that catch page faults and `siglongjmp` back safely. This works for ANY memory type because it relies on the MMU for validation, not on kernel syscall stubs.
-- **`try_read_mem()` now uses `sigaction` + `sigsetjmp`/`siglongjmp`** — Installs handlers per call, tries the read, restores original handlers. If the target memory is unmapped, the MMU delivers SIGSEGV/SIGBUS, the handler longjmps back, and we return 0.
-- **Added `#ifdef VERBOSE_LOG` diagnostics** — When building with `DEBUG=1`, segments and per-chunk read status are logged for easier debugging.
+- **REAL root cause of "Class string not found"** — `try_read_mem()` had a bounds check rejecting addresses below 0x100000000 (4GB). PS4 modules (Il2CppUserAssemblies) are loaded at ~0x80000000 (2GB), so ALL segment reads were rejected by the bounds check before any probing method could be tested. This affected v0.66 through v0.71.
+- **Lower bound changed** from 0x100000000 (4GB) to 0x1000000 (16MB) to accept module segment addresses (~2GB) while still rejecting near-null pointers.
+- **Upper bound changed** from 0x8000000000 (32GB) to 0x2000000000 (128GB) for safety margin.
+- **Signal-handler approach retained** from v0.71 — `sigaction`/`sigsetjmp`/`siglongjmp` remain the memory probing mechanism once address passes bounds check.
+
+### Changed
+- Bounds check constants in `try_read_mem()`.
+
+## [v0.71] — 2026-07-19
+### Changed
+- **Signal-handler-based memory probing** — Replaced `msync()` / `mincore()` with `sigaction(SIGSEGV)` + `sigaction(SIGBUS)` + `sigsetjmp`/`siglongjmp`. Installs handlers per call, tries `memcpy`, restores original handlers. Faults are caught by the handler and longjmp back safely. NOTE: This approach is correct but could not be verified in v0.71 because the bounds check still rejected module addresses.
+- **`#ifdef VERBOSE_LOG` diagnostics** — Build with `DEBUG=1` to log segment addresses, sizes, protections, and per-chunk read status. This was critical for identifying the actual root cause.
+- **Fixed plugin deploy path** — Plugin was being uploaded to `/data/GoldHEN/AFR/CUSA12878/` (asset redirect directory) instead of `/data/GoldHEN/plugins/` (where `plugins.ini` points).
 
 ## [v0.70] — 2026-07-17
 ### Fixed

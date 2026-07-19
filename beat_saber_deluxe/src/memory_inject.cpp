@@ -355,9 +355,10 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
 // ══════════════════════════════════════════════════════════════════════════
 
 static int try_read_mem(uint64_t addr, void* buf, size_t size) {
-    // Bounds check: must be in user space
-    if (addr < 0x100000000ULL || addr > 0x8000000000ULL) return 0;
-    if (addr + size > 0x8000000000ULL || addr + size < addr) return 0;
+    // Bounds check: must be in user space (PS4 modules load ~2GB, GC heap ~8-16GB)
+    // Lower bound 16MB to avoid null/near-null pointers, upper bound 128GB for safety
+    if (addr < 0x1000000ULL || addr > 0x2000000000ULL) return 0;
+    if (addr + size > 0x2000000000ULL || addr + size < addr) return 0;
 
     // Install signal handlers for safe memory probing.
     // SIGSEGV/SIGBUS fire if the target address range is not readable,

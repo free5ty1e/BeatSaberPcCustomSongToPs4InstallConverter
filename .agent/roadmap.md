@@ -42,8 +42,9 @@
 - [ ] Difficulty metadata extraction from all 306 bundles
 - [x] DLC song name extraction from addressables packs — BeatmapLevelSO objects found in `aa/PS4/therollingstones_pack_assets_all_*.bundle` (Exp 111)
 - [ ] DLC song `BeatmapCharacteristicSO` references — need to locate OneSaber/90Degree PIDs in external CAB `CAB-cb38b3e2985c65d4cf8a63437da74a89` (Exp 111)
-- [x] **(NEW) Memory injection metadata patching** — v0.66 plugin patches BeatmapLevelSO fields (song name, artist) in RAM after Addressables load, bypassing CRC validation. Implemented in `src/memory_inject.cpp`.
-- [ ] **(PENDING TESTING)** Deploy v0.66 to PS4 and verify: (1) game doesn't crash, (2) custom song names/artists display correctly in song list, (3) mode selector still works
+- [x] **(NEW) Memory injection metadata patching** — v0.66–v0.72 plugin patches BeatmapLevelSO fields (song name, artist) in RAM after Addressables load, bypassing CRC validation. Implemented in `src/memory_inject.cpp`.
+- [x] **v0.72 deployed** — Real root cause found after 6 versions: bounds check in `try_read_mem()` rejected module segment addresses (~2GB) with a 4GB lower bound. Signal-handler memory probing implemented.
+- [ ] **(PENDING TESTING)** Verify v0.72 on PS4: (1) `[MEMINJ] Found BeatmapLevelSO klass at 0x...`, (2) `[MEMINJ] Patched N/13 objects`, (3) custom song names/artists display correctly in song list
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors
@@ -78,16 +79,19 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **Modes bundle content verified:** 3 `_difficultyBeatmapSets` (Standard, OneSaber, 90Degree) each with 5 difficulties ✅
 - [x] **Modes redirect fixed:** `BeatmapLevelsData/startmeup` now points to modes bundle (was pointing to non-modes bundle)
 
-### Blocked
-- [ ] Song name/artist display change → requires pack bundle modification → CRC blocked
-- [ ] All pack bundle modification approaches — CRC validated by Addressables catalog
-- [ ] IL2CPP hooks for display string interception — all proven dead
-- [ ] No known way to bypass or redirect the catalog
+### Blocked — NOW UNBLOCKED by Memory Injection
+- [x] ~~Song name/artist display change~~ → **SOLVED** via memory injection (patches BeatmapLevelSO in RAM, bypasses catalog CRC entirely)
+- [x] ~~All pack bundle modification approaches~~ → **SOLVED** via memory injection (no pack bundle modification needed)
+- [x] ~~IL2CPP hooks for display string interception~~ → **SOLVED** via heap scanning + klass pointer matching (not hooks)
+- [x] ~~No known way to bypass or redirect the catalog~~ → **SOLVED** — lazy CRC validation gives window for RAM patching
 
-### In Progress
-- [ ] **Test per-song bundle mode selector** — Does `startmeup_custom_v3_modes.bundle` (built with `--enable-modes OneSaber,90Degree`) show extra modes when user selects Start Me Up?
-- [ ] If mode selector works → one goal achieved without pack bundle modification
-- [ ] If mode selector doesn't work → explore alternative approaches (resources.assets for base songs, string interception)
+### In Progress — Memory Injection Testing
+- [ ] **(v0.72)** Verify klass found: `[MEMINJ] Found BeatmapLevelSO klass at 0x...`
+- [ ] **(v0.72)** Verify object scanning: `[MEMINJ] Patched N/13 objects`
+- [ ] **(v0.72+)** Verify custom song names/artists display in song selection
+- [ ] **(v0.72+)** Verify mode selector still works alongside memory injection
+- [ ] **(Future)** Cover image patching via BeatmapLevelSO Sprite* at offset 0x70
+- [ ] **(Future)** Expand metadata table to all 32 DLC slots
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

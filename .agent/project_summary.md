@@ -1,110 +1,96 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-17
-**Status:** 🟢 **v0.66 plugin / v0.52 pipeline** — Memory injection IMPLEMENTED and integrated. BeatmapLevelSO objects found in RAM by klass pointer scanning; string fields patched in-place with custom metadata. **Awaits PS4 hardware testing.**
+**Last Updated:** 2026-07-19
+**Status:** 🟡 **v0.72 plugin** — Memory injection: All known bugs fixed. Bounds check root cause identified (v0.66–v0.71). Signal-handler-based memory probing implemented. **v0.72 deployed, awaiting PS4 hardware test results.**
 
-## Current Blocker: Addressables Catalog Dual Validation
+## Current Approach: Memory Injection (v0.66+)
 
-The game validates BOTH `m_BundleSize` AND `m_Crc` in the catalog for every loaded bundle. Either mismatch causes CE-34878-0 crash. This was confirmed via two separate tests (Exp 146, Exp 148).
+The plugin patches BeatmapLevelSO objects in RAM after Addressables loads the pack bundle, bypassing catalog CRC/size validation entirely:
 
-**Catalog values:**
-- `m_BundleSize`: **7,902,803 bytes** (exact)
-- `m_Crc`: **`0xdc8b314f`** (CRC-32 of original bundle)
+1. **Hook trigger** — `open_hook` detects per-song bundle redirect → calls `memory_inject_try_patch()`
+2. **Find klass** — Search Il2CppUserAssemblies module for "BeatmapLevelSO" string → locate il2cpp class metadata
+3. **Scan heap** — Search 0x0200000000–0x0400000000 range for objects with matching klass pointer (64KB page scanning)
+4. **Validate** — Check _version in range [1,100], verify _levelID/_songName are valid string pointers
+5. **Patch** — Overwrite string fields in-place (UTF-16LE): song name, artist, level ID, level author
 
-Both fields must match exactly. The catalog is loaded as plain JSON (not via `AssetBundle.LoadFromFile`), so the AFR plugin cannot redirect it.
+### Key Design Decisions
 
-## Viable Approaches — Option B BLOCKED, Memory Injection IN PROGRESS
-
-### Option B: Uncompressed Block Injection — ❌ BLOCKED (Exp 157)
-
-**Initial hypothesis:** The 49 uncompressed blocks (flag=0, each 131,072 bytes stored as raw data) are independent storage. Modifying their CONTENT affects CRC but NOT file_size, providing ~6.1 MB of free variables for pure CRC control.
-
-**Critical finding (Exp 157):** Uncompressed blocks are part of a SHARED DECOMPRESSED STREAM that gets LZ4HC compressed as one unit. Modifying content in any block shifts downstream byte positions and alters all subsequent compression ratios, changing file_size by ~817-2,177 bytes.
-
-**Conclusion:** Option B cannot achieve zero size impact. The approach is BLOCKED.
-
-### Memory Injection — ✅ IMPLEMENTED (v0.66, Exp 167)
-
-Memory injection approach now implemented and integrated into the plugin:
-- **How it works:** Worker thread waits 30s for game init, then scans the IL2CPP heap via klass pointer matching
-- **Finding objects:** Searches process memory for 8-byte-aligned `BeatmapLevelSO_c` klass pointers, validates by checking field integrity
-- **Patching:** In-place overwrite of managed string fields (song name, artist, level ID) — new text must fit within original capacity
-- **Metadata table:** 13 Rolling Stones replacement songs registered with custom names and artists
-
-**Implementation Details:**
-- `src/memory_inject.h` — Public API: `memory_inject_init()`, `memory_inject_register()`, `SongMetadataEntry`
-- `src/memory_inject.cpp` — Full implementation (~550 lines) with thread, scanning, and patching
-- Field offsets verified from actual IL2CPP dump (`BeatmapLevelSO_Fields` at `il2cpp.h:381156`)
-- System_String format: klass(8) + monitor(8) + length(4) + UTF-16LE chars starting at +0x14
-
-**Status:** ✅ Code complete. Awaiting PS4 hardware deployment and testing.
-
-## Size Difference Root Cause (Exp 155)
-
-+2,712 byte difference in rollingstones_pack_patched.bundle breaks down as:
-- **+817 bytes:** Decompressed stream grows (original BeatmapLevelSO 440B → Espresso blob 1,257B)
-- **~1,895 bytes:** Bundle rebuild overhead (object table shifts, compression ratio changes)
-
-This confirms that ANY decompressed stream modification changes file_size. Uncompressed block injection was the only path to zero size impact — but it's blocked because those blocks aren't independent storage.
+| Decision | Rationale |
+|----------|-----------|
+| Hook-triggered (not thread) | Threads caused CE-34878-0 on PS4 (v0.67+ removed thread) |
+| Signal-handler safe probing | `mincore`/`msync` are stubs on PS4 kernel; `sigaction`+`sigsetjmp` works for any memory type |
+| In-place string patching | Avoids GC complexity — new text MUST fit within original capacity |
+| Level ID matching | Match by `_levelID` string against registered metadata table |
+| External metadata table | 13 Rolling Stones slots defined in SongMetadataEntry array, expandable to 32+ |
 
 ## Key Technical Findings
 
-### CRC Correction via GF(2) Linear Algebra
-- **Status:** ✅ Works for alignment padding bytes (proven in build_patched_pack_bundle.py achieving CRC=0xdc8b314f)
-- **Limitation:** Only works when file_size changes (+2,712 bytes). Cannot maintain both size AND CRC via padding alone.
+### Bounds Check Bug (v0.66–v0.71 — Real Root Cause)
 
-### UnityFS v8 Bundle Format (PS4 Beat Saber)
-- Magic: `UnityFS\0`, version 8, LZ4HC compression (flag=3)
-- Block structure: blocks_info → alignment padding → raw block data
-- Blocks: 16 compressed + 49 uncompressed = 65 total
-- **CRITICAL FINDING:** Uncompressed blocks are part of shared decompressed stream, NOT independent storage.
+**The bug was NOT mincore, msync, or signal handlers.** It was a bounds check rejection:
 
-### Addressables CRC Validation Timing (Exp 160)
-- **Finding:** Validates LAZILY — when bundle contents are accessed, NOT during LoadFromFile
-- **Evidence:** Other bundles continued loading after pack bundle loaded with mismatched size/CRC
-- **Implication:** Window exists for interception between load and access → memory injection feasible!
+```c
+// WRONG — 0x100000000 = 4GB, but PS4 modules load at ~2GB
+if (addr < 0x100000000ULL || ...) return 0;  // Rejected ALL module reads!
+```
 
-### IL2CPP Hook Analysis (Exp 161)
-- **Finding:** All previous IL2CPP method hooks are DEAD ENDS
-- **Reasons:** Constructor never fires, methods inlined by optimizer, conditional execution
-- **Remaining options:** Per-song metadata bundles OR GoldHEN cheat code memory injection after game initialization
+PS4 module segments from `sceKernelGetModuleInfo` return addresses like `0x806C0000` (~2GB). These were rejected by the bounds check before any probing method could execute.
 
-## Experiment Timeline (Recent Key Experiments)
+**Fix (v0.72):** Lower bound changed to `0x1000000` (16MB) — accepts all valid user-space addresses while rejecting null pointers.
 
-| Exp | Date | What | Result |
-|-----|------|------|--------|
-| 139 | 07-16 | Pack redirect removed from PS4 | ✅ Original pack loads normally |
-| 142 | 07-17 | CRC correction via GF(2) on alignment padding | ✅ CRC=0xdc8b314f (size +2,712B) |
-| 146 | 07-17 | Test: correct CRC but wrong size | ❌ CE-34878-0 crash — size validated |
-| 148 | 07-17 | Test: correct size but wrong CRC | ❌ CE-34878-0 crash — CRC validated |
-| 153 | 07-17 | Size difference root cause analysis | ✅ Identified +817B stream growth |
-| 155 | 07-17 | Option B decision: uncompressed block injection | ⏳ Implementing script |
-| **157** | **07-17** | **Uncompressed block independence test** | **❌ BLOCKED — blocks are part of shared decompressed stream** |
-| **160** | **07-17** | **Addressables CRC validation timing analysis** | **🟡 LAZY validation confirmed — memory injection feasible** |
-| **161** | **07-17** | **IL2CPP hook analysis** | **🔍 All previous hooks dead ends — new approach needed** |
-| **162** | **07-17** | **Memory injection prototype created** | **✅ Prototype verified working** |
+See [[ps4-memory-layout-for-module-scanning]] for full details.
 
-## Working Tools & Scripts
+### Plugin Deploy Path
 
-| Tool | Location | Status |
-|------|----------|--------|
-| `build_patched_pack_bundle.py` | `tools/` | ✅ Proven — achieves CRC=0xdc8b314f via GF(2) on alignment padding |
-| `memory_inject_test.py` | `development/scripts/` | ✅ Verified working — scanning/patching logic confirmed |
-| `memory_inject_plugin.cpp` | `development/scripts/` | ⏳ Skeleton created — needs implementation |
+Plugins MUST go to `/data/GoldHEN/plugins/` (configured by `/data/GoldHEN/plugins.ini`). The AFR directory `/data/GoldHEN/AFR/CUSA12878/` is for asset bundles only. Uploading to the wrong path cost several test cycles (v0.71).
 
-## Next Steps (Priority Order)
+See [[ps4-file-system-redirects]] for deploy path details.
 
-1. **Implement heap finding logic** — Find IL2CPP heap base address in running game (Task #14)
-2. **Implement field patching with IL2CPP runtime** — Allocate new managed strings and patch BeatmapLevelSO fields safely
-3. **Test with simple patch** — Change song name only (doesn't require blob injection)
-4. **Integrate into main plugin** — Add memory injection as fallback when pack bundle modification fails
-5. **Deploy to PS4** — Test on actual hardware
+## Recent Experiment Timeline
+
+| Exp | Version | What | Result |
+|-----|---------|------|--------|
+| 167 | v0.66 | Initial memory injection implementation | ✅ Code complete, PC prototype verified |
+| 168 | v0.67 | Thread removed → hook-triggered, mincore added | ✅ CE-34878-0 fixed, but "Class string not found" |
+| 169 | v0.68 | Static log_write, removed pack bundle redirect | ✅ Boots fine, still "Class string not found" |
+| 170 | v0.69 | Guard timer removed, trigger widened, mincore→msync | Same error — syscall stubs suspected |
+| 171 | v0.70 | msync deployed and tested | Same error — but bounds check was the real issue |
+| 172 | v0.70 test | User tested 2 songs | ❌ "Class string not found" |
+| 173 | v0.71 | Signal handlers + VERBOSE_LOG + deploy path fix | 🔍 **VERBOSE_LOG revealed bounds check bug** |
+| **174** | **v0.72** | **Bounds check fixed (16MB–128GB)** | **🟡 Deployed, awaiting test** |
+
+## Memory Injection Versions
+
+| Version | Date | Key Changes |
+|---------|------|-------------|
+| v0.66 | 07-17 | Initial implementation (thread-based, direct memcpy) |
+| v0.67 | 07-17 | Thread removed → hook-triggered, mincore safe reads |
+| v0.68 | 07-17 | Removed pack bundle redirect (was causing boot crash) |
+| v0.69 | 07-17 | Guard timer removed, trigger widened, mincore→msync |
+| v0.70 | 07-17 | msync tested — same error (bounds check was real issue) |
+| v0.71 | 07-19 | Signal handlers + VERBOSE_LOG + deploy path fix |
+| **v0.72** | **07-19** | **Bounds check fixed — awaiting test** |
+
+## Next Steps
+
+1. **Test v0.72 on PS4** — Verify `[MEMINJ] Found BeatmapLevelSO klass at 0x...` in log
+2. **Verify object patching** — Confirm `[MEMINJ] Patched N/13 objects`
+3. **Verify metadata display** — Check custom song names/artists in song selection
+4. **Expand metadata table** — Register metadata for all 32 DLC slots
+5. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
 
 ## Active Knowledge Gaps
 
-1. ~~CRC validation blocked~~ → Solved via GF(2) linear algebra (padding bytes)
-2. ~~Size validation blocked~~ → Confirmed both size AND CRC must match simultaneously
-3. ~~Uncompressed block independence~~ → **BLOCKED** — blocks are part of shared decompressed stream, not independent storage
-4. Addressables CRC validation timing — **RESOLVED**: LAZY validation (when contents accessed)
-5. IL2CPP hook targets — **RESOLVED**: All previous hooks dead ends; memory injection is new approach
-6. Heap scanning implementation — IN PROGRESS (Task #14)
+1. ~~CRC validation blocked~~ → **SOLVED** via memory injection (bypasses CRC entirely)
+2. ~~Size validation blocked~~ → **SOLVED** via memory injection (bypasses size entirely)
+3. ~~Class string not found~~ → **SOLVED** v0.72: bounds check fixed (real root cause)
+4. Memory injection — **IN PROGRESS**: v0.72 deployed, awaiting test
+5. Song metadata display verification — Not yet tested on PS4
+6. Cover image patching — Not yet implemented
 
+## References
+
+- [[memory-injection-addressables-bypass]] — Full memory injection architecture
+- [[ps4-memory-layout-for-module-scanning]] — Memory layout and bounds check details
+- [[ps4-file-system-redirects]] — Deploy paths (plugins vs AFR)
+- [[plugin-architecture]] — Build system and component overview
+- [[development-workflow]] — Edit-build-deploy-test cycle

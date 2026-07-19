@@ -11,11 +11,39 @@ The Beat Saber Deluxe plugin is a GoldHEN PRX (PS4 PRX plugin) that intercepts f
 
 ## Component Overview
 
-The plugin consists of a single file (`src/main.cpp`) that:
-1. Hooks the `open()` syscall via GoldHEN's HOOK_INIT/HOOK_CONTINUE macros
-2. Intercepts paths containing `BeatmapLevelData/startmeup`
-3. Redirects them to an AssetBundle stored in `/data/GoldHEN/AFR/CUSA12878/`
-4. Logs all file operations to `bs_log.txt` for debugging
+The plugin consists of two source files:
+
+- **`src/main.cpp`** — Main plugin logic:
+  1. Hooks the `open()` syscall via GoldHEN's HOOK_INIT/HOOK_CONTINUE macros
+  2. Intercepts paths containing `BeatmapLevelData/<song_id>` and redirects to custom AssetBundles
+  3. Loads redirect table from `redirects.json` (external config, not hardcoded)
+  4. Stores `open()` log to `bs_log.txt` for debugging
+  5. Sends notification via `/dev/notification0` on plugin load
+
+- **`src/memory_inject.cpp`** — Memory injection module:
+  1. Scans Il2CppUserAssemblies module for BeatmapLevelSO class metadata
+  2. Scans IL2CPP heap for BeatmapLevelSO object instances
+  3. Patches string fields (song name, artist, level ID) in-place via UTF-16LE overwrite
+  4. Uses `sigaction`/`sigsetjmp`/`siglongjmp` for safe memory probing (SIGSEGV/SIGBUS)
+  5. Triggered from `open_hook` callback (not a separate thread)
+
+## Deploy Path
+
+**CRITICAL:** The plugin `.prx` file must be deployed to the **plugins directory**, NOT the AFR directory:
+
+| Component | Deploy Path | Purpose |
+|-----------|------------|---------|
+| **Plugin PRX** | `/data/GoldHEN/plugins/beat_saber_deluxe.prx` | GoldHEN plugin loader (configured by `plugins.ini`) |
+| **Asset bundles** | `/data/GoldHEN/AFR/CUSA12878/<song_id>` | Open() hook redirect target |
+| **Redirects config** | `/data/GoldHEN/AFR/CUSA12878/redirects.json` | Redirect table read by plugin at startup |
+
+The plugin loader config is at `/data/GoldHEN/plugins.ini`:
+```
+[CUSA12878]
+/data/GoldHEN/plugins/beat_saber_deluxe.prx
+```
+
+Uploading the PRX to the AFR directory has NO EFFECT — the plugin loader doesn't read from there. This distinction cost several test cycles (v0.71 deployed to AFR instead of plugins/).
 
 ## Key Architecture Decisions
 
@@ -126,4 +154,44 @@ beat_saber_deluxe/
   custom_songs/          — Generated custom AssetBundles
 ```
 
-See also: [[ps4-file-system-redirects]], [[toolchain-and-build]], [[development-workflow]]
+## Memory Inject Module
+
+As of v0.66, the plugin includes a separate `src/memory_inject.cpp` module for patching BeatmapLevelSO objects in RAM after Addressables loads them.
+
+### Architecture
+```
+open_hook → memory_inject_try_patch()
+               │
+               ├── find_beatmap_level_so_klass()
+               │     ├── find_module_segments()     ← sceKernelGetModuleList + GetModuleInfo
+               │     ├── search_for_string()          ← find "BeatmapLevelSO" in module data
+               │     └── scan for pointer→klass       ← find Il2CppClass_1 via name ptr
+               │
+               ├── scan_for_beatmap_level_objects()
+               │     ├── 64KB page reads (0x200000000–0x400000000)
+               │     └── validate via _version, _levelID, _songName
+               │
+               └── patch_beatmap_level_object()
+                     └── in-place UTF-16LE string overwrite
+```
+
+### Safe Memory Probing
+PS4's FreeBSD kernel has stripped syscalls — mincore() and potentially msync() are stubs. The module uses signal handlers for safe probing:
+
+```
+sigaction(SIGSEGV, &handler, &old);
+sigaction(SIGBUS, &handler, &old);
+if (sigsetjmp(jmpbuf, 1) == 0) {
+    memcpy(buf, (void*)addr, size);
+    result = 1;
+}
+sigaction(SIGSEGV, &old, NULL);
+sigaction(SIGBUS, &old, NULL);
+```
+
+### Bounds Check (Critical Lesson)
+Module segments return addresses at ~0x80000000 (~2 GB). The original bounds check used `addr < 0x100000000` (4 GB) which rejected ALL module reads — this was the real root cause of "Class string not found" from v0.66–v0.71. Fixed in v0.72 to use 0x1000000 (16 MB) as lower bound.
+
+See [[memory-injection-addressables-bypass]] for full implementation details.
+
+See also: [[ps4-file-system-redirects]], [[toolchain-and-build]], [[development-workflow]], [[memory-injection-addressables-bypass]], [[ps4-memory-layout-for-module-scanning]]

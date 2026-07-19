@@ -2687,3 +2687,45 @@ Before building v0.35, I analyzed the difference between the original file and `
   - CLAUDE.md — Updated log archival path to `.ai_memory/experiment_logs/`, staging rules clarified
 - **Version:** v0.69 (revised)
 - **Status:** Deployed to PS4, awaiting test results
+
+### Experiment 172: v0.70 Tested — Same "Class string not found" Error
+- **Date:** 2026-07-17
+- **What:** v0.70 (msync-based memory probing) deployed and tested. User played $100 Bills and Start Me Up (redirect worked). Same error: `[MEMINJ] ERROR: Class string not found`.
+- **Result:** msync(MS_ASYNC) also fails on PS4 for module segment addresses. msync is likely also an unimplemented stub on PS4's stripped kernel.
+- **Lesson Learned:** Cannot rely on syscall-based page validation (mincore, msync) on PS4 — use signal-handler-based approach instead.
+- **Version:** v0.70
+- **Status:** Needs different approach
+
+### Experiment 173: v0.71 — Signal Handler Approach, Wrong Deploy Path, Bounds Check Discovery
+- **Date:** 2026-07-19
+- **What:** 
+  - Replaced msync with `sigaction(SIGSEGV)` + `sigaction(SIGBUS)` + `sigsetjmp/siglongjmp` for safe memory probing
+  - Deployed to `/data/GoldHEN/AFR/CUSA12878/` (WRONG PATH — should be `/data/GoldHEN/plugins/`)
+  - plugins.ini at `/data/GoldHEN/plugins.ini` loads from `/data/GoldHEN/plugins/`
+  - Old v0.70 (89952 bytes) was still in plugins dir, so v0.71 was never actually loaded
+  - User tested twice — first with wrong path (saw v0.70 notification), second with correct path (saw v0.71 notification)
+  - Built with `DEBUG=1` (VERBOSE_LOG) for diagnostics
+- **Key Discovery from verbose log:**
+  ```
+  [MEMINJ:VERBOSE] Segment 0: base=0x806C0000 size=0x3F54000 r=1 w=0 x=1
+  [MEMINJ:VERBOSE] Segment 0: try_read_mem(first 16) = FAIL
+  [MEMINJ] ERROR: Class string not found
+  ```
+  - Segment base = 0x806C0000 (~2GB)
+  - `try_read_mem` returns FAIL — but WHY?
+- **Root Cause Found:** The bounds check in `try_read_mem()` rejects addresses below `0x100000000` (4GB). PS4 modules load at ~2GB (0x80000000 range), so ALL module segment reads were rejected by the bounds check BEFORE any probing method could execute.
+  - **This was the bug from v0.66 through v0.71** — not mincore, not msync, not signals. Just a wrong lower bound.
+- **Archived Log:** `.ai_memory/experiment_logs/v0.71_debug_verbose_log.txt` (780 lines)
+- **Version:** v0.71
+- **Status:** Real root cause identified
+
+### Experiment 174: v0.72 — Bounds Check Fixed (Real Root Cause)
+- **Date:** 2026-07-19
+- **What:** Fixed the bounds check lower bound from `0x100000000` (4GB) to `0x1000000` (16MB) to accept module segment addresses (~2GB). Upper bound changed from `0x8000000000` (32GB) to `0x2000000000` (128GB). Signal-handler probing retained.
+- **Hypothesis:** With the corrected bounds check, `try_read_mem()` will succeed on module segment reads, `search_for_string()` will find "BeatmapLevelSO" in Il2CppUserAssemblies, the klass pointer will be found, and the heap scan can proceed to find and patch BeatmapLevelSO objects.
+- **Files Changed:**
+  - src/memory_inject.cpp — Bounds check constants
+  - src/main.cpp — v0.72
+  - CHANGELOG-PLUGIN.md — v0.72 entry
+- **Version:** v0.72
+- **Status:** Deployed to PS4 at `/data/GoldHEN/plugins/beat_saber_deluxe.prx` (correct path), awaiting test

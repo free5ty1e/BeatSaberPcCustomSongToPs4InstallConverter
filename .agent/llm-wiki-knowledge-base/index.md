@@ -10,8 +10,9 @@ metadata:
 > Durable, compiled knowledge about the Beat Saber PS4 Custom Song Support project.
 
 ## Architecture & Plugin System
-- [[plugin-architecture|Plugin Architecture]] — GoldHEN plugin, hook system, PRX format, CRT initialization
-- [[ps4-file-system-redirects|PS4 File System & Redirects]] — AFR directory, open() hook, permissions model
+- [[plugin-architecture|Plugin Architecture]] — GoldHEN plugin, hook system, PRX format, CRT initialization, memory inject module
+- [[ps4-file-system-redirects|PS4 File System & Redirects]] — AFR directory vs plugins directory, open() hook, permissions model
+- [[ps4-memory-layout-for-module-scanning|PS4 Memory Layout for Module Scanning]] — Where modules (~2GB) and IL2CPP heap (~8-16GB) live, bounds check lessons
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset
@@ -57,4 +58,4 @@ metadata:
 ## Plans
 - [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles. Updated with Exp 129 findings: typetree approach dead-end, blob format verified via hex dump against StartMeUp.
 
-- [Memory Injection — Addressables Bypass](memory-injection-addressables-bypass.md) — Fallback approach when pack bundle modification blocked by dual validation (size + CRC). Patch BeatmapLevelSO in RAM after Addressables loads, bypassing catalog entirely. Viability depends on whether CRC validation is lazy or immediate.
+- [Memory Injection — Addressables Bypass](memory-injection-addressables-bypass.md) — **Primary approach** (v0.66+): Patch BeatmapLevelSO in RAM after Addressables loads, bypassing catalog CRC entirely. Hook-triggered scanning, signal-handler safe memory probing. v0.72 fixes bounds check (real root cause).
