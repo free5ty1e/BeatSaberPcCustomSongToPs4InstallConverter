@@ -2667,3 +2667,23 @@ Before building v0.35, I analyzed the difference between the original file and `
   - CHANGELOG-PLUGIN.md — v0.69 entry
 - **Version:** v0.69
 - **Status:** Ready to deploy and test
+
+### Experiment 171: Class String Not Found — mincore Stub, Replaced with msync
+- **Date:** 2026-07-17 (continuation)
+- **What:** v0.69 successfully called memory_inject_try_patch() but search_for_string() could not find "BeatmapLevelSO" in Il2CppUserAssemblies module, returning "ERROR: Class string not found". No klass found, no objects scanned or patched.
+- **Root Cause:** `try_read_mem()` used `mincore()` to safely check page mapping before memcpy. On PS4, `mincore` is likely an unimplemented stub that always returns -1 (ENOMEM). This caused ALL memory reads to fail, including reads of the Il2CppUserAssemblies module's data segments (which ARE guaranteed mapped from sceKernelGetModuleInfo).
+- **Fix:** Replaced `mincore()` with `msync(MS_ASYNC)` for page mapping validation:
+  - `msync(addr, size, MS_ASYNC)` returns 0 if ALL pages in range are mapped, -1 with ENOMEM if any page is not mapped
+  - For anonymous pages (GC heap), MS_ASYNC is a no-op that still validates mapping
+  - Module segments from sceKernelGetModuleInfo always pass msync (they are mapped)
+  - GC heap pages within allocated blocks also pass msync (they are mapped)
+- **Also Updated (v0.69):**
+  - Guard timer removed (was blocking scan during preload)
+  - Trigger now fires on ANY redirect (not just beatmaplevelsdata/)
+  - Succeeds only lock on successful patch, releases lock on failure for retry
+- **Files Changed:**
+  - src/memory_inject.cpp — try_read_mem: mincore → msync(MS_ASYNC), check entire spanned range
+  - CHANGELOG-PLUGIN.md — v0.69 entry already added
+  - CLAUDE.md — Updated log archival path to `.ai_memory/experiment_logs/`, staging rules clarified
+- **Version:** v0.69 (revised)
+- **Status:** Deployed to PS4, awaiting test results

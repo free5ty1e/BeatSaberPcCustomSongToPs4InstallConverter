@@ -1,8 +1,9 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.70: Memory injection — fixed msync page checking (mincore was a stub on PS4).
 // v0.69: Memory injection — fixed. Removed guard timer, trigger on any redirect.
-// v0.68: Memory injection — fixed CE-34878-0 crash. Removed pack bundle redirect from redirects.json (the real crash cause).
+// v0.68: Memory injection — fixed CE-34878-0 crash. Removed pack bundle redirect from redirects.json.
 // v0.66: Memory injection — patch BeatmapLevelSO in RAM bypassing CRC validation.
 // v0.65: Mode selector — replace StartMeUp BeatmapLevelSO in pack bundle with 5-mode preview data.
 
@@ -17,7 +18,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.69"
+#define PLUGIN_VERSION "v0.70"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"

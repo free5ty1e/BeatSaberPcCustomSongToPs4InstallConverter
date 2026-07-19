@@ -335,14 +335,14 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size) {
     if (addr < 0x100000000ULL || addr > 0x8000000000ULL) return 0;
     if (addr + size > 0x8000000000ULL || addr + size < addr) return 0;
 
-    // Use mincore to safely check ALL pages in the range are mapped.
-    // On FreeBSD/PS4, mincore returns 0 if all pages mapped, -1 if not.
-    // vec needs 1 byte per 4KB page; 16 bytes covers up to 64KB.
-    uint64_t aligned_start = addr & ~0xFFFULL;
-    size_t aligned_size = ((addr + size + 0xFFF) & ~0xFFFULL) - aligned_start;
-    unsigned char vec[16];
-    if (aligned_size / 4096 > sizeof(vec)) return 0;
-    if (mincore((void*)aligned_start, aligned_size, vec) != 0) return 0;
+    // Use msync(MS_ASYNC) to safely check if the mapped span is accessible.
+    // msync with MS_ASYNC is non-blocking; on FreeBSD/PS4 it returns 0 if ALL
+    // pages in the range are mapped, -1 with ENOMEM if any page is not mapped.
+    // For anonymous pages (like IL2CPP heap) it's a no-op that still validates
+    // that the address range is mapped.
+    uint64_t page_align = addr & ~0xFFFULL;
+    size_t page_span = ((addr + size + 0xFFF) & ~0xFFFULL) - page_align;
+    if (msync((void*)page_align, page_span, MS_ASYNC) != 0) return 0;
 
     memcpy(buf, (void*)addr, size);
     return 1;

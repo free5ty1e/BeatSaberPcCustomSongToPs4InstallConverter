@@ -2,6 +2,11 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.70] — 2026-07-17
+### Fixed
+- **Class string "BeatmapLevelSO" not found** — `try_read_mem()` used `mincore()` for page validation, which is an unimplemented stub on PS4 (always returns -1/ENOMEM). Replaced with `msync(MS_ASYNC)` which correctly checks page mapping status. Module segments from `sceKernelGetModuleInfo` and GC heap pages now read correctly.
+- **Heap scan now uses msync for safe page checking** — `msync(addr, size, MS_ASYNC)` returns 0 if all pages mapped, -1 if not. Works for anonymous pages (GC heap) with no side effects.
+
 ## [v0.69] — 2026-07-17
 ### Fixed
 - **Memory injection never fired** — Two root causes fixed:

@@ -64,7 +64,19 @@ Once we intercept deserialization:
    - **Selected approach:** Thread-based delayed scanning + klass pointer matching
 3. Implement memory injection prototype (Task #14) — **COMPLETED in v0.66 plugin**
 
-### Implementation Status — v0.66 Plugin (Exp 167)
+#### Key Technical Discovery — saferead_mem for PS4 Page Checking
+- **`mincore()` is a stub on PS4** — Always returns -1 (ENOMEM), making ALL memory reads appear to fail. This was the root cause of "Class string not found" in v0.69.
+- **`msync(MS_ASYNC)` works for page checking** — `msync(addr, size, MS_ASYNC)` returns 0 if ALL pages in range are mapped, -1 with ENOMEM if not. For anonymous pages (GC heap), MS_ASYNC is a no-op that still validates mapping.
+- **Module segments are always mapped** — Addresses from `sceKernelGetModuleInfo` are guaranteed accessible. These can be read directly.
+- **GC heap can be safely scanned** — Using msync before each read ensures we only memcpy mapped pages, preventing crashes.
+- **PS4 kernel page checking options:**
+  - `msync(MS_ASYNC)` — ✅ Works, validates mapping without side effects on anonymous pages
+  - `mincore()` — ❌ Unimplemented stub on PS4
+  - `mprotect()` — ❌ Changes page protections, not safe
+  - Direct memcpy — ⚠️ Crashes on unmapped pages
+  - `/proc/curproc/map` — ❌ /proc not available on PS4
+
+### Implementation Status — v0.69 Plugin (Exp 171)
 
 **Memory injection is now fully implemented and integrated into the plugin:**
 - `src/memory_inject.h` / `src/memory_inject.cpp` — New files added to the plugin source

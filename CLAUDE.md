@@ -9,7 +9,7 @@ enforced by the files they reference — read them if you haven't already.
 
 Before proceeding with work, upon receiving experiment results, you MUST update ALL of these with experiment results and findings:
 
-1. Download & analyze the PS4 log first, then archive the log with an appropriate file name for historical purposes in `experiment_logs`
+1. Download & analyze the PS4 log first, then archive the log with an appropriate descriptive file name in `.ai_memory/experiment_logs/`
 2. Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with experiment results
 3. Update `.ai_memory/beat-saber-ps4-custom-songs/song_testing_log.md` if received new song testing results
 4. Update `.agent/project_summary.md` with current status
@@ -61,10 +61,11 @@ You MUST complete ALL of the following documentation updates BEFORE presenting r
 - [ ] Update `current-song-replacements-on-chris-ps4.md` when deployed custom songs change
 - [ ] This is the mapping file that lets the user find custom songs in-game manually
 
-**G. Git Staging & Commit Suggestion**
-- [ ] Stage all relevant changes with `git add` (fine-grained, not `-A`)
+**G. Git Staging (MANDATORY before presenting)**
+- [ ] Stage ALL relevant changes with `git add` (fine-grained, not `-A`)
 - [ ] Suggest a detailed commit message describing the staged changes
-- [ ] Present this to the user for review before they decide to commit
+- [ ] Present the staged changes and suggested commit message to the user
+- [ ] Do NOT commit without user approval (staging is for review, committing is user's choice)
 
 ### 3.2 Versioning Triggers (MANDATORY)
 
