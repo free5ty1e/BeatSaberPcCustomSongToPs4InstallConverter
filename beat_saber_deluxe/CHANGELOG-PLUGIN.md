@@ -2,6 +2,12 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.71] — 2026-07-19
+### Fixed
+- **Class string "BeatmapLevelSO" still not found** — `msync(MS_ASYNC)` from v0.70 was also broken on PS4 (likely a stub like `mincore`). Replaced with signal-handler-based memory probing: installs SIGSEGV/SIGBUS handlers that catch page faults and `siglongjmp` back safely. This works for ANY memory type because it relies on the MMU for validation, not on kernel syscall stubs.
+- **`try_read_mem()` now uses `sigaction` + `sigsetjmp`/`siglongjmp`** — Installs handlers per call, tries the read, restores original handlers. If the target memory is unmapped, the MMU delivers SIGSEGV/SIGBUS, the handler longjmps back, and we return 0.
+- **Added `#ifdef VERBOSE_LOG` diagnostics** — When building with `DEBUG=1`, segments and per-chunk read status are logged for easier debugging.
+
 ## [v0.70] — 2026-07-17
 ### Fixed
 - **Class string "BeatmapLevelSO" not found** — `try_read_mem()` used `mincore()` for page validation, which is an unimplemented stub on PS4 (always returns -1/ENOMEM). Replaced with `msync(MS_ASYNC)` which correctly checks page mapping status. Module segments from `sceKernelGetModuleInfo` and GC heap pages now read correctly.

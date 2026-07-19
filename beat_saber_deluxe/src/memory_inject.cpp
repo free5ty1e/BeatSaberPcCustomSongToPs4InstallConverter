@@ -45,6 +45,8 @@
 #include <orbis/libkernel.h>
 #include <sys/mman.h>
 #include <GoldHEN/Common.h>
+#include <signal.h>
+#include <setjmp.h>
 
 // ── Configuration ──────────────────────────────────────────────────────────
 #define MODULE_NAME "Il2CppUserAssemblies"
@@ -84,6 +86,14 @@ static void meminj_log(const char* msg) {
 static SongMetadataEntry g_metadata_table[MAX_METADATA_ENTRIES];
 static int g_metadata_count = 0;
 static volatile int g_patching_done = 0;  // 0=not yet, 1=success, -1=attempted but failed
+
+// ── Signal-handler memory probing ─────────────────────────────────────────
+static sigjmp_buf g_mem_jmpbuf;
+
+static void mem_fault_handler(int sig) {
+    (void)sig;
+    siglongjmp(g_mem_jmpbuf, 1);
+}
 
 // ── IL2CPP Structs ───────────────────────────────────────────────────────
 typedef struct {
@@ -286,6 +296,20 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
     uint64_t class_string_addr = 0;
     for (int s = 0; s < seg_count; s++) {
         if (!segs[s].is_readable) continue;
+#ifdef VERBOSE_LOG
+        {   char buf[256];
+            snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Segment %d: base=0x%lX size=0x%lX r=%d w=%d x=%d",
+                     s, segs[s].base, segs[s].size,
+                     segs[s].is_readable, segs[s].is_writable, segs[s].is_exec);
+            meminj_log(buf);
+            // Test first chunk readability
+            uint8_t test_buf[16];
+            int readable = try_read_mem(segs[s].base, test_buf, 16);
+            snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Segment %d: try_read_mem(first 16) = %s",
+                     s, readable ? "OK" : "FAIL");
+            meminj_log(buf);
+        }
+#endif
         class_string_addr = search_for_string(segs[s].base, segs[s].size, CLASS_NAME);
         if (class_string_addr) break;
     }
@@ -335,17 +359,30 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size) {
     if (addr < 0x100000000ULL || addr > 0x8000000000ULL) return 0;
     if (addr + size > 0x8000000000ULL || addr + size < addr) return 0;
 
-    // Use msync(MS_ASYNC) to safely check if the mapped span is accessible.
-    // msync with MS_ASYNC is non-blocking; on FreeBSD/PS4 it returns 0 if ALL
-    // pages in the range are mapped, -1 with ENOMEM if any page is not mapped.
-    // For anonymous pages (like IL2CPP heap) it's a no-op that still validates
-    // that the address range is mapped.
-    uint64_t page_align = addr & ~0xFFFULL;
-    size_t page_span = ((addr + size + 0xFFF) & ~0xFFFULL) - page_align;
-    if (msync((void*)page_align, page_span, MS_ASYNC) != 0) return 0;
+    // Install signal handlers for safe memory probing.
+    // SIGSEGV/SIGBUS fire if the target address range is not readable,
+    // mem_fault_handler longjmps back, and we return 0.
+    struct sigaction sa, old_segv, old_bus;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = mem_fault_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
 
-    memcpy(buf, (void*)addr, size);
-    return 1;
+    if (sigaction(SIGSEGV, &sa, &old_segv) != 0) return 0;
+    if (sigaction(SIGBUS, &sa, &old_bus) != 0) {
+        sigaction(SIGSEGV, &old_segv, NULL);
+        return 0;
+    }
+
+    int result = 0;
+    if (sigsetjmp(g_mem_jmpbuf, 1) == 0) {
+        memcpy(buf, (void*)addr, size);
+        result = 1;
+    }
+
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
+    return result;
 }
 
 static int scan_for_beatmap_level_objects(uint64_t klass_addr,
