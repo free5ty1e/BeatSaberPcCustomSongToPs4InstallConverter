@@ -1,13 +1,16 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🟡 **v0.72 plugin** — Memory injection: All known bugs fixed. Bounds check root cause identified (v0.66–v0.71). Signal-handler-based memory probing implemented. **v0.72 deployed, awaiting PS4 hardware test results.**
+**Status:** 🔵 **v0.75 plugin** — Memory injection actively developed. Three root causes addressed: bounds check (v0.72), class string not in module (v0.73–discovered v0.75), heap address unknown (v0.75). Current approach: wide-range pattern-based heap scan (1GB–32GB). **v0.75 deployed, awaiting test results.**
 
 ## Current Approach: Memory Injection (v0.66+)
 
 The plugin patches BeatmapLevelSO objects in RAM after Addressables loads the pack bundle, bypassing catalog CRC/size validation entirely:
 
 1. **Hook trigger** — `open_hook` detects per-song bundle redirect → calls `memory_inject_try_patch()`
-2. **Find klass** — Search Il2CppUserAssemblies module for "BeatmapLevelSO" string → locate il2cpp class metadata
+2. **Find klass** — Three attempts:
+   - String search in Il2CppUserAssemblies module (fast path — KNOWN TO FAIL: class names are in global-metadata.dat, not module)
+   - Pattern-based scan of GC heap (wide range 1GB–32GB, coarse granularity) — finds objects by field layout signature
+   - Extract klass pointer from first validated object → use for targeted re-scan
 3. **Scan heap** — Search 0x0200000000–0x0400000000 range for objects with matching klass pointer (64KB page scanning)
 4. **Validate** — Check _version in range [1,100], verify _levelID/_songName are valid string pointers
 5. **Patch** — Overwrite string fields in-place (UTF-16LE): song name, artist, level ID, level author
@@ -56,6 +59,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 171 | v0.70 | msync deployed and tested | Same error — but bounds check was the real issue |
 | 172 | v0.70 test | User tested 2 songs | ❌ "Class string not found" |
 | 173 | v0.71 | Signal handlers + VERBOSE_LOG + deploy path fix | 🔍 **VERBOSE_LOG revealed bounds check bug** |
+| 174 | v0.72 | Bounds check fixed (4GB→16MB) | ✅ try_read_mem works, but string NOT in module |
+| 175 | v0.73 | Pattern matcher (full heap scan) | ❌ Black screen hang — scan too slow |
+| 176 | v0.74–v0.75 | Optimized scan + dump analysis | 🔵 **Class names in global-metadata.dat discovery** |
 | **174** | **v0.72** | **Bounds check fixed (16MB–128GB)** | **🟡 Deployed, awaiting test** |
 
 ## Memory Injection Versions
@@ -68,24 +74,33 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | v0.69 | 07-17 | Guard timer removed, trigger widened, mincore→msync |
 | v0.70 | 07-17 | msync tested — same error (bounds check was real issue) |
 | v0.71 | 07-19 | Signal handlers + VERBOSE_LOG + deploy path fix |
+| v0.72 | 07-19 | Bounds check fixed: 4GB→16MB lower bound, signal handlers proved working |
+| v0.73 | 07-19 | Pattern-based klass finding (full 8GB scan) — ❌ hang, too slow |
+| v0.74 | 07-19 | Persistent signal handlers (once per scan), 256MB range — no klass found |
+| **v0.75** | **07-19** | **Wide-range scan (1GB–32GB, coarse). Class names discovered in metadata NOT module.** |
 | **v0.72** | **07-19** | **Bounds check fixed — awaiting test** |
 
 ## Next Steps
 
-1. **Test v0.72 on PS4** — Verify `[MEMINJ] Found BeatmapLevelSO klass at 0x...` in log
-2. **Verify object patching** — Confirm `[MEMINJ] Patched N/13 objects`
-3. **Verify metadata display** — Check custom song names/artists in song selection
-4. **Expand metadata table** — Register metadata for all 32 DLC slots
-5. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
+1. **Test v0.75 on PS4** — Verify pattern matcher finds BeatmapLevelSO objects in 1GB–32GB range
+2. **Verify klass found** — If objects found, confirm klass pointer and scan for all objects
+3. **Address timing issue** — Memory injection fires on per-song redirect (during play), but song list metadata comes from pack bundle (loaded earlier). UI text caching may prevent display updates even if objects are patched. Options:
+   a. Trigger injection on pack bundle open (not per-song redirect)
+   b. Use frame callback for retry-based injection at song list time
+   c. Accept that song list metadata display changes are not possible via late injection
+4. **Verify field offsets** — Extract actual BeatmapLevelSO TypeTree from a LIVE PS4 dump (not truncated dump)
+5. **Expand metadata table** — Register metadata for all 32 DLC slots
+6. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
 
 ## Active Knowledge Gaps
 
 1. ~~CRC validation blocked~~ → **SOLVED** via memory injection (bypasses CRC entirely)
 2. ~~Size validation blocked~~ → **SOLVED** via memory injection (bypasses size entirely)
-3. ~~Class string not found~~ → **SOLVED** v0.72: bounds check fixed (real root cause)
-4. Memory injection — **IN PROGRESS**: v0.72 deployed, awaiting test
-5. Song metadata display verification — Not yet tested on PS4
-6. Cover image patching — Not yet implemented
+3. ~~Class string not found~~ → **REFRAMED**: Class name strings are in global-metadata.dat, NOT in module (v0.75 discovery)
+4. IL2CPP heap address on PS4 — **UNKNOWN**: Assumed 0x200000000, may be different. v0.75 scans 1GB–32GB
+5. Field offsets (version=0x18, levelID=0x20, etc.) — **UNVERIFIED**: from il2cpp.h dump, may differ on PS4
+6. Timing — **UNRESOLVED**: Per-song redirect fires during play, but song list metadata comes from earlier pack bundle load. UI text caching may prevent display updates from late patching.
+7. Memory injection — **IN PROGRESS**: v0.75 deployed, awaiting test
 
 ## References
 

@@ -44,7 +44,12 @@
 - [ ] DLC song `BeatmapCharacteristicSO` references — need to locate OneSaber/90Degree PIDs in external CAB `CAB-cb38b3e2985c65d4cf8a63437da74a89` (Exp 111)
 - [x] **(NEW) Memory injection metadata patching** — v0.66–v0.72 plugin patches BeatmapLevelSO fields (song name, artist) in RAM after Addressables load, bypassing CRC validation. Implemented in `src/memory_inject.cpp`.
 - [x] **v0.72 deployed** — Real root cause found after 6 versions: bounds check in `try_read_mem()` rejected module segment addresses (~2GB) with a 4GB lower bound. Signal-handler memory probing implemented.
-- [ ] **(PENDING TESTING)** Verify v0.72 on PS4: (1) `[MEMINJ] Found BeatmapLevelSO klass at 0x...`, (2) `[MEMINJ] Patched N/13 objects`, (3) custom song names/artists display correctly in song list
+- [x] **v0.72–v0.75 debugging saga** — Three root causes addressed:
+  - v0.72: Bounds check fixed (4GB→16MB) — try_read_mem works, but class string NOT found
+  - v0.73: Pattern matcher (full 8GB scan) — ❌ black screen hang, too slow for hook callback
+  - v0.74: Persistent signal handlers (once per scan), 256MB range — no objects found in assumed heap range
+  - v0.75: **PS4 dump analysis** — "BeatmapLevelSO" string is in global-metadata.dat, NOT in module. Heap address unverified. Wide-range pattern scan (1GB–32GB) deployed.
+- [ ] **(PENDING TESTING)** Verify v0.75: (1) pattern matcher finds BeatmapLevelSO klass, (2) objects patched, (3) address timing issue (injection fires during play, but song list metadata comes from pack bundle)
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors
@@ -86,10 +91,10 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] ~~No known way to bypass or redirect the catalog~~ → **SOLVED** — lazy CRC validation gives window for RAM patching
 
 ### In Progress — Memory Injection Testing
-- [ ] **(v0.72)** Verify klass found: `[MEMINJ] Found BeatmapLevelSO klass at 0x...`
-- [ ] **(v0.72)** Verify object scanning: `[MEMINJ] Patched N/13 objects`
-- [ ] **(v0.72+)** Verify custom song names/artists display in song selection
-- [ ] **(v0.72+)** Verify mode selector still works alongside memory injection
+- [ ] **(v0.75)** Wide-range pattern scan (1GB–32GB) finds BeatmapLevelSO klass
+- [ ] **(v0.75+)** Verify object patching: `[MEMINJ] Patched N/13 objects`
+- [ ] **(v0.75+)** Address timing: injection fires on per-song redirect (during play), but song list metadata comes from pack bundle (loaded earlier). UI text caching may prevent display updates.
+- [ ] **(v0.75+)** Verify field offsets from il2cpp.h vs actual PS4 layout (dump is truncated)
 - [ ] **(Future)** Cover image patching via BeatmapLevelSO Sprite* at offset 0x70
 - [ ] **(Future)** Expand metadata table to all 32 DLC slots
 

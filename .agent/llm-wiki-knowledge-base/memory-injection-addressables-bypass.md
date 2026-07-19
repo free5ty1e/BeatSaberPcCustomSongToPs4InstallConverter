@@ -13,9 +13,9 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata for the song selection screen.
 
-**Status:** ✅ Memory injection implemented and running on PS4 since v0.66. The hook-triggered scanning finds BeatmapLevelSO klass pointer in Il2CppUserAssemblies module and scans the IL2CPP heap for matching objects. After a 3-version debugging saga (v0.69–v0.71), the real root cause was identified: a **bounds check that rejected module segment addresses** (see [[ps4-memory-layout-for-module-scanning]]).
+**Status:** 🔵 **v0.75 plugin** — Memory injection actively developed. After 9 versions (v0.66–v0.75), three root causes found: bounds check rejection, classic string not in module, unknown heap address. Current approach: wide-range pattern-based heap scan (1GB–32GB) with signal-handler safe probing. See [[ps4-il2cpp-metadata-loading]] for the class name discovery.
 
-## Implementation — Current Architecture (v0.72)
+## Implementation — Current Architecture (v0.75)
 
 ### Component Overview
 
@@ -25,16 +25,29 @@ open_hook (detects per-song bundle open)
     ▼
 memory_inject_try_patch()
     │
-    ├── find_beatmap_level_so_klass()    ← searches Il2CppUserAssemblies module
-    │       │
-    │       ├── find_module_segments()   ← sceKernelGetModuleList + sceKernelGetModuleInfo
-    │       └── search_for_string()      ← reads module data via try_read_mem (signal handler)
+    ├── [1] Install signal handlers (once per scan)
     │
-    ├── scan_for_beatmap_level_objects() ← scans IL2CPP heap (0x0200000000–0x0400000000)
+    ├── [2] find_beatmap_level_so_klass()    ← tries string search in module (may fail)
     │       │
+    │       ├── find_module_segments()       ← sceKernelGetModuleList + sceKernelGetModuleInfo
+    │       └── search_for_string()          ← searches for "BeatmapLevelSO" in module
+    │                                         NOTE: Class name NOT in module (see discovery below)
+    │
+    ├── [3] find_beatmap_level_objects_by_pattern()  ← FALLBACK when string not found
+    │       │
+    │       └── scan memory (1GB–32GB, 1MB pages, 32-byte stepping)
+    │           for objects matching BeatmapLevelSO field layout:
+    │           - klass ptr in [0x80000000, 0x90000000]
+    │           - _version in [1, 50]
+    │           - _levelID, _songName, _songAuthorName → valid System_String pointers
+    │           - String length in [1, 255]
+    │
+    ├── [4] scan_for_beatmap_level_objects() ← scans heap (0x200000000–0x210000000)
+    │       │                                    for objects matching discovered klass
     │       └── validate_beatmap_level_object() ← checks version, field pointers
     │
-    └── patch_beatmap_level_object()     ← in-place UTF-16LE string overwrite
+    └── [5] patch_beatmap_level_object()     ← in-place UTF-16LE string overwrite
+         └── Restore signal handlers
 ```
 
 ### Hook-Triggered Execution (Removed Thread)
@@ -117,6 +130,24 @@ System_String_o:
   0x14: _firstChar (uint16_t) — rest follow contiguously
 ```
 
+## Discovery: Class Name Strings NOT in Module (v0.75)
+
+**Key finding from PS4 game dump analysis:** The "BeatmapLevelSO" class name is NOT compiled into the Il2CppUserAssemblies PRX as a C string. It exists only in `global-metadata.dat` (patch version, offset 0x23CB6E).
+
+This means:
+- The string-search approach (v0.66–v0.71) searched the wrong memory region
+- The bounds check was never the real issue for the string search (though it was a real issue for the signal handler approach)
+- IL2CPP on PS4 uses **dynamic metadata loading** — class names are loaded from the metadata file at runtime into a separately mapped memory region
+- The klass struct's `name` field points into the metadata buffer, NOT into the module's data section
+
+See [[ps4-il2cpp-metadata-loading]] for full analysis.
+
+## Heap Address Is Unverified
+
+The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB) based on typical PS4 Unity layout. This was UNVERIFIED. Scanning 64MB of this range found zero objects, suggesting the heap is at a different address or the field layout is wrong.
+
+**Current approach (v0.75):** Wide-range scan from 1GB to 32GB at coarse granularity to locate objects.
+
 ## History — The Debugging Saga
 
 | Version | Change | Result |
@@ -124,10 +155,13 @@ System_String_o:
 | v0.66 | Initial memory injection (thread-based, direct memcpy) | Tested on PC prototype only |
 | v0.67 | Thread removed → hook-triggered, mincore safe reads | CE-34878-0 fixed, but "Class string not found" |
 | v0.68 | Removed pack bundle redirect (was causing boot crash) | Boots fine, still "Class string not found" |
-| v0.69 | Guard timer removed, trigger widened, mincore→msync | Same error — mincore/msync are stubs |
-| v0.70 | msync retained, deployed for test | Same error — but bounds check was the real issue |
-| v0.71 | Signal handlers + VERBOSE_LOG + fix deploy path | **Found bounds check bug** via verbose log |
-| **v0.72** | **Bounds check fixed: 4GB→16MB lower bound** | **Should find klass — awaiting test!** |
+| v0.69 | Guard timer removed, trigger widened, mincore→msync | Same error |
+| v0.70 | msync tested | Same error — REAL issue: bounds check rejected all reads |
+| v0.71 | Signal handlers + VERBOSE_LOG + deploy path fix | **Found bounds check bug** via verbose log |
+| v0.72 | Bounds check fixed (4GB→16MB) | ✅ try_read_mem works! But **"Class string not found"** — string NOT in module |
+| v0.73 | Pattern matcher added (full 8GB heap scan) | ❌ **Black screen hang** — scan too slow for hook callback |
+| v0.74 | Optimized: persistent handlers, 256MB range | ✅ No hang. **Pattern found NOTHING** in 64MB heap range |
+| **v0.75** | **Wide scan 1GB–32GB, coarse stepping** | 🔵 **Scanning full address space for objects** |
 
 ## Build & Deploy
 
@@ -159,6 +193,7 @@ The AFR directory is for **asset/song bundles only**, not plugins. The `plugins.
 ## See Also
 
 - [[ps4-memory-layout-for-module-scanning]] — PS4 memory layout and bounds check details
+- [[ps4-il2cpp-metadata-loading]] — How class name strings are loaded from global-metadata.dat at runtime (NOT in module)
 - [[plugin-architecture]] — Plugin build system, hook system, CRT init
 - [[ps4-file-system-redirects]] — AFR redirects vs plugin deploy paths
 - [[development-workflow]] — Full edit-build-deploy-test cycle

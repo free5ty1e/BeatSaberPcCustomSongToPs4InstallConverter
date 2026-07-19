@@ -13,6 +13,7 @@ metadata:
 - [[plugin-architecture|Plugin Architecture]] — GoldHEN plugin, hook system, PRX format, CRT initialization, memory inject module
 - [[ps4-file-system-redirects|PS4 File System & Redirects]] — AFR directory vs plugins directory, open() hook, permissions model
 - [[ps4-memory-layout-for-module-scanning|PS4 Memory Layout for Module Scanning]] — Where modules (~2GB) and IL2CPP heap (~8-16GB) live, bounds check lessons
+- [[ps4-il2cpp-metadata-loading|PS4 IL2CPP Metadata Loading]] — Class name strings live in global-metadata.dat, NOT in compiled module PRX
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset

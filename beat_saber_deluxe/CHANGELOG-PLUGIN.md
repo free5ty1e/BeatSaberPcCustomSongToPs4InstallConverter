@@ -2,6 +2,12 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.75] — 2026-07-19
+### Fixed
+- **Pattern matcher scan range expanded** — Changed from limited heap (64MB at 0x200000000) to wide range (1GB-32GB, 1MB pages, 32-byte granularity). The IL2CPP heap address on PS4 is unverified; previous range may have missed objects entirely.
+### Changed
+- **Key discovery** — "BeatmapLevelSO" class name string is NOT in Il2CppUserAssemblies module; it's only in global-metadata.dat loaded at runtime. Confirmed via PS4 game dump analysis.
+
 ## [v0.74] — 2026-07-19
 ### Changed
 - **Signal handlers installed once per scan** — Moved from per-`try_read_mem` call (5 syscalls per read) to once at start of `memory_inject_try_patch()` and restored at end. ~524K fewer syscalls per full heap scan.

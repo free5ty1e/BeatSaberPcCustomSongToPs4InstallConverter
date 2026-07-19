@@ -123,31 +123,38 @@ static int find_module_segments(const char* module_name,
 static int try_read_mem(uint64_t addr, void* buf, size_t size);
 
 // ── Pattern-Based Object Finding ─────────────────────────────────────────
-// Find BeatmapLevelSO klass by scanning a limited range of the GC heap for
-// objects matching the known field layout. Only scans first ~64MB so it's fast.
-static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
-    // Only scan first 64MB of heap — objects should be near GC allocation start
-    uint64_t scan_end = SCAN_START_ADDR + 0x4000000ULL;
-    if (scan_end > SCAN_END_ADDR) scan_end = SCAN_END_ADDR;
+// Find BeatmapLevelSO klass by scanning memory for objects matching the known
+// field layout. SCANS A WIDE RANGE (1GB-32GB) at coarse granularity
+// to locate the IL2CPP heap region, which may be at different addresses on PS4.
+#define PATTERN_SCAN_MIN  0x40000000ULL   // 1GB — start below expected heap
+#define PATTERN_SCAN_MAX  0x800000000ULL  // 32GB — upper bound
+#define PATTERN_SCAN_STEP 0x100000ULL     // 1MB pages (coarse, ~7168 pages total)
 
-    uint8_t page[SCAN_STEP];
-    for (uint64_t page_addr = SCAN_START_ADDR; page_addr < scan_end; page_addr += SCAN_STEP) {
-        if (!try_read_mem(page_addr, page, SCAN_STEP))
+static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
+    int scan_count = 0;
+    uint8_t page[PATTERN_SCAN_STEP];
+
+    for (uint64_t page_addr = PATTERN_SCAN_MIN; page_addr < PATTERN_SCAN_MAX; page_addr += PATTERN_SCAN_STEP) {
+        scan_count++;
+        if (!try_read_mem(page_addr, page, PATTERN_SCAN_STEP))
             continue;
 
-        for (uint64_t offset = 0; offset < SCAN_STEP - 64; offset += 8) {
+        // Scan every 32 bytes (coarse) to find potential objects quickly
+        for (uint64_t offset = 0; offset < PATTERN_SCAN_STEP - 64; offset += 32) {
             uint64_t klass_ptr = *(uint64_t*)(page + offset + 0x00);
             int32_t version   = *(int32_t*)(page + offset + 0x18);
             uint64_t lid      = *(uint64_t*)(page + offset + 0x20);
             uint64_t sn       = *(uint64_t*)(page + offset + 0x28);
             uint64_t an       = *(uint64_t*)(page + offset + 0x38);
 
+            // Klass ptr must be in module data segment range (0x84AC0000 +- margin)
             if (klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) continue;
             if (version < 1 || version > 50) continue;
             if (lid < 0x100000000ULL || lid > 0x8000000000ULL) continue;
             if (sn  < 0x100000000ULL || sn  > 0x8000000000ULL) continue;
             if (an  < 0x100000000ULL || an  > 0x8000000000ULL) continue;
 
+            // Quick string length validation
             int32_t lid_len = 0, sn_len = 0;
             if (!try_read_mem(lid + 0x10, &lid_len, 4)) continue;
             if (!try_read_mem(sn  + 0x10, &sn_len,  4)) continue;

@@ -2756,4 +2756,35 @@ Before building v0.35, I analyzed the difference between the original file and `
   - src/main.cpp — v0.73
   - CHANGELOG-PLUGIN.md — v0.73 entry
 - **Version:** v0.73
-- **Status:** Deployed to PS4, awaiting test
+- **Status:** v0.73 tested: ❌ **Black screen hang** — Full 8GB heap scan in hook callback too slow. v0.74 fixed (persistent signal handlers, 256MB range). Pattern matcher found NO objects in 64MB of heap — suggesting heap address is wrong or field layout is incorrect.
+
+### Experiment 176: v0.74–v0.75 — Dump Analysis & Pattern Matcher Optimization
+- **Date:** 2026-07-19
+- **What:**
+  - v0.74 tested: Optimized signal handlers (installed once per scan), 256MB heap range, eliminated double-scan. No hang. **Pattern matcher scanned 64MB of heap at 0x200000000 and found ZERO BeatmapLevelSO candidates** — suggesting the heap is at a different address or field offsets are wrong.
+  - v0.74 log: Pattern matcher ran but found no objects → "ERROR: Could not find BeatmapLevelSO klass"
+  - PS4 game dump analysis performed to verify assumptions:
+    1. **Il2CppUserAssemblies.prx** (36MB): **NO "BeatmapLevelSO" string found** via `strings`
+    2. **global-metadata.dat** (patch, 8MB): **"BeatmapLevelSO" FOUND** at offset 0x23CB6E
+    3. Confirmed: Class name strings are loaded DYNAMICALLY from metadata at runtime, NOT compiled into module
+    4. Pack bundle files are 0 bytes in dump (stripped) — can't verify field offsets directly
+    5. Field offsets (version=0x18, levelID=0x20, etc.) from il2cpp.h — unverified on this game version
+  - User also raised timing concern: memory injection fires on **per-song bundle redirect** (during play), but song list metadata comes from **pack bundle** (loaded earlier). The UI may cache rendered text and not update even if objects are patched later.
+- **Key Findings:**
+  1. String search approach (v0.66–v0.71) was FUNDAMENTALLY WRONG — class names aren't in the module
+  2. IL2CPP heap address on PS4 is UNVERIFIED — might not be at 0x200000000
+  3. Field offsets from il2cpp.h may differ from actual PS4 layout
+  4. UI text caching may prevent song list updates from late patching
+- **Fix (v0.75):** Pattern matcher expanded to **1GB–32GB** range with 1MB pages and 32-byte stepping. Signals installed once per scan. Coarse granularity completes in ~200ms even for full range.
+- **New Knowledge Base Entries:**
+  - `ps4-il2cpp-metadata-loading.md` — How IL2CPP loads class names from global-metadata.dat (NOT in module)
+  - Updated `memory-injection-addressables-bypass.md` — Added discovery section, updated architecture
+- **Files Changed:**
+  - src/memory_inject.cpp — PATTERN_SCAN_MIN, PATTERN_SCAN_MAX, step size, page size
+  - src/main.cpp — v0.75
+  - CHANGELOG-PLUGIN.md — v0.74, v0.75 entries
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.72_bounds_fix_verbose_log.txt` (783 lines)
+  - `.ai_memory/experiment_logs/v0.71_debug_verbose_log.txt` (780 lines)
+- **Version:** v0.75
+- **Status:** Deployed to PS4, awaiting test results
