@@ -2,6 +2,15 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.74] — 2026-07-19
+### Changed
+- **Signal handlers installed once per scan** — Moved from per-`try_read_mem` call (5 syscalls per read) to once at start of `memory_inject_try_patch()` and restored at end. ~524K fewer syscalls per full heap scan.
+- **Heap scan range reduced** — SCAN_END_ADDR changed from 0x400000000 (8GB) to 0x210000000 (256MB). Reduces iterations from 131K pages × 8192 checks to 4K pages × 8192 checks. ~33M vs ~1B checks.
+- **Pattern matcher limited to first 64MB** — Only scans first 64MB of heap (not full 8GB) to find klass via field layout.
+- **Double scan eliminated** — Combined klass discovery and object scanning logic. String search is tried first, fallback to pattern matcher in limited range, then object scan only once with klass.
+### Fixed
+- **Black screen hang on song select (v0.73)** — Caused by scanning the full 8GB heap range synchronously in the hook callback (~1B checks per scan, double-scanned). Now completes in ~33M checks with optimized signal handler setup.
+
 ## [v0.73] — 2026-07-19
 ### Fixed
 - **Class string "BeatmapLevelSO" not found in Il2CppUserAssemblies** — The string is NOT present in the module's .text segment (only segment returned by `sceKernelGetModuleInfo`). Added `find_beatmap_level_objects_by_pattern()` as fallback: scans the IL2CPP GC heap for objects matching BeatmapLevelSO field layout (version range, valid pointer ranges) instead of requiring klass string search. Extracts klass pointer from the first validated object.

@@ -54,7 +54,7 @@
 
 // Focused scan range: IL2CPP managed heap on PS4 typically lives here
 #define SCAN_START_ADDR 0x0000000200000000ULL
-#define SCAN_END_ADDR   0x0000000400000000ULL
+#define SCAN_END_ADDR   0x0000000210000000ULL   // 256MB range (was 8GB — too slow for hook callback)
 #define SCAN_STEP       0x10000ULL    // 64KB pages
 
 // ── BeatmapLevelSO Field Offsets (from il2cpp dump) ──────────────────────
@@ -123,20 +123,15 @@ static int find_module_segments(const char* module_name,
 static int try_read_mem(uint64_t addr, void* buf, size_t size);
 
 // ── Pattern-Based Object Finding ─────────────────────────────────────────
-// Alternative to klass string search: find BeatmapLevelSO objects on the GC
-// heap by matching their field layout, then extract the klass pointer.
+// Find BeatmapLevelSO klass by scanning a limited range of the GC heap for
+// objects matching the known field layout. Only scans first ~64MB so it's fast.
 static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
-    int seg_count;
-    ModuleSegment mod_segs[4];
-    {
-        ModuleSegment segs[4];
-        seg_count = find_module_segments(MODULE_NAME, segs, 4);
-        if (seg_count <= 0) seg_count = 0;
-        for (int i = 0; i < seg_count; i++) mod_segs[i] = segs[i];
-    }
+    // Only scan first 64MB of heap — objects should be near GC allocation start
+    uint64_t scan_end = SCAN_START_ADDR + 0x4000000ULL;
+    if (scan_end > SCAN_END_ADDR) scan_end = SCAN_END_ADDR;
 
     uint8_t page[SCAN_STEP];
-    for (uint64_t page_addr = SCAN_START_ADDR; page_addr < SCAN_END_ADDR; page_addr += SCAN_STEP) {
+    for (uint64_t page_addr = SCAN_START_ADDR; page_addr < scan_end; page_addr += SCAN_STEP) {
         if (!try_read_mem(page_addr, page, SCAN_STEP))
             continue;
 
@@ -147,25 +142,18 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             uint64_t sn       = *(uint64_t*)(page + offset + 0x28);
             uint64_t an       = *(uint64_t*)(page + offset + 0x38);
 
-            // Klass pointer must be in module range
             if (klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) continue;
-
-            // Version must be a typical BeatmapLevelSO version
             if (version < 1 || version > 50) continue;
-
-            // String pointer basic validation
             if (lid < 0x100000000ULL || lid > 0x8000000000ULL) continue;
             if (sn  < 0x100000000ULL || sn  > 0x8000000000ULL) continue;
             if (an  < 0x100000000ULL || an  > 0x8000000000ULL) continue;
 
-            // Verify strings have plausible System_String header: length > 0, <= 255
             int32_t lid_len = 0, sn_len = 0;
             if (!try_read_mem(lid + 0x10, &lid_len, 4)) continue;
             if (!try_read_mem(sn  + 0x10, &sn_len,  4)) continue;
             if (lid_len <= 0 || lid_len > 255) continue;
             if (sn_len  <= 0 || sn_len  > 255) continue;
 
-            // Found a valid BeatmapLevelSO candidate — use its klass
             *klass_out = klass_ptr;
             return 0;
         }
@@ -209,25 +197,46 @@ int memory_inject_try_patch(void) {
         return -1;  // Another caller already doing this
     }
 
+    // Install signal handlers ONCE for the entire scan (not per try_read_mem call)
+    // This saves ~4 sigaction syscalls per page read = ~524K fewer syscalls for full heap scan
+    struct sigaction sa, old_segv, old_bus;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = mem_fault_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGSEGV, &sa, &old_segv);
+    sigaction(SIGBUS, &sa, &old_bus);
+
     meminj_log("[MEMINJ] Scanning...");
 
     // Step 1: Find BeatmapLevelSO class metadata
     uint64_t klass_addr = 0;
-    if (find_beatmap_level_so_klass(&klass_addr) < 0) {
+    int klass_found = (find_beatmap_level_so_klass(&klass_addr) == 0);
+    if (!klass_found) {
+        // String search failed — try pattern-based discovery in limited heap range
+        meminj_log("[MEMINJ] String not in module — trying pattern find in heap...");
+        klass_found = (find_beatmap_level_objects_by_pattern(&klass_addr) == 0);
+        if (klass_found) {
+            char b[128];
+            snprintf(b, sizeof(b), "[MEMINJ] Found klass 0x%lX via pattern", klass_addr);
+            meminj_log(b);
+        }
+    }
+
+    if (!klass_found) {
         meminj_log("[MEMINJ] ERROR: Could not find BeatmapLevelSO klass");
+        sigaction(SIGSEGV, &old_segv, NULL);
+        sigaction(SIGBUS, &old_bus, NULL);
         g_patching_done = -1;
         return -1;
     }
 
-    char buf[256];
-    snprintf(buf, sizeof(buf), "[MEMINJ] Klass at 0x%lX", klass_addr);
-    meminj_log(buf);
-
-    // Step 2: Scan for BeatmapLevelSO objects
+    // Step 2: Scan for BeatmapLevelSO objects using klass pointer
     uint64_t obj_addrs[256];
     int found = scan_for_beatmap_level_objects(klass_addr, obj_addrs, 256);
 
-    snprintf(buf, sizeof(buf), "[MEMINJ] Found %d candidates", found);
+    char buf[256];
+    snprintf(buf, sizeof(buf), "[MEMINJ] Found %d candidates with klass 0x%lX", found, klass_addr);
     meminj_log(buf);
 
     // Step 3: Patch matching objects
@@ -272,6 +281,10 @@ int memory_inject_try_patch(void) {
 
     snprintf(buf, sizeof(buf), "[MEMINJ] Patched %d/%d objects", patched, g_metadata_count);
     meminj_log(buf);
+
+    // Restore original signal handlers
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
 
     g_patching_done = patched ? patched : -1;
     return patched > 0 ? 0 : -1;
@@ -377,13 +390,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
     }
 
     if (!class_string_addr) {
-        // String not in module — try broader search in IL2CPP heap and other mapped regions
-        meminj_log("[MEMINJ] String not in module — trying heap scan for BeatmapLevelSO...");
-        if (find_beatmap_level_objects_by_pattern(klass_out) == 0) {
-            meminj_log("[MEMINJ] Found BeatmapLevelSO objects via pattern matching");
-            return 0;
-        }
-        meminj_log("[MEMINJ] ERROR: Class string not found");
+        // String not found in any segment — pattern matcher will be tried by caller
         return -1;
     }
 
@@ -428,29 +435,13 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size) {
     if (addr < 0x1000000ULL || addr > 0x2000000000ULL) return 0;
     if (addr + size > 0x2000000000ULL || addr + size < addr) return 0;
 
-    // Install signal handlers for safe memory probing.
-    // SIGSEGV/SIGBUS fire if the target address range is not readable,
-    // mem_fault_handler longjmps back, and we return 0.
-    struct sigaction sa, old_segv, old_bus;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = mem_fault_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-
-    if (sigaction(SIGSEGV, &sa, &old_segv) != 0) return 0;
-    if (sigaction(SIGBUS, &sa, &old_bus) != 0) {
-        sigaction(SIGSEGV, &old_segv, NULL);
-        return 0;
-    }
-
+    // Signal handlers are installed once at the start of memory_inject_try_patch
+    // and restored at the end. Here we just use sigsetjmp to catch any faults.
     int result = 0;
     if (sigsetjmp(g_mem_jmpbuf, 1) == 0) {
         memcpy(buf, (void*)addr, size);
         result = 1;
     }
-
-    sigaction(SIGSEGV, &old_segv, NULL);
-    sigaction(SIGBUS, &old_bus, NULL);
     return result;
 }
 
