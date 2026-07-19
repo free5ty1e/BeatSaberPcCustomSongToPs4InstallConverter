@@ -122,6 +122,57 @@ static int find_module_segments(const char* module_name,
                                 ModuleSegment* segments, int max_segments);
 static int try_read_mem(uint64_t addr, void* buf, size_t size);
 
+// ── Pattern-Based Object Finding ─────────────────────────────────────────
+// Alternative to klass string search: find BeatmapLevelSO objects on the GC
+// heap by matching their field layout, then extract the klass pointer.
+static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
+    int seg_count;
+    ModuleSegment mod_segs[4];
+    {
+        ModuleSegment segs[4];
+        seg_count = find_module_segments(MODULE_NAME, segs, 4);
+        if (seg_count <= 0) seg_count = 0;
+        for (int i = 0; i < seg_count; i++) mod_segs[i] = segs[i];
+    }
+
+    uint8_t page[SCAN_STEP];
+    for (uint64_t page_addr = SCAN_START_ADDR; page_addr < SCAN_END_ADDR; page_addr += SCAN_STEP) {
+        if (!try_read_mem(page_addr, page, SCAN_STEP))
+            continue;
+
+        for (uint64_t offset = 0; offset < SCAN_STEP - 64; offset += 8) {
+            uint64_t klass_ptr = *(uint64_t*)(page + offset + 0x00);
+            int32_t version   = *(int32_t*)(page + offset + 0x18);
+            uint64_t lid      = *(uint64_t*)(page + offset + 0x20);
+            uint64_t sn       = *(uint64_t*)(page + offset + 0x28);
+            uint64_t an       = *(uint64_t*)(page + offset + 0x38);
+
+            // Klass pointer must be in module range
+            if (klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) continue;
+
+            // Version must be a typical BeatmapLevelSO version
+            if (version < 1 || version > 50) continue;
+
+            // String pointer basic validation
+            if (lid < 0x100000000ULL || lid > 0x8000000000ULL) continue;
+            if (sn  < 0x100000000ULL || sn  > 0x8000000000ULL) continue;
+            if (an  < 0x100000000ULL || an  > 0x8000000000ULL) continue;
+
+            // Verify strings have plausible System_String header: length > 0, <= 255
+            int32_t lid_len = 0, sn_len = 0;
+            if (!try_read_mem(lid + 0x10, &lid_len, 4)) continue;
+            if (!try_read_mem(sn  + 0x10, &sn_len,  4)) continue;
+            if (lid_len <= 0 || lid_len > 255) continue;
+            if (sn_len  <= 0 || sn_len  > 255) continue;
+
+            // Found a valid BeatmapLevelSO candidate — use its klass
+            *klass_out = klass_ptr;
+            return 0;
+        }
+    }
+    return -1;
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Public API
 // ══════════════════════════════════════════════════════════════════════════
@@ -292,29 +343,46 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
         return -1;
     }
 
-    // Find "BeatmapLevelSO" C string in module
-    uint64_t class_string_addr = 0;
-    for (int s = 0; s < seg_count; s++) {
-        if (!segs[s].is_readable) continue;
-#ifdef VERBOSE_LOG
-        {   char buf[256];
-            snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Segment %d: base=0x%lX size=0x%lX r=%d w=%d x=%d",
+    // Log all segments (including non-readable) for diagnostics
+    {   char buf[256];
+        snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Il2CppUserAssemblies: %d segments", seg_count);
+        meminj_log(buf);
+        for (int s = 0; s < seg_count; s++) {
+            snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Seg[%d]: base=0x%lX size=0x%lX prot=r%dw%dx%d",
                      s, segs[s].base, segs[s].size,
                      segs[s].is_readable, segs[s].is_writable, segs[s].is_exec);
             meminj_log(buf);
-            // Test first chunk readability
+            // Test first chunk readability with signal handlers (works even on non-readable mappings)
             uint8_t test_buf[16];
             int readable = try_read_mem(segs[s].base, test_buf, 16);
-            snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Segment %d: try_read_mem(first 16) = %s",
+            snprintf(buf, sizeof(buf), "[MEMINJ:VERBOSE] Seg[%d]: try_read_mem(first 16) = %s",
                      s, readable ? "OK" : "FAIL");
             meminj_log(buf);
         }
-#endif
+    }
+
+    // Find "BeatmapLevelSO" C string in module (try ALL segments, signal handler catches faults)
+    uint64_t class_string_addr = 0;
+    for (int s = 0; s < seg_count; s++) {
+        // Skip segments with no readable base (bounds check would reject)
+        if (segs[s].base == 0 || segs[s].size == 0) continue;
         class_string_addr = search_for_string(segs[s].base, segs[s].size, CLASS_NAME);
-        if (class_string_addr) break;
+        if (class_string_addr) {
+            char buf[256];
+            snprintf(buf, sizeof(buf), "[MEMINJ] Found 'BeatmapLevelSO' in Seg[%d] at 0x%lX",
+                     s, class_string_addr);
+            meminj_log(buf);
+            break;
+        }
     }
 
     if (!class_string_addr) {
+        // String not in module — try broader search in IL2CPP heap and other mapped regions
+        meminj_log("[MEMINJ] String not in module — trying heap scan for BeatmapLevelSO...");
+        if (find_beatmap_level_objects_by_pattern(klass_out) == 0) {
+            meminj_log("[MEMINJ] Found BeatmapLevelSO objects via pattern matching");
+            return 0;
+        }
         meminj_log("[MEMINJ] ERROR: Class string not found");
         return -1;
     }

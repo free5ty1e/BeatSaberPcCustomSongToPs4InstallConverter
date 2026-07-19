@@ -2,6 +2,13 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.73] — 2026-07-19
+### Fixed
+- **Class string "BeatmapLevelSO" not found in Il2CppUserAssemblies** — The string is NOT present in the module's .text segment (only segment returned by `sceKernelGetModuleInfo`). Added `find_beatmap_level_objects_by_pattern()` as fallback: scans the IL2CPP GC heap for objects matching BeatmapLevelSO field layout (version range, valid pointer ranges) instead of requiring klass string search. Extracts klass pointer from the first validated object.
+
+### Added
+- **Pattern-based klass finding** — New function `find_beatmap_level_objects_by_pattern()` searches heap objects by struct field layout signature rather than by class name string. This bypasses the need for the "BeatmapLevelSO" C string in module data.
+
 ## [v0.72] — 2026-07-19
 ### Fixed
 - **REAL root cause of "Class string not found"** — `try_read_mem()` had a bounds check rejecting addresses below 0x100000000 (4GB). PS4 modules (Il2CppUserAssemblies) are loaded at ~0x80000000 (2GB), so ALL segment reads were rejected by the bounds check before any probing method could be tested. This affected v0.66 through v0.71.

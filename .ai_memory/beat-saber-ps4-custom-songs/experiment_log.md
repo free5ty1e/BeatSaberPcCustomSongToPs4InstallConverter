@@ -2729,3 +2729,31 @@ Before building v0.35, I analyzed the difference between the original file and `
   - CHANGELOG-PLUGIN.md — v0.72 entry
 - **Version:** v0.72
 - **Status:** Deployed to PS4 at `/data/GoldHEN/plugins/beat_saber_deluxe.prx` (correct path), awaiting test
+
+### Experiment 175: v0.72 Tested & v0.73 — Bounds Fix Works, but String Not in Module
+- **Date:** 2026-07-19
+- **What:** 
+  - v0.72 deployed and tested ($100 Bills, Start Me Up). User saw v0.72 notification, no crashes, redirects worked.
+  - v0.72 log analysis with VERBOSE_LOG revealed:
+    ```
+    [MEMINJ:VERBOSE] Seg[0]: base=0x806C0000 size=0x3F54000 prot=r1w0x1
+    [MEMINJ:VERBOSE] Seg[0]: try_read_mem(first 16) = OK
+    [MEMINJ] ERROR: Class string not found
+    ```
+  - Bounds fix works: `try_read_mem(first 16) = OK` — signal handlers read the .text segment correctly!
+  - BUT: Only 1 segment returned by `sceKernelGetModuleInfo` (the .text section). The "BeatmapLevelSO" C string is NOT in this segment.
+  - All segments logged (including any non-readable) but only 1 segment exists.
+- **Key Discovery:** The `Il2CppUserAssemblies` module's .text segment (0x806C0000, 63MB) is the ONLY segment returned by `sceKernelGetModuleInfo`. The class name strings (.rodata/.data) may be in a separate mapping not reported, or in the global-metadata.dat file. String search approach CANNOT work for finding the klass.
+- **Fix (v0.73):** Added `find_beatmap_level_objects_by_pattern()` as fallback — scans the IL2CPP GC heap (0x200000000–0x400000000) for objects matching BeatmapLevelSO field layout signature:
+  - klass ptr in module range (0x80000000–0x90000000)
+  - _version in [1, 50]
+  - 3 string pointers (_levelID, _songName, _songAuthorName) in valid heap range
+  - Each string verified as plausible System_String (length 1–255 at offset +0x10)
+  - On match: extracts klass pointer from the found object → use for targeted heap re-scan
+- **Archived Log:** `.ai_memory/experiment_logs/v0.72_bounds_fix_verbose_log.txt` (783 lines)
+- **Files Changed (v0.73):**
+  - src/memory_inject.cpp — Added `find_beatmap_level_objects_by_pattern()`, updated segment logging to show all segments, updated `find_beatmap_level_so_klass()` to call pattern fallback
+  - src/main.cpp — v0.73
+  - CHANGELOG-PLUGIN.md — v0.73 entry
+- **Version:** v0.73
+- **Status:** Deployed to PS4, awaiting test
