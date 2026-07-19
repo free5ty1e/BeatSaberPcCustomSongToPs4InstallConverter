@@ -2788,3 +2788,23 @@ Before building v0.35, I analyzed the difference between the original file and `
   - `.ai_memory/experiment_logs/v0.71_debug_verbose_log.txt` (780 lines)
 - **Version:** v0.75
 - **Status:** Deployed to PS4, awaiting test results
+
+### Experiment 177: v0.76 — String Pointer Validation Threshold Lowered (Real Bug Found)
+- **Date:** 2026-07-19
+- **What:**
+  - v0.75 tested: Scanned 1GB–32GB range, found NO BeatmapLevelSO objects. Log showed "String not in module — trying pattern find in heap... ERROR: Could not find BeatmapLevelSO klass"
+  - **Root Cause Identified:** The pattern matcher and object validation functions used `0x100000000` (4GB) as the lower bound for string pointer validation (lid, sn, an fields), while `try_read_mem()` used `0x1000000` (16MB) as its bounds check lower limit.
+  - When the IL2CPP heap is below 4GB on PS4, all BeatmapLevelSO objects and their string pointers are at addresses below 4GB. `try_read_mem` correctly read the pages, but the validation functions REJECTED every object because their string pointer fields were < 4GB.
+  - **This was the bug across v0.73–v0.75:** not the scan range, not the heap address — just a mismatched constant.
+- **Fix (v0.76):**
+  - Changed all string pointer validation thresholds from `0x100000000` (4GB) to `0x1000000` (16MB) to match try_read_mem's bounds
+  - Updated in ALL locations: pattern matcher (3 checks), validate_beatmap_level_object (3 checks)
+  - PATTERN_SCAN_MIN lowered from 0x40000000 (1GB) to 0x1000000 (16MB)
+  - PATTERN_SCAN_MAX raised from 0x800000000 (32GB) to 0x1000000000 (64GB)
+- **Key Lesson:** When changing bounds in try_read_mem, ALL validation functions that check pointer ranges MUST be updated to match. Inconsistent bounds between the low-level read function and the high-level validation functions silently rejects all objects even though memory is read correctly.
+- **Files Changed:**
+  - src/memory_inject.cpp — All string ptr validation thresholds (4 locations), PATTERN_SCAN_MIN/MAX
+  - src/main.cpp — v0.76
+  - CHANGELOG-PLUGIN.md — v0.76 entry
+- **Version:** v0.76
+- **Status:** Deployed to PS4, awaiting test

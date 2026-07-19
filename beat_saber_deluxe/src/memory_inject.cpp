@@ -124,11 +124,11 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size);
 
 // ── Pattern-Based Object Finding ─────────────────────────────────────────
 // Find BeatmapLevelSO klass by scanning memory for objects matching the known
-// field layout. SCANS A WIDE RANGE (1GB-32GB) at coarse granularity
-// to locate the IL2CPP heap region, which may be at different addresses on PS4.
-#define PATTERN_SCAN_MIN  0x40000000ULL   // 1GB — start below expected heap
-#define PATTERN_SCAN_MAX  0x800000000ULL  // 32GB — upper bound
-#define PATTERN_SCAN_STEP 0x100000ULL     // 1MB pages (coarse, ~7168 pages total)
+// field layout. SCANS A WIDE RANGE (16MB-64GB) at coarse granularity
+// to locate the IL2CPP heap region, whose address is UNKNOWN on PS4.
+#define PATTERN_SCAN_MIN  0x1000000ULL    // 16MB — start below possible heap
+#define PATTERN_SCAN_MAX  0x1000000000ULL // 64GB — upper bound
+#define PATTERN_SCAN_STEP 0x100000ULL     // 1MB pages (coarse, ~65536 pages total)
 
 static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
     int scan_count = 0;
@@ -150,9 +150,9 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             // Klass ptr must be in module data segment range (0x84AC0000 +- margin)
             if (klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) continue;
             if (version < 1 || version > 50) continue;
-            if (lid < 0x100000000ULL || lid > 0x8000000000ULL) continue;
-            if (sn  < 0x100000000ULL || sn  > 0x8000000000ULL) continue;
-            if (an  < 0x100000000ULL || an  > 0x8000000000ULL) continue;
+            if (lid < 0x1000000ULL || lid > 0x8000000000ULL) continue;
+            if (sn  < 0x1000000ULL || sn  > 0x8000000000ULL) continue;
+            if (an  < 0x1000000ULL || an  > 0x8000000000ULL) continue;
 
             // Quick string length validation
             int32_t lid_len = 0, sn_len = 0;
@@ -490,17 +490,17 @@ static int validate_beatmap_level_object(uint64_t addr) {
     // _levelID must be a valid string pointer
     uint64_t lid = 0;
     if (!try_read_mem(addr + OFFSET_LEVEL_ID, &lid, 8)) return 0;
-    if (lid < 0x100000000ULL || lid > 0x8000000000ULL) return 0;
+    if (lid < 0x1000000ULL || lid > 0x8000000000ULL) return 0;
 
     // _songName must be a valid pointer
     uint64_t sn = 0;
     if (!try_read_mem(addr + OFFSET_SONG_NAME, &sn, 8)) return 0;
-    if (sn < 0x100000000ULL || sn > 0x8000000000ULL) return 0;
+    if (sn < 0x1000000ULL || sn > 0x8000000000ULL) return 0;
 
     // _songAuthorName must be a valid pointer
     uint64_t an = 0;
     if (!try_read_mem(addr + OFFSET_SONG_AUTHOR, &an, 8)) return 0;
-    if (an < 0x100000000ULL || an > 0x8000000000ULL) return 0;
+    if (an < 0x1000000ULL || an > 0x8000000000ULL) return 0;
 
     return 1;
 }

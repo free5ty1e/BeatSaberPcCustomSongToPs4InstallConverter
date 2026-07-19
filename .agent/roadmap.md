@@ -49,7 +49,8 @@
   - v0.73: Pattern matcher (full 8GB scan) — ❌ black screen hang, too slow for hook callback
   - v0.74: Persistent signal handlers (once per scan), 256MB range — no objects found in assumed heap range
   - v0.75: **PS4 dump analysis** — "BeatmapLevelSO" string is in global-metadata.dat, NOT in module. Heap address unverified. Wide-range pattern scan (1GB–32GB) deployed.
-- [ ] **(PENDING TESTING)** Verify v0.75: (1) pattern matcher finds BeatmapLevelSO klass, (2) objects patched, (3) address timing issue (injection fires during play, but song list metadata comes from pack bundle)
+  - v0.76: **String ptr validation threshold 4GB→16MB** — real bug in v0.73–v0.75: try_read_mem accepted 16MB+, but pattern validation rejected <4GB. Scan range 16MB–64GB.
+- [ ] **(PENDING TESTING)** Verify v0.76: (1) pattern matcher finds BeatmapLevelSO klass, (2) objects patched, (3) address timing issue (injection fires during play, but song list metadata comes from pack bundle)
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors

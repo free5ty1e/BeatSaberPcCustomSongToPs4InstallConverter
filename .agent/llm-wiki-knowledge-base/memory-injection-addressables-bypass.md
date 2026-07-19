@@ -13,9 +13,9 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata for the song selection screen.
 
-**Status:** 🔵 **v0.75 plugin** — Memory injection actively developed. After 9 versions (v0.66–v0.75), three root causes found: bounds check rejection, classic string not in module, unknown heap address. Current approach: wide-range pattern-based heap scan (1GB–32GB) with signal-handler safe probing. See [[ps4-il2cpp-metadata-loading]] for the class name discovery.
+**Status:** 🔵 **v0.76 plugin** — Memory injection actively developed. After 10 versions (v0.66–v0.76), root causes addressed: bounds check (v0.72), class string in metadata not module (v0.75), string pointer validation mismatch with try_read_mem bounds (v0.76). Current approach: wide-range pattern-based heap scan (16MB–64GB) with signal-handler safe probing.
 
-## Implementation — Current Architecture (v0.75)
+## Implementation — Current Architecture (v0.76)
 
 ### Component Overview
 
@@ -35,7 +35,7 @@ memory_inject_try_patch()
     │
     ├── [3] find_beatmap_level_objects_by_pattern()  ← FALLBACK when string not found
     │       │
-    │       └── scan memory (1GB–32GB, 1MB pages, 32-byte stepping)
+    │       └── scan memory (16MB–64GB, 1MB pages, 32-byte stepping)
     │           for objects matching BeatmapLevelSO field layout:
     │           - klass ptr in [0x80000000, 0x90000000]
     │           - _version in [1, 50]
@@ -146,7 +146,7 @@ See [[ps4-il2cpp-metadata-loading]] for full analysis.
 
 The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB) based on typical PS4 Unity layout. This was UNVERIFIED. Scanning 64MB of this range found zero objects, suggesting the heap is at a different address or the field layout is wrong.
 
-**Current approach (v0.75):** Wide-range scan from 1GB to 32GB at coarse granularity to locate objects.
+**Current approach (v0.76):** Wide-range scan from 16MB to 64GB at coarse granularity to locate objects.
 
 ## History — The Debugging Saga
 
@@ -161,7 +161,8 @@ The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB)
 | v0.72 | Bounds check fixed (4GB→16MB) | ✅ try_read_mem works! But **"Class string not found"** — string NOT in module |
 | v0.73 | Pattern matcher added (full 8GB heap scan) | ❌ **Black screen hang** — scan too slow for hook callback |
 | v0.74 | Optimized: persistent handlers, 256MB range | ✅ No hang. **Pattern found NOTHING** in 64MB heap range |
-| **v0.75** | **Wide scan 1GB–32GB, coarse stepping** | 🔵 **Scanning full address space for objects** |
+| **v0.75** | **Wide scan 1GB–32GB, coarse stepping** | 🔵 **Pattern found NOTHING — string ptr bounds mismatch** |
+| **v0.76** | **Fixed string ptr threshold 4GB→16MB, scan 16MB–64GB** | 🔵 **Consistent bounds in all validation** |
 
 ## Build & Deploy
 

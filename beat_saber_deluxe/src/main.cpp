@@ -1,7 +1,7 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.75: Memory injection — wide-range heap scan (4GB-32GB, coarse) to find actual IL2CPP heap.
+// v0.76: Memory injection — wide-range heap scan (4GB-32GB, coarse) to find actual IL2CPP heap.
 // v0.74: Memory injection — signal handlers installed once per scan, heap scan range reduced.
 // v0.73: Memory injection — pattern-based klass finding (string not in module text segment).
 // v0.72: Memory injection — fixed bounds check rejecting valid module addresses (<4GB).
@@ -23,7 +23,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.75"
+#define PLUGIN_VERSION "v0.76"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
