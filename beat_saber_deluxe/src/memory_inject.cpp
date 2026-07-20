@@ -89,6 +89,7 @@ static volatile int g_patching_done = 0;  // 0=not yet, 1=success, -1=attempted 
 static uint64_t g_metadata_base = 0;      // Address of patch global-metadata.dat in memory
 static uint64_t g_cached_klass = 0;       // Cached klass addr for close-hook retry
 static int g_retry_pending = 0;           // 1 = retry pending on close()
+static volatile int g_wide_scan = 0;       // 1 = scan full address range (retry only)
 
 // ── Signal-handler memory probing ─────────────────────────────────────────
 static sigjmp_buf g_mem_jmpbuf;
@@ -314,8 +315,11 @@ int memory_inject_try_patch(void) {
     }
 
     // Step 2: Scan for BeatmapLevelSO objects using klass pointer
+    // On retry, enable full-range scan to find objects outside the narrow GC heap range
+    g_wide_scan = is_retry;
     uint64_t obj_addrs[256];
     int found = scan_for_beatmap_level_objects(klass_addr, obj_addrs, 256);
+    g_wide_scan = 0;
 
     char buf[256];
     snprintf(buf, sizeof(buf), "[MEMINJ] Found %d candidates with klass 0x%lX", found, klass_addr);
@@ -671,13 +675,15 @@ static int scan_for_beatmap_level_objects(uint64_t klass_addr,
     snprintf(buf, sizeof(buf), "[MEMINJ] Scanning (klass=0x%lX)...", klass_addr);
     meminj_log(buf);
 
-    // Define scan ranges: [primary GC heap, extended near metadata (if found)]
+    // Define scan ranges: [primary GC heap, extended near metadata, FULL if retry]
     struct { uint64_t start; uint64_t end; } scan_ranges[] = {
         { SCAN_START_ADDR, SCAN_END_ADDR },
         { g_metadata_base ? g_metadata_base - 0x200000 : 0,  // 2MB before metadata
           g_metadata_base ? g_metadata_base + 0x1000000 : 0 }, // 16MB after
+        { g_wide_scan && g_metadata_base ? SCAN_END_ADDR : 0,   // Gap: end of GC heap
+          g_wide_scan && g_metadata_base ? g_metadata_base - 0x200000 : 0 }, // → metadata - 2MB
     };
-    int range_count = (g_metadata_base) ? 2 : 1;
+    int range_count = g_wide_scan ? 3 : (g_metadata_base ? 2 : 1);
 
     uint8_t page[SCAN_STEP];
     for (int r = 0; r < range_count && found < max_objs; r++) {

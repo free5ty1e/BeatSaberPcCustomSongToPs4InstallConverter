@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8009] — 2026-07-19
+### Added
+- **Gap scan on retry** — When the close hook retries the object scan, it now also searches the 2GB gap between the primary GC heap range (0x200000000-0x210000000) and the metadata address (~0x293280000). BeatmapLevelSO objects may be allocated on the GC heap at addresses above 0x210000000, which wasn't covered by any previous scan range.
+- Added `g_wide_scan` flag that enables the gap scan range (SCAN_END_ADDR → metadata_base) only during retry, avoiding extra delay on the initial scan.
+
 ## [v0.8008] — 2026-07-19
 ### Added
 - **Close hook retry mechanism** — Added a `close()` hook that retries the MEMINJ object scan after a file is closed. When the initial scan (triggered by `open()`) finds the BeatmapLevelSO_c klass but 0 BeatmapLevelSO objects, it caches the klass address and schedules a retry. The retry uses the cached klass (skipping the ~9s metadata magic search) and only runs the object scanner, which should find the BeatmapLevelSO objects that were created between the open() and close() calls.

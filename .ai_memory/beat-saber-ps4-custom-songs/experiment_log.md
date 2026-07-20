@@ -2973,5 +2973,21 @@ Before building v0.35, I analyzed the difference between the original file and `
   - src/main.cpp — Added close hook, `HOOK_INIT(hook_close)`, `close_hook()`, hook installation
   - main.cpp — v0.8008
   - CHANGELOG-PLUGIN.md — v0.8008 entry
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8008_close_hook_retry.txt` (v0.8008 log, retry fired but still 0 objects found)
 - **Version:** v0.8008
+- **Status:** ✅ Tested — close hook retry WORKS (fired after file close), but `Klass diag: 0 raw matches, 0 validated` on BOTH the initial and retry scans. The BeatmapLevelSO objects are NOT in the GC heap range (0x200000000-0x210000000) OR the metadata area. Possible locations: the 2GB gap between 0x210000000 and the metadata at 0x293280000.
+
+### Experiment 188: v0.8009 — Gap Scan Between GC Heap and Metadata
+- **Date:** 2026-07-19
+- **What:**
+  - Added `g_wide_scan` flag that extends the object scanner to also cover the 2GB gap between the primary GC heap range (0x200000000-0x210000000) and the metadata address (~0x293280000)
+  - Gap range: SCAN_END_ADDR (0x210000000) → metadata_base - 0x200000 scanned only on retry (~1.8s extra time)
+  - No overlap with existing metadata range (gap ends 2MB before metadata area starts)
+  - Initial scan unchanged (only retry gets the wider scan)
+- **Files Changed:**
+  - src/memory_inject.cpp — Added `g_wide_scan` global, gap range in scan switch, g_wide_scan = is_retry before object scan
+  - main.cpp — v0.8009
+  - CHANGELOG-PLUGIN.md — v0.8009 entry
+- **Version:** v0.8009
 - **Status:** 🚀 Deployed to PS4, awaiting test results

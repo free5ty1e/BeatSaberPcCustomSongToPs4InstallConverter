@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🔵 **Memory injection v0.8008 deployed** — **Timing issue identified and addressed.** The BeatmapLevelSO_c klass is found in the GC heap (0x2012007E0) via metadata magic search, and the name field offset is confirmed correct. But BeatmapLevelSO OBJECT instances don't exist when the open() hook fires — they're created LATER by Unity's deserialization. **v0.8008 adds a close() hook retry mechanism:** the klass is cached after the first scan, and the object scanner retries when close() fires (after the per-song bundle data has been read). Retry skips the ~9s metadata magic search by using the cached klass.
+**Status:** 🔵 **Memory injection v0.8009 deployed** — The close hook retry (v0.8008) fires after file close but STILL finds 0 BeatmapLevelSO objects. The objects aren't in the GC heap range (0x200000000-0x210000000) or metadata area. **v0.8009 adds a gap scan** that covers the 2GB between the GC heap limit and the metadata address (~0x210000000-0x293280000). If still 0, the klass pointer at 0x2012007E0 may not be what BeatmapLevelSO objects actually reference — the `[0x00]=0x0` klass field suggests the struct may not be a properly initialized Il2CppClass.
 
 ## Current Approach: Memory Injection (v0.66+)
 
