@@ -1,0 +1,22 @@
+=== BS Deluxe v0.8006 started ===
+v0.8006 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (no guard timer, fires on any redirect)
+[MEMINJ] Scanning...
+[MEMINJ:VERBOSE] Il2CppUserAssemblies: 3 segments
+[MEMINJ:VERBOSE] Seg[0]: base=0x806C0000 size=0x3F54000 prot=r1w0x1
+[MEMINJ:VERBOSE] Seg[0]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[1]: base=0x84AC0000 size=0x558000 prot=r0w1x1
+[MEMINJ:VERBOSE] Seg[1]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[2]: base=0x846C0000 size=0x400000 prot=r0w0x1
+[MEMINJ:VERBOSE] Seg[2]: try_read_mem(first 16) = OK
+[MEMINJ] String not in module — searching for global-metadata.dat magic...
+[MEMINJ] Found metadata at 0x293280000, class string at 0x2934BCB6E
+[MEMINJ] Scanning (klass=0x2012007E0)...
+[MEMINJ] Klass diag: 0 raw matches, 0 validated
+[MEMINJ] Found 0 candidates with klass 0x2012007E0
+[MEMINJ] Patched 0/13 objects

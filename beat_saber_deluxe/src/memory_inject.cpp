@@ -592,6 +592,21 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
                     if (!try_read_mem(candidate + 0x18, &ns_ptr, 8)) continue;
                     if (ns_ptr < 0x10000 || ns_ptr > 0x8000000000ULL) continue;
                     if (!try_read_mem(candidate + 0x20, &fb_val, 8)) continue;
+                    // Dump Il2CppClass struct bytes to verify field layout
+                    uint64_t klass_hdr[4] = {0};
+                    if (try_read_mem(candidate, klass_hdr, 32)) {
+                        char dbuf[512];
+                        snprintf(dbuf, sizeof(dbuf),
+                                 "[MEMINJ] KLASS_STRUCT addr=0x%lX "
+                                 "[0x00]=0x%lX (klass) "
+                                 "[0x08]=0x%lX (image) "
+                                 "[0x10]=0x%lX (name) "
+                                 "[0x18]=0x%lX (ns/td)",
+                                 candidate,
+                                 klass_hdr[0], klass_hdr[1],
+                                 klass_hdr[2], klass_hdr[3]);
+                        meminj_log(dbuf);
+                    }
                     *klass_out = candidate;
                     return 0;
                 }
