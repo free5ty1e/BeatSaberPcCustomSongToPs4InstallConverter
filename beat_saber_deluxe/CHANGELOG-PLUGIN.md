@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8011] — 2026-07-19
+### Changed
+- **Optimized string search** — 8× faster: uses 8-byte granularity with a uint32 length lookup table instead of 2-byte granularity with 13-length loops. Target: ~200ms instead of ~18s for the GC heap scan.
+- **Dual-format string matching** — Now checks BOTH UTF-16LE (standard .NET) AND UTF-8 (possibly used by PS4) patterns in a single pass. Each string has two uint64 fingerprints checked at every 8-byte aligned position.
+- **Expanded search range** — Covers from 0x200000000 (GC heap start) to `metadata_base + 64MB` (~0x297280000), covering the full 2.3GB range including the gap that was previously unscannable. Single pass, no separate metadata range scan needed.
+- **Gap scan remains disabled** — No separate gap scan; the single large-range pass uses try_read_mem at 64KB granularity, which quickly skips unmapped pages.
+
 ## [v0.8010] — 2026-07-19
 ### Changed
 - **DIRECT STRING SEARCH APPROACH** — Completely new method: instead of finding BeatmapLevelSO objects by klass pointer, search for song name/author strings by their UTF-16LE content in memory and patch them directly. This bypasses the need to find BeatmapLevelSO objects entirely.

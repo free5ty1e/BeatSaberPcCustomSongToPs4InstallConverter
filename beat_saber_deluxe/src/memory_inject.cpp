@@ -330,9 +330,8 @@ int memory_inject_try_patch(void) {
     int string_patched = 0;
     if (found == 0 && g_metadata_base) {
         meminj_log("[MEMINJ] Trying direct string content search...");
-        string_patched = patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR);
-        string_patched += patch_strings_by_content(
-            g_metadata_base - 0x200000, g_metadata_base + 0x1000000);
+        string_patched = patch_strings_by_content(
+            SCAN_START_ADDR, g_metadata_base + 0x4000000);
         if (string_patched > 0) {
             snprintf(buf, sizeof(buf), "[MEMINJ] Direct string patched: %d fields", string_patched);
             meminj_log(buf);
@@ -840,74 +839,117 @@ static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end) {
     int patched = 0;
     char buf[256];
 
-    // Precompute valid string lengths with their metadata indices
-    int v_len[64], v_mid[64], v_count = 0;
-    for (int m = 0; m < g_metadata_count && v_count < 64; m++) {
+    // ── Build lookup tables ──────────────────────────────────────────────
+    uint8_t length_lut[256];                   // length→pattern_index+1 (0=none)
+    int     pat_meta[64];                      // metadata index per pattern
+    uint64_t pat_16[64];                       // UTF-16LE uint64 pattern
+    uint64_t pat_8[64];                        // UTF-8    uint64 pattern
+    int pat_count = 0;
+    memset(length_lut, 0, sizeof(length_lut));
+    memset(pat_16, 0, sizeof(pat_16));
+    memset(pat_8, 0, sizeof(pat_8));
+
+    for (int m = 0; m < g_metadata_count && pat_count < 64; m++) {
         const char* orig = g_metadata_table[m].orig_song_name;
         if (!orig || !orig[0]) continue;
-        int len = strlen(orig);
+        int len = (int)strlen(orig);
+        if (len < 1 || len > 254) continue;
+
+        uint64_t p16 = (uint64_t)(uint32_t)len;
+        p16 |= ((uint64_t)(uint16_t)(unsigned char)orig[0]) << 32;
+        if (len > 1) p16 |= ((uint64_t)(uint16_t)(unsigned char)orig[1]) << 48;
+
+        uint64_t p8 = (uint64_t)(uint32_t)len;
+        p8 |= ((uint64_t)(unsigned char)orig[0]) << 32;
+        p8 |= ((uint64_t)(unsigned char)orig[1]) << 40;
+        p8 |= ((uint64_t)(unsigned char)orig[2]) << 48;
+        p8 |= ((uint64_t)(unsigned char)orig[3]) << 56;
+
         int dup = 0;
-        for (int v = 0; v < v_count && !dup; v++)
-            if (v_len[v] == len && strcmp(orig, g_metadata_table[v_mid[v]].orig_song_name) == 0)
-                dup = 1;
-        if (!dup) { v_len[v_count] = len; v_mid[v_count] = m; v_count++; }
+        for (int p = 0; p < pat_count; p++)
+            if (pat_16[p] == p16 && strcmp(orig, g_metadata_table[pat_meta[p]].orig_song_name) == 0)
+                { dup = 1; break; }
+
+        if (!dup) {
+            pat_16[pat_count] = p16;
+            pat_8[pat_count]  = p8;
+            pat_meta[pat_count] = m;
+            length_lut[len] = (uint8_t)(pat_count + 1);
+            pat_count++;
+        }
     }
 
-    snprintf(buf, sizeof(buf), "[MEMINJ] String scan: %d unique strings to find", v_count);
+    snprintf(buf, sizeof(buf), "[MEMINJ] String scan (opt): %d patterns", pat_count);
     meminj_log(buf);
-    if (v_count == 0) return 0;
+    if (pat_count == 0) return 0;
 
+    // ── Main scan loop ──────────────────────────────────────────────────
     uint8_t page[SCAN_STEP];
     for (uint64_t page_addr = scan_start; page_addr < scan_end; page_addr += SCAN_STEP) {
         if (!try_read_mem(page_addr, page, SCAN_STEP)) continue;
 
-        // Scan at 2-byte (UTF-16 LE) granularity within each page
-        for (uint64_t off = 0; off < SCAN_STEP - 12; off += 2) {
-            uint32_t str_len = *(uint32_t*)(page + off);
+        for (uint64_t off = 0; off < SCAN_STEP - 8; off += 8) {
+            uint64_t page_val = *(uint64_t*)(page + off);
+            uint32_t str_len = (uint32_t)(page_val & 0xFFFFFFFFULL);
+            if (str_len >= 256) continue;
+            int lut_idx = (int)length_lut[str_len] - 1;
+            if (lut_idx < 0) continue;
 
-            // Check against each unique string length
-            for (int v = 0; v < v_count; v++) {
-                if ((int)str_len != v_len[v]) continue;
-                int m = v_mid[v];
-                const char* orig = g_metadata_table[m].orig_song_name;
-                int orig_len = v_len[v];
+            int fmt = 0;  // 0 = none, 1 = UTF-16LE, 2 = UTF-8
+            if (page_val == pat_16[lut_idx]) fmt = 1;
+            else if (page_val == pat_8[lut_idx]) fmt = 2;
+            if (!fmt) continue;
 
-                // Verify full UTF-16LE match
-                int match = 1;
+            int m = pat_meta[lut_idx];
+            const char* orig = g_metadata_table[m].orig_song_name;
+            int orig_len = (int)strlen(orig);
+            if (orig_len < 1) continue;
+
+            int match = 1;
+            if (fmt == 1) {
                 for (int c = 0; c < orig_len && match; c++) {
                     uint16_t e = (uint16_t)(unsigned char)orig[c];
                     uint16_t a = *(uint16_t*)(page + off + 4 + c * 2);
                     if (a != e) match = 0;
                 }
-
-                if (match) {
-                    const char* new_val = g_metadata_table[m].song_name;
-                    int new_len = new_val ? strlen(new_val) : 0;
-
-                    // Patch only if replacement fits (prevents overflow)
-                    if (new_len > 0 && new_len <= orig_len) {
-                        uint64_t data_addr = page_addr + off + 4; // _firstChar
-                        uint32_t new_len_le = new_len;
-
-                        // Write is safe: GC heap pages are writable
-                        memcpy((void*)(page_addr + off), &new_len_le, 4);
-                        for (int c = 0; c < new_len; c++) {
-                            uint16_t ch = (uint16_t)(unsigned char)new_val[c];
-                            memcpy((void*)(data_addr + c * 2), &ch, 2);
-                        }
-                        snprintf(buf, sizeof(buf),
-                                 "[MEMINJ] String patched 0x%lX: '%s' -> '%s'",
-                                 data_addr, orig, new_val);
-                        meminj_log(buf);
-                        patched++;
-                    } else {
-                        snprintf(buf, sizeof(buf),
-                                 "[MEMINJ] String skip 0x%lX: '%s' (new len %d > %d)",
-                                 page_addr + off + 4, orig, new_len, orig_len);
-                        meminj_log(buf);
-                    }
+            } else {
+                for (int c = 0; c < orig_len && match; c++) {
+                    uint8_t e = (uint8_t)(unsigned char)orig[c];
+                    uint8_t a = *(uint8_t*)(page + off + 4 + c);
+                    if (a != e) match = 0;
                 }
             }
+            if (!match) continue;
+
+            // ── Patch in-place ────────────────────────────────────────────
+            const char* new_val = g_metadata_table[m].song_name;
+            int new_len = new_val ? (int)strlen(new_val) : 0;
+            uint64_t data_addr = page_addr + off + 4;
+
+            if (new_len < 1 || new_len > orig_len) {
+                snprintf(buf, sizeof(buf), "[MEMINJ] String skip 0x%lX: '%s' (len %d/%d)",
+                         data_addr, orig, new_len, orig_len);
+                meminj_log(buf);
+                continue;
+            }
+
+            uint32_t new_len_le = (uint32_t)new_len;
+            if (fmt == 1) {  // UTF-16LE
+                memcpy((void*)(page_addr + off), &new_len_le, 4);
+                for (int c = 0; c < new_len; c++) {
+                    uint16_t ch = (uint16_t)(unsigned char)new_val[c];
+                    memcpy((void*)(data_addr + c * 2), &ch, 2);
+                }
+            } else {  // UTF-8
+                memcpy((void*)(page_addr + off), &new_len_le, 4);
+                memcpy((void*)(data_addr), new_val, new_len);
+            }
+
+            snprintf(buf, sizeof(buf),
+                     "[MEMINJ] String patched 0x%lX: '%s' -> '%s' (%s)",
+                     data_addr, orig, new_val, fmt == 1 ? "UTF16" : "UTF8");
+            meminj_log(buf);
+            patched++;
         }
     }
     return patched;
