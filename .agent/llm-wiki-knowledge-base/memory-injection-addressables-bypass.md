@@ -13,7 +13,7 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🔵 **Memory injection v0.79** — 12 versions (v0.66–v0.79). Root causes addressed: bounds check (v0.72), class string in metadata not module (v0.75), inconsistent validation bounds (v0.76), 1MB stack buffer overflow (v0.78). Current issue: pattern matcher finds 17 candidates matching BeatmapLevelSO field layout but System_String._stringLength offset on PS4 may differ from standard IL2CPP layout (all fail string length check). See [[ps4-il2cpp-metadata-loading]] for the class name discovery.
+**Status:** 🔵 **Memory injection v0.8001** — Pattern matcher covers two scan ranges (16MB-4GB + 8GB-8.25GB). Found **45 candidates** (up from 17 in v0.78) that pass klass+version+pointer+klass!=lid checks, but ALL fail string length check at `lid+0x10`. **System_String._stringLength likely NOT at offset 0x10 on PS4 IL2CPP** — the struct layout may differ from standard. Module data segment discovered at 0x84AC0000 (writable, size 0x558000). See [[ps4-il2cpp-metadata-loading]] for the class name discovery.
 
 ## Implementation — Current Architecture (v0.79)
 

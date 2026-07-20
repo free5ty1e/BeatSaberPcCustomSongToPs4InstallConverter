@@ -2831,4 +2831,39 @@ Before building v0.35, I analyzed the difference between the original file and `
   - `.ai_memory/experiment_logs/v0.72_bounds_fix_verbose_log.txt` (783 lines)
   - `.ai_memory/experiment_logs/v0.71_debug_verbose_log.txt` (780 lines)
 - **Version:** v0.79
-- **Status:** Deployed to PS4, awaiting STRDEBUG results
+- **Status:** ✅ Tested — STRDEBUG not triggered due to klass==lid rejection of first 3 candidates
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.72_bounds_fix_verbose_log.txt` (783 lines)
+  - `.ai_memory/experiment_logs/v0.71_debug_verbose_log.txt` (780 lines)
+
+### Experiment 179: v0.80 — False Positive Rejection & GC Heap Scan Range
+- **Date:** 2026-07-19
+- **What:**
+  - Added `klass != lid/sn/an` rejection to kill 17 false positives (all had klass==lid in 0x802Axxxx range)
+  - Extended pattern scan to cover GC heap range (0x200000000-0x210000000) in addition to module/system range (16MB-4GB)
+  - Widened klass range check to accept klass in both module space (0x80000000-0x90000000) and GC heap (0x200000000+)
+- **Test Result:** 🟡 Game loaded, plugin detected. Pattern scan showed `69376 pages (5841 mapped) klass=285910 ver=6312 ptrs=45 strlen=0`.
+  - **45 pointer-level candidates** found (up from 17 in v0.78) — the `klass != lid` rejection works
+  - **0 string length checks passed** — ALL 45 fail at `lid+0x10`
+  - STRDEBUG didn't fire because the first 3 `chk_ptrs` candidates were rejected by `klass != lid` (old 0x802Axxxx false positives), and the remaining 42 candidates are past the `chk_ptrs <= 3` limit
+  - Module data segment discovered: Seg[1]=0x84AC0000 (size 0x558000, writable) — this is where BeatmapLevelSO_c klass should reside
+- **Key Finding:** The `lid+0x10` offset consistently fails to contain a valid string length (0 or >255) for all 45 candidates. System_String._stringLength may NOT be at offset 0x10 on PS4 IL2CPP, OR the 45 candidates are not actually BeatmapLevelSO objects.
+- **Version Scheme Change:** Project adopted 0.0001 increment scheme (v0.80 → v0.8001 → v0.8002) for finer granularity before v1.00.
+- **Version:** v0.80
+- **Status:** ✅ Analyzed — STRDEBUG needs expansion to capture all 45 candidates
+
+### Experiment 180: v0.8001 — Expanded Candidate STRDEBUG for All 45 Candidates
+- **Date:** 2026-07-19
+- **What:**
+  - Removed `chk_ptrs <= 3` limit on STRDEBUG — now logs ALL pointer-level candidates
+  - Added candidate object address and `lid+0x18` value to STRDEBUG output
+  - This will provide data on where the 45 candidates live (module space vs GC heap) and the raw bytes at `lid+0x10`/`+0x14`/`+0x18`
+- **Files Changed:**
+  - src/memory_inject.cpp — Removed chk_ptrs limit, enhanced STRDEBUG with obj address + lid+0x18
+  - CHANGELOG-PLUGIN.md — v0.8001 entry
+  - CLAUDE.md — Added version scheme rule (0.0001 increments)
+  - README.md — Removed Rolling Stones-specific language, made generic
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.80_pattern_diag_5841mapped.txt` (v0.80 log with 45 candidates)
+- **Version:** v0.8001
+- **Status:** 🚀 Deployed to PS4, awaiting test results

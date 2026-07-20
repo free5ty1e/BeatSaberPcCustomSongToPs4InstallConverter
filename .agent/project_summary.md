@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🔵 **Memory injection v0.79 verified** — Memory injection actively developed. Root causes addressed: bounds check (v0.72), class string in metadata not module (v0.75), **string pointer validation 4GB threshold vs try_read_mem 16MB threshold** (v0.76). The v0.73–v0.75 bug was inconsistent bounds between try_read_mem and object validation. Current approach: wide-range pattern-based heap scan (16MB–4GB). **v0.79 deployed, awaiting STRDEBUG results. Pattern matcher finds 17 candidates, all fail string length check — likely wrong _stringLength offset**
+**Status:** 🔵 **Memory injection v0.8001 deployed** — Pattern matcher now covers two ranges: module/system space (16MB-4GB) and GC heap (8GB-8.25GB). v0.80 found **45 pointer-level candidates** (up from 17 in v0.78), but ALL fail `lid+0x10` string length check. **System_String._stringLength likely NOT at offset 0x10 on PS4 IL2CPP.** Module data segment discovered at 0x84AC0000 (writable). v0.8001 expands STRDEBUG to capture all 45 candidates for analysis.
 
 ## Current Approach: Memory Injection (v0.66+)
 

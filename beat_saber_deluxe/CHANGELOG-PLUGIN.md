@@ -2,6 +2,13 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+**Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
+
+## [v0.8001] — 2026-07-19
+### Changed
+- **STRDEBUG expanded to ALL pointer-level candidates** — Removed `chk_ptrs <= 3` limit. Now logs every candidate that passes klass+version+pointers checks, providing full diagnostic data for the 45 candidates found in v0.80.
+- **Enhanced candidate logging** — Added candidate object address (`obj=0x...`) and `lid+0x18` value to STRDEBUG output for deeper System_String layout analysis on PS4.
+
 ## [v0.80] — 2026-07-19
 ### Fixed
 - **False positive rejection in pattern matcher** — Added `klass != lid/sn/an` check to reject 17 false positives found at 0x802Axxxx (kernel/system memory below module base). These garbage structs coincidentally matched the BeatmapLevelSO field layout but had klass == lid, which a real object never has.

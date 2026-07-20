@@ -178,16 +178,22 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             // lid/sn/an -> GC heap (0x200000000+). False positives have klass==lid.
             if (klass_ptr == lid || klass_ptr == sn || klass_ptr == an) continue;
 
-            // Debug: dump first 3 ptrs-level candidates to understand string layout
-            if (chk_ptrs <= 3) {
-                int32_t v0x10 = 0, v0x14 = 0;
-                if (try_read_mem(lid + 0x10, &v0x10, 4) && try_read_mem(lid + 0x14, &v0x14, 4)) {
-                    char buf[256];
+            // Debug: dump raw values at lid to understand System_String layout on PS4
+            // Removed chk_ptrs <= 3 limit — captures ALL passing candidates for analysis.
+            {
+                int32_t v0x10 = 0, v0x14 = 0, v0x18 = 0;
+                uint64_t obj_addr = page_addr + offset;
+                if (try_read_mem(lid + 0x10, &v0x10, 4) &&
+                    try_read_mem(lid + 0x14, &v0x14, 4) &&
+                    try_read_mem(lid + 0x18, &v0x18, 4)) {
+                    char buf[384];
                     snprintf(buf, sizeof(buf),
-                             "[MEMINJ] STRDEBUG[%d]: klass=0x%lX ver=%d "
+                             "[MEMINJ] CANDIDATE[%d]: obj=0x%lX klass=0x%lX ver=%d "
                              "lid=0x%lX sn=0x%lX an=0x%lX "
-                             "lid+0x10=%d lid+0x14=%d",
-                             chk_ptrs, klass_ptr, version, lid, sn, an, v0x10, v0x14);
+                             "lid+0x10=%d lid+0x14=%d lid+0x18=%d",
+                             chk_ptrs, obj_addr, klass_ptr, version,
+                             lid, sn, an,
+                             v0x10, v0x14, v0x18);
                     meminj_log(buf);
                 }
             }

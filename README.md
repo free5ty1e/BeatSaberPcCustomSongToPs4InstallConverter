@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-Replace any Rolling Stones DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin.
+Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
 > **📋 Prerequisites:**
 > - **Beat Saber PS4 version 2.04** (CUSA12878, patch 2.04) — this is the specific version all development targets
@@ -14,13 +14,15 @@ Replace any Rolling Stones DLC song's audio and beatmaps with community-made cus
 >   The dump must include the unpacked patch files (eboot.bin, Media/ directory, etc.). Tools like PS4 Dumper on a jailbroken PS4 create this via the `split=3` config option.
 
 > **⚠️ Current limitations:**
-> - **Song menu is untouched** — song names, artists, and cover art still show the original Rolling Stones track. You must remember which custom song is mapped to which slot to find it in-game.
+> - **Song menu is untouched** — song names, artists, and cover art in the menu still show the original song's metadata. You must remember which custom song is mapped to which slot.
 > - **No note color customization** — left/right saber colors are the game's default red/blue. Custom color schemes are planned.
 > - **Extra game modes (OneSaber, 90Degree) are experimental** — mode selector buttons may appear via IL2CPP hook, but labels show "Standard" for all modes. Actual mode selection during gameplay works for OneSaber and 90Degree if modes are set via `--add-mode-characteristics`.
 
-## Available Song Slots (Targets)
+## Available Song Slots (Default Targets)
 
-The 13 Rolling Stones DLC songs that can be replaced. Use the `--target <name>` argument to specify which slot a custom song goes into:
+The pipeline replaces songs by targeting specific filenames in the game's `BeatmapLevelsData/` directory. Below are the 13 default target slots currently configured. Use the `--target <name>` argument to specify which slot a custom song goes into.
+
+The pipeline can target **any** song present in the game's dump — if the song has a `.bundle` file in `BeatmapLevelsData/`, you can replace it. To use a non-default target, point `--target` at any other bundle name from that directory.
 
 | Target Name | Original Song |
 |-------------|---------------|
@@ -306,7 +308,7 @@ python3 tools/full_custom_song_pipeline.py \
 1. The bundle is built and deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`
 2. The redirect config is updated and deployed
 3. Restart Beat Saber on your PS4
-4. Navigate to Start Me Up in the Rolling Stones DLC pack — your custom song will play!
+4. Navigate to the target song in the game's song pack — your custom song will play!
 
 ---
 
@@ -459,7 +461,7 @@ open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /
 └─────────────────────┘     └──────────────────┘
 ```
 
-The plugin hooks file I/O to redirect Rolling Stones asset paths to custom song bundles stored in `/data/GoldHEN/AFR/CUSA12878/`. The pipeline handles audio conversion (lossless → PCM16 FSB5), beatmap V2→V3 conversion, and addressable bundle assembly.
+The plugin hooks file I/O to redirect DLC song asset paths to custom song bundles stored in `/data/GoldHEN/AFR/CUSA12878/`. The pipeline handles audio conversion (lossless → PCM16 FSB5), beatmap V2→V3 conversion, and addressable bundle assembly.
 
 ### Key Components
 
