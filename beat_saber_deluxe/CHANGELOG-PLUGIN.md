@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8008] — 2026-07-19
+### Added
+- **Close hook retry mechanism** — Added a `close()` hook that retries the MEMINJ object scan after a file is closed. When the initial scan (triggered by `open()`) finds the BeatmapLevelSO_c klass but 0 BeatmapLevelSO objects, it caches the klass address and schedules a retry. The retry uses the cached klass (skipping the ~9s metadata magic search) and only runs the object scanner, which should find the BeatmapLevelSO objects that were created between the open() and close() calls.
+
+### Changed
+- **Memory injection retry support** — `memory_inject_try_patch()` now detects retry calls via `g_cached_klass`, skipping the klass search and pattern matcher entirely on retry.
+
 ## [v0.8007] — 2026-07-19
 ### Added
 - **Il2CppClass struct hex dump** — When the broader search finds the BeatmapLevelSO name pointer in memory, dumps the 32 bytes at the suspected klass struct start: `[0x00]=klass [0x08]=image [0x10]=name [0x18]=ns/td`. This will verify whether the `name` field is actually at offset 0x10 or at a different position in the struct. 0 raw matches in v0.8006 suggests either a timing issue or wrong offset assumption.

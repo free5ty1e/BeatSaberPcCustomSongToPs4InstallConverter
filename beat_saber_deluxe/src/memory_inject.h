@@ -26,4 +26,10 @@ typedef struct {
 
 void memory_inject_register(const SongMetadataEntry* entry);
 
+// ── Retry Support (close() hook) ─────────────────────────────────────────────
+// Returns non-zero if a memory injection retry is pending (klass was found
+// but no BeatmapLevelSO objects were found during the initial scan).
+// Called from the close hook to avoid re-scanning the full memory for klass.
+int memory_inject_is_retry_pending(void);
+
 #endif // MEMORY_INJECT_H

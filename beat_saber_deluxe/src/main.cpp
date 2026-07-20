@@ -25,7 +25,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8007"
+#define PLUGIN_VERSION "v0.8008"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -41,9 +41,11 @@ static int REDIRECT_COUNT = 0;
 
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
+extern "C" int close(int fd);
 
 HOOK_INIT(hook_fopen);
 HOOK_INIT(hook_open);
+HOOK_INIT(hook_close);
 
 static int in_hook = 0;
 static int log_ok = 0;
@@ -224,6 +226,18 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
+// ── Close hook: retry MEMINJ after file close (objects may now exist) ────────
+static int close_hook(int fd) {
+    if (in_hook) return HOOK_CONTINUE(hook_close, int (*)(int), fd);
+    in_hook = 1;
+    int r = HOOK_CONTINUE(hook_close, int (*)(int), fd);
+    if (memory_inject_is_retry_pending()) {
+        memory_inject_try_patch();  // Retry: uses cached klass, skips metadata search
+    }
+    in_hook = 0;
+    return r;
+}
+
 // ── IL2CPP module base (reserved for future mode control) ───────────────────
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[64];
@@ -288,6 +302,10 @@ extern "C" int module_start(size_t argc, const void *args) {
     // open hook — handles ALL redirects
     Detour_Construct(&Detour_hook_open, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
+
+    // close hook — retries MEMINJ after per-song bundle close
+    Detour_Construct(&Detour_hook_close, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_close, (uint64_t)(void*)&close, (void*)close_hook);
 
     log_write("hooks installed");
 

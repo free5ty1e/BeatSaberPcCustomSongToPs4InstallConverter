@@ -2919,4 +2919,59 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Archived Logs:**
   - `.ai_memory/experiment_logs/v0.8003_metadata_magic_search.txt` (v0.8003 log, metadata found at 0x293280000)
 - **Version:** v0.8004
+- **Status:** ✅ Tested — metadata magic search found metadata at 0x293280000, but even without is_readable filter, no raw klass pointer matches were found in module segments.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8004_data_segment_klass_fix.txt` (v0.8004 log)
+
+### Experiment 184: v0.8005 — Broader Klass Search in GC Heap and Metadata Range
+- **Date:** 2026-07-19
+- **What:**
+  - Added broader search fallback for Il2CppClass pointer in GC heap range (0x200000000-0x210000000) and metadata range (metadata_base ± 1MB/16MB)
+  - Module segment pointer search had returned "Klass not found" — but broader search FINDS it in GC heap
+- **Test Result:** 🟢 **Breakthrough — klass found at 0x2012007E0!** The broader search found the BeatmapLevelSO_c Il2CppClass struct in the GC heap range. But `Klass diag: 0 raw matches, 0 validated` — no BeatmapLevelSO OBJECTS with this klass exist in memory.
+- **Key Finding:** The BeatmapLevelSO_c klass exists but no BeatmapLevelSO object instances exist when the hook fires. Timing issue confirmed.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8005_broader_klass_search.txt` (v0.8005 log, klass=0x2012007E0 found)
+- **Version:** v0.8005
+
+### Experiment 185: v0.8006 — Klass Match Diagnostic & Extended Scan Range
+- **Date:** 2026-07-19
+- **What:**
+  - Added `g_metadata_base` static global to persist metadata address
+  - Added raw klass match counter (before validation) to scanner — `Klass diag: N raw matches, M validated`
+  - Added extended object scan range around metadata (±2MB to +16MB)
+- **Test Result:** 🟡 `Klass diag: 0 raw matches, 0 validated` — NO BeatmapLevelSO objects in GC heap range OR metadata range. Objects truly don't exist at hook time. 17-second load time reported (mostly from metadata magic search).
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8006_klass_diag.txt` (v0.8006 log)
+- **Version:** v0.8006
+
+### Experiment 186: v0.8007 — KLASS_STRUCT Layout Dump
+- **Date:** 2026-07-19
+- **What:**
+  - Added 32-byte hex dump of Il2CppClass struct when name pointer found: `[0x00]=klass [0x08]=image [0x10]=name [0x18]=ns/td`
+  - Purpose: verify name field offset (CLASS1_OFFSET_NAME = 0x10) is correct
+- **Test Result:** 🟢 **KLASS_STRUCT dump confirmed:**
+  addr=0x2012007E0 [0x00]=0x0 [0x08]=0x29334E400 [0x10]=0x2934BCB6E [0x18]=0x294029B40
+  - `[0x10]` = 0x2934BCB6E ✓ — name IS at offset 0x10
+  - `[0x00]` = 0x0 — klass field NULL (unusual but doesn't affect object scan)
+  - **Conclusion:** Klass address and name offset both correct. BeatmapLevelSO objects simply don't exist when open() hook fires. Need retry (close hook) to find them.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8007_klass_struct_dump.txt` (v0.8007 log, KLASS_STRUCT confirmed)
+- **Version:** v0.8007
+
+### Experiment 187: v0.8008 — Close Hook Retry for Object Timing
+- **Date:** 2026-07-19
+- **What:**
+  - Added `close()` hook that retries MEMINJ after a file close
+  - When initial scan finds klass but 0 objects, caches klass address and sets `g_retry_pending = 1`
+  - Close hook checks the flag and calls `memory_inject_try_patch()` again
+  - Retry uses cached klass (skips ~9s metadata magic search) and only runs the object scanner
+  - Only ONE retry is attempted (ensured by `is_retry` flag)
+- **Files Changed:**
+  - src/memory_inject.cpp — Added `g_cached_klass`, `g_retry_pending` globals, `memory_inject_is_retry_pending()` function, retry logic
+  - src/memory_inject.h — Added `memory_inject_is_retry_pending()` declaration
+  - src/main.cpp — Added close hook, `HOOK_INIT(hook_close)`, `close_hook()`, hook installation
+  - main.cpp — v0.8008
+  - CHANGELOG-PLUGIN.md — v0.8008 entry
+- **Version:** v0.8008
 - **Status:** 🚀 Deployed to PS4, awaiting test results

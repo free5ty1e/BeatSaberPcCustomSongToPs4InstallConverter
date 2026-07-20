@@ -87,6 +87,8 @@ static SongMetadataEntry g_metadata_table[MAX_METADATA_ENTRIES];
 static int g_metadata_count = 0;
 static volatile int g_patching_done = 0;  // 0=not yet, 1=success, -1=attempted but failed
 static uint64_t g_metadata_base = 0;      // Address of patch global-metadata.dat in memory
+static uint64_t g_cached_klass = 0;       // Cached klass addr for close-hook retry
+static int g_retry_pending = 0;           // 1 = retry pending on close()
 
 // ── Signal-handler memory probing ─────────────────────────────────────────
 static sigjmp_buf g_mem_jmpbuf;
@@ -250,6 +252,10 @@ int memory_inject_init(void) {
     return 0;
 }
 
+int memory_inject_is_retry_pending(void) {
+    return g_retry_pending;
+}
+
 // Called from open_hook when a per-song bundle is detected.
 // Runs synchronously inside the open() callback.
 // Returns 0 on success, -1 if not yet time or already done.
@@ -276,15 +282,26 @@ int memory_inject_try_patch(void) {
 
     // Step 1: Find BeatmapLevelSO class metadata
     uint64_t klass_addr = 0;
-    int klass_found = (find_beatmap_level_so_klass(&klass_addr) == 0);
-    if (!klass_found) {
-        // String search failed — try pattern-based discovery in limited heap range
-        meminj_log("[MEMINJ] String not in module — trying pattern find in heap...");
-        klass_found = (find_beatmap_level_objects_by_pattern(&klass_addr) == 0);
-        if (klass_found) {
-            char b[128];
-            snprintf(b, sizeof(b), "[MEMINJ] Found klass 0x%lX via pattern", klass_addr);
-            meminj_log(b);
+    int klass_found = 0;
+    int is_retry = (g_cached_klass != 0);
+
+    if (is_retry) {
+        // Retry from close hook — use cached klass, skip ~9s metadata search
+        klass_addr = g_cached_klass;
+        klass_found = 1;
+        g_retry_pending = 0;  // Clear retry flag for this attempt
+        meminj_log("[MEMINJ] Using cached klass (retry)...");
+    } else {
+        klass_found = (find_beatmap_level_so_klass(&klass_addr) == 0);
+        if (!klass_found) {
+            // String search failed — try pattern-based discovery in limited heap range
+            meminj_log("[MEMINJ] String not in module — trying pattern find in heap...");
+            klass_found = (find_beatmap_level_objects_by_pattern(&klass_addr) == 0);
+            if (klass_found) {
+                char b[128];
+                snprintf(b, sizeof(b), "[MEMINJ] Found klass 0x%lX via pattern", klass_addr);
+                meminj_log(b);
+            }
         }
     }
 
@@ -351,7 +368,15 @@ int memory_inject_try_patch(void) {
     sigaction(SIGSEGV, &old_segv, NULL);
     sigaction(SIGBUS, &old_bus, NULL);
 
-    g_patching_done = patched ? patched : -1;
+    if (patched == 0 && klass_addr && !is_retry) {
+        // No objects found — likely timing issue. Cache klass for close-hook retry.
+        g_cached_klass = klass_addr;
+        g_retry_pending = 1;
+        g_patching_done = 0;  // Allow retry on close()
+        meminj_log("[MEMINJ] No objects yet — retry scheduled on close()");
+    } else {
+        g_patching_done = patched ? patched : -1;
+    }
     return patched > 0 ? 0 : -1;
 }
 
