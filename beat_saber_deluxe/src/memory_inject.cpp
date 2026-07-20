@@ -86,6 +86,7 @@ static void meminj_log(const char* msg) {
 static SongMetadataEntry g_metadata_table[MAX_METADATA_ENTRIES];
 static int g_metadata_count = 0;
 static volatile int g_patching_done = 0;  // 0=not yet, 1=success, -1=attempted but failed
+static uint64_t g_metadata_base = 0;      // Address of patch global-metadata.dat in memory
 
 // ── Signal-handler memory probing ─────────────────────────────────────────
 static sigjmp_buf g_mem_jmpbuf;
@@ -525,6 +526,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
         metadata_base = search_for_patch_metadata();
         if (metadata_base) {
             class_string_addr = metadata_base + BEATMAP_LEVEL_SO_STRING_OFFSET;
+            g_metadata_base = metadata_base;
             snprintf(msgbuf, sizeof(msgbuf),
                      "[MEMINJ] Found metadata at 0x%lX, class string at 0x%lX",
                      metadata_base, class_string_addr);
@@ -624,29 +626,47 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size) {
 static int scan_for_beatmap_level_objects(uint64_t klass_addr,
                                           uint64_t* obj_addrs, int max_objs) {
     int found = 0;
+    int raw_matches = 0;
     char buf[256];
     snprintf(buf, sizeof(buf), "[MEMINJ] Scanning (klass=0x%lX)...", klass_addr);
     meminj_log(buf);
 
+    // Define scan ranges: [primary GC heap, extended near metadata (if found)]
+    struct { uint64_t start; uint64_t end; } scan_ranges[] = {
+        { SCAN_START_ADDR, SCAN_END_ADDR },
+        { g_metadata_base ? g_metadata_base - 0x200000 : 0,  // 2MB before metadata
+          g_metadata_base ? g_metadata_base + 0x1000000 : 0 }, // 16MB after
+    };
+    int range_count = (g_metadata_base) ? 2 : 1;
+
     uint8_t page[SCAN_STEP];
-    for (uint64_t page_addr = SCAN_START_ADDR;
-         page_addr < SCAN_END_ADDR && found < max_objs;
-         page_addr += SCAN_STEP) {
+    for (int r = 0; r < range_count && found < max_objs; r++) {
+        for (uint64_t page_addr = scan_ranges[r].start;
+             page_addr < scan_ranges[r].end && found < max_objs;
+             page_addr += SCAN_STEP) {
 
-        if (!try_read_mem(page_addr, page, SCAN_STEP))
-            continue;
+            if (!try_read_mem(page_addr, page, SCAN_STEP))
+                continue;
 
-        for (uint64_t offset = 0; offset < SCAN_STEP - 24; offset += 8) {
-            uint64_t val = *(uint64_t*)(page + offset);
-            if (val == klass_addr) {
-                uint64_t candidate = page_addr + offset;
-                if (validate_beatmap_level_object(candidate)) {
-                    obj_addrs[found++] = candidate;
-                    if (found >= max_objs) break;
+            for (uint64_t offset = 0; offset < SCAN_STEP - 24; offset += 8) {
+                uint64_t val = *(uint64_t*)(page + offset);
+                if (val == klass_addr) {
+                    raw_matches++;
+                    uint64_t candidate = page_addr + offset;
+                    if (validate_beatmap_level_object(candidate)) {
+                        obj_addrs[found++] = candidate;
+                        if (found >= max_objs) break;
+                    }
                 }
             }
         }
     }
+
+    // Log diagnostic: how many raw klass matches vs validated
+    snprintf(buf, sizeof(buf), "[MEMINJ] Klass diag: %d raw matches, %d validated",
+             raw_matches, found);
+    meminj_log(buf);
+
     return found;
 }
 

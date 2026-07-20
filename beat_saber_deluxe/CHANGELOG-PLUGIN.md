@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8006] — 2026-07-19
+### Added
+- **Diagnostic klass match counter** — `scan_for_beatmap_level_objects()` now logs the number of raw klass pointer matches found (even those that fail validation) via `[MEMINJ] Klass diag: N raw matches, M validated`. This will tell us if BeatmapLevelSO objects exist but are being rejected by validation.
+- **Extended object scan range** — Added a second scan range around the metadata address (±2MB to +16MB) when `g_metadata_base` is known. BeatmapLevelSO objects may be allocated in memory near the metadata rather than in the main GC heap range.
+- Added `g_metadata_base` static global to persist metadata address across the klass search and object scanner.
+
 ## [v0.8005] — 2026-07-19
 ### Added
 - **Broader klass pointer search fallback** — After module segment search fails, searches the GC heap range (0x200000000-0x210000000) and memory near the metadata itself for 8-byte pointers to the "BeatmapLevelSO" string. The Il2CppClass struct may be dynamically allocated outside the module data segment.
