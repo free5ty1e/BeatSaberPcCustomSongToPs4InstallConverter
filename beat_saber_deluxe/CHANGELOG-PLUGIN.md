@@ -4,6 +4,18 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8010] — 2026-07-19
+### Changed
+- **DIRECT STRING SEARCH APPROACH** — Completely new method: instead of finding BeatmapLevelSO objects by klass pointer, search for song name/author strings by their UTF-16LE content in memory and patch them directly. This bypasses the need to find BeatmapLevelSO objects entirely.
+- **Removed gap scan** — The 2GB gap scan (v0.8009) caused 60-second soft lock. Replaced with the much faster string search in the GC heap and metadata ranges.
+- Added original song names/artists to SongMetadataEntry (`orig_song_name`, `orig_song_author_name`) for content-based search.
+- Added `patch_strings_by_content()` function that scans memory for known UTF-16LE strings and overwrites them with replacement text.
+
+### Files Changed
+- memory_inject.h — Added `orig_song_name`, `orig_song_author_name` to SongMetadataEntry
+- memory_inject.cpp — Added `patch_strings_by_content()`, forward declaration, integration into `memory_inject_try_patch()`
+- main.cpp — Updated `register_song_metadata()` with original names
+
 ## [v0.8009] — 2026-07-19
 ### Added
 - **Gap scan on retry** — When the close hook retries the object scan, it now also searches the 2GB gap between the primary GC heap range (0x200000000-0x210000000) and the metadata address (~0x293280000). BeatmapLevelSO objects may be allocated on the GC heap at addresses above 0x210000000, which wasn't covered by any previous scan range.

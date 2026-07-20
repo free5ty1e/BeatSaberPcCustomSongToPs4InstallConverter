@@ -25,7 +25,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8009"
+#define PLUGIN_VERSION "v0.8010"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -259,19 +259,19 @@ static uint64_t find_il2cpp_module_base(void) {
 // level_id must match the _levelID in the BeatmapLevelSO for the slot.
 static void register_song_metadata(void) {
     SongMetadataEntry entries[] = {
-        {"startmeup",               "Espresso",           "", "Sabrina Carpenter",       ""},
-        {"angry",                   "Rhythm Is A Dancer", "", "Pegboard Nerds",          ""},
-        {"bitemyheadoff",           "Escaping the Ruins", "", "MDK / Gareth Coker",      ""},
-        {"cantyouhearmeknocking",   "Spicy",              "", "aespa",                   ""},
-        {"deadmanwalking",          "Finesse (Remix)",    "", "Various",                 ""},
-        {"gimmeshelter",            "Yes I'm A Mess",     "", "AJR",                     ""},
-        {"icantgetnosatisfaction",  "Dreams Come True",   "", "Various",                 ""},
-        {"livebythesword",          "Take Me to the Beach","", "Imagine Dragons",         ""},
-        {"messitup",                "Powersnake",         "", "Brothers of Metal",       ""},
-        {"paintitblack",            "Time Lapse",         "", "TheFatRat",               ""},
-        {"sugarsoaker",             "Venom of Venus",     "", "Powerwolf",               ""},
-        {"sympathyforthedevil",     "LIT",                "", "Polyphia",                ""},
-        {"wholewideworld",          "VOLUPTE",            "", "REZZ / Tare",             ""},
+        {"startmeup",               "Espresso",           "", "Sabrina Carpenter",       "", "Start Me Up",           "", "The Rolling Stones"},
+        {"angry",                   "Rhythm Is A Dancer", "", "Pegboard Nerds",          "", "Angry",                 "", "The Rolling Stones"},
+        {"bitemyheadoff",           "Escaping the Ruins", "", "MDK / Gareth Coker",      "", "Bite My Head Off",      "", "The Rolling Stones"},
+        {"cantyouhearmeknocking",   "Spicy",              "", "aespa",                   "", "Can't You Hear Me Knocking", "", "The Rolling Stones"},
+        {"deadmanwalking",          "Finesse (Remix)",    "", "Various",                 "", "Dead Man Walking",      "", "The Rolling Stones"},
+        {"gimmeshelter",            "Yes I'm A Mess",     "", "AJR",                     "", "Gimme Shelter",          "", "The Rolling Stones"},
+        {"icantgetnosatisfaction",  "Dreams Come True",   "", "Various",                 "", "(I Can't Get No) Satisfaction", "", "The Rolling Stones"},
+        {"livebythesword",          "Take Me to the Beach","", "Imagine Dragons",         "", "Live by the Sword",     "", "The Rolling Stones"},
+        {"messitup",                "Powersnake",         "", "Brothers of Metal",       "", "Mess It Up",            "", "The Rolling Stones"},
+        {"paintitblack",            "Time Lapse",         "", "TheFatRat",               "", "Paint It Black",        "", "The Rolling Stones"},
+        {"sugarsoaker",             "Venom of Venus",     "", "Powerwolf",               "", "Sugar Soaker",          "", "The Rolling Stones"},
+        {"sympathyforthedevil",     "LIT",                "", "Polyphia",                "", "Sympathy for the Devil", "", "The Rolling Stones"},
+        {"wholewideworld",          "VOLUPTE",            "", "REZZ / Tare",             "", "The Whole Wide World",  "", "The Rolling Stones"},
     };
 
     int count = sizeof(entries) / sizeof(entries[0]);

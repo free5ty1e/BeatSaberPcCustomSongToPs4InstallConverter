@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🔵 **Memory injection v0.8009 deployed** — The close hook retry (v0.8008) fires after file close but STILL finds 0 BeatmapLevelSO objects. The objects aren't in the GC heap range (0x200000000-0x210000000) or metadata area. **v0.8009 adds a gap scan** that covers the 2GB between the GC heap limit and the metadata address (~0x210000000-0x293280000). If still 0, the klass pointer at 0x2012007E0 may not be what BeatmapLevelSO objects actually reference — the `[0x00]=0x0` klass field suggests the struct may not be a properly initialized Il2CppClass.
+**Status:** 🟢 **Memory injection v0.8010 deployed — NEW APPROACH: Direct string content search.** The gap scan (v0.8009) caused a 60-second soft lock (too slow scanning unmapped pages via signal handlers). **v0.8010 completely pivots** from the klass-based approach to a **string content search**. Instead of finding BeatmapLevelSO objects and patching their fields, we now search for the actual song name strings in memory by their UTF-16LE content (length prefix + characters) and overwrite them in-place. This requires NO klass lookup, NO object scanning, and NO knowledge of object layout. The gap scan is DISABLED. Searches only the GC heap (0x200000000-0x210000000, ~80ms) and metadata area (~10ms).
 
 ## Current Approach: Memory Injection (v0.66+)
 

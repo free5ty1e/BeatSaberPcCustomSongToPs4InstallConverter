@@ -22,6 +22,10 @@ typedef struct {
     const char* song_sub_name;
     const char* song_author_name;
     const char* level_author_name;
+    // Original strings for content-based patching (NULL = skip)
+    const char* orig_song_name;
+    const char* orig_song_sub_name;
+    const char* orig_song_author_name;
 } SongMetadataEntry;
 
 void memory_inject_register(const SongMetadataEntry* entry);

@@ -122,6 +122,7 @@ static int validate_beatmap_level_object(uint64_t addr);
 static int patch_beatmap_level_object(uint64_t obj_addr,
                                       const SongMetadataEntry* meta);
 static int patch_il2cpp_string(uint64_t string_addr, const char* new_text);
+static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end);
 static int find_module_segments(const char* module_name,
                                 ModuleSegment* segments, int max_segments);
 static int try_read_mem(uint64_t addr, void* buf, size_t size);
@@ -315,8 +316,8 @@ int memory_inject_try_patch(void) {
     }
 
     // Step 2: Scan for BeatmapLevelSO objects using klass pointer
-    // On retry, enable full-range scan to find objects outside the narrow GC heap range
-    g_wide_scan = is_retry;
+    // Disable wide scan (gap scan was causing 60s hang on PS4 — v0.8009)
+    g_wide_scan = 0;
     uint64_t obj_addrs[256];
     int found = scan_for_beatmap_level_objects(klass_addr, obj_addrs, 256);
     g_wide_scan = 0;
@@ -325,7 +326,22 @@ int memory_inject_try_patch(void) {
     snprintf(buf, sizeof(buf), "[MEMINJ] Found %d candidates with klass 0x%lX", found, klass_addr);
     meminj_log(buf);
 
-    // Step 3: Patch matching objects
+    // Step 3a: If no objects found by klass, try direct string content search
+    int string_patched = 0;
+    if (found == 0 && g_metadata_base) {
+        meminj_log("[MEMINJ] Trying direct string content search...");
+        string_patched = patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR);
+        string_patched += patch_strings_by_content(
+            g_metadata_base - 0x200000, g_metadata_base + 0x1000000);
+        if (string_patched > 0) {
+            snprintf(buf, sizeof(buf), "[MEMINJ] Direct string patched: %d fields", string_patched);
+            meminj_log(buf);
+        }
+    }
+
+    int total_patched = 0;
+
+    // Step 3b: Patch matching objects (if any found)
     int patched = 0;
     for (int i = 0; i < found && patched < g_metadata_count; i++) {
         // Read _levelID to identify this song
@@ -365,23 +381,27 @@ int memory_inject_try_patch(void) {
         }
     }
 
-    snprintf(buf, sizeof(buf), "[MEMINJ] Patched %d/%d objects", patched, g_metadata_count);
+    total_patched = patched + string_patched;
+    snprintf(buf, sizeof(buf), "[MEMINJ] Patched %d/%d objects (str=%d)",
+             total_patched, g_metadata_count, string_patched);
     meminj_log(buf);
 
     // Restore original signal handlers
     sigaction(SIGSEGV, &old_segv, NULL);
     sigaction(SIGBUS, &old_bus, NULL);
 
-    if (patched == 0 && klass_addr && !is_retry) {
-        // No objects found — likely timing issue. Cache klass for close-hook retry.
+    if (total_patched > 0) {
+        g_patching_done = total_patched;
+    } else if (klass_addr && !is_retry) {
+        // No objects found. Cache klass for close-hook retry.
         g_cached_klass = klass_addr;
         g_retry_pending = 1;
-        g_patching_done = 0;  // Allow retry on close()
+        g_patching_done = 0;
         meminj_log("[MEMINJ] No objects yet — retry scheduled on close()");
     } else {
-        g_patching_done = patched ? patched : -1;
+        g_patching_done = -1;
     }
-    return patched > 0 ? 0 : -1;
+    return total_patched > 0 ? 0 : -1;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -808,4 +828,87 @@ static int patch_beatmap_level_object(uint64_t obj_addr,
              "[MEMINJ] Object 0x%lX: %d fields patched", obj_addr, patched);
     meminj_log(buf);
     return patched > 0 ? 0 : -1;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Direct String Search & Patch (No klass required)
+// ══════════════════════════════════════════════════════════════════════════
+
+// Search for song name/author strings by their UTF-16LE content and patch
+// them directly, without needing to find the BeatmapLevelSO objects.
+static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end) {
+    int patched = 0;
+    char buf[256];
+
+    // Precompute valid string lengths with their metadata indices
+    int v_len[64], v_mid[64], v_count = 0;
+    for (int m = 0; m < g_metadata_count && v_count < 64; m++) {
+        const char* orig = g_metadata_table[m].orig_song_name;
+        if (!orig || !orig[0]) continue;
+        int len = strlen(orig);
+        int dup = 0;
+        for (int v = 0; v < v_count && !dup; v++)
+            if (v_len[v] == len && strcmp(orig, g_metadata_table[v_mid[v]].orig_song_name) == 0)
+                dup = 1;
+        if (!dup) { v_len[v_count] = len; v_mid[v_count] = m; v_count++; }
+    }
+
+    snprintf(buf, sizeof(buf), "[MEMINJ] String scan: %d unique strings to find", v_count);
+    meminj_log(buf);
+    if (v_count == 0) return 0;
+
+    uint8_t page[SCAN_STEP];
+    for (uint64_t page_addr = scan_start; page_addr < scan_end; page_addr += SCAN_STEP) {
+        if (!try_read_mem(page_addr, page, SCAN_STEP)) continue;
+
+        // Scan at 2-byte (UTF-16 LE) granularity within each page
+        for (uint64_t off = 0; off < SCAN_STEP - 12; off += 2) {
+            uint32_t str_len = *(uint32_t*)(page + off);
+
+            // Check against each unique string length
+            for (int v = 0; v < v_count; v++) {
+                if ((int)str_len != v_len[v]) continue;
+                int m = v_mid[v];
+                const char* orig = g_metadata_table[m].orig_song_name;
+                int orig_len = v_len[v];
+
+                // Verify full UTF-16LE match
+                int match = 1;
+                for (int c = 0; c < orig_len && match; c++) {
+                    uint16_t e = (uint16_t)(unsigned char)orig[c];
+                    uint16_t a = *(uint16_t*)(page + off + 4 + c * 2);
+                    if (a != e) match = 0;
+                }
+
+                if (match) {
+                    const char* new_val = g_metadata_table[m].song_name;
+                    int new_len = new_val ? strlen(new_val) : 0;
+
+                    // Patch only if replacement fits (prevents overflow)
+                    if (new_len > 0 && new_len <= orig_len) {
+                        uint64_t data_addr = page_addr + off + 4; // _firstChar
+                        uint32_t new_len_le = new_len;
+
+                        // Write is safe: GC heap pages are writable
+                        memcpy((void*)(page_addr + off), &new_len_le, 4);
+                        for (int c = 0; c < new_len; c++) {
+                            uint16_t ch = (uint16_t)(unsigned char)new_val[c];
+                            memcpy((void*)(data_addr + c * 2), &ch, 2);
+                        }
+                        snprintf(buf, sizeof(buf),
+                                 "[MEMINJ] String patched 0x%lX: '%s' -> '%s'",
+                                 data_addr, orig, new_val);
+                        meminj_log(buf);
+                        patched++;
+                    } else {
+                        snprintf(buf, sizeof(buf),
+                                 "[MEMINJ] String skip 0x%lX: '%s' (new len %d > %d)",
+                                 page_addr + off + 4, orig, new_len, orig_len);
+                        meminj_log(buf);
+                    }
+                }
+            }
+        }
+    }
+    return patched;
 }

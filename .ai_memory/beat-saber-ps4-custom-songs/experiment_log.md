@@ -2990,4 +2990,25 @@ Before building v0.35, I analyzed the difference between the original file and `
   - main.cpp — v0.8009
   - CHANGELOG-PLUGIN.md — v0.8009 entry
 - **Version:** v0.8009
+- **Status:** ❌ FAILED — Gap scan caused 60-second soft lock. Scanning the 2GB gap at 64KB granularity hits mostly unmapped pages, each taking ~500µs-1ms due to PS4's SIGSEGV signal handler overhead. Total: ~50 seconds stall before the level starts. User killed the game. Gap scan DISABLED.
+
+### Experiment 189: v0.8010 — Direct String Content Search (No klass)
+- **Date:** 2026-07-19
+- **What:**
+  - **COMPLETE PIVOT** — The klass-based approach failed because BeatmapLevelSO objects couldn't be found in any scannable memory range, and the gap scan caused a 60s hang.
+  - **New approach:** Search for song name strings directly by their UTF-16LE content in the GC heap and metadata area, then overwrite them in-place. This bypasses the need to find BeatmapLevelSO objects entirely.
+  - Added `orig_song_name`, `orig_song_sub_name`, `orig_song_author_name` to `SongMetadataEntry` with the original in-game names from the Rolling Stones pack.
+  - Created `patch_strings_by_content()` function that scans memory at 2-byte granularity for UTF-16LE patterns matching original song names, verifies them, and patches with replacement names.
+  - Gap scan (`g_wide_scan`) DISABLED. String search runs in the GC heap range (0x200000000-0x210000000, ~80ms) and metadata range (~10ms).
+  - The retry mechanism (close hook) still exists but the string search runs on the FIRST call.
+- **Key Difference:** This approach patches System_String data directly, regardless of which klass the BeatmapLevelSO object uses. It's independent of object layout, klass validity, or memory mapping. The 4-byte UTF-16LE length prefix + content pattern makes false positives essentially impossible (~1 in 2^80 for an 8-byte pattern).
+- **Files Changed:**
+  - src/memory_inject.h — Added `orig_song_name`, `orig_song_author_name`, `orig_song_sub_name` to SongMetadataEntry
+  - src/memory_inject.cpp — Added `patch_strings_by_content()` function, forward declaration, integrated into memory_inject_try_patch()
+  - src/main.cpp — Updated register_song_metadata() with all 13 original song names and "The Rolling Stones" as original artist
+  - main.cpp — v0.8010
+  - CHANGELOG-PLUGIN.md — v0.8010 entry
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8009_gap_scan.txt` (v0.8009 log, gap scan caused hang)
+- **Version:** v0.8010
 - **Status:** 🚀 Deployed to PS4, awaiting test results
