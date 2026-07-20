@@ -124,11 +124,13 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size);
 
 // ── Pattern-Based Object Finding ─────────────────────────────────────────
 // Find BeatmapLevelSO klass by scanning memory for objects matching the known
-// field layout. SCANS A WIDE RANGE (16MB-64GB) at coarse granularity
+// field layout. SCANS FROM 16MB-4GB at coarse granularity
 // to locate the IL2CPP heap region, whose address is UNKNOWN on PS4.
 #define PATTERN_SCAN_MIN  0x1000000ULL    // 16MB — start below possible heap
-#define PATTERN_SCAN_MAX  0x1000000000ULL // 64GB — upper bound
-#define PATTERN_SCAN_STEP 0x100000ULL     // 1MB pages (coarse, ~65536 pages total)
+#define PATTERN_SCAN_MAX  0x100000000ULL  // 4GB — upper bound (~65520 pages with 64KB step)
+// 64KB pages to stay within PS4 stack limit (typically 256KB per thread).
+// 1MB pages overflow the stack and cause every try_read_mem to fault.
+#define PATTERN_SCAN_STEP 0x10000ULL      // 64KB pages (safe for stack)
 
 static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
     int scan_count = 0, mapped_pages = 0;

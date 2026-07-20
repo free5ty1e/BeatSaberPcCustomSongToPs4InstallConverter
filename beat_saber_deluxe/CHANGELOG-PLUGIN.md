@@ -2,6 +2,11 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.78] — 2026-07-19
+### Fixed
+- **Pattern matcher stack buffer overflow** — Changed `PATTERN_SCAN_STEP` from 0x100000 (1MB) to 0x10000 (64KB). The 1MB `uint8_t page[PATTERN_SCAN_STEP]` stack buffer exceeded the PS4 thread's ~256KB stack limit. Every `try_read_mem` call faulted on the invalid stack destination buffer, resulting in "0 mapped pages" across the entire scan range. The original code used 64KB pages (SCAN_STEP) — this was safe. The pattern matcher inherited the wrong constant.
+- **Max scan range reduced** — PATTERN_SCAN_MAX from 64GB to 4GB (still covers module segments and likely heap regions).
+
 ## [v0.77] — 2026-07-19
 ### Added
 - **Pattern matcher diagnostic counters** — Added per-check failure counters (klass, version, ptrs, strlen) to identify which field validation check is rejecting BeatmapLevelSO candidates. Output: `[MEMINJ] Pattern diag: N pages (M mapped). klass=K ver=V ptrs=P strlen=S`
