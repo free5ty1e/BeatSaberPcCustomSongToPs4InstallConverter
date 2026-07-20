@@ -2903,4 +2903,20 @@ Before building v0.35, I analyzed the difference between the original file and `
   - main.cpp — v0.8003
   - CHANGELOG-PLUGIN.md — v0.8003 entry
 - **Version:** v0.8003
+- **Status:** ✅ Tested — **Metadata magic search WORKED.** Found patch metadata at 0x293280000 (version 31), computed class string at 0x2934BCB6E. But `[MEMINJ] ERROR: Klass not found in module data` — the data segment (Seg[1] at 0x84AC0000, where Il2CppClass structs live) was NOT searched because `is_readable=0` flag caused the pointer search to skip it. try_read_mem CAN read from it (signal handlers handle any fault).
+- **Root Cause:** The existing Il2CppClass pointer search code filters by `if (!segs[s].is_readable) continue;`, which excludes the writable data segment (Seg[1]).
+
+### Experiment 183: v0.8004 — Fix Data Segment Klass Search
+- **Date:** 2026-07-19
+- **What:**
+  - Removed `if (!segs[s].is_readable) continue;` from the Il2CppClass pointer search loop
+  - Now scans ALL module segments — the signal handler in try_read_mem safely handles any genuinely inaccessible pages
+  - Combined with the v0.8003 metadata magic search, this should now find the BeatmapLevelSO_c klass pointer: metadata → class string address → data segment pointer → Il2CppClass struct
+- **Files Changed:**
+  - src/memory_inject.cpp — Removed is_readable filter from klass pointer search
+  - main.cpp — v0.8004
+  - CHANGELOG-PLUGIN.md — v0.8004 entry
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8003_metadata_magic_search.txt` (v0.8003 log, metadata found at 0x293280000)
+- **Version:** v0.8004
 - **Status:** 🚀 Deployed to PS4, awaiting test results

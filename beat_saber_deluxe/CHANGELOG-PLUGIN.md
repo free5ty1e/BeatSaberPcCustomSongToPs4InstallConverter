@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8004] — 2026-07-19
+### Fixed
+- **Klass pointer search now scans ALL module segments** — Removed `if (!segs[s].is_readable) continue;` filter that was skipping the data segment (Seg[1] at 0x84AC0000). The data segment is where Il2CppClass structs live, but it's incorrectly flagged as `is_readable=0` in sceKernelGetModuleInfo results. `try_read_mem` with signal handlers can safely read from any segment.
+- **Metadata magic search confirmed working** — v0.8003 found patch global-metadata.dat at 0x293280000 (version 31), but the klass pointer search couldn't find the string reference because it never scanned the data segment.
+
 ## [v0.8003] — 2026-07-19
 ### Added
 - **global-metadata.dat magic search** — New function `search_for_patch_metadata()` that finds the patch global-metadata.dat in memory by searching for its magic bytes (`0xFAB11BAF`) across all readable memory. When found (version 31, string count > 1M), computes the runtime address of the "BeatmapLevelSO" string within it and uses the existing Il2CppClass pointer search to locate the BeatmapLevelSO_c klass in the data segment. This solves the root problem: "BeatmapLevelSO" is only stored in the patch global-metadata.dat, not in the module text/data segments.

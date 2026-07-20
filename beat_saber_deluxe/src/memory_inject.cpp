@@ -537,8 +537,11 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
     }
 
     // Search for 8-byte pointers to this string (the `name` field in Il2CppClass_1)
+    // Scan ALL segments — Seg[1] (data segment at 0x84AC0000) has is_readable=0
+    // but try_read_mem can still read it via signal handlers. The signal handler
+    // safely catches faults on genuinely inaccessible pages.
     for (int s = 0; s < seg_count; s++) {
-        if (!segs[s].is_readable) continue;
+        if (segs[s].base == 0 || segs[s].size == 0) continue;
         uint64_t scan_end = segs[s].base + segs[s].size;
 
         for (uint64_t addr = segs[s].base; addr < scan_end; addr += 8) {

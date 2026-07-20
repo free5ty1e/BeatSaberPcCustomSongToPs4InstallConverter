@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🔵 **Memory injection v0.8003 deployed** — All 44 pattern-matcher candidates from v0.8002 were confirmed false positives (hex dumps showed C string literals, .NET encoding names, and GC heap pointers — not System_String objects). **New approach v0.8003:** Finds BeatmapLevelSO klass by searching memory for the patch global-metadata.dat magic (0xFAB11BAF), locating the "BeatmapLevelSO" string within it, then scanning the data segment for the Il2CppClass `name` pointer. The string was discovered at file offset 0x23cb6e in the patch metadata (version 31). Previous searches failed because only the app metadata was checked.
+**Status:** 🔵 **Memory injection v0.8004 deployed** — **Metadata magic search WORKS.** v0.8003 found patch metadata at 0x293280000 (version 31), computed class string at 0x2934BCB6E. But the v0.8003 Il2CppClass pointer search had a bug: it filtered by `is_readable` flag, which excluded the writable data segment (Seg[1] at 0x84AC0000) where the BeatmapLevelSO_c struct lives. **v0.8004 fixes this** — now scans ALL segments. The signal handler in try_read_mem safely handles inaccessible pages. Combined with the metadata magic search, this should now locate the klass: metadata → class string address → data segment pointer → Il2CppClass struct.
 
 ## Current Approach: Memory Injection (v0.66+)
 
