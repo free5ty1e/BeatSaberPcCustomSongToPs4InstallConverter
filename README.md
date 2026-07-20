@@ -36,6 +36,11 @@ Fork it, rename it, strip it down or build on top — this is your base project.
 
 ### Prerequisites
 
+> **Jailbroken PS4
+>
+> **Decrypted dump of PS4 Beat Saber v2.04 from a Jailbroken PS4
+> (As of the current version, this is still required to build the modified bundles)
+> 
 > **Install ONE code editor** (all support Dev Containers):
 > (For ease of use, VS Code is recommended. Especially in Windows; it will even automatically install docker WSL for you.)
 >
