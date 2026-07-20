@@ -124,10 +124,14 @@ static int try_read_mem(uint64_t addr, void* buf, size_t size);
 
 // ── Pattern-Based Object Finding ─────────────────────────────────────────
 // Find BeatmapLevelSO klass by scanning memory for objects matching the known
-// field layout. SCANS FROM 16MB-4GB at coarse granularity
-// to locate the IL2CPP heap region, whose address is UNKNOWN on PS4.
-#define PATTERN_SCAN_MIN  0x1000000ULL    // 16MB — start below possible heap
-#define PATTERN_SCAN_MAX  0x100000000ULL  // 4GB — upper bound (~65520 pages with 64KB step)
+// field layout. Scans two ranges:
+//   1. 16MB-4GB      - covers the PS4 module/system space (0x80000000-0x90000000)
+//   2. 8GB-8.25GB    - covers the IL2CPP GC heap (mmap'd at high addresses)
+// The GC heap range is derived from the object scanner's SCAN_START/END_ADDR.
+#define PATTERN_SCAN_MIN    0x1000000ULL      // 16MB — start below possible heap
+#define PATTERN_SCAN_MAX    0x100000000ULL    // 4GB — lower range (~65520 pages)
+#define PATTERN_SCAN_MIN2   0x200000000ULL    // 8GB — GC heap start (SCAN_START_ADDR)
+#define PATTERN_SCAN_MAX2   0x210000000ULL    // 8.25GB — GC heap end (SCAN_END_ADDR)
 // 64KB pages to stay within PS4 stack limit (typically 256KB per thread).
 // 1MB pages overflow the stack and cause every try_read_mem to fault.
 #define PATTERN_SCAN_STEP 0x10000ULL      // 64KB pages (safe for stack)
@@ -137,20 +141,30 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
     int chk_klass = 0, chk_version = 0, chk_ptrs = 0, chk_strlen = 0;
     uint8_t page[PATTERN_SCAN_STEP];
 
-    for (uint64_t page_addr = PATTERN_SCAN_MIN; page_addr < PATTERN_SCAN_MAX; page_addr += PATTERN_SCAN_STEP) {
-        scan_count++;
-        if (!try_read_mem(page_addr, page, PATTERN_SCAN_STEP))
-            continue;
-        mapped_pages++;
+    // Scan two ranges: module/system space (16MB-4GB) and GC heap (8GB-8.25GB)
+    struct { uint64_t start; uint64_t end; } ranges[] = {
+        { PATTERN_SCAN_MIN,  PATTERN_SCAN_MAX },   // low range: module/system
+        { PATTERN_SCAN_MIN2, PATTERN_SCAN_MAX2 },   // high range: GC heap
+    };
+    const int num_ranges = sizeof(ranges) / sizeof(ranges[0]);
 
-        for (uint64_t offset = 0; offset < PATTERN_SCAN_STEP - 64; offset += 32) {
+    for (int r = 0; r < num_ranges; r++) {
+        for (uint64_t page_addr = ranges[r].start; page_addr < ranges[r].end; page_addr += PATTERN_SCAN_STEP) {
+            scan_count++;
+            if (!try_read_mem(page_addr, page, PATTERN_SCAN_STEP))
+                continue;
+            mapped_pages++;
+
+            for (uint64_t offset = 0; offset < PATTERN_SCAN_STEP - 64; offset += 32) {
             uint64_t klass_ptr = *(uint64_t*)(page + offset + 0x00);
             int32_t version   = *(int32_t*)(page + offset + 0x18);
             uint64_t lid      = *(uint64_t*)(page + offset + 0x20);
             uint64_t sn       = *(uint64_t*)(page + offset + 0x28);
             uint64_t an       = *(uint64_t*)(page + offset + 0x38);
 
-            if (klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) continue;
+            // Accept klass in module space (0x80000000-0x90000000) or GC heap (0x200000000+).
+            if ((klass_ptr < 0x80000000ULL || klass_ptr > 0x90000000ULL) &&
+                (klass_ptr < 0x200000000ULL || klass_ptr > 0x210000000ULL)) continue;
             chk_klass++;
             if (version < 1 || version > 50) continue;
             chk_version++;
@@ -158,6 +172,11 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             if (sn  < 0x1000000ULL || sn  > 0x8000000000ULL) continue;
             if (an  < 0x1000000ULL || an  > 0x8000000000ULL) continue;
             chk_ptrs++;
+
+            // Reject false positives: klass must NOT equal string pointers.
+            // Real BeatmapLevelSO has klass -> data segment (0x84AC0000+) and
+            // lid/sn/an -> GC heap (0x200000000+). False positives have klass==lid.
+            if (klass_ptr == lid || klass_ptr == sn || klass_ptr == an) continue;
 
             // Debug: dump first 3 ptrs-level candidates to understand string layout
             if (chk_ptrs <= 3) {
@@ -184,6 +203,7 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             return 0;
         }
     }
+}
 
     // Log diagnostics
     {   char buf[256];

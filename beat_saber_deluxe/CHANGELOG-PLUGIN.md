@@ -2,6 +2,12 @@
 
 All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are documented here.
 
+## [v0.80] — 2026-07-19
+### Fixed
+- **False positive rejection in pattern matcher** — Added `klass != lid/sn/an` check to reject 17 false positives found at 0x802Axxxx (kernel/system memory below module base). These garbage structs coincidentally matched the BeatmapLevelSO field layout but had klass == lid, which a real object never has.
+- **Widened klass range check** — Accept klass in both module space (0x80000000-0x90000000) and GC heap (0x200000000+). Il2CppClass structs may be allocated on the GC heap in some configurations.
+- **Extended pattern scan to GC heap range** — Added second scan loop covering 0x200000000-0x210000000 (8GB-8.25GB) where the IL2CPP GC heap is typically mapped on PS4. Previously the pattern scan only searched 16MB-4GB, missing the GC heap entirely.
+
 ## [v0.79] — 2026-07-19
 ### Added
 - **STRDEBUG logging in pattern matcher** — Dumps raw values at `lid+0x10` and `lid+0x14` for the first 3 candidates that reach `chk_ptrs` level. Used to determine the correct System_String._stringLength offset on PS4 (may differ from standard IL2CPP layout).
