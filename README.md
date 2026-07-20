@@ -11,7 +11,7 @@
 >   ```
 >   The dump must include the unpacked patch files (eboot.bin, Media/ directory, etc.). Tools like PS4 Dumper on a jailbroken PS4 create this via the `split=3` config option.
 
-Replace any Rolling Stones DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook.
+Replace any DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook.
 
 > **⚠️ Current limitations:**
 > - **Song menu is untouched** — song names, artists, and cover art still show the original Rolling Stones track. You must remember which custom song is mapped to which slot to find it in-game.
