@@ -2883,4 +2883,24 @@ Before building v0.35, I analyzed the difference between the original file and `
   - main.cpp — v0.8002
   - CHANGELOG-PLUGIN.md — v0.8002 entry
 - **Version:** v0.8002
+- **Status:** ✅ Tested — hex dumps revealed ALL 12 readable candidates are **false positives**. None point to System_String objects:
+  - OBJ[30–32] (0x802xxxxx): Show C string literals ("digit", "graph", "wer", "punct") from module data section
+  - OBJ[37–38] (0x84948xxx): Show .NET encoding names ("utf_8", "ascii", "ansi_x3")
+  - OBJ[40–46] (0x201xxxxxxx, GC heap): Show GC heap pointers, not string headers
+- **Key Finding:** Pattern matcher still unable to find real BeatmapLevelSO objects. All 44 pointer-level candidates are coincidental matches.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8002_lid_hexdump.txt` (v0.8002 log, 12 OBJ entries)
+
+### Experiment 182: v0.8003 — Find BeatmapLevelSO via global-metadata.dat Magic Search
+- **Date:** 2026-07-19
+- **What:**
+  - Discovered: PATCH metadata (NOT app metadata) contains "BeatmapLevelSO" as a contiguous string at file offset 0x23cb6e (string index 84256). The game uses the patch global-metadata.dat (version 31), not the app metadata (version 24).
+  - Implemented `search_for_patch_metadata()` — scans all readable memory for magic bytes 0xFAB11BAF, validates version == 31 and string count > 1M, then computes the runtime address of the "BeatmapLevelSO" string within the memory-mapped metadata.
+  - The string address feeds into the existing Il2CppClass pointer search (data segment scan for 8-byte pointers → klass struct)
+- **Key Finding:** The "BeatmapLevelSO" string is ONLY in the patch metadata (version 31). This approach should finally locate the BeatmapLevelSO_c klass pointer in the data segment (0x84AC0000-0x85018000).
+- **Files Changed:**
+  - src/memory_inject.cpp — Added `search_for_patch_metadata()` + integration into `find_beatmap_level_so_klass()`
+  - main.cpp — v0.8003
+  - CHANGELOG-PLUGIN.md — v0.8003 entry
+- **Version:** v0.8003
 - **Status:** 🚀 Deployed to PS4, awaiting test results

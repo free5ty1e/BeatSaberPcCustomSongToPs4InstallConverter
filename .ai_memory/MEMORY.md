@@ -17,6 +17,9 @@
 ### Experiment Log
 - [📋 Experiment Log](beat-saber-ps4-custom-songs/experiment_log.md) — **Complete chronological log of ALL 19+ experiments and tests with results. Updated every test cycle.**
 
+### Memory Injection & Metadata
+- [BeatmapLevelSO in Patch Metadata](beatmap-levelso-in-patch-metadata.md) — The "BeatmapLevelSO" class name is stored only in the game patch's global-metadata.dat (version 31, offset 0x23cb6e). NOT in app metadata or module segments.
+
 ### Plugin Architecture
 - [crtlib.o module_start analysis](beat-saber-ps4-custom-songs/crtlib-o-module-start-analysis.md) — Root cause: plugin_main() never called by CRT. Fix: use __attribute__((constructor)) or define module_start directly.
 - [RB4DX Plugin Architecture Reference](beat-saber-ps4-custom-songs/rb4dx-plugin-architecture-reference.md) — Working GoldHEN plugin pattern: crtprx.o, -e _init, GoldHEN SDK HOOK macros.

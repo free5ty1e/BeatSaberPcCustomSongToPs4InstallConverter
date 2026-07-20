@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8003] — 2026-07-19
+### Added
+- **global-metadata.dat magic search** — New function `search_for_patch_metadata()` that finds the patch global-metadata.dat in memory by searching for its magic bytes (`0xFAB11BAF`) across all readable memory. When found (version 31, string count > 1M), computes the runtime address of the "BeatmapLevelSO" string within it and uses the existing Il2CppClass pointer search to locate the BeatmapLevelSO_c klass in the data segment. This solves the root problem: "BeatmapLevelSO" is only stored in the patch global-metadata.dat, not in the module text/data segments.
+
 ## [v0.8002] — 2026-07-19
 ### Changed
 - **Hex dump of lid pointer header** — Replaced int32 STRDEBUG with full 32-byte hex dump of the object at `lid` (4 × uint64_t). Shows klass pointer, monitor field, and suspected _stringLength field at all potential offsets. Enables definitive identification of System_String layout on PS4 by inspection.

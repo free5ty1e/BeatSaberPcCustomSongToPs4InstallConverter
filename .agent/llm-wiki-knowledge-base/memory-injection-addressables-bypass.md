@@ -13,7 +13,7 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🔵 **Memory injection v0.8002** — Pattern matcher covers two scan ranges (16MB-4GB + 8GB-8.25GB). v0.8001 found 44 candidates, with GC heap candidates consistently showing `lid+0x14=2`. **System_String._stringLength may be at offset 0x14 on PS4 IL2CPP** instead of the standard 0x10. v0.8002 adds full 32-byte hex dump of lid header to confirm layout. Module data segment at 0x84AC0000 (writable, size 0x558000).
+**Status:** 🔵 **Memory injection v0.8003** — All 44 pattern-matcher candidates confirmed false positives (hex dumps in v0.8002 revealed C string literals, .NET encoding names, and GC heap pointers). **New approach:** Find BeatmapLevelSO klass by locating the patch global-metadata.dat in memory via its magic bytes (0xFAB11BAF), computing the address of the "BeatmapLevelSO" string at file offset 0x23cb6e within it, then scanning the data segment for the Il2CppClass `name` pointer. The string is ONLY in the **patch** metadata (version 31), not the app metadata (version 24), which is why previous searches failed.
 
 ## Implementation — Current Architecture (v0.79)
 

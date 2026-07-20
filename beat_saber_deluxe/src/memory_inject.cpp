@@ -412,6 +412,70 @@ static uint64_t search_for_string(uint64_t region_start, uint64_t region_size,
     return 0;
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// global-metadata.dat Magic Search
+// ══════════════════════════════════════════════════════════════════════════
+
+// Magic bytes for global-metadata.dat: 0xFAB11BAF
+// "BeatmapLevelSO" is at file offset 0x23cb6e in the PATCH metadata (version 31).
+// At runtime the metadata is mmap'd into memory — finding the magic gives us
+// its base address, then we compute the string address as base + file_offset.
+#define METADATA_MAGIC_BYTES "\xAF\x1B\xB1\xFA"
+#define METADATA_MAGIC_LEN   4
+#define BEATMAP_LEVEL_SO_STRING_OFFSET 0x23CB6EULL
+
+// Search for patch global-metadata.dat (version 31) across all readable memory.
+// Returns the base address (where magic is found), or 0 if not found.
+// Validates by checking version field == 31 and string count > 1M.
+static uint64_t search_for_patch_metadata(void) {
+    // Scan all readable memory at 64KB granularity (matches pattern scan step)
+    for (uint64_t page_addr = 0x1000000ULL; page_addr < 0x2000000000ULL; page_addr += PATTERN_SCAN_STEP) {
+        // First check if ANY of this page is readable
+        uint64_t probe = 0;
+        if (!try_read_mem(page_addr, &probe, 8)) continue;
+
+        // Page is readable — scan it for the magic at 4KB granularity
+        for (uint64_t offset = 0; offset < PATTERN_SCAN_STEP; offset += 4096) {
+            uint64_t chunk_addr = page_addr + offset;
+
+            // Quick pre-check: look for first magic byte (0xAF)
+            uint8_t first_byte = 0;
+            if (!try_read_mem(chunk_addr, &first_byte, 1)) continue;
+            if (first_byte != 0xAF) continue;
+
+            // Read the full 4096-byte chunk to check
+            uint8_t chunk[4096];
+            if (!try_read_mem(chunk_addr, chunk, sizeof(chunk))) continue;
+
+            for (size_t i = 0; i <= sizeof(chunk) - METADATA_MAGIC_LEN; i++) {
+                if (memcmp(chunk + i, METADATA_MAGIC_BYTES, METADATA_MAGIC_LEN) == 0) {
+                    // Found magic — validate it's the patch metadata (version 31)
+                    int32_t version = 0;
+                    if (i + 8 <= sizeof(chunk)) {
+                        version = *(int32_t*)(chunk + i + 4);
+                    } else {
+                        if (!try_read_mem(chunk_addr + i + 4, &version, 4)) continue;
+                    }
+                    if (version != 31) continue;
+
+                    // Sanity check: string count should be > 1M for the patch metadata
+                    int32_t str_count = 0;
+                    if (i + 32 <= sizeof(chunk)) {
+                        str_count = *(int32_t*)(chunk + i + 28);
+                    } else {
+                        if (!try_read_mem(chunk_addr + i + 28, &str_count, 4)) continue;
+                    }
+                    if (str_count < 1000000) continue;
+
+                    // Verified! This is the patch global-metadata.dat
+                    return chunk_addr + i;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 static int find_beatmap_level_so_klass(uint64_t* klass_out) {
     ModuleSegment segs[4];
     int seg_count = find_module_segments(MODULE_NAME, segs, 4);
@@ -450,6 +514,20 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
                      s, class_string_addr);
             meminj_log(buf);
             break;
+        }
+    }
+
+    if (!class_string_addr) {
+        // String not found in module — try finding it via global-metadata.dat magic
+        char msgbuf[256];
+        meminj_log("[MEMINJ] String not in module — searching for global-metadata.dat magic...");
+        uint64_t metadata_base = search_for_patch_metadata();
+        if (metadata_base) {
+            class_string_addr = metadata_base + BEATMAP_LEVEL_SO_STRING_OFFSET;
+            snprintf(msgbuf, sizeof(msgbuf),
+                     "[MEMINJ] Found metadata at 0x%lX, class string at 0x%lX",
+                     metadata_base, class_string_addr);
+            meminj_log(msgbuf);
         }
     }
 

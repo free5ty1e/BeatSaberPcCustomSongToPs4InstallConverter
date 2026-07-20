@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🔵 **Memory injection v0.8002 deployed** — Pattern matcher now logs full hex dumps of lid pointers for all candidates. v0.8001 found 44 pointer-level candidates (only 10 readable). GC heap candidates (5 total) show `lid+0x14=2` consistently, suggesting System_String._stringLength might be at offset **0x14** instead of 0x10 on PS4 IL2CPP. v0.8002 adds 32-byte hex dump of lid header to confirm the exact layout by inspection.
+**Status:** 🔵 **Memory injection v0.8003 deployed** — All 44 pattern-matcher candidates from v0.8002 were confirmed false positives (hex dumps showed C string literals, .NET encoding names, and GC heap pointers — not System_String objects). **New approach v0.8003:** Finds BeatmapLevelSO klass by searching memory for the patch global-metadata.dat magic (0xFAB11BAF), locating the "BeatmapLevelSO" string within it, then scanning the data segment for the Il2CppClass `name` pointer. The string was discovered at file offset 0x23cb6e in the patch metadata (version 31). Previous searches failed because only the app metadata was checked.
 
 ## Current Approach: Memory Injection (v0.66+)
 
