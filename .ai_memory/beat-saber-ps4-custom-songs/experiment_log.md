@@ -2808,3 +2808,27 @@ Before building v0.35, I analyzed the difference between the original file and `
   - CHANGELOG-PLUGIN.md — v0.76 entry
 - **Version:** v0.76
 - **Status:** Deployed to PS4, awaiting test
+
+### Experiment 178: v0.77–v0.79 — Stack Buffer Overflow & System_String Layout Discovery
+- **Date:** 2026-07-19
+- **What:**
+  - v0.77: Added per-check diagnostic counters to pattern matcher to identify which validation check was rejecting candidates
+  - v0.77 tested: Pattern diag showed `klass=128982 ver=78 ptrs=17 strlen=0` — 17 candidates passed all checks except string length validation
+  - **v0.78 Root Cause:** The pattern matcher used `PATTERN_SCAN_STEP = 0x100000` (1MB) for `uint8_t page[PATTERN_SCAN_STEP]` on the stack. PS4 threads have ~256KB stack limit. The 1MB stack buffer overflowed, causing every `try_read_mem` destination to be invalid → signal handler caught every fault → returned 0 for every page → "0 mapped pages".
+  - **Fix:** Changed `PATTERN_SCAN_STEP` from 1MB to 64KB (same as the object scanner's `SCAN_STEP`). PS4's thread stack can handle 64KB buffers.
+  - v0.78 tested: Pattern diag showed `65280 pages (1745 mapped)` — try_read_mem now works! Found 17 candidates that match BeatmapLevelSO field layout (klass range, version, 3 string pointers) but ALL fail the string length check at offset 0x10.
+  - v0.79: Added STRDEBUG logging to dump raw values at `lid+0x10` and `lid+0x14` for first 3 candidates, to determine the correct System_String._stringLength offset on PS4.
+- **Key Finding:** The System_String layout on PS4 IL2CPP may differ from standard — `_stringLength` might NOT be at offset 0x10 as a 4-byte field. The STRDEBUG output will tell us the actual offset.
+- **Files Changed (v0.78):**
+  - src/memory_inject.cpp — PATTERN_SCAN_STEP 0x100000→0x10000, PATTERN_SCAN_MAX 0x1000000000→0x100000000, comment fixes
+  - src/main.cpp — v0.78
+  - CHANGELOG-PLUGIN.md — v0.78 entry
+- **Files Changed (v0.79):**
+  - src/memory_inject.cpp — Added STRDEBUG dump for first 3 chk_ptrs candidates (lid+0x10, lid+0x14 values)
+  - src/main.cpp — v0.79
+  - CHANGELOG-PLUGIN.md — v0.79 entry
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.72_bounds_fix_verbose_log.txt` (783 lines)
+  - `.ai_memory/experiment_logs/v0.71_debug_verbose_log.txt` (780 lines)
+- **Version:** v0.79
+- **Status:** Deployed to PS4, awaiting STRDEBUG results

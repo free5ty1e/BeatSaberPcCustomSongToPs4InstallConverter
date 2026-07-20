@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-19
-**Status:** 🔵 **v0.76 plugin** — Memory injection actively developed. Root causes addressed: bounds check (v0.72), class string in metadata not module (v0.75), **string pointer validation 4GB threshold vs try_read_mem 16MB threshold** (v0.76). The v0.73–v0.75 bug was inconsistent bounds between try_read_mem and object validation. Current approach: wide-range pattern-based heap scan (16MB–64GB). **v0.76 deployed, awaiting test results.**
+**Status:** 🔵 **Memory injection v0.79 verified** — Memory injection actively developed. Root causes addressed: bounds check (v0.72), class string in metadata not module (v0.75), **string pointer validation 4GB threshold vs try_read_mem 16MB threshold** (v0.76). The v0.73–v0.75 bug was inconsistent bounds between try_read_mem and object validation. Current approach: wide-range pattern-based heap scan (16MB–4GB). **v0.79 deployed, awaiting STRDEBUG results. Pattern matcher finds 17 candidates, all fail string length check — likely wrong _stringLength offset**
 
 ## Current Approach: Memory Injection (v0.66+)
 
@@ -63,6 +63,7 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 175 | v0.73 | Pattern matcher (full heap scan) | ❌ Black screen hang — scan too slow |
 | 176 | v0.74–v0.75 | Optimized scan + dump analysis | 🔵 **Class names in global-metadata.dat discovery** |
 | **177** | **v0.76** | **String ptr validation threshold 4GB→16MB** | **✅ Consistent bounds — real fix for "found nothing"** |
+| **178** | **v0.77–v0.79** | **Stack overflow fix + STRDEBUG** | **✅ 1MB→64KB stack, finds 17 candidates. String layout mismatch** |
 | **174** | **v0.72** | **Bounds check fixed (16MB–128GB)** | **🟡 Deployed, awaiting test** |
 
 ## Memory Injection Versions

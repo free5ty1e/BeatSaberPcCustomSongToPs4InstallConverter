@@ -1,7 +1,7 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.78: Memory injection — pattern matcher diag logging, per-check failure counters.
+// v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
 // v0.76: Memory injection — lowered string ptr validation threshold (4GB→16MB), expanded scan range.
 // v0.75: Memory injection — wide-range heap scan (1GB-32GB, coarse). Discovered class strings in global-metadata.dat.
 // v0.74: Memory injection — signal handlers installed once per scan, heap scan range reduced.
@@ -25,7 +25,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.78"
+#define PLUGIN_VERSION "v0.79"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"

@@ -159,6 +159,20 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             if (an  < 0x1000000ULL || an  > 0x8000000000ULL) continue;
             chk_ptrs++;
 
+            // Debug: dump first 3 ptrs-level candidates to understand string layout
+            if (chk_ptrs <= 3) {
+                int32_t v0x10 = 0, v0x14 = 0;
+                if (try_read_mem(lid + 0x10, &v0x10, 4) && try_read_mem(lid + 0x14, &v0x14, 4)) {
+                    char buf[256];
+                    snprintf(buf, sizeof(buf),
+                             "[MEMINJ] STRDEBUG[%d]: klass=0x%lX ver=%d "
+                             "lid=0x%lX sn=0x%lX an=0x%lX "
+                             "lid+0x10=%d lid+0x14=%d",
+                             chk_ptrs, klass_ptr, version, lid, sn, an, v0x10, v0x14);
+                    meminj_log(buf);
+                }
+            }
+
             int32_t lid_len = 0, sn_len = 0;
             if (!try_read_mem(lid + 0x10, &lid_len, 4)) continue;
             if (!try_read_mem(sn  + 0x10, &sn_len,  4)) continue;
