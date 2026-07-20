@@ -1,0 +1,30 @@
+=== BS Deluxe v0.8004 started ===
+v0.8004 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (no guard timer, fires on any redirect)
+[MEMINJ] Scanning...
+[MEMINJ:VERBOSE] Il2CppUserAssemblies: 3 segments
+[MEMINJ:VERBOSE] Seg[0]: base=0x806C0000 size=0x3F54000 prot=r1w0x1
+[MEMINJ:VERBOSE] Seg[0]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[1]: base=0x84AC0000 size=0x558000 prot=r0w1x1
+[MEMINJ:VERBOSE] Seg[1]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[2]: base=0x846C0000 size=0x400000 prot=r0w0x1
+[MEMINJ:VERBOSE] Seg[2]: try_read_mem(first 16) = OK
+[MEMINJ] String not in module — searching for global-metadata.dat magic...
+[MEMINJ] Found metadata at 0x293280000, class string at 0x2934BCB6E
+[MEMINJ] ERROR: Klass not found in module data
+[MEMINJ] String not in module — trying pattern find in heap...
+[MEMINJ] OBJ[30]: obj=0x802B3240 klass=0x802B6D34 ver=3 lid=0x802594A2 sn=0x802596B2 an=0x802A8040 | lid[0]=0x0003000200010000 [1]=0x0007000600050004 [2]=0x000B000A00090008 [3]=0x000F000E000D000C
+[MEMINJ] OBJ[31]: obj=0x802B42E0 klass=0x8026C084 ver=5 lid=0x8026C090 sn=0x2000000001 an=0x2000000005 | lid[0]=0x0074696769640064 [1]=0x6F6C006870617267 [2]=0x6E69727000726577 [3]=0x0074636E75700074
+[MEMINJ] OBJ[32]: obj=0x802B43E0 klass=0x8026C0E0 ver=5 lid=0x8026C0F8 sn=0x2000000001 an=0x2000000005 | lid[0]=0x0069006400000064 [1]=0x0000007400690067 [2]=0x0070006100720067 [3]=0x006F006C00000068
+[MEMINJ] OBJ[37]: obj=0x84948C20 klass=0x83D92A34 ver=3 lid=0x83D9299D sn=0x83D92A6E an=0x83D92A92 | lid[0]=0x736100385F667475 [1]=0x615F737500696963 [2]=0x0073750069696373 [3]=0x2E33785F69736E61
+[MEMINJ] OBJ[38]: obj=0x84948C80 klass=0x83D92ACA ver=5 lid=0x83D92AE7 sn=0x83D92AF3 an=0x83D92AFC | lid[0]=0x6665646F63696E75 [1]=0x5F66747500656666 [2]=0x6F73690065623631 [3]=0x00315F393538385F
+[MEMINJ] OBJ[42]: obj=0x201180020 klass=0x200000000 ver=50 lid=0x2011800A0 sn=0x29F0E8740 an=0x295358030 | lid[0]=0x00000002FFFFFFFF [1]=0x00000002011800E8 [2]=0x0000000100000001 [3]=0x0000000000000000
+[MEMINJ] OBJ[43]: obj=0x2011823A0 klass=0x2011804D0 ver=50 lid=0x2011C8AE0 sn=0x201181FA0 an=0x200000001 | lid[0]=0x00000002011C8B40 [1]=0x00000002011823C0 [2]=0x000000029797FEB0 [3]=0x000000000000003C
+[MEMINJ] OBJ[45]: obj=0x2011D1DA0 klass=0x2011D2D70 ver=50 lid=0x2011D1E20 sn=0x2011D1C40 an=0x5D5B6574 | lid[0]=0x00000002011D1E80 [1]=0x00000002011D1DC0 [2]=0x00000002A0509BE0 [3]=0x000000000000006F
+[MEMINJ] Pattern diag: 69376 pages (5841 mapped). klass=285944 ver=6310 ptrs=45 strlen=0
+[MEMINJ] ERROR: Could not find BeatmapLevelSO klass

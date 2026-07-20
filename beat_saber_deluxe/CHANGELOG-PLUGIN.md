@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8005] — 2026-07-19
+### Added
+- **Broader klass pointer search fallback** — After module segment search fails, searches the GC heap range (0x200000000-0x210000000) and memory near the metadata itself for 8-byte pointers to the "BeatmapLevelSO" string. The Il2CppClass struct may be dynamically allocated outside the module data segment.
+- **metadata_base now function-scoped** — Saved at function scope so it's available for both the string address computation and the broader fallback search.
+
 ## [v0.8004] — 2026-07-19
 ### Fixed
 - **Klass pointer search now scans ALL module segments** — Removed `if (!segs[s].is_readable) continue;` filter that was skipping the data segment (Seg[1] at 0x84AC0000). The data segment is where Il2CppClass structs live, but it's incorrectly flagged as `is_readable=0` in sceKernelGetModuleInfo results. `try_read_mem` with signal handlers can safely read from any segment.

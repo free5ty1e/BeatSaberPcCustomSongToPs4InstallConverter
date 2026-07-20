@@ -504,6 +504,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
 
     // Find "BeatmapLevelSO" C string in module (try ALL segments, signal handler catches faults)
     uint64_t class_string_addr = 0;
+    uint64_t metadata_base = 0;
     for (int s = 0; s < seg_count; s++) {
         // Skip segments with no readable base (bounds check would reject)
         if (segs[s].base == 0 || segs[s].size == 0) continue;
@@ -521,7 +522,7 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
         // String not found in module — try finding it via global-metadata.dat magic
         char msgbuf[256];
         meminj_log("[MEMINJ] String not in module — searching for global-metadata.dat magic...");
-        uint64_t metadata_base = search_for_patch_metadata();
+        metadata_base = search_for_patch_metadata();
         if (metadata_base) {
             class_string_addr = metadata_base + BEATMAP_LEVEL_SO_STRING_OFFSET;
             snprintf(msgbuf, sizeof(msgbuf),
@@ -563,6 +564,36 @@ static int find_beatmap_level_so_klass(uint64_t* klass_out) {
 
             *klass_out = candidate;
             return 0;
+        }
+    }
+
+    // Fallback: search GC heap and metadata range for the pointer
+    // Il2CppClass struct may be dynamically allocated outside module segments
+    if (metadata_base) {
+        uint8_t fb_page[PATTERN_SCAN_STEP]; // 64KB buffer
+        uint64_t fb_val;
+
+        // Define broader search ranges
+        struct { uint64_t start; uint64_t end; } fb_ranges[] = {
+            { 0x200000000ULL, 0x210000000ULL },          // GC heap
+            { metadata_base - 0x100000,                   // ±1MB around metadata
+              metadata_base + 0x1000000 },
+        };
+        for (int f = 0; f < 2; f++) {
+            for (uint64_t page_addr = fb_ranges[f].start; page_addr < fb_ranges[f].end; page_addr += PATTERN_SCAN_STEP) {
+                if (!try_read_mem(page_addr, fb_page, sizeof(fb_page))) continue;
+                for (size_t i = 0; i < sizeof(fb_page) / sizeof(uint64_t); i++) {
+                    if (((uint64_t*)fb_page)[i] != class_string_addr) continue;
+                    uint64_t addr = page_addr + i * sizeof(uint64_t);
+                    uint64_t candidate = addr - 0x10;
+                    uint64_t ns_ptr = 0;
+                    if (!try_read_mem(candidate + 0x18, &ns_ptr, 8)) continue;
+                    if (ns_ptr < 0x10000 || ns_ptr > 0x8000000000ULL) continue;
+                    if (!try_read_mem(candidate + 0x20, &fb_val, 8)) continue;
+                    *klass_out = candidate;
+                    return 0;
+                }
+            }
         }
     }
 
