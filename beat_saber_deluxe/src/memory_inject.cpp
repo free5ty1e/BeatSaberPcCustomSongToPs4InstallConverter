@@ -178,22 +178,24 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             // lid/sn/an -> GC heap (0x200000000+). False positives have klass==lid.
             if (klass_ptr == lid || klass_ptr == sn || klass_ptr == an) continue;
 
-            // Debug: dump raw values at lid to understand System_String layout on PS4
-            // Removed chk_ptrs <= 3 limit — captures ALL passing candidates for analysis.
+            // Debug: dump hex header of lid pointer to understand System_String layout on PS4
+            // Shows the first 32 bytes (4 uint64 values) at lid:
+            //   [0] = bytes 0-7  (klass ptr)
+            //   [1] = bytes 8-15 (monitor — or _stringLength if layout differs)
+            //   [2] = bytes 16-23 (standard: _stringLength at 0x10 + _firstChar at 0x14)
+            //   [3] = bytes 24-31 (string data or next field)
             {
-                int32_t v0x10 = 0, v0x14 = 0, v0x18 = 0;
                 uint64_t obj_addr = page_addr + offset;
-                if (try_read_mem(lid + 0x10, &v0x10, 4) &&
-                    try_read_mem(lid + 0x14, &v0x14, 4) &&
-                    try_read_mem(lid + 0x18, &v0x18, 4)) {
-                    char buf[384];
+                uint64_t lid_hdr[4] = {0};
+                if (try_read_mem(lid, lid_hdr, 32)) {
+                    char buf[512];
                     snprintf(buf, sizeof(buf),
-                             "[MEMINJ] CANDIDATE[%d]: obj=0x%lX klass=0x%lX ver=%d "
-                             "lid=0x%lX sn=0x%lX an=0x%lX "
-                             "lid+0x10=%d lid+0x14=%d lid+0x18=%d",
+                             "[MEMINJ] OBJ[%d]: obj=0x%lX klass=0x%lX ver=%d "
+                             "lid=0x%lX sn=0x%lX an=0x%lX | "
+                             "lid[0]=0x%016lX [1]=0x%016lX [2]=0x%016lX [3]=0x%016lX",
                              chk_ptrs, obj_addr, klass_ptr, version,
                              lid, sn, an,
-                             v0x10, v0x14, v0x18);
+                             lid_hdr[0], lid_hdr[1], lid_hdr[2], lid_hdr[3]);
                     meminj_log(buf);
                 }
             }

@@ -2866,4 +2866,21 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Archived Logs:**
   - `.ai_memory/experiment_logs/v0.80_pattern_diag_5841mapped.txt` (v0.80 log with 45 candidates)
 - **Version:** v0.8001
+- **Status:** ✅ Tested — CANDIDATE output captured 10 of 44 candidates (34 had try_read_mem failures in debug block). Key finding: GC heap candidates show `lid+0x14=2` consistently, suggesting _stringLength might be at offset 0x14 instead of 0x10. Hex dump of lid header needed to confirm.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.80_pattern_diag_5841mapped.txt` (v0.80 log with 45 candidates)
+  - `.ai_memory/experiment_logs/v0.8001_candidate_debug_45.txt` (v0.8001 log, 10 CANDIDATE entries)
+
+### Experiment 181: v0.8002 — Hex Dump of lid Header for Layout Discovery
+- **Date:** 2026-07-19
+- **What:**
+  - Replaced the int32 STRDEBUG dump with a full 32-byte (4 × uint64_t) hex dump of the data at `lid` pointer
+  - Shows the complete object header at lid: [0]=klass ptr, [1]=monitor/_stringLength candidate, [2]=standard _stringLength+_firstChar, [3]=string data
+  - Enables definitive identification of System_String layout on PS4 by inspection
+- **Key Finding:** If lid[2] contains a small positive int (1-255) in its lower 32 bits, _stringLength IS at offset 0x10 (standard layout). If lid[1] or the upper 32 bits of lid[2] has it, the layout differs.
+- **Files Changed:**
+  - src/memory_inject.cpp — Replaced CANDIDATE int32 dump with full 32-byte hex dump of lid header
+  - main.cpp — v0.8002
+  - CHANGELOG-PLUGIN.md — v0.8002 entry
+- **Version:** v0.8002
 - **Status:** 🚀 Deployed to PS4, awaiting test results

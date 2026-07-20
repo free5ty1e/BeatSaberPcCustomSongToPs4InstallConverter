@@ -9,7 +9,7 @@ enforced by the files they reference — read them if you haven't already.
 
 Before proceeding with work, upon receiving experiment results, you MUST update ALL of these with experiment results and findings:
 
-1. Download & analyze the PS4 log first, then archive the log with an appropriate descriptive file name in `.ai_memory/experiment_logs/`
+1. Download the PS4 log directly to `.ai_memory/experiment_logs/` with a version-specific descriptive filename (e.g., `v0.8001_candidate_debug.txt`). Analyze the log, then ensure it's archived there — the download IS the archival copy. Never use `/tmp/` or other temporary locations.
 2. Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with experiment results
 3. Update `.ai_memory/beat-saber-ps4-custom-songs/song_testing_log.md` if received new song testing results
 4. Update `.agent/project_summary.md` with current status
@@ -19,11 +19,12 @@ Before proceeding with work, upon receiving experiment results, you MUST update 
 ## 2. Rules For Performing Work
 
 - If making changes to the Beat Saber Deluxe Plugin, you must bump the version in `main.cpp` and create an appropriate entry in `beat_saber_deluxe/CHANGELOG-PLUGIN.md`
-- **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
+- **Version scheme:** Both plugin and pipeline increment by **0.0001** per experiment (e.g. plugin v0.80 → v0.8001 → v0.8002; pipeline v0.53 → v0.5301 → v0.5302). This gives ample room to iterate before reaching v1.00 for either component.
 - If making changes to the Beat Saber Deluxe Song Conversion Pipeline, you must bump the version in `beat_saber_deluxe/VERSION` and create an appropriate entry in `beat_saber_deluxe/CHANGELOG-PIPELINE.md`
 - **Development scripts go in `beat_saber_deluxe/development/scripts/`.** Only after a script is proven to work correctly should it be integrated into the production pipeline (e.g., moved to `tools/`, `full_custom_song_pipeline.py`, or the plugin source). This keeps the codebase clean and prevents experimental code from being accidentally deployed or committed as production.
 - If any new tools or prerequisites are needed, you have permission to install them; we are in a devcontainer so it is safe. If the tool is useful at all, please persist it along with its prerequisites in the devcontainer definition files so that our full toolset survives a devcontainer rebuild.
 - If it makes sense to do so, attempt to deploy latest changes to the PS4 for experimentation
+- **PS4 log handling:** Always download PS4 logs directly to `./workspace/.ai_memory/experiment_logs/` with a version-specific descriptive filename — never to `/tmp/` or other temporary locations. The log IS the archival copy; downloading to the workspace ensures it's preserved and organized alongside experiment documentation.
 
 ## 3. MANDATORY Documentation Updates Before Presenting
 
@@ -85,8 +86,8 @@ When ANY of the following changes occur, you MUST bump versions and update chang
 - Fixing bugs in the pipeline
 
 **Version Bump Format:**
-- Plugin: `v0.XX` → increment last digit for patch, middle for minor, first for major
-- Pipeline: `v1.XX` → same convention
+- Plugin: `v0.XXXX` → increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002)
+- Pipeline: `v0.XXXX` → increment by **0.0001** per experiment (e.g. v0.53 → v0.5301 → v0.5302)
 - Update both `CHANGELOG-PLUGIN.md` and `CHANGELOG-PIPELINE.md` with date and description
 
 **Example:**

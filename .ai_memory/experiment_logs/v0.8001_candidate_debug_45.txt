@@ -1,0 +1,29 @@
+=== BS Deluxe v0.8001 started ===
+v0.8001 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (no guard timer, fires on any redirect)
+[MEMINJ] Scanning...
+[MEMINJ:VERBOSE] Il2CppUserAssemblies: 3 segments
+[MEMINJ:VERBOSE] Seg[0]: base=0x806C0000 size=0x3F54000 prot=r1w0x1
+[MEMINJ:VERBOSE] Seg[0]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[1]: base=0x84AC0000 size=0x558000 prot=r0w1x1
+[MEMINJ:VERBOSE] Seg[1]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[2]: base=0x846C0000 size=0x400000 prot=r0w0x1
+[MEMINJ:VERBOSE] Seg[2]: try_read_mem(first 16) = OK
+[MEMINJ] String not in module — trying pattern find in heap...
+[MEMINJ] CANDIDATE[30]: obj=0x802B3240 klass=0x802B6D34 ver=3 lid=0x802594A2 sn=0x802596B2 an=0x802A8040 lid+0x10=589832 lid+0x14=720906 lid+0x18=851980
+[MEMINJ] CANDIDATE[31]: obj=0x802B42E0 klass=0x8026C084 ver=5 lid=0x8026C090 sn=0x2000000001 an=0x2000000005 lid+0x10=7497079 lid+0x14=1852404336 lid+0x18=1970274420
+[MEMINJ] CANDIDATE[32]: obj=0x802B43E0 klass=0x8026C0E0 ver=5 lid=0x8026C0F8 sn=0x2000000001 an=0x2000000005 lid+0x10=7471207 lid+0x14=7340129 lid+0x18=104
+[MEMINJ] CANDIDATE[37]: obj=0x84948C20 klass=0x83D92A34 ver=3 lid=0x83D9299D sn=0x83D92A6E an=0x83D92A92 lid+0x10=1768514419 lid+0x14=7566592 lid+0x18=1769172577
+[MEMINJ] CANDIDATE[38]: obj=0x84948C80 klass=0x83D92ACA ver=5 lid=0x83D92AE7 sn=0x83D92AF3 an=0x83D92AFC lid+0x10=1700935217 lid+0x14=1869834496 lid+0x18=892876895
+[MEMINJ] CANDIDATE[40]: obj=0x2010B2480 klass=0x2010B1010 ver=50 lid=0x201233040 sn=0x2012331A0 an=0x2962426F0 lid+0x10=-1756434144 lid+0x14=2 lid+0x18=1566270320
+[MEMINJ] CANDIDATE[41]: obj=0x2010B2500 klass=0x2012326B0 ver=50 lid=0x2010B2660 sn=0x2010B2380 an=0x2000000B8 lid+0x10=-1756434880 lid+0x14=2 lid+0x18=-1772715984
+[MEMINJ] CANDIDATE[42]: obj=0x20117FD20 klass=0x200000001 ver=50 lid=0x849496C8 sn=0x20117FC60 an=0x2960FF4C0 lid+0x10=-2137098224 lid+0x14=0 lid+0x18=-2137098192
+[MEMINJ] CANDIDATE[43]: obj=0x20117FEA0 klass=0x200000001 ver=50 lid=0x84949660 sn=0x20117FDA0 an=0x2114A14F0 lid+0x10=-2137098224 lid+0x14=0 lid+0x18=-2137098192
+[MEMINJ] CANDIDATE[44]: obj=0x201183F40 klass=0x201182C50 ver=50 lid=0x295EB94E8 sn=0x201183FC0 an=0x2011847C0 lid+0x10=-1779906224 lid+0x14=2 lid+0x18=-1824045465
+[MEMINJ] Pattern diag: 69376 pages (5841 mapped). klass=285965 ver=6268 ptrs=44 strlen=0
+[MEMINJ] ERROR: Could not find BeatmapLevelSO klass
