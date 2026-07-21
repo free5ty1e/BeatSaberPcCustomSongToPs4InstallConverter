@@ -25,6 +25,7 @@ Before proceeding with work, upon receiving experiment results, you MUST update 
 - If any new tools or prerequisites are needed, you have permission to install them; we are in a devcontainer so it is safe. If the tool is useful at all, please persist it along with its prerequisites in the devcontainer definition files so that our full toolset survives a devcontainer rebuild.
 - If it makes sense to do so, attempt to deploy latest changes to the PS4 for experimentation
 - **PS4 log handling:** Always download PS4 logs directly to `./workspace/.ai_memory/experiment_logs/` with a version-specific descriptive filename — never to `/tmp/` or other temporary locations. The log IS the archival copy; downloading to the workspace ensures it's preserved and organized alongside experiment documentation.
+- **Feature flag enforcement:** All new experimental or optional functionality in the plugin MUST be gated behind a feature flag in `features.json`. When introducing a new feature, automatically propose a feature flag name (e.g., `enable_<feature_name>`) and gate the code behind `g_feature_<feature_name>` in `main.cpp`. Feature flags must default to `false` when absent. The pipeline's `DEFAULT_FEATURES` dict should include the new flag. This ensures every feature can be toggled on/off without recompiling.
 
 ## 3. MANDATORY Documentation Updates Before Presenting
 

@@ -30,8 +30,10 @@
  *   System_String_o (il2cpp.h:67207):
  *     0x00: klass (System_String_c*)
  *     0x08: monitor (void*)
- *     0x10: _stringLength (int32_t)    — length in UTF-16 code units
+ *     0x10: _stringLength (int32_t)    — length in UTF-16 code units  [standard IL2CPP]
  *     0x14: _firstChar (uint16_t)      — first char, rest follow as array
+ *   NOTE: PS4 mono may have 16-byte monitor, pushing _stringLength to 0x18.
+ *         Detected dynamically via offset probing in pattern matcher.
  *
  * v0.66 — Hook-triggered memory injection (no threads)
  */
@@ -67,6 +69,10 @@
 
 // ── Il2CppClass_1 field offsets ─────────────────────────────────────────
 #define CLASS1_OFFSET_NAME         0x10  // const char* — class name
+
+// Detected System_String._stringLength offset (set by pattern matcher).
+// Standard IL2CPP: 0x10. PS4 mono may use 0x18 (16-byte monitor field).
+static int g_strlen_offset = 0x10;
 
 // ── Independent logging ──────────────────────────────────────────────────
 // Uses its own sceKernelOpen/sceKernelWrite calls (not main.cpp's static
@@ -186,9 +192,9 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
             // Debug: dump hex header of lid pointer to understand System_String layout on PS4
             // Shows the first 32 bytes (4 uint64 values) at lid:
             //   [0] = bytes 0-7  (klass ptr)
-            //   [1] = bytes 8-15 (monitor — or _stringLength if layout differs)
+            //   [1] = bytes 8-15 (monitor)
             //   [2] = bytes 16-23 (standard: _stringLength at 0x10 + _firstChar at 0x14)
-            //   [3] = bytes 24-31 (string data or next field)
+            //   [3] = bytes 24-31 (alt: _stringLength at 0x18 + _firstChar at 0x1C)
             {
                 uint64_t obj_addr = page_addr + offset;
                 uint64_t lid_hdr[4] = {0};
@@ -202,14 +208,58 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
                              lid, sn, an,
                              lid_hdr[0], lid_hdr[1], lid_hdr[2], lid_hdr[3]);
                     meminj_log(buf);
+                    // Also log what a 32-bit read at each candidate offset gives
+                    for (int oi = 0; oi < 4; oi++) {
+                        int32_t val = 0;
+                        try_read_mem(lid + (size_t[]){0x10, 0x14, 0x18, 0x1C}[oi], &val, 4);
+                        char obuf[128];
+                        snprintf(obuf, sizeof(obuf),
+                                 "  LID OFFSET 0x%lX -> %d (0x%08X)",
+                                 (unsigned long)(size_t[]){0x10, 0x14, 0x18, 0x1C}[oi],
+                                 val, (uint32_t)val);
+                        meminj_log(obuf);
+                    }
                 }
             }
 
-            int32_t lid_len = 0, sn_len = 0;
-            if (!try_read_mem(lid + 0x10, &lid_len, 4)) continue;
-            if (!try_read_mem(sn  + 0x10, &sn_len,  4)) continue;
-            if (lid_len <= 0 || lid_len > 255) continue;
-            if (sn_len  <= 0 || sn_len  > 255) continue;
+            // Try multiple string length offsets to handle PS4's unknown System_String layout.
+            // Standard IL2CPP: _stringLength at 0x10, but PS4 mono may have a larger
+            // monitor field (16 bytes) pushing it to 0x18. Probe several candidates.
+            static const int strlen_offsets[] = { 0x10, 0x14, 0x18, 0x1C };
+            int found_offset = -1;
+            for (int si = 0; si < (int)(sizeof(strlen_offsets)/sizeof(strlen_offsets[0])); si++) {
+                int32_t lid_len = 0, sn_len = 0;
+                if (!try_read_mem(lid + strlen_offsets[si], &lid_len, 4)) continue;
+                if (!try_read_mem(sn  + strlen_offsets[si], &sn_len,  4)) continue;
+                if (lid_len <= 0 || lid_len > 255) continue;
+                if (sn_len  <= 0 || sn_len  > 255) continue;
+                found_offset = strlen_offsets[si];
+                break;
+            }
+            // Diagnostic: on first few candidates, log all offset attempts
+            if (chk_strlen == 0 && found_offset < 0) {
+                for (int si = 0; si < (int)(sizeof(strlen_offsets)/sizeof(strlen_offsets[0])); si++) {
+                    int32_t lid_len = 0, sn_len = 0;
+                    int lid_ok = try_read_mem(lid + strlen_offsets[si], &lid_len, 4);
+                    int sn_ok  = try_read_mem(sn  + strlen_offsets[si], &sn_len,  4);
+                    char dbuf[256];
+                    snprintf(dbuf, sizeof(dbuf),
+                             "[MEMINJ] OFFSET PROBE: lid=0x%lX offset=0x%X "
+                             "lid_read=%d lid_len=%d sn_read=%d sn_len=%d",
+                             lid, strlen_offsets[si],
+                             lid_ok, lid_len, sn_ok, sn_len);
+                    meminj_log(dbuf);
+                }
+            }
+            if (found_offset < 0) continue;
+            if (chk_strlen == 0) {
+                char obuf[128];
+                snprintf(obuf, sizeof(obuf),
+                         "[MEMINJ] String length offset detected: 0x%X (standard=0x10, PS4_alt=0x18)",
+                         found_offset);
+                meminj_log(obuf);
+            }
+            g_strlen_offset = found_offset;
             chk_strlen++;
 
             *klass_out = klass_ptr;
@@ -222,9 +272,9 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
     {   char buf[256];
         snprintf(buf, sizeof(buf),
                  "[MEMINJ] Pattern diag: %d pages (%d mapped). "
-                 "klass=%d ver=%d ptrs=%d strlen=%d",
+                 "klass=%d ver=%d ptrs=%d strlen=%d strlen_offset=0x%X",
                  scan_count, mapped_pages,
-                 chk_klass, chk_version, chk_ptrs, chk_strlen);
+                 chk_klass, chk_version, chk_ptrs, chk_strlen, g_strlen_offset);
         meminj_log(buf);
     }
     return -1;
@@ -767,7 +817,7 @@ static int patch_il2cpp_string(uint64_t string_addr, const char* new_text) {
     if (!string_addr || !new_text) return -1;
 
     int32_t old_length = 0;
-    if (!try_read_mem(string_addr + 0x10, &old_length, 4)) return -1;
+    if (!try_read_mem(string_addr + g_strlen_offset, &old_length, 4)) return -1;
 
     int new_length = (int)strlen(new_text);
     if (new_length > old_length) {
@@ -775,10 +825,10 @@ static int patch_il2cpp_string(uint64_t string_addr, const char* new_text) {
     }
 
     // Write new length
-    *(int32_t*)(string_addr + 0x10) = new_length;
+    *(int32_t*)(string_addr + g_strlen_offset) = new_length;
 
     // Write UTF-16LE characters
-    uint16_t* char_buf = (uint16_t*)(string_addr + 0x14);
+    uint16_t* char_buf = (uint16_t*)(string_addr + g_strlen_offset + 4);
     for (int i = 0; i < new_length; i++) {
         char_buf[i] = (uint16_t)(unsigned char)new_text[i];
     }

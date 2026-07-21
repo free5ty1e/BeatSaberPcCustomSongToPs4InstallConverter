@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8013] — 2026-07-20
+### Added
+- **Pack bundle detection** — `open_hook` now triggers `memory_inject_try_patch()` when `pack_assets_all` bundles are opened (user selects a pack), not just on per-song redirects. This fires the scan when BeatmapLevelSO objects are actually loaded into RAM.
+- **String length offset probing** — Pattern matcher now tries offsets 0x10, 0x14, 0x18, 0x1C to find `_stringLength` in System_String objects, instead of hardcoding 0x10. Handles PS4's non-standard mono layout (16-byte monitor field). Logs which offset succeeds.
+
 ## [v0.8012] — 2026-07-19
 ### Added
 - **Feature flags system** — Reads `/data/GoldHEN/AFR/CUSA12878/features.json` at plugin startup. Two flags:
