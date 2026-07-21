@@ -1,8 +1,10 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
+// Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
+// v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
 // v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
-// v0.76: Memory injection — lowered string ptr validation threshold (4GB→16MB), expanded scan range.
 // v0.75: Memory injection — wide-range heap scan (1GB-32GB, coarse). Discovered class strings in global-metadata.dat.
 // v0.74: Memory injection — signal handlers installed once per scan, heap scan range reduced.
 // v0.73: Memory injection — pattern-based klass finding (string not in module text segment).
@@ -25,11 +27,12 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8011"
+#define PLUGIN_VERSION "v0.8012"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
 #define CONFIG_PATH AFR_BASE "/" TITLE_ID "/redirects.json"
+#define FEATURES_PATH AFR_BASE "/" TITLE_ID "/features.json"
 #define MAX_REDIRECTS 256
 #define MAX_PATH 256
 
@@ -38,6 +41,66 @@ static char *REDIRECT_KEYS[MAX_REDIRECTS];
 static char *REDIRECT_VALS[MAX_REDIRECTS];
 static char *LOWER_REDIRECT_KEYS[MAX_REDIRECTS];
 static int REDIRECT_COUNT = 0;
+
+// ── Feature flags ────────────────────────────────────────────────────────────
+// Read from /data/GoldHEN/AFR/CUSA12878/features.json at startup.
+// Missing file or missing key = false (default off for safety).
+static int g_feature_custom_song_replacements = 0;
+static int g_feature_song_metadata_modification = 0;
+
+// ── Forward declarations ────────────────────────────────────────────────────
+static int log_write(const char *msg);
+
+static void load_features(void) {
+    int fd = open(FEATURES_PATH, O_RDONLY, 0);
+    if (fd < 0) fd = sceKernelOpen(FEATURES_PATH, O_RDONLY, 0);
+    if (fd < 0) {
+        log_write("features.json not found — all feature flags OFF (default)");
+        return;
+    }
+
+    char buf[4096];
+    ssize_t got = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (got <= 0) {
+        log_write("features.json is empty — all feature flags OFF");
+        return;
+    }
+    buf[got] = '\0';
+
+    // Simple key:true/false parser
+    const char *p = buf;
+    while (*p) {
+        // Find a key (quoted string)
+        while (*p && *p != '"') p++;
+        if (!*p) break;
+        p++; int ki = 0;
+        char key[128];
+        while (*p && *p != '"' && ki < (int)sizeof(key)-1) key[ki++] = *p++;
+        key[ki] = '\0';
+        if (*p) p++;
+
+        // Skip to value
+        while (*p && *p != ':' && *p != 't' && *p != 'f') p++;
+        if (*p == ':') p++;
+        while (*p && *p != 't' && *p != 'f' && *p != 'n' && *p != '"') p++;
+
+        int val = 0;
+        if (*p == 't') { val = 1; while (*p && *p != ',' && *p != '}') p++; }
+        else if (*p == 'f') { val = 0; while (*p && *p != ',' && *p != '}') p++; }
+
+        if (strcmp(key, "enable_custom_song_replacements") == 0) {
+            g_feature_custom_song_replacements = val;
+        } else if (strcmp(key, "enable_song_metadata_modification") == 0) {
+            g_feature_song_metadata_modification = val;
+        }
+    }
+
+    char logmsg[256];
+    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d",
+             g_feature_custom_song_replacements, g_feature_song_metadata_modification);
+    log_write(logmsg);
+}
 
 extern "C" FILE *fopen(const char *path, const char *mode);
 extern "C" int open(const char *path, int flags, ...);
@@ -49,9 +112,6 @@ HOOK_INIT(hook_close);
 
 static int in_hook = 0;
 static int log_ok = 0;
-
-// ── Forward declarations ────────────────────────────────────────────────────
-static int log_write(const char *msg);
 
 // ── Minimal JSON parser ─────────────────────────────────────────────────────
 static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], char vals[][MAX_PATH]) {
@@ -196,7 +256,8 @@ static int open_hook(const char *path, int flags, ...) {
             lower_path[len] = '\0';
 
             // ── User redirects from redirects.json ────────────────────────────
-            if (!np) {
+            // Only active when enable_custom_song_replacements feature flag is ON
+            if (!np && g_feature_custom_song_replacements) {
                 for (int i = 0; i < REDIRECT_COUNT; i++) {
                     if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
                         np = REDIRECT_VALS[i];
@@ -209,7 +270,8 @@ static int open_hook(const char *path, int flags, ...) {
             // All 32 redirects are per-song bundles (BeatmapLevelsData/*).
             // Fires every time a song bundle is opened; memory_inject_try_patch
             // has internal re-entrancy guard and only scans once.
-            if (np) {
+            // Only active when enable_song_metadata_modification feature flag is ON.
+            if (np && g_feature_song_metadata_modification) {
                 memory_inject_try_patch();
             }
         }
@@ -231,7 +293,7 @@ static int close_hook(int fd) {
     if (in_hook) return HOOK_CONTINUE(hook_close, int (*)(int), fd);
     in_hook = 1;
     int r = HOOK_CONTINUE(hook_close, int (*)(int), fd);
-    if (memory_inject_is_retry_pending()) {
+    if (g_feature_song_metadata_modification && memory_inject_is_retry_pending()) {
         memory_inject_try_patch();  // Retry: uses cached klass, skips metadata search
     }
     in_hook = 0;
@@ -293,7 +355,26 @@ extern "C" int module_start(size_t argc, const void *args) {
     log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
     log_write(PLUGIN_VERSION " — dynamic redirect config (reads redirects.json from AFR)");
     log_write("config: " CONFIG_PATH);
+
+    // Load feature flags first — they gate everything else
     load_redirects();
+    load_features();
+
+    // Log feature flag state for debugging
+    {
+        char flog[256];
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s",
+                 g_feature_custom_song_replacements ? "ON" : "OFF",
+                 g_feature_song_metadata_modification ? "ON" : "OFF");
+        log_write(flog);
+    }
+
+    if (!g_feature_custom_song_replacements) {
+        log_write("DISABLED: custom_song_replacements is OFF — redirects will NOT fire");
+    }
+    if (!g_feature_song_metadata_modification) {
+        log_write("DISABLED: song_metadata_modification is OFF — memory injection will NOT run");
+    }
 
     // fopen hook
     Detour_Construct(&Detour_hook_fopen, DetourMode_x64);
@@ -310,8 +391,13 @@ extern "C" int module_start(size_t argc, const void *args) {
     log_write("hooks installed");
 
     // Memory injection — register song metadata and start patcher thread
-    register_song_metadata();
-    memory_inject_init();
+    // Only active when enable_song_metadata_modification feature flag is ON.
+    if (g_feature_song_metadata_modification) {
+        register_song_metadata();
+        memory_inject_init();
+    } else {
+        log_write("DISABLED: song_metadata_modification is OFF — memory injection skipped");
+    }
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;

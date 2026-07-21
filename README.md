@@ -108,34 +108,6 @@ Edit `beat_saber_deluxe/ps4_config.json` with your PS4's IP address:
     "id": "CUSA12878",
     "name": "Beat Saber"
   }
-
-## Feature Flags
-
-The Beat Saber Deluxe plugin uses `features.json` to control experimental features without recompiling.
-
-- **Config Path:** `/data/GoldHEN/AFR/CUSA12878/features.json`
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `enable_song_metadata_modification` | `false` | Enables real-time memory injection to update song metadata |
-
-### Example `features.json`
-
-```json
-{
-  "enable_song_metadata_modification": false
-}
-```
-
-You can deploy these settings using the pipeline:
-
-```bash
-# Deploy the plugin and update features.json
-python3 tools/full_custom_song_pipeline.py \
-    --deploy-plugin \
-    --set-feature enable_song_metadata_modification=true
-```
-
 }
 ```
 
@@ -151,14 +123,31 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `enable_song_metadata_modification` | `false` | Enables real-time memory injection to update song metadata |
+| `enable_custom_song_replacements` | `false` | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs |
+| `enable_song_metadata_modification` | `false` | Gates memory injection — when OFF, no RAM patching of BeatmapLevelSO occurs |
 
 ### Example `features.json`
 
 ```json
 {
+  "enable_custom_song_replacements": true,
   "enable_song_metadata_modification": false
 }
+```
+
+You can deploy these settings using the pipeline:
+
+```bash
+# Deploy the plugin and update features.json
+python3 tools/full_custom_song_pipeline.py \
+    --deploy-plugin \
+    --set-feature enable_custom_song_replacements=true \
+    --set-feature enable_song_metadata_modification=true
+
+# Disable custom songs (play originals without rebooting)
+python3 tools/full_custom_song_pipeline.py \
+    --deploy-plugin \
+    --set-feature enable_custom_song_replacements=false
 ```
 
 

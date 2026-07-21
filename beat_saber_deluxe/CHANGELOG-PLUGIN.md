@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8012] — 2026-07-19
+### Added
+- **Feature flags system** — Reads `/data/GoldHEN/AFR/CUSA12878/features.json` at plugin startup. Two flags:
+  - `enable_custom_song_replacements` (default: `false` if missing) — Gates all song redirects in `open_hook`. When OFF, the plugin loads but no bundle redirects fire, so the game plays original songs.
+  - `enable_song_metadata_modification` (default: `false` if missing) — Gates memory injection (`register_song_metadata` + `memory_inject_init`). When OFF, no RAM patching occurs.
+- **Pipeline integration** — `--set-feature key=value` flag in the pipeline writes features.json locally and deploys it to PS4 via FTP.
+
 ## [v0.8011] — 2026-07-19
 ### Changed
 - **Optimized string search** — 8× faster: uses 8-byte granularity with a uint32 length lookup table instead of 2-byte granularity with 13-length loops. Target: ~200ms instead of ~18s for the GC heap scan.

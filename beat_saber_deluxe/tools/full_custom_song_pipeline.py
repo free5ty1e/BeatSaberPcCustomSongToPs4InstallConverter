@@ -1493,18 +1493,122 @@ def manage_redirect_config(
 
 
 # ============================================================================
+# Feature Flags Management
+# ============================================================================
+
+FEATURES_FILENAME = "features.json"
+DEFAULT_FEATURES = {
+    "enable_custom_song_replacements": True,
+    "enable_song_metadata_modification": False
+}
+
+def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to features.json in the project root."""
+    return os.path.join(project_root, FEATURES_FILENAME)
+
+def _get_remote_features_path(config: dict) -> str:
+    """Return the remote AFR path for features.json."""
+    cfg_paths = config.get('paths', {})
+    cfg_title = config.get('title', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    return f"{afr_base}/{title_id}/{FEATURES_FILENAME}"
+
+def _load_local_features(local_path: str) -> dict:
+    """Load a local features.json file. Returns default structure if missing."""
+    if not os.path.exists(local_path):
+        return DEFAULT_FEATURES.copy()
+    try:
+        with open(local_path, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        log.warning(f"  ⚠️  Failed to parse {local_path}, using defaults")
+        return DEFAULT_FEATURES.copy()
+
+def _save_local_features(features: dict, local_path: str):
+    """Save features dict to local features.json."""
+    os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
+    with open(local_path, 'w') as f:
+        json.dump(features, f, indent=2)
+        f.write('\n')
+    log.info(f"  Saved {local_path}")
+
+def _deploy_features_to_ps4(config: dict):
+    """Upload the local features.json to PS4 via FTP."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    local_path = _get_local_features_path()
+    remote_path = _get_remote_features_path(config)
+
+    if not os.path.exists(local_path):
+        log.warning(f"  ⚠️  Local features.json not found at {local_path}")
+        return
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_path} -o {remote_path}; quit"]
+    log.info(f"  Deploying features.json to PS4: {remote_path}")
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info("  ✅ Features config deployed")
+    else:
+        log.warning(f"  ⚠️  Features config deploy failed: {result.stderr}")
+
+def apply_feature_flags(set_features: list, config: dict):
+    """
+    Apply feature flag changes from --set-feature arguments.
+
+    Args:
+        set_features: List of "key=value" strings (e.g. ["enable_song_metadata_modification=false"])
+        config: PS4 config dict
+    """
+    if not set_features:
+        return
+
+    local_path = _get_local_features_path()
+    features = _load_local_features(local_path)
+
+    for entry in set_features:
+        if '=' not in entry:
+            log.error(f"  ❌ Invalid --set-feature format: '{entry}' (expected key=true/false)")
+            continue
+        key, val_str = entry.split('=', 1)
+        key = key.strip()
+        val_str = val_str.strip().lower()
+        if val_str in ('true', '1', 'yes', 'on'):
+            val = True
+        elif val_str in ('false', '0', 'no', 'off'):
+            val = False
+        else:
+            log.error(f"  ❌ Invalid feature value: '{val_str}' (expected true/false)")
+            continue
+        features[key] = val
+        log.info(f"  Feature flag: {key} = {val}")
+
+    _save_local_features(features, local_path)
+    _deploy_features_to_ps4(config)
+
+
+# ============================================================================
 # BeatSaver Song Downloader
 # ============================================================================
 
 BEATSAVER_API_BASE = "https://api.beatsaver.com"
 
-def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
+def download_beat_saver_song(map_id: str, output_dir: str | None = None,
+                             api_base: str | None = None) -> str:
     """
     Download a song from BeatSaver by its map key and extract it.
 
     Args:
         map_id: The BeatSaver map key (e.g. '1d6c7c2' from beatsaver.com/maps/1d6c7c2)
         output_dir: Directory to extract into. If None, uses a temp directory.
+        api_base: Override BeatSaver API base URL (default: https://api.beatsaver.com)
 
     Returns:
         Path to the extracted song directory containing info.dat/Easy.dat/etc.
@@ -1515,8 +1619,9 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
     import zipfile
     import shutil
 
-    download_url = f"{BEATSAVER_API_BASE}/maps/id/{map_id}/download"
-    info_url = f"{BEATSAVER_API_BASE}/maps/id/{map_id}"
+    base = api_base or BEATSAVER_API_BASE
+    download_url = f"{base}/maps/id/{map_id}/download"
+    info_url = f"{base}/maps/id/{map_id}"
 
     log.info(f"Downloading BeatSaver song: {map_id}")
     log.info(f"  API: {info_url}")
@@ -1705,12 +1810,21 @@ Examples:
     parser.add_argument('--download-beat-saver-song', default=None, metavar='MAP_ID',
                         help='Download a song from BeatSaver by map key (e.g. "1d6c7c2") '
                              'and run the full pipeline. Requires --target to specify the PS4 slot.')
+    parser.add_argument('--beatsaver-api-base', default=None,
+                        help='Override BeatSaver API base URL (default: https://api.beatsaver.com). '
+                             'Useful for testing against a mirror or local server.')
 
     # Song metadata override for BeatmapLevelSO injection into CAB bundle
     parser.add_argument('--song-name', default=None,
                         help='Override song display name (default: extracted from Info.dat or BeatSaver)')
     parser.add_argument('--artist', default=None,
                         help='Override artist/song-author name (default: extracted from Info.dat or BeatSaver)')
+
+    # Feature flags
+    parser.add_argument('--set-feature', action='append', default=None,
+                        help='Set a feature flag (format: feature_name=true/false). '
+                             'Can be used multiple times. Flags are written to features.json '
+                             'on PS4 at /data/GoldHEN/AFR/CUSA12878/features.json.')
 
     args = parser.parse_args()
 
@@ -1739,6 +1853,11 @@ Examples:
                 sync=args.sync_config,
                 enforce_local=args.enforce_config,
             )
+
+        # Handle feature flags in plugin-only mode
+        if args.set_feature:
+            apply_feature_flags(args.set_feature, {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths})
+
         sys.exit(0)
 
     # Plugin toggle mode: enable/disable without processing any song
@@ -1754,7 +1873,8 @@ Examples:
     # Auto-download from BeatSaver if requested (sets args.song_dir before the dir check)
     if args.download_beat_saver_song and not args.song_dir:
         log.info("Downloading song from BeatSaver...")
-        extracted_dir = download_beat_saver_song(args.download_beat_saver_song)
+        extracted_dir = download_beat_saver_song(args.download_beat_saver_song,
+                                                  api_base=args.beatsaver_api_base)
         args.song_dir = extracted_dir
     elif args.download_beat_saver_song and args.song_dir:
         log.info(f"Using local song directory: {args.song_dir} (ignoring --download-beat-saver-song)")
@@ -1957,6 +2077,12 @@ Examples:
             sync=args.sync_config,
             enforce_local=args.enforce_config,
         )
+
+    # -----------------------------------------------------------------------
+    # Step 10: Feature flags
+    # -----------------------------------------------------------------------
+    if args.set_feature:
+        apply_feature_flags(args.set_feature, config)
 
     log.info("Pipeline complete!")
     log.info(f"  Bundle: {args.output}")
