@@ -115,6 +115,25 @@ Replace `192.168.100.117` with your PS4's IP address. The default FTP port for G
 
 ---
 
+## Feature Flags
+
+The Beat Saber Deluxe plugin uses `features.json` to control experimental features without recompiling.
+
+- **Config Path:** `/data/GoldHEN/AFR/CUSA12878/features.json`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `enable_song_metadata_modification` | `false` | Enables real-time memory injection to update song metadata |
+
+### Example `features.json`
+
+```json
+{
+  "enable_song_metadata_modification": false
+}
+```
+
+
 ## 2. Building the Plugin
 
 The plugin is a GoldHEN PRX (PS4-format shared library) that hooks file I/O to redirect song assets.

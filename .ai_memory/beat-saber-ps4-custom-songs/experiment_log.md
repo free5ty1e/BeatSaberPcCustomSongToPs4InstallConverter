@@ -3012,3 +3012,9 @@ Before building v0.35, I analyzed the difference between the original file and `
   - `.ai_memory/experiment_logs/v0.8009_gap_scan.txt` (v0.8009 log, gap scan caused hang)
 - **Version:** v0.8010
 - **Status:** 🚀 Deployed to PS4, awaiting test results
+
+### Experiment 128: Implement Feature Flags for Metadata Modification
+- **Date:** 2026-07-21
+- **What:** Implemented feature flag system (`features.json`) to control `enable_song_metadata_modification`.
+- **Result:** 🔄 IMPLEMENTING — modifying plugin to read `features.json` on startup. 
+- **Next steps:** Finish `main.cpp` integration, deploy v0.8012 (feature disabled), confirm game stability, then enable for further testing.

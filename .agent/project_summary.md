@@ -90,9 +90,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
    a. Trigger injection on pack bundle open (not per-song redirect)
    b. Use frame callback for retry-based injection at song list time
    c. Accept that song list metadata display changes are not possible via late injection
-4. **Verify field offsets** — Extract actual BeatmapLevelSO TypeTree from a LIVE PS4 dump (not truncated dump)
-5. **Expand metadata table** — Register metadata for all 32 DLC slots
-6. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
+4. **Implement Feature Flags** — Add `features.json` to allow toggling `enable_song_metadata_modification` (default: false)
+5. **Verify field offsets** — Extract actual BeatmapLevelSO TypeTree from a LIVE PS4 dump (not truncated dump)
+6. **Expand metadata table** — Register metadata for all 32 DLC slots
+7. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
 
 ## Active Knowledge Gaps
 
