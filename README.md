@@ -108,6 +108,34 @@ Edit `beat_saber_deluxe/ps4_config.json` with your PS4's IP address:
     "id": "CUSA12878",
     "name": "Beat Saber"
   }
+
+## Feature Flags
+
+The Beat Saber Deluxe plugin uses `features.json` to control experimental features without recompiling.
+
+- **Config Path:** `/data/GoldHEN/AFR/CUSA12878/features.json`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `enable_song_metadata_modification` | `false` | Enables real-time memory injection to update song metadata |
+
+### Example `features.json`
+
+```json
+{
+  "enable_song_metadata_modification": false
+}
+```
+
+You can deploy these settings using the pipeline:
+
+```bash
+# Deploy the plugin and update features.json
+python3 tools/full_custom_song_pipeline.py \
+    --deploy-plugin \
+    --set-feature enable_song_metadata_modification=true
+```
+
 }
 ```
 
