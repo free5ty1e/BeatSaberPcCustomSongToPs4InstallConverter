@@ -3,10 +3,6 @@
 You MUST follow these rules for every task in this project. These rules are
 enforced by the files they reference — read them if you haven't already.
 
-## 0. Rule Synchronization
-- **Any changes to this file MUST be mirrored in `.opencode/rules.md`.**
-- If an agent or user asks for a rule change, ensure both files are updated to maintain consistency.
-
 ## 1. MANDATORY Documentation Before Performing Work
 
 **Rule file:** `/workspace/.ai_memory/project-summary-update-rule.md`
