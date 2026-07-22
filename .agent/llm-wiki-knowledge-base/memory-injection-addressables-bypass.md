@@ -1,6 +1,6 @@
 ---
 name: memory-injection-addressables-bypass
-description: "Memory injection approach to bypass Addressables catalog CRC validation by patching BeatmapLevelSO in RAM — implemented as hook-triggered, signal-handler-based scanning"
+description: "Memory injection approach to bypass Addressables catalog CRC validation by patching BeatmapLevelSO in RAM — implemented as hook-triggered, signal-handler-based scanning with wide-range heap sweep"
 metadata:
   type: reference
 ---
@@ -13,17 +13,17 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🔵 **Memory injection v0.8003** — All 44 pattern-matcher candidates confirmed false positives (hex dumps in v0.8002 revealed C string literals, .NET encoding names, and GC heap pointers). **New approach:** Find BeatmapLevelSO klass by locating the patch global-metadata.dat in memory via its magic bytes (0xFAB11BAF), computing the address of the "BeatmapLevelSO" string at file offset 0x23cb6e within it, then scanning the data segment for the Il2CppClass `name` pointer. The string is ONLY in the **patch** metadata (version 31), not the app metadata (version 24), which is why previous searches failed.
+**Status:** 🟡 **Memory injection v0.8015** — Wide-range heap scan (4GB–17GB) deployed. Previous scans found 0 objects in the 256MB window (8GB–8.25GB). The multi-minute freeze was caused by the string content search fallback scanning 12GB — now disabled. Pack bundle detection restored for correct startup timing. Feature flags system fully implemented (v0.8012).
 
-## Implementation — Current Architecture (v0.79)
+## Implementation — Current Architecture (v0.8015)
 
 ### Component Overview
 
 ```
-open_hook (detects per-song bundle open)
+open_hook (detects pack_assets_all OR per-song redirect)
     │
     ▼
-memory_inject_try_patch()
+memory_inject_try_patch()  [gated behind g_feature_song_metadata_modification]
     │
     ├── [1] Install signal handlers (once per scan)
     │
@@ -40,9 +40,9 @@ memory_inject_try_patch()
     │           - klass ptr in [0x80000000, 0x90000000]
     │           - _version in [1, 50]
     │           - _levelID, _songName, _songAuthorName → valid System_String pointers
-    │           - String length in [1, 255] at lid+0x10 (offset may be wrong on PS4)
+    │           - String length at lid+0x10/0x14/0x18/0x1C (probed dynamically)
     │
-    ├── [4] scan_for_beatmap_level_objects() ← scans heap (0x200000000–0x210000000)
+    ├── [4] scan_for_beatmap_level_objects() ← scans heap (4GB–17GB, 64KB pages, 60s timeout)
     │       │                                    for objects matching discovered klass
     │       └── validate_beatmap_level_object() ← checks version, field pointers
     │
@@ -54,10 +54,12 @@ memory_inject_try_patch()
 
 The original v0.66 implementation used a 30-second pthread for deferred scanning. This caused CE-34878-0 crashes due to FreeBSD init race. Since v0.67, the scan runs synchronously inside the `open_hook()` callback:
 
-- **Trigger:** `open_hook` detects per-song bundle redirect (e.g., `BeatmapLevelsData/startmeup`) → calls `memory_inject_try_patch()`
+- **Primary trigger:** `open_hook` detects pack bundle load (`pack_assets_all`) at startup → calls `memory_inject_try_patch()`
+- **Secondary trigger:** `open_hook` detects per-song bundle redirect → calls `memory_inject_try_patch()`
 - **Re-entrancy guard:** `g_patching_done` flag prevents multiple simultaneous scans
+- **Feature flag:** All memory injection gated behind `g_feature_song_metadata_modification`
 - **Signal handlers:** Installed once at scan start, restored at end (v0.74 optimization, saves ~524K sigaction syscalls)
-- **Timing note:** Scan fires when user presses Play (triggers per-song redirect), NOT when song list is populated from pack bundle
+- **Timing:** Primary trigger fires at startup when pack bundle loads (before song list UI reads metadata)
 
 ### Memory Probing (try_read_mem)
 
@@ -127,7 +129,7 @@ See [[ps4-il2cpp-metadata-loading]] for full analysis.
 
 ## Heap Address Is Unverified
 
-The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB) based on typical PS4 Unity layout. This was UNVERIFIED. The pattern matcher now scans from 16MB to 4GB with 64KB pages to locate objects.
+The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB) based on typical PS4 Unity layout. The klass struct was found at `0x2012007E0` (8GB), but scanning 8GB–8.25GB found 0 objects. v0.8015 expands the scan to 4GB–17GB to cover the full possible heap.
 
 ## History — The Debugging Saga
 
@@ -145,8 +147,16 @@ The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB)
 | v0.75 | Wide scan 1GB–32GB, coarse stepping | 🔵 **Pattern found NOTHING** — string ptr bounds mismatch |
 | v0.76 | Fixed string ptr threshold 4GB→16MB, scan 16MB–64GB | ✅ Consistent bounds, but still found NOTHING (bug was 1MB stack) |
 | v0.77 | Added per-check diagnostic counters (klass/ver/ptrs/strlen) | 🔍 **65280 pages, 1745 mapped, klass=128K ver=78 ptrs=17 strlen=0** |
-| **v0.78** | **Fixed 1MB stack buffer → 64KB (was crashing every try_read_mem)** | ✅ **Stack fix: try_read_mem now works! Pattern finds 17 candidates** |
-| **v0.79** | **STRDEBUG logging for System_String layout on PS4** | 🔵 **Awaiting test — need user to press Play to trigger scan** |
+| v0.78 | Fixed 1MB stack buffer → 64KB (was crashing every try_read_mem) | ✅ **Stack fix: try_read_mem now works! Pattern finds 17 candidates** |
+| v0.79 | STRDEBUG logging for System_String layout on PS4 | 🔵 String length offset likely 0x18 on PS4 (16-byte monitor) |
+| v0.8008 | Close hook retry mechanism | ✅ Retry fires on file close, but still 0 objects found |
+| v0.8009 | Gap scan between GC heap and metadata | ❌ 60-second soft lock — gap scan disabled |
+| v0.8010 | Direct string content search (no klass needed) | 🔄 Pivoted to string search approach |
+| v0.8011 | Optimized string search (8× faster, dual-format) | 🔵 String search deployed, awaiting test |
+| v0.8012 | Feature flags system | ✅ Implemented and tested on PS4 |
+| v0.8013 | Pack bundle detection + offset probing | ❌ Fired at startup (multi-min freeze), 0 objects in 256MB |
+| v0.8014 | Diagnostic logging + scan timeout | ❌ Objects not in 8GB–8.25GB, string search caused hang |
+| **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **🔄 Deployed, awaiting test** |
 
 ## Build & Deploy
 
@@ -187,7 +197,11 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 5. **Keep all bounds checks in sync** — Changing `try_read_mem()` bounds requires updating ALL validation functions
 6. **Stack buffer size matters** — PS4 thread stack ~256KB. 1MB buffers overflow silently (every try_read_mem faults)
 7. **Class name strings in global-metadata.dat** — NOT in compiled module PRX
-8. **System_String layout may differ on PS4** — `_stringLength` offset may not be at standard 0x10
+8. **System_String layout may differ on PS4** — `_stringLength` offset may not be at standard 0x10; dynamic probing added (0x10/0x14/0x18/0x1C)
+9. **String content search is too slow for large ranges** — Scanning 12GB for string patterns causes multi-minute hangs; disable or cap range
+10. **Pack bundle detection fires at startup** — `pack_assets_all` matches bundles loaded during game init, not just when user navigates to pack
+11. **Feature flags essential for iteration** — All experimental features gated behind `features.json` flags for safe testing
+12. **Klass pointer may not match expected range** — Found klass at 8GB but objects not in 8GB–8.25GB window; scan entire possible heap (4GB–17GB)
 
 ## See Also
 

@@ -52,4 +52,5 @@ The pipeline writes `features.json` locally and uploads it to PS4 via FTP.
 
 ## Plugin Source
 - `main.cpp`: Reads `features.json` via `load_features()`, stores in `g_feature_custom_song_replacements` and `g_feature_song_metadata_modification` globals
-- Gates: `open_hook` redirect logic, `memory_inject_try_patch()` calls, `register_song_metadata()` + `memory_inject_init()` calls
+- Gates: `open_hook` redirect logic, pack bundle detection (`pack_assets_all`), `memory_inject_try_patch()` calls, `register_song_metadata()` + `memory_inject_init()` calls
+- Pack bundle detection (`strstr("pack_assets_all")`) triggers scan at startup when pack loads — gated behind `g_feature_song_metadata_modification`

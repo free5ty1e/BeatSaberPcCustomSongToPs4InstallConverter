@@ -54,11 +54,12 @@
 #define MODULE_NAME "Il2CppUserAssemblies"
 #define CLASS_NAME "BeatmapLevelSO"
 
-// Focused scan range: IL2CPP managed heap on PS4 typically lives here
-#define SCAN_START_ADDR 0x0000000200000000ULL
-#define SCAN_END_ADDR   0x0000000210000000ULL   // 256MB range (was 8GB — too slow for hook callback)
+// Full heap scan range: PS4 IL2CPP heap can span 4GB-17GB
+#define SCAN_START_ADDR 0x0000000040000000ULL   // 4GB — below module space
+#define SCAN_END_ADDR   0x0000000440000000ULL   // 17GB — above metadata
 #define SCAN_STEP       0x10000ULL    // 64KB pages
-#define SCAN_TIMEOUT_US 30000000ULL   // 30 seconds — abort scan if it takes longer
+#define SCAN_TIMEOUT_US 60000000ULL   // 60 seconds — abort scan if it takes longer
+#define PRE_SWEEP_STEP  0x10000ULL    // 64KB — same page size for pre-sweep
 
 // ── BeatmapLevelSO Field Offsets (from il2cpp dump) ──────────────────────
 #define OFFSET_VERSION         0x18   // int32
@@ -378,15 +379,11 @@ int memory_inject_try_patch(void) {
     meminj_log(buf);
 
     // Step 3a: If no objects found by klass, try direct string content search
+    // SKIP: scanning the full heap for string content is too slow (>60s).
+    // The klass-based scan with the wider range should find objects instead.
     int string_patched = 0;
     if (found == 0 && g_metadata_base) {
-        meminj_log("[MEMINJ] Trying direct string content search...");
-        string_patched = patch_strings_by_content(
-            SCAN_START_ADDR, g_metadata_base + 0x4000000);
-        if (string_patched > 0) {
-            snprintf(buf, sizeof(buf), "[MEMINJ] Direct string patched: %d fields", string_patched);
-            meminj_log(buf);
-        }
+        meminj_log("[MEMINJ] Skipping string content search (too slow for full heap scan)");
     }
 
     int total_patched = 0;

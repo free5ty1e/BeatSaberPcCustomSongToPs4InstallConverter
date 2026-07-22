@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8015] — 2026-07-21
+### Fixed
+- **Wide-range heap scan** — Scan range expanded from 8GB–8.25GB (256MB) to 4GB–17GB (13GB). The BeatmapLevelSO objects were never in the 256MB window — diagnostics confirmed 0 raw matches across 4,380 pages. The wider range covers the full possible IL2CPP heap on PS4.
+- **Restored pack bundle detection** — Re-added `pack_assets_all` detection in `open_hook` so the scan fires at startup when the pack loads (before song list UI reads metadata). `memory_inject_try_patch` has internal guard — only scans once.
+- **Disabled string content search** — The fallback string content search scanned 4GB–16GB (12GB) and caused the multi-minute freeze. Skipped entirely — the wider klass-based scan should find objects directly.
+- **60-second scan timeout** — Hard limit prevents indefinite freezes even with the wider range.
+
 ## [v0.8014] — 2026-07-20
 ### Fixed
 - **Removed pack bundle detection** — `strstr("pack_assets_all")` was matching bundles loaded at game startup (before user agreement screen), triggering a full scan immediately and causing a multi-minute black screen. Reverted to redirect-only triggering.

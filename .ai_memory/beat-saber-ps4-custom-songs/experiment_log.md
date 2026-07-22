@@ -3016,5 +3016,44 @@ Before building v0.35, I analyzed the difference between the original file and `
 ### Experiment 128: Implement Feature Flags for Metadata Modification
 - **Date:** 2026-07-21
 - **What:** Implemented feature flag system (`features.json`) to control `enable_song_metadata_modification`.
-- **Result:** 🔄 IMPLEMENTING — modifying plugin to read `features.json` on startup. 
-- **Next steps:** Finish `main.cpp` integration, deploy v0.8012 (feature disabled), confirm game stability, then enable for further testing.
+- **Result:** ✅ IMPLEMENTED — plugin reads `features.json` on startup, gates all memory injection behind `enable_song_metadata_modification` flag. Pipeline `--set-feature key=value` deploys flags to PS4.
+- **Version:** v0.8012 (plugin), v0.5301 (pipeline)
+
+### Experiment 129: v0.8013 — Pack Bundle Detection + String Length Offset Probing
+- **Date:** 2026-07-20
+- **What:**
+  - Added pack bundle detection (`strstr("pack_assets_all")`) in `open_hook` to trigger scan when pack loads at startup (before song list UI reads metadata)
+  - Added multi-offset string length probing (0x10, 0x14, 0x18, 0x1C) instead of hardcoded 0x10
+  - All behind `enable_song_metadata_modification` feature flag
+  - Added feature flag enforcement rule to CLAUDE.md and .opencode/rules.md
+- **Result:** ❌ FAILED — Pack bundle detection fired at game startup (before user agreement screen), triggering a full scan that caused a multi-minute black screen. The scan found 0 objects with klass `0x2012007E0` across 4,380 pages in ranges 8GB–8.25GB and around metadata. String content search also found 0/13 patterns.
+- **Key Finding:** The klass struct at `0x2012007E0` was found via metadata search, but NO object in the scanned memory has this as its first 8 bytes. The BeatmapLevelSO objects are NOT in the 256MB window we were scanning.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8013_pack_bundle_detection.txt`
+- **Version:** v0.8013
+- **Status:** ❌ Tested — objects not found in scanned range, scan too slow due to string content search fallback
+
+### Experiment 130: v0.8014 — Diagnostic Logging + Scan Timeout
+- **Date:** 2026-07-20
+- **What:**
+  - Removed pack bundle detection (fired at wrong time)
+  - Added 30-second scan timeout to prevent multi-minute freezes
+  - Added diagnostic logging: page addresses and first 8 bytes every 256 pages, every raw klass match with exact address, range boundaries
+- **Result:** ❌ PARTIAL — Scan fired on redirect (when user started song), not at startup. Diagnostic output confirmed: 0 raw matches for klass `0x2012007E0` across 4,380 pages. Pages at 0x200000000 start with 0x0, not the klass pointer. The multi-minute freeze was from the string content search scanning 12GB of memory (disabled in v0.8015).
+- **Key Finding:** The diagnostic output proved the klass pointer `0x2012007E0` does not appear as the first 8 bytes of ANY object in the 8GB–8.25GB range. The objects must be at different memory addresses.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8014_diagnostics.txt`
+- **Version:** v0.8014
+- **Status:** ❌ Tested — timing wrong (fires on song start, not pack load), objects not found
+
+### Experiment 131: v0.8015 — Wide-Range Heap Scan + Timing Fix
+- **Date:** 2026-07-21
+- **What:**
+  - Expanded scan range from 8GB–8.25GB (256MB) to 4GB–17GB (13GB) to cover full possible IL2CPP heap
+  - Restored pack bundle detection for correct startup timing
+  - Disabled string content search (was causing multi-minute hang scanning 12GB)
+  - 60-second scan timeout
+- **Result:** 🔄 DEPLOYED — awaiting user test
+- **Key Insight:** The string content search scanning 12GB was the root cause of multi-minute freezes. The klass-based scan reading 64KB pages is fast (~4 seconds for 13GB). If objects are found in the wider range, the scan will complete quickly.
+- **Version:** v0.8015
+- **Status:** 🔄 Deployed, awaiting test
