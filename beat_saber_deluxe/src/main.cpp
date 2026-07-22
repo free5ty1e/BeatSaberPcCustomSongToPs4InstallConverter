@@ -2,7 +2,7 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.8017: Synchronous string content search (5s timeout, no threads).
+// v0.8018: Synchronous string content search (2s timeout, no retry, no threads).
 // v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
 // v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
 // v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
@@ -28,7 +28,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8017"
+#define PLUGIN_VERSION "v0.8018"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -273,19 +273,12 @@ static int open_hook(const char *path, int flags, ...) {
             // the pack at startup, BEFORE the song list UI reads the metadata.
             // memory_inject_try_patch has internal guard — only scans once.
             // Only active when enable_song_metadata_modification feature flag is ON.
+            // NOTE: Does NOT retry on per-song redirects — strings are not in memory
+            // at startup; they only load when the song list UI renders.
             if (np == NULL && g_feature_song_metadata_modification) {
                 if (strstr(lower_path, "pack_assets_all")) {
                     memory_inject_try_patch();
                 }
-            }
-
-            // ── Trigger memory injection on any redirect ─────────────────────
-            // All 32 redirects are per-song bundles (BeatmapLevelsData/*).
-            // Fires every time a song bundle is opened; memory_inject_try_patch
-            // has internal re-entrancy guard and only scans once.
-            // Only active when enable_song_metadata_modification feature flag is ON.
-            if (np && g_feature_song_metadata_modification) {
-                memory_inject_try_patch();
             }
         }
     }
@@ -301,14 +294,11 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
-// ── Close hook: retry MEMINJ after file close (objects may now exist) ────────
+// ── Close hook (no longer retries MEMINJ — strings not in memory at startup) ──
 static int close_hook(int fd) {
     if (in_hook) return HOOK_CONTINUE(hook_close, int (*)(int), fd);
     in_hook = 1;
     int r = HOOK_CONTINUE(hook_close, int (*)(int), fd);
-    if (g_feature_song_metadata_modification && memory_inject_is_retry_pending()) {
-        memory_inject_try_patch();  // Retry: uses cached klass, skips metadata search
-    }
     in_hook = 0;
     return r;
 }

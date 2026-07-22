@@ -1,0 +1,404 @@
+=== BS Deluxe v0.8017 started ===
+v0.8017 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+features: custom_song_replacements=1 metadata_modification=1
+FEATURE FLAGS: custom_song_replacements=ON  metadata_modification=ON
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (synchronous string content search, fires on pack load)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5410ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5004ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5009ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5412ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5007ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5004ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5411ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5412ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5008ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5011ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5413ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5404ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5000ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5408ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5005ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5403ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5405ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5406ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5404ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5403ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5394ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5410ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5404ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5409ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5006ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5413ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5000ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 8192 pages (5414ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5024ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5017ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5025ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5018ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5035ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5028ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5028ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5036ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5031ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5038ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5033ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5027ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5046ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5038ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5031ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5038ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5037ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5038ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5031ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5035ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5027ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5039ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5034ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5030ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5029ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5033ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5027ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5037ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5028ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5049ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5047ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5034ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5047ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5044ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5056ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5044ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5045ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5043ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5040ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5047ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5030ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5024ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5030ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5015ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5066ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5012ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5018ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5023ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5079ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5065ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5076ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5069ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5067ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5073ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5008ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5012ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5006ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5064ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5008ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5059ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5062ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5047ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5051ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5064ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5054ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5059ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5044ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5056ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5058ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] String scan TIMEOUT after 7936 pages (5060ms)
+[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)
+[MEMINJ] Synchronous string content scan (13 patterns, 5s timeout)
+[MEMINJ] String scan (opt): 13 patterns

@@ -35,7 +35,7 @@
  *   NOTE: PS4 mono may have 16-byte monitor, pushing _stringLength to 0x18.
  *         Detected dynamically via offset probing in pattern matcher.
  *
- * v0.8017 — Synchronous string content search (no threads, 5s timeout)
+ * v0.8018 — Synchronous string content search (2s timeout, no retry)
  */
 
 #include "memory_inject.h"
@@ -100,7 +100,7 @@ static int g_retry_pending = 0;           // 1 = retry pending on close()
 static volatile int g_wide_scan = 0;       // 1 = scan full address range (retry only)
 
 // ── Synchronous scan timeout ─────────────────────────────────────────────
-#define SYNCHRONOUS_SCAN_TIMEOUT_US 5000000ULL  // 5 seconds max in hook callback
+#define SYNCHRONOUS_SCAN_TIMEOUT_US 2000000ULL  // 2 seconds max in hook callback
 
 // ── Signal-handler memory probing ─────────────────────────────────────────
 static sigjmp_buf g_mem_jmpbuf;
@@ -313,12 +313,13 @@ int memory_inject_is_retry_pending(void) {
     return g_retry_pending;
 }
 
-// Called from open_hook when pack bundle is detected or per-song redirect fires.
+// Called from open_hook when pack bundle is detected.
 // Scans memory synchronously for UTF-16LE song name strings and patches them.
-// Runs with a 5-second timeout to avoid blocking the hook callback too long.
-// Returns 0 if scan completed (success or timeout), -1 if already done.
+// Runs with a 2-second timeout to avoid blocking the hook callback.
+// Only scans ONCE — does not retry on redirect (strings not in memory at startup).
+// Returns 0 if scan completed, -1 if already done.
 int memory_inject_try_patch(void) {
-    // If already succeeded (1) or failed in the past (-1), skip
+    // If already done (succeeded or failed), skip entirely
     if (g_patching_done) return -1;
 
     // Lock to prevent re-entry
@@ -328,7 +329,7 @@ int memory_inject_try_patch(void) {
 
     char buf[256];
     snprintf(buf, sizeof(buf),
-             "[MEMINJ] Synchronous string content scan (%d patterns, 5s timeout)",
+             "[MEMINJ] String content scan (%d patterns, 2s timeout)",
              g_metadata_count);
     meminj_log(buf);
 
@@ -351,11 +352,14 @@ int memory_inject_try_patch(void) {
     if (result > 0) {
         g_patching_done = result;
         snprintf(buf, sizeof(buf),
-                 "[MEMINJ] Synchronous scan: patched %d strings", result);
+                 "[MEMINJ] Scan complete: patched %d strings", result);
         meminj_log(buf);
     } else {
-        g_patching_done = 0;  // Allow retry on next trigger (pack load or redirect)
-        meminj_log("[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)");
+        // Mark as done — do NOT retry on redirect (strings not in memory at startup)
+        // The scan found nothing because song name strings are only loaded
+        // when the song list UI renders, not during pack bundle loading.
+        g_patching_done = -1;
+        meminj_log("[MEMINJ] Scan complete: no strings found (strings likely not loaded yet)");
     }
 
     return 0;

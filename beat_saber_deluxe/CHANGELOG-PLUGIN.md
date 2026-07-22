@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8018] — 2026-07-22
+### Fixed
+- **Reduced scan timeout from 5s to 2s** — Prevents multi-minute black screen caused by repeated scans
+- **Removed redirect-triggered retries** — Each of 32 redirects was re-triggering the scan, causing 160s of blocking. Now only scans once on pack_assets_all detection.
+- **Scan once, no retry** — On failure, marks as done (`g_patching_done = -1`). Strings are not in memory at startup; they only load when the song list UI renders.
+
 ## [v0.8017] — 2026-07-21
 ### Fixed
 - **Removed background thread** — `scePthreadCreate` inside `open_hook` callback causes CE-34878-0 crash. Replaced with synchronous `patch_strings_by_content()` call with signal handlers installed around it. No thread creation in hook context.
