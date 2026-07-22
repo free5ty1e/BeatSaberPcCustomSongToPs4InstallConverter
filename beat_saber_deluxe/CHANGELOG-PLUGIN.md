@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8014] — 2026-07-20
+### Fixed
+- **Removed pack bundle detection** — `strstr("pack_assets_all")` was matching bundles loaded at game startup (before user agreement screen), triggering a full scan immediately and causing a multi-minute black screen. Reverted to redirect-only triggering.
+- **Scan timeout** — 30-second hard limit on the klass-based scan. Aborts gracefully and logs elapsed time. Prevents indefinite freezes.
+- **Enhanced scan diagnostics** — Logs page addresses and first8 bytes every 256 pages, logs every raw klass match with exact address, and logs range boundaries at scan start. Will help diagnose why 0 objects were found in v0.8013.
+
 ## [v0.8013] — 2026-07-20
 ### Added
 - **Pack bundle detection** — `open_hook` now triggers `memory_inject_try_patch()` when `pack_assets_all` bundles are opened (user selects a pack), not just on per-song redirects. This fires the scan when BeatmapLevelSO objects are actually loaded into RAM.

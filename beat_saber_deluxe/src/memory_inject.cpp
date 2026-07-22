@@ -58,6 +58,7 @@
 #define SCAN_START_ADDR 0x0000000200000000ULL
 #define SCAN_END_ADDR   0x0000000210000000ULL   // 256MB range (was 8GB — too slow for hook callback)
 #define SCAN_STEP       0x10000ULL    // 64KB pages
+#define SCAN_TIMEOUT_US 30000000ULL   // 30 seconds — abort scan if it takes longer
 
 // ── BeatmapLevelSO Field Offsets (from il2cpp dump) ──────────────────────
 #define OFFSET_VERSION         0x18   // int32
@@ -740,6 +741,8 @@ static int scan_for_beatmap_level_objects(uint64_t klass_addr,
                                           uint64_t* obj_addrs, int max_objs) {
     int found = 0;
     int raw_matches = 0;
+    int pages_read = 0;
+    int pages_failed = 0;
     char buf[256];
     snprintf(buf, sizeof(buf), "[MEMINJ] Scanning (klass=0x%lX)...", klass_addr);
     meminj_log(buf);
@@ -755,19 +758,54 @@ static int scan_for_beatmap_level_objects(uint64_t klass_addr,
     int range_count = g_wide_scan ? 3 : (g_metadata_base ? 2 : 1);
 
     uint8_t page[SCAN_STEP];
+    uint64_t scan_start_time = sceKernelGetProcessTime();  // microseconds
     for (int r = 0; r < range_count && found < max_objs; r++) {
+        snprintf(buf, sizeof(buf), "[MEMINJ] Range %d: 0x%lX - 0x%lX (%d ranges)",
+                 r, scan_ranges[r].start, scan_ranges[r].end, range_count);
+        meminj_log(buf);
+
         for (uint64_t page_addr = scan_ranges[r].start;
              page_addr < scan_ranges[r].end && found < max_objs;
              page_addr += SCAN_STEP) {
 
-            if (!try_read_mem(page_addr, page, SCAN_STEP))
+            if (!try_read_mem(page_addr, page, SCAN_STEP)) {
+                pages_failed++;
                 continue;
+            }
+            pages_read++;
+
+            // Check timeout every 256 pages (~16MB)
+            if ((pages_read & 0xFF) == 0) {
+                uint64_t now = sceKernelGetProcessTime();
+                if (now - scan_start_time > SCAN_TIMEOUT_US) {
+                    snprintf(buf, sizeof(buf),
+                             "[MEMINJ] SCAN TIMEOUT after %d pages (%dms), aborting",
+                             pages_read, (int)((now - scan_start_time) / 1000));
+                    meminj_log(buf);
+                    goto scan_done;
+                }
+            }
+
+            // Log first page of each range for diagnostics
+            if (pages_read == 1 || (pages_read & 0xFFF) == 0) {
+                uint64_t first_val = *(uint64_t*)(page + 0);
+                uint64_t second_val = *(uint64_t*)(page + 8);
+                snprintf(buf, sizeof(buf),
+                         "[MEMINJ] PAGE 0x%lX: [0]=0x%lX [8]=0x%lX (want 0x%lX)%s",
+                         page_addr, first_val, second_val, klass_addr,
+                         first_val == klass_addr ? " MATCH!" : "");
+                meminj_log(buf);
+            }
 
             for (uint64_t offset = 0; offset < SCAN_STEP - 24; offset += 8) {
                 uint64_t val = *(uint64_t*)(page + offset);
                 if (val == klass_addr) {
                     raw_matches++;
                     uint64_t candidate = page_addr + offset;
+                    snprintf(buf, sizeof(buf),
+                             "[MEMINJ] RAW MATCH at 0x%lX (page=0x%lX off=0x%lX)",
+                             candidate, page_addr, offset);
+                    meminj_log(buf);
                     if (validate_beatmap_level_object(candidate)) {
                         obj_addrs[found++] = candidate;
                         if (found >= max_objs) break;
@@ -777,9 +815,10 @@ static int scan_for_beatmap_level_objects(uint64_t klass_addr,
         }
     }
 
+scan_done:
     // Log diagnostic: how many raw klass matches vs validated
-    snprintf(buf, sizeof(buf), "[MEMINJ] Klass diag: %d raw matches, %d validated",
-             raw_matches, found);
+    snprintf(buf, sizeof(buf), "[MEMINJ] Klass diag: %d raw matches, %d validated (%d pages read, %d failed)",
+             raw_matches, found, pages_read, pages_failed);
     meminj_log(buf);
 
     return found;

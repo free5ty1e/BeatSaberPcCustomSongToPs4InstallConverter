@@ -27,7 +27,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8013"
+#define PLUGIN_VERSION "v0.8014"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -263,17 +263,6 @@ static int open_hook(const char *path, int flags, ...) {
                         np = REDIRECT_VALS[i];
                         break;
                     }
-                }
-            }
-
-            // ── Trigger memory injection on pack bundle load ──────────────────
-            // Pack bundles (pack_assets_all) contain BeatmapLevelSO objects.
-            // Detecting them here fires the scan when the user selects the pack
-            // in the song list, BEFORE the UI reads song metadata.
-            // Only active when enable_song_metadata_modification feature flag is ON.
-            if (np == NULL && g_feature_song_metadata_modification) {
-                if (strstr(lower_path, "pack_assets_all")) {
-                    memory_inject_try_patch();
                 }
             }
 
