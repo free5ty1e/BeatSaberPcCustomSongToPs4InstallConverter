@@ -13,7 +13,18 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🟡 **Memory injection v0.8015** — Wide-range heap scan (4GB–17GB) deployed. Previous scans found 0 objects in the 256MB window (8GB–8.25GB). The multi-minute freeze was caused by the string content search fallback scanning 12GB — now disabled. Pack bundle detection restored for correct startup timing. Feature flags system fully implemented (v0.8012).
+**Status:** 🔴 **Memory injection klass-pointer approach ABANDONED (v0.8015)** — After 10+ versions, the klass pointer `0x2012007E0` was NEVER found as the first 8 bytes of any page in 4GB–17GB (262K pages scanned). PS4 IL2CPP uses compressed/indirect klass pointers, or objects aren't instantiated until song list UI loads. **Pivoting to string content search approach (v0.8016).**
+
+## 🔴 CRITICAL: Klass Pointer Approach is Broken
+
+After 10+ versions of trying different ranges, diagnostic logging, and timing strategies, the klass pointer search approach **fundamentally does not work on PS4 IL2CPP**:
+
+- **Klass struct found at `0x2012007E0`** — verified via metadata search (global-metadata.dat magic `0xFAB11BAF`, class string at `0x2934BCB6E`)
+- **0 objects found with this klass as first 8 bytes** — scanned 4GB–17GB (262K pages, 41K mapped), zero matches
+- **Root cause:** PS4 IL2CPP likely uses compressed pointers (32-bit offsets) or indirect klass references instead of raw 64-bit pointers
+- **Alternative:** Objects may not be instantiated at scan time (lazy loading — only created when song list UI displays)
+
+**New approach (v0.8016):** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory. If found, trace back to containing object and patch strings directly. Background thread for non-blocking periodic scan.
 
 ## Implementation — Current Architecture (v0.8015)
 
@@ -129,7 +140,7 @@ See [[ps4-il2cpp-metadata-loading]] for full analysis.
 
 ## Heap Address Is Unverified
 
-The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB) based on typical PS4 Unity layout. The klass struct was found at `0x2012007E0` (8GB), but scanning 8GB–8.25GB found 0 objects. v0.8015 expands the scan to 4GB–17GB to cover the full possible heap.
+The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB) based on typical PS4 Unity layout. The klass struct was found at `0x2012007E0` (8GB), but scanning 4GB–17GB (262K pages) found 0 objects with this klass as first 8 bytes. **The klass pointer approach is fundamentally broken on PS4 IL2CPP.**
 
 ## History — The Debugging Saga
 
@@ -156,7 +167,8 @@ The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB)
 | v0.8012 | Feature flags system | ✅ Implemented and tested on PS4 |
 | v0.8013 | Pack bundle detection + offset probing | ❌ Fired at startup (multi-min freeze), 0 objects in 256MB |
 | v0.8014 | Diagnostic logging + scan timeout | ❌ Objects not in 8GB–8.25GB, string search caused hang |
-| **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **🔄 Deployed, awaiting test** |
+| **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **❌ FAILED — 2min black screen, 0 objects found. Klass pointer approach ABANDONED** |
+| **v0.8016** | **String content search + background thread** | **🔄 Implementing — search for UTF-16LE song names directly** |
 
 ## Build & Deploy
 
@@ -190,18 +202,19 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 
 ## Key Lessons Learned
 
-1. **Always check bounds before probing** — VERBOSE_LOG the actual segment addresses first
-2. **Module segments can be anywhere** — Don't assume they're above 4 GB
-3. **Signal handling works for safe probing** — `sigaction` + `sigsetjmp`/`siglongjmp` works on PS4
-4. **Syscall stubs are common** — `mincore` and `msync` are stubs on PS4; use signal handlers instead
-5. **Keep all bounds checks in sync** — Changing `try_read_mem()` bounds requires updating ALL validation functions
-6. **Stack buffer size matters** — PS4 thread stack ~256KB. 1MB buffers overflow silently (every try_read_mem faults)
-7. **Class name strings in global-metadata.dat** — NOT in compiled module PRX
-8. **System_String layout may differ on PS4** — `_stringLength` offset may not be at standard 0x10; dynamic probing added (0x10/0x14/0x18/0x1C)
-9. **String content search is too slow for large ranges** — Scanning 12GB for string patterns causes multi-minute hangs; disable or cap range
-10. **Pack bundle detection fires at startup** — `pack_assets_all` matches bundles loaded during game init, not just when user navigates to pack
-11. **Feature flags essential for iteration** — All experimental features gated behind `features.json` flags for safe testing
-12. **Klass pointer may not match expected range** — Found klass at 8GB but objects not in 8GB–8.25GB window; scan entire possible heap (4GB–17GB)
+1. **🔴 Klass pointer approach is BROKEN on PS4 IL2CPP** — After 10+ versions, scanning 4GB–17GB (262K pages) found 0 objects with klass `0x2012007E0` as first 8 bytes. PS4 IL2CPP uses compressed/indirect klass pointers, or objects aren't instantiated until song list UI loads. **Do not pursue klass-based scanning further.**
+2. **Always check bounds before probing** — VERBOSE_LOG the actual segment addresses first
+3. **Module segments can be anywhere** — Don't assume they're above 4 GB
+4. **Signal handling works for safe probing** — `sigaction` + `sigsetjmp`/`siglongjmp` works on PS4
+5. **Syscall stubs are common** — `mincore` and `msync` are stubs on PS4; use signal handlers instead
+6. **Keep all bounds checks in sync** — Changing `try_read_mem()` bounds requires updating ALL validation functions
+7. **Stack buffer size matters** — PS4 thread stack ~256KB. 1MB buffers overflow silently (every try_read_mem faults)
+8. **Class name strings in global-metadata.dat** — NOT in compiled module PRX
+9. **System_String layout may differ on PS4** — `_stringLength` offset may not be at standard 0x10; dynamic probing added (0x10/0x14/0x18/0x1C)
+10. **String content search is too slow for large ranges** — Scanning 12GB for string patterns causes multi-minute hangs; disable or cap range
+11. **Pack bundle detection fires at startup** — `pack_assets_all` matches bundles loaded during game init, not just when user navigates to pack
+12. **Feature flags essential for iteration** — All experimental features gated behind `features.json` flags for safe testing
+13. **Search for WHAT you want to modify, not HOW it's stored** — Instead of searching for klass pointers (which are compressed/indirect), search for the actual song name strings we want to modify. This is more direct and avoids the klass pointer issue entirely.
 
 ## See Also
 

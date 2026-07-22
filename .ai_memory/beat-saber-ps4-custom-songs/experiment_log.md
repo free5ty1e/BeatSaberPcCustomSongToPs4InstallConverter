@@ -3053,7 +3053,26 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Restored pack bundle detection for correct startup timing
   - Disabled string content search (was causing multi-minute hang scanning 12GB)
   - 60-second scan timeout
-- **Result:** 🔄 DEPLOYED — awaiting user test
-- **Key Insight:** The string content search scanning 12GB was the root cause of multi-minute freezes. The klass-based scan reading 64KB pages is fast (~4 seconds for 13GB). If objects are found in the wider range, the scan will complete quickly.
+- **Result:** ❌ **FAILED — 2-minute black screen, 0 objects found**
+- **Key Findings:**
+  - Scan DID complete: 41,205 pages read, 221,227 failed (total 262K pages = ~16GB)
+  - **0 raw matches for klass `0x2012007E0` across the ENTIRE 4GB–17GB range**
+  - The 2-minute black screen blocked startup (user agreement screen delayed)
+  - Retry from close_hook also found 0 objects
+  - Metadata unaltered in both song menu and level pause menu
+- **🔴 CRITICAL LESSON: The klass pointer `0x2012007E0` is NEVER the first 8 bytes of any page in 4GB–17GB.** This proves PS4 IL2CPP uses compressed/indirect klass pointers, or BeatmapLevelSO objects are not instantiated until much later (song list UI loads). **The klass-pointer-search approach is fundamentally broken after 10+ versions of trying.**
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8015_wide_range.txt`
 - **Version:** v0.8015
-- **Status:** 🔄 Deployed, awaiting test
+- **Status:** ❌ Tested — klass pointer approach abandoned after 10+ failed versions
+
+### Experiment 132: Pivot to String Content Search Approach
+- **Date:** 2026-07-21
+- **What:**
+  - **COMPLETE PIVOT** — klass pointer search abandoned after 10+ versions finding 0 objects
+  - New approach: search for exact UTF-16LE strings ("Start Me Up", "The Rolling Stones") in memory
+  - If found, trace back to find containing object and patch strings directly
+  - Background thread via `sceKernelStartThread` for non-blocking periodic scan
+  - Scan every 100ms for up to 30 seconds (strings may not be in memory at startup)
+- **Key Insight:** Instead of searching for the klass pointer (which is compressed/indirect on PS4), search for the actual song name strings we want to modify. This is more direct and avoids the klass pointer issue entirely.
+- **Status:** 🔄 Implementing

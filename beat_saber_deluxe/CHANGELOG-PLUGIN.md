@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8016] — 2026-07-21
+### Changed
+- **String content search via background thread** — Complete pivot from klass-pointer approach (broken after 10+ versions). Now searches for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") directly in memory. Runs in a background thread via `sceKernelStartThread` (non-blocking, scans every 100ms for up to 30 seconds). Gated behind `enable_song_metadata_modification` feature flag.
+- **Removed klass-based scanning** — The klass pointer `0x2012007E0` was NEVER found as the first 8 bytes of any page in 4GB–17GB (262K pages). PS4 IL2CPP uses compressed/indirect klass pointers. Do not pursue further.
+
 ## [v0.8015] — 2026-07-21
 ### Fixed
 - **Wide-range heap scan** — Scan range expanded from 8GB–8.25GB (256MB) to 4GB–17GB (13GB). The BeatmapLevelSO objects were never in the 256MB window — diagnostics confirmed 0 raw matches across 4,380 pages. The wider range covers the full possible IL2CPP heap on PS4.

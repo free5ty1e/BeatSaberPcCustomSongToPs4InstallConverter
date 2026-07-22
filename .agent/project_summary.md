@@ -1,34 +1,43 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-21
-**Status:** 🟡 **Memory injection v0.8015 deployed — wide-range heap scan (4GB–17GB).** The klass-based scan found 0 objects in the 256MB window (8GB–8.25GB). v0.8015 expands the range to cover the full possible IL2CPP heap (4GB–17GB = 13GB). The multi-minute freeze was caused by the string content search fallback scanning 12GB — now disabled. Pack bundle detection restored for correct startup timing. Feature flags system fully implemented and tested (v0.8012).
+**Status:** 🔴 **Memory injection klass-pointer approach ABANDONED (v0.8015).** After 10+ versions scanning 4GB–17GB (262K pages), the klass pointer `0x2012007E0` was NEVER found as the first 8 bytes of any page. PS4 IL2CPP uses compressed/indirect klass pointers. **Pivoting to string content search approach (v0.8016):** search for exact UTF-16LE song name strings directly in memory.
 
-## Current Approach: Memory Injection (v0.66+)
+## Current Approach: String Content Search (v0.8016+)
 
-The plugin patches BeatmapLevelSO objects in RAM after Addressables loads the pack bundle, bypassing catalog CRC/size validation entirely:
+**The klass pointer approach is broken.** After 10+ versions, we know:
+- Klass struct found at `0x2012007E0` via metadata search
+- 0 objects found with this klass as first 8 bytes in 4GB–17GB range
+- PS4 IL2CPP likely uses compressed/indirect klass pointers
 
-1. **Hook trigger** — `open_hook` detects pack bundle load (pack_assets_all) at startup OR per-song redirect → calls `memory_inject_try_patch()`
-2. **Find klass** — Three attempts:
-   - String search in Il2CppUserAssemblies module (fast path — KNOWN TO FAIL: class names are in global-metadata.dat, not module)
-   - Pattern-based scan of GC heap (wide range 4GB–17GB, 64KB pages) — finds objects by klass pointer
-   - Extract klass pointer from first validated object → use for targeted re-scan
-3. **Scan heap** — Search 0x40000000–0x440000000 range for objects with matching klass pointer (64KB page scanning, 60s timeout)
-4. **Validate** — Check _version in range [1,100], verify _levelID/_songName are valid string pointers
-5. **Patch** — Overwrite string fields in-place (UTF-16LE): song name, artist, level ID, level author
+**New approach:** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory. If found, trace back to containing object and patch strings directly.
+
+1. **Background thread** — `sceKernelStartThread` for non-blocking periodic scan (every 100ms for up to 30s)
+2. **Search for strings** — Scan for UTF-16LE patterns matching original song names
+3. **Patch in-place** — Overwrite string content with custom names
+4. **Feature flag gated** — All behind `enable_song_metadata_modification`
 
 ### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| Hook-triggered (not thread) | Threads caused CE-34878-0 on PS4 (v0.67+ removed thread) |
-| Signal-handler safe probing | `mincore`/`msync` are stubs on PS4 kernel; `sigaction`+`sigsetjmp` works for any memory type |
-| In-place string patching | Avoids GC complexity — new text MUST fit within original capacity |
-| Level ID matching | Match by `_levelID` string against registered metadata table |
-| External metadata table | 13 Rolling Stones slots defined in SongMetadataEntry array, expandable to 32+ |
-| Feature flag gating | All memory injection behind `enable_song_metadata_modification` flag (default: false) |
-| Pack bundle detection | Scan fires at startup when pack_assets_all loads, before song list UI |
-| String content search disabled | Was scanning 12GB causing multi-minute hang; klass-based scan preferred |
+| String content search (not klass) | Klass pointer approach broken after 10+ versions |
+| Background thread | Non-blocking — avoids 2-minute startup hang |
+| Periodic retry | Strings may not be in memory at startup (lazy loading) |
+| UTF-16LE pattern matching | Direct — search for WHAT we want to modify |
+| Feature flag gating | All memory injection behind `enable_song_metadata_modification` flag |
 
 ## Key Technical Findings
+
+### 🔴 Klass Pointer Approach is BROKEN (v0.8015 — CRITICAL)
+
+After 10+ versions of trying different ranges, diagnostic logging, and timing strategies:
+
+- **Klass struct found at `0x2012007E0`** — verified via metadata search (global-metadata.dat magic `0xFAB11BAF`)
+- **0 objects found with this klass as first 8 bytes** — scanned 4GB–17GB (262K pages, 41K mapped), zero matches
+- **Root cause:** PS4 IL2CPP likely uses compressed pointers (32-bit offsets) or indirect klass references instead of raw 64-bit pointers
+- **Alternative:** Objects may not be instantiated at scan time (lazy loading — only created when song list UI displays)
+
+**Do not pursue klass-based scanning further.** The evidence is conclusive.
 
 ### Bounds Check Bug (v0.66–v0.71 — Real Root Cause)
 
@@ -72,7 +81,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 128 | v0.8012 | Feature flags system | ✅ Implemented and tested on PS4 |
 | 129 | v0.8013 | Pack bundle detection + offset probing | ❌ Fired at startup (multi-min freeze), 0 objects found in 256MB |
 | 130 | v0.8014 | Diagnostic logging + scan timeout | ❌ Timing wrong (fires on song start), objects not in 8GB–8.25GB |
-| **131** | **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **🔄 Deployed, awaiting test** |
+| **131** | **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **❌ FAILED — 2min black screen, 0 objects. Klass approach ABANDONED** |
+| **132** | **v0.8016** | **String content search + background thread** | **🔄 Implementing** |
 
 ## Memory Injection Versions
 
@@ -100,29 +110,25 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | v0.8013 | 07-20 | Pack bundle detection + string length offset probing |
 | v0.8014 | 07-20 | Diagnostic logging + scan timeout |
 | **v0.8015** | **07-21** | **Wide-range scan 4GB–17GB, pack bundle timing, string search disabled** |
+| **v0.8016** | **07-21** | **String content search + background thread (implementing)** |
 
 ## Next Steps
 
-1. **Test v0.8015 on PS4** — Verify wide-range scan (4GB–17GB) finds BeatmapLevelSO objects
-2. **If objects found:** Confirm klass pointer, scan for all objects, patch metadata before song list displays
-3. **If objects NOT found:** Investigate alternative approaches:
-   - Objects may use a derived class with different klass pointer
-   - Objects may have klass pointer at offset 0x08 instead of 0x00
-   - Try scanning for known string content ("The Rolling Stones", song names) across wider range
-   - Consider hooking UI display function instead of patching objects
-4. **Optimize scan** — Once objects are found, narrow the scan range to their actual memory region for sub-second performance
-5. **Expand metadata table** — Register metadata for all 32 DLC slots
-6. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
+1. **Implement string content search (v0.8016)** — Search for exact UTF-16LE song name strings in memory
+2. **Background thread** — `sceKernelStartThread` for non-blocking periodic scan (every 100ms for up to 30s)
+3. **Patch strings** — If found, overwrite with custom names in-place
+4. **Expand metadata table** — Register metadata for all 32 DLC slots
+5. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
 
 ## Active Knowledge Gaps
 
 1. ~~CRC validation blocked~~ → **SOLVED** via memory injection (bypasses CRC entirely)
 2. ~~Size validation blocked~~ → **SOLVED** via memory injection (bypasses size entirely)
 3. ~~Class string not found~~ → **SOLVED**: Class name strings in global-metadata.dat (v0.75)
-4. **IL2CPP heap address on PS4** — **PARTIALLY KNOWN**: Klass struct at 0x2012007E0 (8GB), metadata at 0x293280000 (16.6GB). Objects NOT in 8GB–8.25GB window. v0.8015 scans 4GB–17GB.
-5. **Field offsets (version=0x18, levelID=0x20, etc.)** — **UNVERIFIED**: from il2cpp.h dump, may differ on PS4
-6. **Timing** — **PARTIALLY SOLVED**: Pack bundle detection fires at startup (before song list UI). If objects are found, metadata can be patched before display.
-7. **Memory injection** — **IN PROGRESS**: v0.8015 deployed, wide-range scan 4GB–17GB
+4. ~~IL2CPP heap address on PS4~~ → **KNOWN**: Klass at 0x2012007E0, metadata at 0x293280000. Objects NOT in 4GB–17GB (klass pointer approach broken)
+5. ~~Field offsets~~ → **UNVERIFIED** but may not matter if string content search works
+6. ~~Timing~~ → **SOLVED**: Pack bundle detection fires at startup. Background thread scans periodically until strings found
+7. **Memory injection** — **IN PROGRESS**: v0.8016 implementing string content search approach
 
 ## References
 

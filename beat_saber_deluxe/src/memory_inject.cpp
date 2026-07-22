@@ -99,6 +99,10 @@ static uint64_t g_cached_klass = 0;       // Cached klass addr for close-hook re
 static int g_retry_pending = 0;           // 1 = retry pending on close()
 static volatile int g_wide_scan = 0;       // 1 = scan full address range (retry only)
 
+// ── Background Thread for String Content Search ───────────────────────────
+static volatile int g_bg_thread_running = 0;
+static volatile int g_bg_thread_result = 0;
+
 // ── Signal-handler memory probing ─────────────────────────────────────────
 static sigjmp_buf g_mem_jmpbuf;
 
@@ -283,6 +287,68 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// Background Thread — String Content Search (v0.8016+)
+// ══════════════════════════════════════════════════════════════════════════
+
+// Background thread scans for UTF-16LE song name strings periodically.
+// Runs every 100ms for up to 30 seconds. Non-blocking — doesn't hold up startup.
+static void* bg_string_scan_thread(void* arg) {
+    (void)arg;
+    g_bg_thread_running = 1;
+
+    // Install signal handlers for this thread
+    struct sigaction sa, old_segv, old_bus;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = mem_fault_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGSEGV, &sa, &old_segv);
+    sigaction(SIGBUS, &sa, &old_bus);
+
+    meminj_log("[MEMINJ] Background thread started — scanning for song name strings");
+
+    // Scan periodically for up to 30 seconds (300 × 100ms)
+    for (int attempt = 0; attempt < 300; attempt++) {
+        sceKernelUsleep(100000);  // 100ms
+
+        // Try to find and patch song name strings
+        int result = patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR);
+        if (result > 0) {
+            g_bg_thread_result = result;
+            char buf[256];
+            snprintf(buf, sizeof(buf),
+                     "[MEMINJ] Background thread: patched %d strings on attempt %d",
+                     result, attempt + 1);
+            meminj_log(buf);
+            break;
+        }
+
+        // Log progress every 5 seconds
+        if ((attempt + 1) % 50 == 0) {
+            char buf[128];
+            snprintf(buf, sizeof(buf),
+                     "[MEMINJ] Background thread: attempt %d/300, no strings found yet",
+                     attempt + 1);
+            meminj_log(buf);
+        }
+    }
+
+    // Restore signal handlers
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
+
+    if (g_bg_thread_result == 0) {
+        meminj_log("[MEMINJ] Background thread: no strings found after 30 seconds");
+        g_patching_done = -1;
+    } else {
+        g_patching_done = g_bg_thread_result;
+    }
+
+    g_bg_thread_running = 0;
+    return NULL;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // Public API
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -299,7 +365,7 @@ void memory_inject_register(const SongMetadataEntry* entry) {
 }
 
 int memory_inject_init(void) {
-    meminj_log("[MEMINJ] Initialized (no guard timer, fires on any redirect)");
+    meminj_log("[MEMINJ] Initialized (background thread mode, fires on pack load)");
     if (g_metadata_count == 0) {
         meminj_log("[MEMINJ] WARNING: No metadata registered");
     }
@@ -310,145 +376,61 @@ int memory_inject_is_retry_pending(void) {
     return g_retry_pending;
 }
 
-// Called from open_hook when a per-song bundle is detected.
-// Runs synchronously inside the open() callback.
-// Returns 0 on success, -1 if not yet time or already done.
+// Called from open_hook when pack bundle is detected or per-song redirect fires.
+// Starts a background thread that scans for song name strings periodically.
+// Returns 0 on success (thread started), -1 if already done or failed.
 int memory_inject_try_patch(void) {
     // If already succeeded (1) or failed in the past (-1), skip
     if (g_patching_done) return -1;
 
-    // Lock to prevent re-entry during scan
+    // Lock to prevent re-entry
     if (__sync_lock_test_and_set(&g_patching_done, 1)) {
         return -1;  // Another caller already doing this
     }
 
-    // Install signal handlers ONCE for the entire scan (not per try_read_mem call)
-    // This saves ~4 sigaction syscalls per page read = ~524K fewer syscalls for full heap scan
-    struct sigaction sa, old_segv, old_bus;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = mem_fault_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGSEGV, &sa, &old_segv);
-    sigaction(SIGBUS, &sa, &old_bus);
-
-    meminj_log("[MEMINJ] Scanning...");
-
-    // Step 1: Find BeatmapLevelSO class metadata
-    uint64_t klass_addr = 0;
-    int klass_found = 0;
-    int is_retry = (g_cached_klass != 0);
-
-    if (is_retry) {
-        // Retry from close hook — use cached klass, skip ~9s metadata search
-        klass_addr = g_cached_klass;
-        klass_found = 1;
-        g_retry_pending = 0;  // Clear retry flag for this attempt
-        meminj_log("[MEMINJ] Using cached klass (retry)...");
-    } else {
-        klass_found = (find_beatmap_level_so_klass(&klass_addr) == 0);
-        if (!klass_found) {
-            // String search failed — try pattern-based discovery in limited heap range
-            meminj_log("[MEMINJ] String not in module — trying pattern find in heap...");
-            klass_found = (find_beatmap_level_objects_by_pattern(&klass_addr) == 0);
-            if (klass_found) {
-                char b[128];
-                snprintf(b, sizeof(b), "[MEMINJ] Found klass 0x%lX via pattern", klass_addr);
-                meminj_log(b);
-            }
-        }
+    // If background thread is already running, just return
+    if (g_bg_thread_running) {
+        g_patching_done = 0;
+        return -1;
     }
 
-    if (!klass_found) {
-        meminj_log("[MEMINJ] ERROR: Could not find BeatmapLevelSO klass");
-        sigaction(SIGSEGV, &old_segv, NULL);
-        sigaction(SIGBUS, &old_bus, NULL);
+    char buf[256];
+    snprintf(buf, sizeof(buf),
+             "[MEMINJ] Starting background thread for string content search (%d patterns)",
+             g_metadata_count);
+    meminj_log(buf);
+
+    // Start background thread using scePthreadCreate
+    // Thread scans for UTF-16LE song name strings every 100ms for up to 30 seconds
+    OrbisPthread thread_id = 0;
+    OrbisPthreadAttr attr;
+    scePthreadAttrInit(&attr);
+    scePthreadAttrSetstacksize(&attr, 0x10000);  // 64KB stack
+    int ret = scePthreadCreate(
+        &thread_id,         // Thread handle
+        &attr,              // Attributes
+        bg_string_scan_thread,  // Entry function
+        0,                  // Argument
+        "meminj_str"        // Thread name
+    );
+    scePthreadAttrDestroy(&attr);
+
+    if (ret != 0 || thread_id == 0) {
+        snprintf(buf, sizeof(buf),
+                 "[MEMINJ] ERROR: Failed to start background thread (err=%d)",
+                 ret);
+        meminj_log(buf);
         g_patching_done = -1;
         return -1;
     }
 
-    // Step 2: Scan for BeatmapLevelSO objects using klass pointer
-    // Disable wide scan (gap scan was causing 60s hang on PS4 — v0.8009)
-    g_wide_scan = 0;
-    uint64_t obj_addrs[256];
-    int found = scan_for_beatmap_level_objects(klass_addr, obj_addrs, 256);
-    g_wide_scan = 0;
-
-    char buf[256];
-    snprintf(buf, sizeof(buf), "[MEMINJ] Found %d candidates with klass 0x%lX", found, klass_addr);
+    snprintf(buf, sizeof(buf),
+             "[MEMINJ] Background thread started (id=%p)", (void*)thread_id);
     meminj_log(buf);
 
-    // Step 3a: If no objects found by klass, try direct string content search
-    // SKIP: scanning the full heap for string content is too slow (>60s).
-    // The klass-based scan with the wider range should find objects instead.
-    int string_patched = 0;
-    if (found == 0 && g_metadata_base) {
-        meminj_log("[MEMINJ] Skipping string content search (too slow for full heap scan)");
-    }
-
-    int total_patched = 0;
-
-    // Step 3b: Patch matching objects (if any found)
-    int patched = 0;
-    for (int i = 0; i < found && patched < g_metadata_count; i++) {
-        // Read _levelID to identify this song
-        uint64_t level_id_ptr = 0;
-        if (!try_read_mem(obj_addrs[i] + OFFSET_LEVEL_ID, &level_id_ptr, 8) || !level_id_ptr)
-            continue;
-
-        // Read _levelID string length
-        int32_t str_len = 0;
-        if (!try_read_mem(level_id_ptr + 0x10, &str_len, 4) || str_len <= 0 || str_len > 100)
-            continue;
-
-        // Read _levelID string content (UTF-16LE → ASCII)
-        char level_id_str[128];
-        uint16_t str_buf[128] = {0};
-        int read_len = str_len < 100 ? str_len * 2 : 200;
-        if (!try_read_mem(level_id_ptr + 0x14, str_buf, read_len))
-            continue;
-
-        for (int c = 0; c < str_len && c < 100; c++)
-            level_id_str[c] = (char)str_buf[c];
-        level_id_str[str_len < 100 ? str_len : 100] = '\0';
-
-        // Match against registered metadata
-        for (int m = 0; m < g_metadata_count; m++) {
-            if (g_metadata_table[m].level_id &&
-                strcmp(level_id_str, g_metadata_table[m].level_id) == 0) {
-                snprintf(buf, sizeof(buf),
-                         "[MEMINJ] Patching 0x%lX: %s", obj_addrs[i], level_id_str);
-                meminj_log(buf);
-
-                if (patch_beatmap_level_object(obj_addrs[i], &g_metadata_table[m]) == 0) {
-                    patched++;
-                }
-                break;
-            }
-        }
-    }
-
-    total_patched = patched + string_patched;
-    snprintf(buf, sizeof(buf), "[MEMINJ] Patched %d/%d objects (str=%d)",
-             total_patched, g_metadata_count, string_patched);
-    meminj_log(buf);
-
-    // Restore original signal handlers
-    sigaction(SIGSEGV, &old_segv, NULL);
-    sigaction(SIGBUS, &old_bus, NULL);
-
-    if (total_patched > 0) {
-        g_patching_done = total_patched;
-    } else if (klass_addr && !is_retry) {
-        // No objects found. Cache klass for close-hook retry.
-        g_cached_klass = klass_addr;
-        g_retry_pending = 1;
-        g_patching_done = 0;
-        meminj_log("[MEMINJ] No objects yet — retry scheduled on close()");
-    } else {
-        g_patching_done = -1;
-    }
-    return total_patched > 0 ? 0 : -1;
+    // Reset patching_done so the thread can set it when done
+    g_patching_done = 0;
+    return 0;
 }
 
 // ══════════════════════════════════════════════════════════════════════════

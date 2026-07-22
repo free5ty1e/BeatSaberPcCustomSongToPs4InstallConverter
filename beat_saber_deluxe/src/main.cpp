@@ -2,6 +2,7 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.8016: String content search via background thread (non-blocking, periodic scan).
 // v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
 // v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
 // v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
@@ -27,7 +28,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8015"
+#define PLUGIN_VERSION "v0.8016"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
