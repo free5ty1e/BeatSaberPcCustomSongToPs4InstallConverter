@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8017] — 2026-07-21
+### Fixed
+- **Removed background thread** — `scePthreadCreate` inside `open_hook` callback causes CE-34878-0 crash. Replaced with synchronous `patch_strings_by_content()` call with signal handlers installed around it. No thread creation in hook context.
+- **5-second scan timeout** — The synchronous scan uses `sceKernelGetProcessTime()` inside `patch_strings_by_content` to abort after 5 seconds if no strings found. Prevents indefinite hook blocking.
+
 ## [v0.8016] — 2026-07-21
 ### Changed
 - **String content search via background thread** — Complete pivot from klass-pointer approach (broken after 10+ versions). Now searches for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") directly in memory. Runs in a background thread via `sceKernelStartThread` (non-blocking, scans every 100ms for up to 30 seconds). Gated behind `enable_song_metadata_modification` feature flag.

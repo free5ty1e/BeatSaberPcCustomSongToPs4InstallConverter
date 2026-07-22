@@ -1,28 +1,30 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-21
-**Status:** 🔴 **Memory injection klass-pointer approach ABANDONED (v0.8015).** After 10+ versions scanning 4GB–17GB (262K pages), the klass pointer `0x2012007E0` was NEVER found as the first 8 bytes of any page. PS4 IL2CPP uses compressed/indirect klass pointers. **Pivoting to string content search approach (v0.8016):** search for exact UTF-16LE song name strings directly in memory.
+**Last Updated:** 2026-07-22
+**Status:** 🟡 **String content search implemented (v0.8017).** Klass pointer approach ABANDONED after 10+ versions. Synchronous string content search deployed — no threads (unsafe in hook context). Awaiting user test.
 
-## Current Approach: String Content Search (v0.8016+)
+## Current Approach: Synchronous String Content Search (v0.8017)
 
 **The klass pointer approach is broken.** After 10+ versions, we know:
 - Klass struct found at `0x2012007E0` via metadata search
 - 0 objects found with this klass as first 8 bytes in 4GB–17GB range
-- PS4 IL2CPP likely uses compressed/indirect klass pointers
+- PS4 IL2CPP uses compressed/indirect klass pointers
 
-**New approach:** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory. If found, trace back to containing object and patch strings directly.
+**New approach:** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory and patch them in-place.
 
-1. **Background thread** — `sceKernelStartThread` for non-blocking periodic scan (every 100ms for up to 30s)
-2. **Search for strings** — Scan for UTF-16LE patterns matching original song names
+1. **Synchronous scan** — Runs in hook callback with 5-second timeout (no threads — unsafe in PS4 hook context)
+2. **Search for strings** — Scan for UTF-16LE/UTF-8 patterns matching original song names
 3. **Patch in-place** — Overwrite string content with custom names
 4. **Feature flag gated** — All behind `enable_song_metadata_modification`
+5. **Retry on failure** — `g_patching_done` reset to 0 on failure, allowing retry on next trigger
 
 ### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
 | String content search (not klass) | Klass pointer approach broken after 10+ versions |
-| Background thread | Non-blocking — avoids 2-minute startup hang |
-| Periodic retry | Strings may not be in memory at startup (lazy loading) |
+| Synchronous scan (not thread) | `scePthreadCreate` in hook callback causes CE-34878-0 crash (v0.8016) |
+| 5-second timeout | Prevents indefinite hook blocking while allowing full scan |
+| Retry on failure | Strings may not be in memory at startup (lazy loading) |
 | UTF-16LE pattern matching | Direct — search for WHAT we want to modify |
 | Feature flag gating | All memory injection behind `enable_song_metadata_modification` flag |
 
@@ -82,7 +84,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 129 | v0.8013 | Pack bundle detection + offset probing | ❌ Fired at startup (multi-min freeze), 0 objects found in 256MB |
 | 130 | v0.8014 | Diagnostic logging + scan timeout | ❌ Timing wrong (fires on song start), objects not in 8GB–8.25GB |
 | **131** | **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **❌ FAILED — 2min black screen, 0 objects. Klass approach ABANDONED** |
-| **132** | **v0.8016** | **String content search + background thread** | **🔄 Implementing** |
+| **132** | **v0.8016** | **String content search + background thread** | **❌ CRASH — scePthreadCreate in hook unsafe** |
+| **133** | **v0.8017** | **Synchronous string scan, 5s timeout** | **🔄 Deployed, awaiting test** |
 
 ## Memory Injection Versions
 
@@ -110,13 +113,14 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | v0.8013 | 07-20 | Pack bundle detection + string length offset probing |
 | v0.8014 | 07-20 | Diagnostic logging + scan timeout |
 | **v0.8015** | **07-21** | **Wide-range scan 4GB–17GB, pack bundle timing, string search disabled** |
-| **v0.8016** | **07-21** | **String content search + background thread (implementing)** |
+| **v0.8016** | **07-21** | **String content search + background thread — CRASH (thread in hook unsafe)** |
+| **v0.8017** | **07-22** | **Synchronous string scan, 5s timeout, retry on failure** |
 
 ## Next Steps
 
-1. **Implement string content search (v0.8016)** — Search for exact UTF-16LE song name strings in memory
-2. **Background thread** — `sceKernelStartThread` for non-blocking periodic scan (every 100ms for up to 30s)
-3. **Patch strings** — If found, overwrite with custom names in-place
+1. **Test v0.8017 on PS4** — Verify synchronous scan completes without crash and finds strings
+2. **If strings found** — Verify metadata updates in song menu and pause menu
+3. **If strings not found** — Strings may only load when song list UI displays (deferred scanning needed)
 4. **Expand metadata table** — Register metadata for all 32 DLC slots
 5. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
 

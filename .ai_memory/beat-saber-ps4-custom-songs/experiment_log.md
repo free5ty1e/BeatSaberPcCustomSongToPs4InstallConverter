@@ -3066,13 +3066,32 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Version:** v0.8015
 - **Status:** ❌ Tested — klass pointer approach abandoned after 10+ failed versions
 
-### Experiment 132: Pivot to String Content Search Approach
+### Experiment 132: v0.8016 — String Content Search + Background Thread
 - **Date:** 2026-07-21
 - **What:**
   - **COMPLETE PIVOT** — klass pointer search abandoned after 10+ versions finding 0 objects
   - New approach: search for exact UTF-16LE strings ("Start Me Up", "The Rolling Stones") in memory
-  - If found, trace back to find containing object and patch strings directly
-  - Background thread via `sceKernelStartThread` for non-blocking periodic scan
-  - Scan every 100ms for up to 30 seconds (strings may not be in memory at startup)
-- **Key Insight:** Instead of searching for the klass pointer (which is compressed/indirect on PS4), search for the actual song name strings we want to modify. This is more direct and avoids the klass pointer issue entirely.
-- **Status:** 🔄 Implementing
+  - Background thread via `scePthreadCreate` for non-blocking periodic scan (every 100ms for up to 30s)
+  - Gated behind `enable_song_metadata_modification` feature flag
+- **Result:** ❌ **CRASH — CE-34878-0 immediately on startup**
+- **Key Findings:**
+  - Empty log file means crash happened before any `meminj_log()` call
+  - `scePthreadCreate` inside `open_hook` callback is unsafe — same root cause as v0.66 pthread crash
+  - PS4 hook callbacks run in a restricted context where thread creation causes CE-34878-0
+  - The string content search code itself (`patch_strings_by_content`) was never tested
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8016_crash.txt` (empty — crash before logging)
+- **Version:** v0.8016
+- **Status:** ❌ Crashed — thread creation in hook callback is unsafe
+
+### Experiment 133: v0.8017 — Synchronous String Content Search
+- **Date:** 2026-07-22
+- **What:**
+  - Removed background thread entirely — `scePthreadCreate` in hook callback causes CE-34878-0
+  - Replaced with synchronous `patch_strings_by_content()` call with 5-second timeout
+  - Signal handlers installed around the scan for safe memory probing
+  - Retry allowed: on failure, `g_patching_done` reset to 0 so next trigger retries
+  - Still gated behind `enable_song_metadata_modification` feature flag
+- **Key Insight:** Thread creation inside PS4 hook callbacks is unsafe. Synchronous execution with timeout is the only viable approach in hook context.
+- **Status:** 🔄 Deployed, awaiting user test
+- **Version:** v0.8017

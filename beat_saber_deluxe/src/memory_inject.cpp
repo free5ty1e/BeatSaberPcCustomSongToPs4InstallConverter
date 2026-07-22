@@ -35,7 +35,7 @@
  *   NOTE: PS4 mono may have 16-byte monitor, pushing _stringLength to 0x18.
  *         Detected dynamically via offset probing in pattern matcher.
  *
- * v0.66 — Hook-triggered memory injection (no threads)
+ * v0.8017 — Synchronous string content search (no threads, 5s timeout)
  */
 
 #include "memory_inject.h"
@@ -99,9 +99,8 @@ static uint64_t g_cached_klass = 0;       // Cached klass addr for close-hook re
 static int g_retry_pending = 0;           // 1 = retry pending on close()
 static volatile int g_wide_scan = 0;       // 1 = scan full address range (retry only)
 
-// ── Background Thread for String Content Search ───────────────────────────
-static volatile int g_bg_thread_running = 0;
-static volatile int g_bg_thread_result = 0;
+// ── Synchronous scan timeout ─────────────────────────────────────────────
+#define SYNCHRONOUS_SCAN_TIMEOUT_US 5000000ULL  // 5 seconds max in hook callback
 
 // ── Signal-handler memory probing ─────────────────────────────────────────
 static sigjmp_buf g_mem_jmpbuf;
@@ -287,68 +286,6 @@ static int find_beatmap_level_objects_by_pattern(uint64_t* klass_out) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// Background Thread — String Content Search (v0.8016+)
-// ══════════════════════════════════════════════════════════════════════════
-
-// Background thread scans for UTF-16LE song name strings periodically.
-// Runs every 100ms for up to 30 seconds. Non-blocking — doesn't hold up startup.
-static void* bg_string_scan_thread(void* arg) {
-    (void)arg;
-    g_bg_thread_running = 1;
-
-    // Install signal handlers for this thread
-    struct sigaction sa, old_segv, old_bus;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = mem_fault_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGSEGV, &sa, &old_segv);
-    sigaction(SIGBUS, &sa, &old_bus);
-
-    meminj_log("[MEMINJ] Background thread started — scanning for song name strings");
-
-    // Scan periodically for up to 30 seconds (300 × 100ms)
-    for (int attempt = 0; attempt < 300; attempt++) {
-        sceKernelUsleep(100000);  // 100ms
-
-        // Try to find and patch song name strings
-        int result = patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR);
-        if (result > 0) {
-            g_bg_thread_result = result;
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "[MEMINJ] Background thread: patched %d strings on attempt %d",
-                     result, attempt + 1);
-            meminj_log(buf);
-            break;
-        }
-
-        // Log progress every 5 seconds
-        if ((attempt + 1) % 50 == 0) {
-            char buf[128];
-            snprintf(buf, sizeof(buf),
-                     "[MEMINJ] Background thread: attempt %d/300, no strings found yet",
-                     attempt + 1);
-            meminj_log(buf);
-        }
-    }
-
-    // Restore signal handlers
-    sigaction(SIGSEGV, &old_segv, NULL);
-    sigaction(SIGBUS, &old_bus, NULL);
-
-    if (g_bg_thread_result == 0) {
-        meminj_log("[MEMINJ] Background thread: no strings found after 30 seconds");
-        g_patching_done = -1;
-    } else {
-        g_patching_done = g_bg_thread_result;
-    }
-
-    g_bg_thread_running = 0;
-    return NULL;
-}
-
-// ══════════════════════════════════════════════════════════════════════════
 // Public API
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -365,7 +302,7 @@ void memory_inject_register(const SongMetadataEntry* entry) {
 }
 
 int memory_inject_init(void) {
-    meminj_log("[MEMINJ] Initialized (background thread mode, fires on pack load)");
+    meminj_log("[MEMINJ] Initialized (synchronous string content search, fires on pack load)");
     if (g_metadata_count == 0) {
         meminj_log("[MEMINJ] WARNING: No metadata registered");
     }
@@ -377,8 +314,9 @@ int memory_inject_is_retry_pending(void) {
 }
 
 // Called from open_hook when pack bundle is detected or per-song redirect fires.
-// Starts a background thread that scans for song name strings periodically.
-// Returns 0 on success (thread started), -1 if already done or failed.
+// Scans memory synchronously for UTF-16LE song name strings and patches them.
+// Runs with a 5-second timeout to avoid blocking the hook callback too long.
+// Returns 0 if scan completed (success or timeout), -1 if already done.
 int memory_inject_try_patch(void) {
     // If already succeeded (1) or failed in the past (-1), skip
     if (g_patching_done) return -1;
@@ -388,48 +326,38 @@ int memory_inject_try_patch(void) {
         return -1;  // Another caller already doing this
     }
 
-    // If background thread is already running, just return
-    if (g_bg_thread_running) {
-        g_patching_done = 0;
-        return -1;
-    }
-
     char buf[256];
     snprintf(buf, sizeof(buf),
-             "[MEMINJ] Starting background thread for string content search (%d patterns)",
+             "[MEMINJ] Synchronous string content scan (%d patterns, 5s timeout)",
              g_metadata_count);
     meminj_log(buf);
 
-    // Start background thread using scePthreadCreate
-    // Thread scans for UTF-16LE song name strings every 100ms for up to 30 seconds
-    OrbisPthread thread_id = 0;
-    OrbisPthreadAttr attr;
-    scePthreadAttrInit(&attr);
-    scePthreadAttrSetstacksize(&attr, 0x10000);  // 64KB stack
-    int ret = scePthreadCreate(
-        &thread_id,         // Thread handle
-        &attr,              // Attributes
-        bg_string_scan_thread,  // Entry function
-        0,                  // Argument
-        "meminj_str"        // Thread name
-    );
-    scePthreadAttrDestroy(&attr);
+    // Install signal handlers for this scan
+    struct sigaction sa, old_segv, old_bus;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = mem_fault_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGSEGV, &sa, &old_segv);
+    sigaction(SIGBUS, &sa, &old_bus);
 
-    if (ret != 0 || thread_id == 0) {
+    // Run the string content scan with the full address range
+    int result = patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR);
+
+    // Restore signal handlers
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
+
+    if (result > 0) {
+        g_patching_done = result;
         snprintf(buf, sizeof(buf),
-                 "[MEMINJ] ERROR: Failed to start background thread (err=%d)",
-                 ret);
+                 "[MEMINJ] Synchronous scan: patched %d strings", result);
         meminj_log(buf);
-        g_patching_done = -1;
-        return -1;
+    } else {
+        g_patching_done = 0;  // Allow retry on next trigger (pack load or redirect)
+        meminj_log("[MEMINJ] Synchronous scan: no strings found (will retry on next trigger)");
     }
 
-    snprintf(buf, sizeof(buf),
-             "[MEMINJ] Background thread started (id=%p)", (void*)thread_id);
-    meminj_log(buf);
-
-    // Reset patching_done so the thread can set it when done
-    g_patching_done = 0;
     return 0;
 }
 
@@ -951,10 +879,26 @@ static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end) {
     meminj_log(buf);
     if (pat_count == 0) return 0;
 
-    // ── Main scan loop ──────────────────────────────────────────────────
+    // ── Main scan loop with timeout ──────────────────────────────────────
     uint8_t page[SCAN_STEP];
+    uint64_t scan_start_time = sceKernelGetProcessTime();
+    int pages_read = 0;
     for (uint64_t page_addr = scan_start; page_addr < scan_end; page_addr += SCAN_STEP) {
         if (!try_read_mem(page_addr, page, SCAN_STEP)) continue;
+        pages_read++;
+
+        // Check timeout every 256 pages (~16MB)
+        if ((pages_read & 0xFF) == 0) {
+            uint64_t now = sceKernelGetProcessTime();
+            if (now - scan_start_time > SYNCHRONOUS_SCAN_TIMEOUT_US) {
+                char timeout_buf[128];
+                snprintf(timeout_buf, sizeof(timeout_buf),
+                         "[MEMINJ] String scan TIMEOUT after %d pages (%dms)",
+                         pages_read, (int)((now - scan_start_time) / 1000));
+                meminj_log(timeout_buf);
+                break;
+            }
+        }
 
         for (uint64_t off = 0; off < SCAN_STEP - 8; off += 8) {
             uint64_t page_val = *(uint64_t*)(page + off);

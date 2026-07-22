@@ -13,7 +13,7 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🔴 **Memory injection klass-pointer approach ABANDONED (v0.8015)** — After 10+ versions, the klass pointer `0x2012007E0` was NEVER found as the first 8 bytes of any page in 4GB–17GB (262K pages scanned). PS4 IL2CPP uses compressed/indirect klass pointers, or objects aren't instantiated until song list UI loads. **Pivoting to string content search approach (v0.8016).**
+**Status:** 🟡 **String content search implemented (v0.8017).** Synchronous scan with 5s timeout, no threads (unsafe in hook context). Klass pointer approach ABANDONED after 10+ versions. Awaiting user test.
 
 ## 🔴 CRITICAL: Klass Pointer Approach is Broken
 
@@ -24,9 +24,9 @@ After 10+ versions of trying different ranges, diagnostic logging, and timing st
 - **Root cause:** PS4 IL2CPP likely uses compressed pointers (32-bit offsets) or indirect klass references instead of raw 64-bit pointers
 - **Alternative:** Objects may not be instantiated at scan time (lazy loading — only created when song list UI displays)
 
-**New approach (v0.8016):** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory. If found, trace back to containing object and patch strings directly. Background thread for non-blocking periodic scan.
+**New approach (v0.8017):** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory and patch them in-place. Synchronous execution with 5-second timeout (no threads — unsafe in PS4 hook context). Retry on failure.
 
-## Implementation — Current Architecture (v0.8015)
+## Implementation — Current Architecture (v0.8017)
 
 ### Component Overview
 
@@ -38,39 +38,31 @@ memory_inject_try_patch()  [gated behind g_feature_song_metadata_modification]
     │
     ├── [1] Install signal handlers (once per scan)
     │
-    ├── [2] find_beatmap_level_so_klass()    ← tries string search in module (always fails)
+    ├── [2] patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR)
     │       │
-    │       ├── find_module_segments()       ← sceKernelGetModuleList + sceKernelGetModuleInfo
-    │       └── search_for_string()          ← searches for "BeatmapLevelSO" in module
-    │                                         NOTE: Class name NOT in module (see ps4-il2cpp-metadata-loading)
+    │       ├── Build lookup tables (UTF-16LE + UTF-8 patterns from metadata)
+    │       ├── Scan memory at 64KB granularity with 5s timeout
+    │       │   └── try_read_mem() with signal handlers for safe probing
+    │       ├── Match string content against known original song names
+    │       └── Patch matched strings in-place (UTF-16LE or UTF-8)
     │
-    ├── [3] find_beatmap_level_objects_by_pattern()  ← FALLBACK when string not found
-    │       │
-    │       └── scan memory (16MB–4GB, 64KB pages, 32-byte stepping)
-    │           for objects matching BeatmapLevelSO field layout:
-    │           - klass ptr in [0x80000000, 0x90000000]
-    │           - _version in [1, 50]
-    │           - _levelID, _songName, _songAuthorName → valid System_String pointers
-    │           - String length at lid+0x10/0x14/0x18/0x1C (probed dynamically)
-    │
-    ├── [4] scan_for_beatmap_level_objects() ← scans heap (4GB–17GB, 64KB pages, 60s timeout)
-    │       │                                    for objects matching discovered klass
-    │       └── validate_beatmap_level_object() ← checks version, field pointers
-    │
-    └── [5] patch_beatmap_level_object()     ← in-place UTF-16LE string overwrite
-         └── Restore signal handlers
+    └── [3] Restore signal handlers
+         └── Reset g_patching_done to 0 on failure (allows retry)
 ```
 
-### Hook-Triggered Execution (Removed Thread)
+### Hook-Triggered Execution (Synchronous, No Threads)
 
-The original v0.66 implementation used a 30-second pthread for deferred scanning. This caused CE-34878-0 crashes due to FreeBSD init race. Since v0.67, the scan runs synchronously inside the `open_hook()` callback:
+The original v0.66 implementation used a 30-second pthread for deferred scanning. This caused CE-34878-0 crashes. v0.8016 tried `scePthreadCreate` inside the hook callback — also crashed. **Thread creation inside PS4 hook callbacks is fundamentally unsafe.**
+
+Since v0.8017, the scan runs synchronously inside the `open_hook()` callback with a 5-second timeout:
 
 - **Primary trigger:** `open_hook` detects pack bundle load (`pack_assets_all`) at startup → calls `memory_inject_try_patch()`
 - **Secondary trigger:** `open_hook` detects per-song bundle redirect → calls `memory_inject_try_patch()`
 - **Re-entrancy guard:** `g_patching_done` flag prevents multiple simultaneous scans
+- **Retry on failure:** `g_patching_done` reset to 0 on failure, allowing retry on next trigger
 - **Feature flag:** All memory injection gated behind `g_feature_song_metadata_modification`
-- **Signal handlers:** Installed once at scan start, restored at end (v0.74 optimization, saves ~524K sigaction syscalls)
-- **Timing:** Primary trigger fires at startup when pack bundle loads (before song list UI reads metadata)
+- **Signal handlers:** Installed once at scan start, restored at end (saves ~524K sigaction syscalls)
+- **Timeout:** 5-second hard limit prevents indefinite hook blocking
 
 ### Memory Probing (try_read_mem)
 
@@ -168,7 +160,8 @@ The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB)
 | v0.8013 | Pack bundle detection + offset probing | ❌ Fired at startup (multi-min freeze), 0 objects in 256MB |
 | v0.8014 | Diagnostic logging + scan timeout | ❌ Objects not in 8GB–8.25GB, string search caused hang |
 | **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **❌ FAILED — 2min black screen, 0 objects found. Klass pointer approach ABANDONED** |
-| **v0.8016** | **String content search + background thread** | **🔄 Implementing — search for UTF-16LE song names directly** |
+| **v0.8016** | **String content search + scePthreadCreate** | **❌ CRASH — thread creation in hook callback causes CE-34878-0** |
+| **v0.8017** | **Synchronous string scan, 5s timeout, retry** | **🔄 Deployed — awaiting test** |
 
 ## Build & Deploy
 
@@ -215,6 +208,7 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 11. **Pack bundle detection fires at startup** — `pack_assets_all` matches bundles loaded during game init, not just when user navigates to pack
 12. **Feature flags essential for iteration** — All experimental features gated behind `features.json` flags for safe testing
 13. **Search for WHAT you want to modify, not HOW it's stored** — Instead of searching for klass pointers (which are compressed/indirect), search for the actual song name strings we want to modify. This is more direct and avoids the klass pointer issue entirely.
+14. **🔴 Thread creation in hook callbacks is UNSAFE on PS4** — Both `pthread_create` (v0.66) and `scePthreadCreate` (v0.8016) inside `open_hook` cause CE-34878-0 crashes. Hook callbacks run in a restricted context. Use synchronous execution with timeout instead.
 
 ## See Also
 
