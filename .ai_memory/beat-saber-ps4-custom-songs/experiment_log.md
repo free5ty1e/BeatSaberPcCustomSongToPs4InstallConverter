@@ -3092,6 +3092,42 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Signal handlers installed around the scan for safe memory probing
   - Retry allowed: on failure, `g_patching_done` reset to 0 so next trigger retries
   - Still gated behind `enable_song_metadata_modification` feature flag
-- **Key Insight:** Thread creation inside PS4 hook callbacks is unsafe. Synchronous execution with timeout is the only viable approach in hook context.
-- **Status:** 🔄 Deployed, awaiting user test
+- **Result:** ❌ **MULTI-MINUTE BLACK SCREEN** — Scan itself respects 5s timeout, but each of 32 redirects re-triggered the scan, causing 32 × 5s = 160 seconds of blocking. Also confirmed: strings NOT in memory at pack load time (0 matches across 7936–8192 pages per attempt).
+- **Key Findings:**
+  - Scan timeout works correctly (~5s per attempt)
+  - **Every redirect re-triggered the scan** because `g_patching_done` was reset to 0 on failure
+  - 32 redirects × 5s each = ~160 seconds of blocking = multi-minute black screen
+  - Strings confirmed NOT in memory during pack bundle loading phase
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8017_black_screen.txt`
 - **Version:** v0.8017
+- **Status:** ❌ Tested — multi-minute hang from retry storm, strings not found
+
+### Experiment 134: v0.8018 — Reduced Timeout, No Retry
+- **Date:** 2026-07-22
+- **What:**
+  - Reduced scan timeout from 5s to 2s
+  - Removed redirect-triggered retries — scan once on pack_assets_all, never retry
+  - On failure, `g_patching_done = -1` (permanent stop)
+  - Removed dead retry code from close_hook
+- **Result:** ⚠️ **PARTIAL — No hang, but no metadata change**
+- **Key Findings:**
+  - ~15-17 second black loading screen (acceptable — includes normal game loading)
+  - Scan completed: 6144 pages in 2090ms, 0 strings found
+  - **Confirmed: song name strings are NOT in memory during pack bundle loading**
+  - User checked song list, song details, level pause menu, and song menu after exiting — no changed metadata anywhere
+  - Strings likely only load when song list UI renders (much later than pack load)
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8018_no_change.txt`
+- **Version:** v0.8018
+- **Status:** ⚠️ Tested — no hang, but strings not in memory at scan time
+
+### Experiment 135: v0.8019 — Diagnostic Redirect Logging
+- **Date:** 2026-07-22
+- **What:**
+  - Added sequential redirect counter (`[REDIR #N]`) to map file open sequence and timing
+  - Helps identify when song bundles are loaded and when to trigger the scan
+  - Same 2s scan timeout, no retry
+- **Key Insight:** Need to see the full file open sequence to determine if redirects fire at startup or when song list UI renders. This determines the correct trigger point.
+- **Status:** 🔄 Deployed, awaiting test
+- **Version:** v0.8019

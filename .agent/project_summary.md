@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-22
-**Status:** 🟡 **String content search implemented (v0.8017).** Klass pointer approach ABANDONED after 10+ versions. Synchronous string content search deployed — no threads (unsafe in hook context). Awaiting user test.
+**Status:** 🟡 **String content search runs but finds nothing (v0.8019).** Scan at pack load completes in 2s but strings NOT in memory yet. Need to find correct trigger point (when song list UI renders). Diagnostic redirect logging deployed to map file open sequence.
 
 ## Current Approach: Synchronous String Content Search (v0.8017)
 
@@ -85,7 +85,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 130 | v0.8014 | Diagnostic logging + scan timeout | ❌ Timing wrong (fires on song start), objects not in 8GB–8.25GB |
 | **131** | **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **❌ FAILED — 2min black screen, 0 objects. Klass approach ABANDONED** |
 | **132** | **v0.8016** | **String content search + background thread** | **❌ CRASH — scePthreadCreate in hook unsafe** |
-| **133** | **v0.8017** | **Synchronous string scan, 5s timeout** | **🔄 Deployed, awaiting test** |
+| **133** | **v0.8017** | **Synchronous string scan, 5s timeout** | **❌ 160s hang — 32 redirects × 5s retry storm** |
+| **134** | **v0.8018** | **2s timeout, no retry** | **⚠️ No hang, but strings not in memory at pack load** |
+| **135** | **v0.8019** | **Diagnostic redirect logging** | **🔄 Deployed — mapping file open sequence** |
 
 ## Memory Injection Versions
 
@@ -115,14 +117,16 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **v0.8015** | **07-21** | **Wide-range scan 4GB–17GB, pack bundle timing, string search disabled** |
 | **v0.8016** | **07-21** | **String content search + background thread — CRASH (thread in hook unsafe)** |
 | **v0.8017** | **07-22** | **Synchronous string scan, 5s timeout, retry on failure** |
+| **v0.8018** | **07-22** | **2s timeout, no retry, scan once** |
+| **v0.8019** | **07-22** | **Diagnostic redirect logging** |
 
 ## Next Steps
 
-1. **Test v0.8017 on PS4** — Verify synchronous scan completes without crash and finds strings
-2. **If strings found** — Verify metadata updates in song menu and pause menu
-3. **If strings not found** — Strings may only load when song list UI displays (deferred scanning needed)
-4. **Expand metadata table** — Register metadata for all 32 DLC slots
-5. **Cover image patching** — Replace Sprite* at BeatmapLevelSO offset 0x70
+1. **Analyze redirect log (v0.8019)** — See when32 redirects fire (at startup or when song list UI renders)
+2. **Find correct trigger point** — If redirects fire at UI render time, trigger scan AFTER redirects complete
+3. **Implement deferred scan** — Trigger scan at the right point in the game lifecycle
+4. **Verify metadata patching** — Confirm strings are found and patched at correct trigger point
+5. **Expand metadata table** — Register metadata for all 32 DLC slots
 
 ## Active Knowledge Gaps
 

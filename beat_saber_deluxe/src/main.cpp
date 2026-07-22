@@ -2,7 +2,7 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.8018: Synchronous string content search (2s timeout, no retry, no threads).
+// v0.8019: Diagnostic redirect logging + 2s timeout, no retry.
 // v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
 // v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
 // v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
@@ -28,7 +28,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8018"
+#define PLUGIN_VERSION "v0.8019"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -244,6 +244,9 @@ static FILE *fh(const char *p, const char *m) {
     return r;
 }
 
+// ── Redirect counter for diagnostic logging ──────────────────────────────────
+static int g_redirect_count = 0;
+
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
@@ -267,16 +270,19 @@ static int open_hook(const char *path, int flags, ...) {
                 }
             }
 
+            // ── Diagnostic: log redirects and key file opens ──────────────────
+            // Always log redirects to see the load sequence and timing
+            if (np) {
+                g_redirect_count++;
+                char dbuf[256];
+                snprintf(dbuf, sizeof(dbuf), "[REDIR #%d] %s", g_redirect_count, path);
+                log_write(dbuf);
+            }
+
             // ── Trigger memory injection on pack bundle load (startup timing) ──
-            // Pack bundles (pack_assets_all) contain BeatmapLevelSO objects with
-            // song metadata. Detecting them here fires the scan when the game loads
-            // the pack at startup, BEFORE the song list UI reads the metadata.
-            // memory_inject_try_patch has internal guard — only scans once.
-            // Only active when enable_song_metadata_modification feature flag is ON.
-            // NOTE: Does NOT retry on per-song redirects — strings are not in memory
-            // at startup; they only load when the song list UI renders.
             if (np == NULL && g_feature_song_metadata_modification) {
                 if (strstr(lower_path, "pack_assets_all")) {
+                    log_write("[MEMINJ] Pack bundle detected — scanning now");
                     memory_inject_try_patch();
                 }
             }

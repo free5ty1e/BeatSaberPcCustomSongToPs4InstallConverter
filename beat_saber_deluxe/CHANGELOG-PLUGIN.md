@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8019] — 2026-07-22
+### Added
+- **Diagnostic redirect logging** — Logs every redirect with sequential counter (`[REDIR #N]`) to map the file open sequence and timing. Helps identify the right trigger point for string scanning.
+
 ## [v0.8018] — 2026-07-22
 ### Fixed
 - **Reduced scan timeout from 5s to 2s** — Prevents multi-minute black screen caused by repeated scans
