@@ -2,7 +2,8 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.8023: Trigger scan at BeatmapLevelsData redirect (OPEN #740) instead of pack load (OPEN #738). Objects deserialized lazily.
+// v0.8024: Scan FOUR ranges: low memory (16MB-4GB), GC heap, metadata, extended heap (4GB-8GB). Pack bundles mmap'd below 4GB.
+// v0.8023: Trigger scan at BeatmapLevelsData redirect (OPEN #740) instead of pack load (OPEN #738).
 // v0.8022: Scan BOTH GC heap (0x200000000-0x210000000) AND metadata mmap (±256MB).
 // v0.8021: Scan trigger moved to therollingstones_pack_assets_all (OPEN #738) instead of first pack_assets_all (OPEN #207).
 // v0.8020: Scan metadata region (±256MB around 0x293280000), log all file opens.
@@ -31,7 +32,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8023"
+#define PLUGIN_VERSION "v0.8024"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"

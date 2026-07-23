@@ -60,7 +60,7 @@
 #define SCAN_START_ADDR 0x000000291000000ULL   // ~10.5GB — below metadata
 #define SCAN_END_ADDR   0x000000296000000ULL   // ~10.8GB — above metadata
 #define SCAN_STEP       0x10000ULL    // 64KB pages
-#define SCAN_TIMEOUT_US 10000000ULL   // 10 seconds — should be enough for 512MB
+#define SCAN_TIMEOUT_US 15000000ULL   // 15 seconds — wider scan needs more time
 #define PRE_SWEEP_STEP  0x10000ULL    // 64KB — same page size for pre-sweep
 
 // ── BeatmapLevelSO Field Offsets (from il2cpp dump) ──────────────────────
@@ -885,15 +885,19 @@ static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end) {
     meminj_log(buf);
     if (pat_count == 0) return 0;
 
-    // ── Main scan loop with timeout — TWO RANGES ─────────────────────────
+    // ── Main scan loop with timeout — FOUR RANGES ────────────────────────
+    // Range 0: Low memory (16MB–4GB) — pack bundle file data, Il2Cpp assemblies
     // Range 1: GC heap (0x200000000-0x210000000, 256MB) — where IL2CPP objects live
-    // Range 2: Metadata mmap (±256MB around 0x293280000, 512MB) — where string literals live
-    // Total: ~768MB. At ~76MB/s scan speed, should complete in ~10s.
+    // Range 2: Metadata mmap (±256MB around 0x293280000, 512MB) — string literals
+    // Range 3: Extended heap (4GB–8GB) — additional IL2CPP allocations
+    // Pack bundles may be mmap'd or read into buffers in low memory (below 4GB).
     struct { uint64_t start; uint64_t end; } ranges[] = {
-        { 0x200000000ULL, 0x210000000ULL },   // GC heap
-        { SCAN_START_ADDR, SCAN_END_ADDR },    // Metadata mmap
+        { 0x1000000ULL, 0x100000000ULL },      // Low: 16MB–4GB (pack bundles, assemblies)
+        { 0x200000000ULL, 0x210000000ULL },    // GC heap
+        { SCAN_START_ADDR, SCAN_END_ADDR },     // Metadata mmap
+        { 0x100000000ULL, 0x200000000ULL },    // Extended: 4GB–8GB
     };
-    int num_ranges = 2;
+    int num_ranges = 4;
     uint8_t page[SCAN_STEP];
     uint64_t scan_start_time = sceKernelGetProcessTime();
     int pages_read = 0;

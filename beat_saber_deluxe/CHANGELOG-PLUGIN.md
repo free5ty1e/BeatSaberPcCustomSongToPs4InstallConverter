@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8024] — 2026-07-23
+### Changed
+- **Scan four memory ranges** — Added low memory (16MB–4GB) and extended heap (4GB–8GB) to scan. Pack bundles may be memory-mapped or read into buffers in low memory where Il2Cpp assemblies load (~2GB). Increased timeout to 15s for wider scan.
+
 ## [v0.8023] — 2026-07-23
 ### Changed
 - **Trigger scan at BeatmapLevelsData redirect** — Changed trigger from `therollingstones_pack_assets_all` (OPEN #738) to first `BeatmapLevelsData` redirect (OPEN #740). BeatmapLevelSO objects are deserialized lazily — only when the game reads song data. At pack load, objects aren't in GC heap yet.
