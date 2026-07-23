@@ -885,28 +885,42 @@ static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end) {
     meminj_log(buf);
     if (pat_count == 0) return 0;
 
-    // ── Main scan loop with timeout ──────────────────────────────────────
+    // ── Main scan loop with timeout — TWO RANGES ─────────────────────────
+    // Range 1: GC heap (0x200000000-0x210000000, 256MB) — where IL2CPP objects live
+    // Range 2: Metadata mmap (±256MB around 0x293280000, 512MB) — where string literals live
+    // Total: ~768MB. At ~76MB/s scan speed, should complete in ~10s.
+    struct { uint64_t start; uint64_t end; } ranges[] = {
+        { 0x200000000ULL, 0x210000000ULL },   // GC heap
+        { SCAN_START_ADDR, SCAN_END_ADDR },    // Metadata mmap
+    };
+    int num_ranges = 2;
     uint8_t page[SCAN_STEP];
     uint64_t scan_start_time = sceKernelGetProcessTime();
     int pages_read = 0;
-    for (uint64_t page_addr = scan_start; page_addr < scan_end; page_addr += SCAN_STEP) {
-        if (!try_read_mem(page_addr, page, SCAN_STEP)) continue;
-        pages_read++;
+    int timed_out = 0;
+    for (int r = 0; r < num_ranges && !timed_out; r++) {
+        snprintf(buf, sizeof(buf), "[MEMINJ] Scanning range %d: 0x%lX - 0x%lX",
+                 r, ranges[r].start, ranges[r].end);
+        meminj_log(buf);
+        for (uint64_t page_addr = ranges[r].start; page_addr < ranges[r].end && !timed_out; page_addr += SCAN_STEP) {
+            if (!try_read_mem(page_addr, page, SCAN_STEP)) continue;
+            pages_read++;
 
-        // Check timeout every 256 pages (~16MB)
-        if ((pages_read & 0xFF) == 0) {
-            uint64_t now = sceKernelGetProcessTime();
-            if (now - scan_start_time > SYNCHRONOUS_SCAN_TIMEOUT_US) {
-                char timeout_buf[128];
-                snprintf(timeout_buf, sizeof(timeout_buf),
-                         "[MEMINJ] String scan TIMEOUT after %d pages (%dms)",
-                         pages_read, (int)((now - scan_start_time) / 1000));
-                meminj_log(timeout_buf);
-                break;
+            // Check timeout every 256 pages (~16MB)
+            if ((pages_read & 0xFF) == 0) {
+                uint64_t now = sceKernelGetProcessTime();
+                if (now - scan_start_time > SYNCHRONOUS_SCAN_TIMEOUT_US) {
+                    char timeout_buf[128];
+                    snprintf(timeout_buf, sizeof(timeout_buf),
+                             "[MEMINJ] String scan TIMEOUT after %d pages (%dms)",
+                             pages_read, (int)((now - scan_start_time) / 1000));
+                    meminj_log(timeout_buf);
+                    timed_out = 1;
+                    break;
+                }
             }
-        }
 
-        for (uint64_t off = 0; off < SCAN_STEP - 8; off += 8) {
+            for (uint64_t off = 0; off < SCAN_STEP - 8; off += 8) {
             uint64_t page_val = *(uint64_t*)(page + off);
             uint32_t str_len = (uint32_t)(page_val & 0xFFFFFFFFULL);
             if (str_len >= 256) continue;
@@ -968,7 +982,11 @@ static int patch_strings_by_content(uint64_t scan_start, uint64_t scan_end) {
                      data_addr, orig, new_val, fmt == 1 ? "UTF16" : "UTF8");
             meminj_log(buf);
             patched++;
-        }
-    }
+        }  // end for (off)
+    }  // end for (page_addr)
+    }  // end for (r — ranges)
+    snprintf(buf, sizeof(buf), "[MEMINJ] Scan complete: %d pages read, %d strings patched",
+             pages_read, patched);
+    meminj_log(buf);
     return patched;
 }
