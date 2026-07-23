@@ -2,7 +2,7 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.8019: Diagnostic redirect logging + 2s timeout, no retry.
+// v0.8020: Scan metadata region (±256MB around 0x293280000), log all file opens.
 // v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
 // v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
 // v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
@@ -28,7 +28,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8019"
+#define PLUGIN_VERSION "v0.8020"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -244,12 +244,14 @@ static FILE *fh(const char *p, const char *m) {
     return r;
 }
 
-// ── Redirect counter for diagnostic logging ──────────────────────────────────
+// ── Diagnostic counters ──────────────────────────────────────────────────────
 static int g_redirect_count = 0;
+static int g_open_count = 0;
 
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
+    g_open_count++;
 
     const char *np = NULL;
     if (path) {
@@ -270,12 +272,15 @@ static int open_hook(const char *path, int flags, ...) {
                 }
             }
 
-            // ── Diagnostic: log redirects and key file opens ──────────────────
-            // Always log redirects to see the load sequence and timing
-            if (np) {
-                g_redirect_count++;
-                char dbuf[256];
-                snprintf(dbuf, sizeof(dbuf), "[REDIR #%d] %s", g_redirect_count, path);
+            // ── Diagnostic: log ALL file opens with original path ─────────────
+            // Shows the full load sequence. Logs every open with sequential counter.
+            {
+                char dbuf[512];
+                const char *filename = strrchr(path, '/');
+                filename = filename ? filename + 1 : path;
+                snprintf(dbuf, sizeof(dbuf), "[OPEN #%d] %s%s",
+                         g_open_count, path,
+                         np ? " -> REDIRECTED" : "");
                 log_write(dbuf);
             }
 

@@ -35,7 +35,7 @@
  *   NOTE: PS4 mono may have 16-byte monitor, pushing _stringLength to 0x18.
  *         Detected dynamically via offset probing in pattern matcher.
  *
- * v0.8018 — Synchronous string content search (2s timeout, no retry)
+ * v0.8020 — Scan metadata region (±256MB around 0x293280000), 10s timeout
  */
 
 #include "memory_inject.h"
@@ -54,11 +54,13 @@
 #define MODULE_NAME "Il2CppUserAssemblies"
 #define CLASS_NAME "BeatmapLevelSO"
 
-// Full heap scan range: PS4 IL2CPP heap can span 4GB-17GB
-#define SCAN_START_ADDR 0x0000000040000000ULL   // 4GB — below module space
-#define SCAN_END_ADDR   0x0000000440000000ULL   // 17GB — above metadata
+// Scan the global-metadata.dat mmap region where string literals are stored.
+// Metadata base found at ~0x293280000 in v0.8003. Scan ±256MB around it.
+// This is much faster than scanning the full 4GB–17GB range.
+#define SCAN_START_ADDR 0x000000291000000ULL   // ~10.5GB — below metadata
+#define SCAN_END_ADDR   0x000000296000000ULL   // ~10.8GB — above metadata
 #define SCAN_STEP       0x10000ULL    // 64KB pages
-#define SCAN_TIMEOUT_US 60000000ULL   // 60 seconds — abort scan if it takes longer
+#define SCAN_TIMEOUT_US 10000000ULL   // 10 seconds — should be enough for 512MB
 #define PRE_SWEEP_STEP  0x10000ULL    // 64KB — same page size for pre-sweep
 
 // ── BeatmapLevelSO Field Offsets (from il2cpp dump) ──────────────────────

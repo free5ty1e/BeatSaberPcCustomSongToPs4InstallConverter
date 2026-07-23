@@ -3128,6 +3128,24 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Added sequential redirect counter (`[REDIR #N]`) to map file open sequence and timing
   - Helps identify when song bundles are loaded and when to trigger the scan
   - Same 2s scan timeout, no retry
-- **Key Insight:** Need to see the full file open sequence to determine if redirects fire at startup or when song list UI renders. This determines the correct trigger point.
-- **Status:** 🔄 Deployed, awaiting test
+- **Result:** ⚠️ **PARTIAL — No hang, but no metadata change**
+- **Key Findings:**
+  - **288 "pack_assets_all" detections** — Not 1 pack bundle. The game opens hundreds of files matching `pack_assets_all` at startup.
+  - Only2 redirects logged (both for "startmeup") — Log appears truncated or redirects happen much later
+  - Scan still fires at first pack_assets_all, times out after 2s (6144 pages), finds nothing
+  - **Root cause identified:** Scan range 4GB–17GB is too large — only reaches ~400MB in 2s before timeout. Metadata is at ~10.8GB, never reached.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8019_redirect_sequence.txt`
 - **Version:** v0.8019
+- **Status:** ⚠️ Tested — scan range too large, strings never reached
+
+### Experiment 136: v0.8020 — Metadata Region Scan
+- **Date:** 2026-07-22
+- **What:**
+  - Changed scan range from 4GB–17GB (13GB) to ±256MB around metadata base (0x293280000, 512MB total)
+  - Metadata base found at ~0x293280000 in v0.8003 — string literals in global-metadata.dat should be nearby
+  - 10-second timeout (enough for 512MB at ~600MB/s scan speed)
+  - Comprehensive file-open logging: every open with sequential counter and original path
+- **Key Insight:** Previous scans never reached the metadata address (10.8GB) because they timed out at 400MB. Scanning the metadata region directly should find string literals.
+- **Status:** 🔄 Deployed, awaiting test
+- **Version:** v0.8020

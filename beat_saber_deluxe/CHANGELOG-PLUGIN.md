@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8020] — 2026-07-22
+### Changed
+- **Scan metadata region directly** — Changed scan range from 4GB–17GB (13GB, never reached) to ±256MB around metadata base (0x293280000). Covers 512MB, completes in ~10s. Previous scan only reached ~400MB before timeout.
+- **Comprehensive file-open logging** — Logs every file open with sequential counter and original path. Shows full load sequence including redirects.
+
 ## [v0.8019] — 2026-07-22
 ### Added
 - **Diagnostic redirect logging** — Logs every redirect with sequential counter (`[REDIR #N]`) to map the file open sequence and timing. Helps identify the right trigger point for string scanning.
