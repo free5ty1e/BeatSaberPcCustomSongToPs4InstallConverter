@@ -1,17 +1,23 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-23
-**Status:** 🟡 **Scan trigger moved to Rolling Stones pack load (v0.8021).** Previous scans fired at OPEN #207 but target pack loads at OPEN #738. Now triggers at therollingstones_pack_assets_all detection. Awaiting test results.
+**Status:** 🔴 **Memory injection approach may not be viable (v0.8024).** After 14+ versions and scanning every memory region (16MB–8GB + metadata mmap), 0 strings found. Strings don't exist in scannable memory at scan time. Need fundamentally different approach.
 
-## Current Approach: Synchronous String Content Search (v0.8021)
+## Current Approach: Synchronous String Content Search (v0.8024)
 
 **The klass pointer approach is broken.** After 10+ versions, we know:
 - Klass struct found at `0x2012007E0` via metadata search
 - 0 objects found with this klass as first 8 bytes in 4GB–17GB range
 - PS4 IL2CPP uses compressed/indirect klass pointers
 
-**New approach:** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory and patch them in-place.
+**String content search also appears broken.** After 6+ versions scanning different ranges, 0 strings found:
+- GC heap (8–8.25GB): 0 strings
+- Metadata mmap (10.5–10.8GB): 0 strings
+- Low memory (16MB–4GB): 0 strings
+- Extended heap (4–8GB): 0 strings
 
-1. **Synchronous scan** — Runs in hook callback with 10-second timeout (no threads — unsafe in PS4 hook context)
+**Root cause hypothesis:** Strings are loaded on-demand when song list UI renders, not during startup when scan fires. The scan runs at BeatmapLevelsData redirect (OPEN #740) but the song list UI may not render until much later.
+
+1. **Synchronous scan** — Runs in hook callback with 15-second timeout (no threads — unsafe in PS4 hook context)
 2. **Search for strings** — Scan for UTF-16LE/UTF-8 patterns matching original song names
 3. **Patch in-place** — Overwrite string content with custom names
 4. **Feature flag gated** — All behind `enable_song_metadata_modification`
@@ -90,7 +96,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **134** | **v0.8018** | **2s timeout, no retry** | **⚠️ No hang, but strings not in memory at pack load** |
 | **135** | **v0.8019** | **Diagnostic redirect logging** | **⚠️ No hang, but scan range too large, strings not reached** |
 | **136** | **v0.8020** | **Metadata region scan (±256MB)** | **❌ Strings NOT in metadata mmap. Found full file-open sequence** |
-| **137** | **v0.8021** | **Trigger at Rolling Stones pack load** | **🔄 Deployed — scan fires at OPEN #738 instead of OPEN #207** |
+| **137** | **v0.8021** | **Trigger at Rolling Stones pack load** | **❌ Strings not in metadata mmap** |
+| **138** | **v0.8022** | **Scan both GC heap AND metadata** | **❌ 5275 pages, 0 strings** |
+| **139** | **v0.8023** | **Trigger at BeatmapLevelsData redirect** | **❌ 5276 pages, 0 strings** |
+| **140** | **v0.8024** | **Scan four memory ranges (16MB–8GB)** | **❌ 7021 pages, 0 strings. Strings not in any region** |
 
 ## Memory Injection Versions
 
@@ -124,14 +133,17 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **v0.8019** | **07-22** | **Diagnostic redirect logging — 288 pack_assets_all detections, only 2 redirects** |
 | **v0.8020** | **07-22** | **Metadata region scan (±256MB), comprehensive file-open logging** |
 | **v0.8021** | **07-23** | **Scan trigger moved to therollingstones_pack_assets_all (OPEN #738)** |
+| **v0.8022** | **07-23** | **Scan both GC heap AND metadata mmap** |
+| **v0.8023** | **07-23** | **Trigger at BeatmapLevelsData redirect (OPEN #740)** |
+| **v0.8024** | **07-23** | **Scan four memory ranges (16MB–8GB + metadata), 15s timeout** |
 
 ## Next Steps
 
-1. **Test v0.8021 on PS4** — Verify scan fires at correct time (after Rolling Stones pack loads)
-2. **Analyze scan results** — Check if strings are found after pack bundle loads
-3. **If still not found** — Strings may be in GC heap (4GB–17GB) but require longer scan or different trigger
-4. **Consider alternative approaches** — Hook into Unity rendering functions, or modify pack bundle contents directly
-5. **Expand metadata table** — Register metadata for all 32 DLC slots
+1. **🔴 Reconsider approach** — Memory injection string search has failed across ALL memory regions after 14+ versions. Strings not found in 16MB–8GB or metadata mmap.
+2. **Alternative: Hook Unity rendering** — Intercept string display at the UI rendering level
+3. **Alternative: Modify pack bundle directly** — Patch pack bundle file contents before Addressables loads it
+4. **Alternative: Trigger scan later** — Hook into song list UI population to fire scan when strings are actually in memory
+5. **Expand metadata table** — Register metadata for all 32 DLC slots (if approach is viable)
 
 ## Active Knowledge Gaps
 
@@ -140,9 +152,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 3. ~~Class string not found~~ → **SOLVED**: Class name strings in global-metadata.dat (v0.75)
 4. ~~IL2CPP heap address on PS4~~ → **KNOWN**: Klass at 0x2012007E0, metadata at 0x293280000. Objects NOT in 4GB–17GB (klass pointer approach broken)
 5. ~~Field offsets~~ → **UNVERIFIED** but may not matter if string content search works
-6. ~~Timing~~ → **PARTIALLY SOLVED**: Scan now triggers at therollingstones_pack_assets_all (OPEN #738). Previous triggers fired too early (OPEN #207).
-7. **String location** → **UNKNOWN**: Strings NOT in metadata mmap (±256MB around 0x293280000). May be in GC heap but scan can't complete before timeout.
-8. **Memory injection** — **IN PROGRESS**: v0.8021 testing correct trigger timing
+6. ~~Timing~~ → **TESTED**: Scanned at pack load (OPEN #738) and BeatmapLevelsData redirect (OPEN #740). Strings not found at either time.
+7. **String location** → **NOT FOUND**: Strings NOT in any scanned region (16MB–8GB + metadata). After 14+ versions, strings are conclusively not in scannable memory at scan time.
+8. **Memory injection** — **🔴 LIKELY NOT VIABLE**: String content search failed across all memory regions. Need fundamentally different approach.
 
 ## References
 

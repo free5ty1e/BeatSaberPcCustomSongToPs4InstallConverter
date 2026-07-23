@@ -13,7 +13,7 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🟡 **Scan trigger moved to Rolling Stones pack load (v0.8021).** Previous scans fired at OPEN #207 but target pack loads at OPEN #738. Now triggers at therollingstones_pack_assets_all detection. Awaiting test results.
+**Status:** 🔴 **Memory injection string search FAILED across all memory regions (v0.8024).** After 14+ versions scanning 16MB–8GB + metadata mmap, 0 strings found. Approach likely not viable. Need fundamentally different strategy.
 
 ## 🔴 CRITICAL: Klass Pointer Approach is Broken
 
@@ -26,22 +26,26 @@ After 10+ versions of trying different ranges, diagnostic logging, and timing st
 
 **New approach (v0.8017):** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory and patch them in-place. Synchronous execution with 5-second timeout (no threads — unsafe in PS4 hook context). Retry on failure.
 
-## Implementation — Current Architecture (v0.8021)
+## Implementation — Current Architecture (v0.8024)
 
 ### Component Overview
 
 ```
-open_hook (detects therollingstones_pack_assets_all at OPEN #738)
+open_hook (detects BeatmapLevelsData redirect at OPEN #740)
     │
     ▼
 memory_inject_try_patch()  [gated behind g_feature_song_metadata_modification]
     │
     ├── [1] Install signal handlers (once per scan)
     │
-    ├── [2] patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR)
+    ├── [2] patch_strings_by_content() — scans FOUR ranges:
+    │       │   Range 0: Low memory (16MB–4GB) — pack bundles, assemblies
+    │       │   Range 1: GC heap (8–8.25GB) — IL2CPP objects
+    │       │   Range 2: Metadata mmap (10.5–10.8GB) — string literals
+    │       │   Range 3: Extended heap (4–8GB) — additional allocations
     │       │
     │       ├── Build lookup tables (UTF-16LE + UTF-8 patterns from metadata)
-    │       ├── Scan memory at 64KB granularity with 10s timeout
+    │       ├── Scan memory at 64KB granularity with 15s timeout
     │       │   └── try_read_mem() with signal handlers for safe probing
     │       ├── Match string content against known original song names
     │       └── Patch matched strings in-place (UTF-16LE or UTF-8)
@@ -52,16 +56,14 @@ memory_inject_try_patch()  [gated behind g_feature_song_metadata_modification]
 
 ### Hook-Triggered Execution (Synchronous, No Threads)
 
-The original v0.66 implementation used a 30-second pthread for deferred scanning. This caused CE-34878-0 crashes. v0.8016 tried `scePthreadCreate` inside the hook callback — also crashed. **Thread creation inside PS4 hook callbacks is fundamentally unsafe.**
+Since v0.8017, the scan runs synchronously inside the `open_hook()` callback. Since v0.8023, the trigger is the first `BeatmapLevelsData` redirect (OPEN #740) — when the game actually reads song data:
 
-Since v0.8017, the scan runs synchronously inside the `open_hook()` callback. Since v0.8021, the trigger is `therollingstones_pack_assets_all` (OPEN #738) instead of the first `pack_assets_all` (OPEN #207):
-
-- **Primary trigger:** `open_hook` detects Rolling Stones pack load (`therollingstones_pack_assets_all`) at startup → calls `memory_inject_try_patch()`
+- **Primary trigger:** `open_hook` detects BeatmapLevelsData redirect → calls `memory_inject_try_patch()`
 - **Re-entrancy guard:** `g_patching_done` flag prevents multiple simultaneous scans
 - **Scan once:** On failure, `g_patching_done = -1` (permanent stop, no retry)
 - **Feature flag:** All memory injection gated behind `g_feature_song_metadata_modification`
-- **Signal handlers:** Installed once at scan start, restored at end (saves ~524K sigaction syscalls)
-- **Timeout:** 10-second hard limit prevents indefinite hook blocking
+- **Signal handlers:** Installed once at scan start, restored at end
+- **Timeout:** 15-second hard limit for wider scan range
 
 ### Memory Probing (try_read_mem)
 
@@ -164,7 +166,10 @@ The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB)
 | **v0.8018** | **2s timeout, no retry** | **⚠️ No hang, but strings not in memory at pack load** |
 | **v0.8019** | **Diagnostic redirect logging** | **⚠️ 288 pack_assets_all detections, only 2 redirects logged** |
 | **v0.8020** | **Metadata region scan (±256MB)** | **❌ Strings NOT in metadata mmap. Found full file-open sequence** |
-| **v0.8021** | **Trigger at Rolling Stones pack load (OPEN #738)** | **🔄 Deployed — awaiting test** |
+| **v0.8021** | **Trigger at Rolling Stones pack load (OPEN #738)** | **❌ Strings not in metadata mmap** |
+| **v0.8022** | **Scan both GC heap AND metadata** | **❌ 5275 pages, 0 strings. Strings not in GC heap or metadata** |
+| **v0.8023** | **Trigger at BeatmapLevelsData redirect (OPEN #740)** | **❌ 5276 pages, 0 strings. Strings not found at redirect time** |
+| **v0.8024** | **Scan four memory ranges (16MB–8GB + metadata)** | **❌ 7021 pages, 0 strings. Strings not in any scanned region** |
 
 ## Build & Deploy
 
@@ -216,6 +221,9 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 16. **🔴 Strings NOT in metadata mmap** — v0.8020 scanned ±256MB around 0x293280000, found 0 matches. String literals are heap-allocated System.String objects, not stored in global-metadata.dat region.
 17. **Pack bundles load BEFORE song bundles** — The game opens hundreds of pack_assets_all files (OPEN #207-738) before opening individual BeatmapLevelsData files (OPEN #740+). BeatmapLevelSO objects with song names are in pack bundles, not individual song files.
 18. **File-open sequence is predictable** — OPEN #1-206 (system), OPEN #207-738 (pack bundles), OPEN #738-739 (therollingstones_pack_assets_all), OPEN #740-741 (song redirects), OPEN #742+ (scenes/shaders/resources).
+19. **🔴 String content search FAILED across all memory regions** — After 14+ versions (v0.66–v0.8024), scanning 16MB–8GB + metadata mmap, 0 strings found. Strings are NOT in: GC heap (8–8.25GB), metadata mmap (10.5–10.8GB), low memory (16MB–4GB), or extended heap (4–8GB). The memory injection approach for string patching is likely not viable on PS4.
+20. **🔴 Pack bundles load BEFORE song data is used** — The Rolling Stones pack loads at OPEN #738, but BeatmapLevelsData redirects fire at OPEN #740. Even scanning at the redirect time finds 0 strings. The game may load BeatmapLevelSO objects lazily when the song list UI renders, not during startup.
+21. **Deploy path matters** — Plugin goes to `/data/GoldHEN/plugins/`, NOT `/data/GoldHEN/AFR/CUSA12878/Plugins/`. Wrong path cost test cycles (v0.8021).
 
 ## See Also
 

@@ -3163,7 +3163,79 @@ Before building v0.35, I analyzed the difference between the original file and `
   - Changed scan trigger from first `pack_assets_all` (OPEN #207) to `therollingstones_pack_assets_all` (OPEN #738)
   - The target pack bundle loads 500+ file opens AFTER the scan was previously firing
   - BeatmapLevelSO objects with song names are in this pack bundle, so scan must fire AFTER it loads
-  - Diagnostic: now we know the exact file-open sequence and timing
-- **Key Insight:** Previous scans fired at OPEN #207 but the target pack doesn't load until OPEN #738. By the time the scan completes, the pack hasn't loaded yet. Moving trigger to OPEN #738 ensures strings are in memory when scan runs.
-- **Status:** 🔄 Deployed, awaiting test
+- **Result:** ❌ **FAILED — strings not found in metadata mmap.** Scan fires at OPEN #738 but strings still not in ±256MB around metadata. User tested v0.8020 (old binary) first, then v0.8021 after correct deploy path found.
+- **Key Finding:** Deployed to wrong path `/data/GoldHEN/AFR/CUSA12878/Plugins/` instead of `/data/GoldHEN/plugins/`. Fixed.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8021_test.txt` (v0.8020 binary, wrong trigger)
 - **Version:** v0.8021
+- **Status:** ❌ Tested — strings not in metadata mmap region
+
+### Experiment 138: v0.8022 — Scan Both GC Heap AND Metadata Mmap
+- **Date:** 2026-07-23
+- **What:**
+  - v0.8021 only scanned ±256MB around metadata (10.5–10.8GB). Strings not there.
+  - Added GC heap range (8–8.25GB) to scan — where IL2CPP objects typically live
+  - Now scans both ranges sequentially: GC heap (256MB) then metadata (512MB)
+  - Total ~768MB within 10s timeout
+- **Result:** ❌ **FAILED — 5275 pages read, 0 strings patched.** Both ranges scanned completely without timeout. Strings not in GC heap OR metadata mmap.
+- **Key Finding:** The strings "Start Me Up" and "The Rolling Stones" are NOT in the GC heap (8–8.25GB) at pack load time. BeatmapLevelSO objects may not be deserialized until song list UI renders.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8022_test.txt`
+- **Version:** v0.8022
+- **Status:** ❌ Tested — strings not in GC heap or metadata
+
+### Experiment 139: v0.8023 — Trigger at BeatmapLevelsData Redirect
+- **Date:** 2026-07-23
+- **What:**
+  - Changed trigger from `therollingstones_pack_assets_all` (OPEN #738) to first `BeatmapLevelsData` redirect (OPEN #740)
+  - BeatmapLevelSO objects are deserialized lazily — only when game reads song data
+  - At pack load (OPEN #738), objects may not be in GC heap yet
+  - At BeatmapLevelsData redirect (OPEN #740), game is actually using song data
+- **Result:** ❌ **FAILED — 5276 pages read, 0 strings patched.** Scan fires at correct time (OPEN #740) but strings still not found in GC heap or metadata.
+- **Key Finding:** Even when triggered at the exact moment the game reads song data, strings are not in the scanned memory regions. The strings must be in a different memory location.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8023_test.txt`
+- **Version:** v0.8023
+- **Status:** ❌ Tested — strings not found at BeatmapLevelsData redirect time
+
+### Experiment 140: v0.8024 — Scan Four Memory Ranges
+- **Date:** 2026-07-23
+- **What:**
+  - Added low memory (16MB–4GB) and extended heap (4GB–8GB) to scan
+  - Pack bundles may be memory-mapped or read into buffers in low memory where Il2Cpp assemblies load (~2GB)
+  - Four ranges: low memory (16MB–4GB), GC heap (8–8.25GB), metadata (10.5–10.8GB), extended heap (4–8GB)
+  - Increased timeout to 15s for wider scan
+- **Result:** ❌ **FAILED — 7021 pages read, 0 strings patched.** All four ranges scanned completely without timeout. Strings not found anywhere in 16MB–8GB + metadata.
+- **Key Finding:** The strings are NOT in any of the four scanned memory regions. The scan covers 16MB to 8GB plus the metadata mmap, but finds 0 matches. This suggests:
+  1. Strings are stored in a format we don't recognize (not UTF-16LE with 4-byte length prefix)
+  2. Strings are in memory above 10.8GB (not scanned)
+  3. Strings don't exist in memory at startup (loaded on-demand when song list UI renders)
+  4. Strings are in a shared memory region we can't read
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8024_test.txt`
+- **Version:** v0.8024
+- **Status:** ❌ Tested — strings not found in any scanned memory region
+
+### Critical Assessment: Memory Injection Approach
+
+After 14+ versions of trying (v0.66–v0.8024), the string content search approach has consistently found 0 strings across every memory region we've scanned:
+
+| Range | Size | Versions Tested | Result |
+|-------|------|-----------------|--------|
+| GC heap (8–8.25GB) | 256MB | v0.8022–v0.8024 | 0 strings |
+| Metadata mmap (10.5–10.8GB) | 512MB | v0.8020–v0.8024 | 0 strings |
+| Low memory (16MB–4GB) | ~4GB | v0.8024 | 0 strings |
+| Extended heap (4–8GB) | 4GB | v0.8024 | 0 strings |
+| Full range (4–17GB) | 13GB | v0.8015 | 0 strings (timed out) |
+
+**The strings simply don't exist in any scannable memory region at the time of the scan.** This is conclusive after 6+ versions of scanning different ranges.
+
+**Possible root causes:**
+1. **Strings are loaded on-demand** — The game only loads BeatmapLevelSO string data when the song list UI renders, not during pack bundle loading. Our scan fires during startup, before the UI renders.
+2. **Strings are in a different format** — PS4 IL2CPP may use a completely different string layout than standard IL2CPP.
+3. **Strings are in inaccessible memory** — The pack bundle data might be in a shared memory region or use memory protection that prevents reading.
+
+**Recommendation:** The memory injection approach for string patching may not be viable on PS4. Consider alternative approaches:
+- Hook into Unity rendering functions to intercept string display
+- Modify the pack bundle file contents directly (bypass Addressables validation)
+- Use a different trigger point (e.g., hook into song list UI population)
