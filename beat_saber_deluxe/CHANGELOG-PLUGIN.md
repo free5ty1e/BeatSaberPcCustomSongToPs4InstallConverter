@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8021] — 2026-07-23
+### Changed
+- **Scan trigger moved to Rolling Stones pack load** — Changed trigger from first `pack_assets_all` (OPEN #207) to `therollingstones_pack_assets_all` (OPEN #738). Previous scan fired at startup but the target pack bundle doesn't load until much later. BeatmapLevelSO objects with song names are in the pack bundle, so scan must fire after it loads.
+
 ## [v0.8020] — 2026-07-22
 ### Changed
 - **Scan metadata region directly** — Changed scan range from 4GB–17GB (13GB, never reached) to ±256MB around metadata base (0x293280000). Covers 512MB, completes in ~10s. Previous scan only reached ~400MB before timeout.

@@ -3147,5 +3147,23 @@ Before building v0.35, I analyzed the difference between the original file and `
   - 10-second timeout (enough for 512MB at ~600MB/s scan speed)
   - Comprehensive file-open logging: every open with sequential counter and original path
 - **Key Insight:** Previous scans never reached the metadata address (10.8GB) because they timed out at 400MB. Scanning the metadata region directly should find string literals.
-- **Status:** 🔄 Deployed, awaiting test
+- **Status:** ❌ Tested — strings NOT found in metadata mmap region. Scan completed in ~9s, found 0 matches across 10,752 pages. Strings are heap-allocated System.String objects, not stored in global-metadata.dat.
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8020_metadata_scan.txt` (1059 lines, full file-open sequence captured)
+- **Key Findings from v0.8020 log:**
+  - **File-open sequence:** OPEN #1-206 (system files), OPEN #207-738 (288+ pack_assets_all files), OPEN #738-739 (therollingstones_pack_assets_all), OPEN #740-741 (BeatmapLevelsData/startmeup — REDIRECTED), OPEN #742+ (scenes, shaders, resources)
+  - **Pack bundles load BEFORE song bundles** — The Rolling Stones pack (OPEN #738) loads 500+ file opens BEFORE the individual song (OPEN #740) is redirected
+  - **Scan fires at wrong time** — Currently triggers at first pack_assets_all (OPEN #207) but the target pack loads at OPEN #738
+  - **Song names are in pack bundle** — BeatmapLevelSO objects with names are in therollingstones_pack_assets_all, not in individual BeatmapLevelsData files
 - **Version:** v0.8020
+
+### Experiment 137: v0.8021 — Trigger Scan at Rolling Stones Pack Load
+- **Date:** 2026-07-23
+- **What:**
+  - Changed scan trigger from first `pack_assets_all` (OPEN #207) to `therollingstones_pack_assets_all` (OPEN #738)
+  - The target pack bundle loads 500+ file opens AFTER the scan was previously firing
+  - BeatmapLevelSO objects with song names are in this pack bundle, so scan must fire AFTER it loads
+  - Diagnostic: now we know the exact file-open sequence and timing
+- **Key Insight:** Previous scans fired at OPEN #207 but the target pack doesn't load until OPEN #738. By the time the scan completes, the pack hasn't loaded yet. Moving trigger to OPEN #738 ensures strings are in memory when scan runs.
+- **Status:** 🔄 Deployed, awaiting test
+- **Version:** v0.8021

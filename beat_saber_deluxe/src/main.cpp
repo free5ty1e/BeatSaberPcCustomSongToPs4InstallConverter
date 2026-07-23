@@ -2,6 +2,7 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.8021: Scan trigger moved to therollingstones_pack_assets_all (OPEN #738) instead of first pack_assets_all (OPEN #207). Strings not in memory when scan fired at OPEN #207.
 // v0.8020: Scan metadata region (±256MB around 0x293280000), log all file opens.
 // v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
 // v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
@@ -28,7 +29,7 @@
 
 #include "memory_inject.h"
 
-#define PLUGIN_VERSION "v0.8020"
+#define PLUGIN_VERSION "v0.8021"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -284,10 +285,13 @@ static int open_hook(const char *path, int flags, ...) {
                 log_write(dbuf);
             }
 
-            // ── Trigger memory injection on pack bundle load (startup timing) ──
-            if (np == NULL && g_feature_song_metadata_modification) {
-                if (strstr(lower_path, "pack_assets_all")) {
-                    log_write("[MEMINJ] Pack bundle detected — scanning now");
+            // ── Trigger memory injection on Rolling Stones pack load ───────────
+            // The Rolling Stones pack bundle loads at OPEN #738-739 (late in startup).
+            // BeatmapLevelSO objects with song names are in THIS pack bundle.
+            // Trigger scan AFTER this pack loads, not at first pack_assets_all.
+            if (g_feature_song_metadata_modification) {
+                if (strstr(lower_path, "therollingstones_pack_assets_all")) {
+                    log_write("[MEMINJ] Rolling Stones pack detected — scanning now");
                     memory_inject_try_patch();
                 }
             }

@@ -1,8 +1,8 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-22
-**Status:** 🟡 **String content search runs but finds nothing (v0.8019).** Scan at pack load completes in 2s but strings NOT in memory yet. Need to find correct trigger point (when song list UI renders). Diagnostic redirect logging deployed to map file open sequence.
+**Last Updated:** 2026-07-23
+**Status:** 🟡 **Scan trigger moved to Rolling Stones pack load (v0.8021).** Previous scans fired at OPEN #207 but target pack loads at OPEN #738. Now triggers at therollingstones_pack_assets_all detection. Awaiting test results.
 
-## Current Approach: Synchronous String Content Search (v0.8017)
+## Current Approach: Synchronous String Content Search (v0.8021)
 
 **The klass pointer approach is broken.** After 10+ versions, we know:
 - Klass struct found at `0x2012007E0` via metadata search
@@ -11,11 +11,11 @@
 
 **New approach:** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory and patch them in-place.
 
-1. **Synchronous scan** — Runs in hook callback with 5-second timeout (no threads — unsafe in PS4 hook context)
+1. **Synchronous scan** — Runs in hook callback with 10-second timeout (no threads — unsafe in PS4 hook context)
 2. **Search for strings** — Scan for UTF-16LE/UTF-8 patterns matching original song names
 3. **Patch in-place** — Overwrite string content with custom names
 4. **Feature flag gated** — All behind `enable_song_metadata_modification`
-5. **Retry on failure** — `g_patching_done` reset to 0 on failure, allowing retry on next trigger
+5. **Scan once** — On failure, `g_patching_done = -1` (permanent stop)
 
 ### Key Design Decisions
 
@@ -23,10 +23,11 @@
 |----------|-----------|
 | String content search (not klass) | Klass pointer approach broken after 10+ versions |
 | Synchronous scan (not thread) | `scePthreadCreate` in hook callback causes CE-34878-0 crash (v0.8016) |
-| 5-second timeout | Prevents indefinite hook blocking while allowing full scan |
-| Retry on failure | Strings may not be in memory at startup (lazy loading) |
+| 10-second timeout | Enough for 512MB scan, prevents indefinite hook blocking |
+| Scan once, no retry | Prevents multi-minute hang from retry storm (v0.8017) |
 | UTF-16LE pattern matching | Direct — search for WHAT we want to modify |
 | Feature flag gating | All memory injection behind `enable_song_metadata_modification` flag |
+| Trigger at Rolling Stones pack | Scan must fire AFTER pack bundle loads (OPEN #738), not at first pack_assets_all (OPEN #207) |
 
 ## Key Technical Findings
 
@@ -87,7 +88,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **132** | **v0.8016** | **String content search + background thread** | **❌ CRASH — scePthreadCreate in hook unsafe** |
 | **133** | **v0.8017** | **Synchronous string scan, 5s timeout** | **❌ 160s hang — 32 redirects × 5s retry storm** |
 | **134** | **v0.8018** | **2s timeout, no retry** | **⚠️ No hang, but strings not in memory at pack load** |
-| **135** | **v0.8019** | **Diagnostic redirect logging** | **🔄 Deployed — mapping file open sequence** |
+| **135** | **v0.8019** | **Diagnostic redirect logging** | **⚠️ No hang, but scan range too large, strings not reached** |
+| **136** | **v0.8020** | **Metadata region scan (±256MB)** | **❌ Strings NOT in metadata mmap. Found full file-open sequence** |
+| **137** | **v0.8021** | **Trigger at Rolling Stones pack load** | **🔄 Deployed — scan fires at OPEN #738 instead of OPEN #207** |
 
 ## Memory Injection Versions
 
@@ -118,14 +121,16 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **v0.8016** | **07-21** | **String content search + background thread — CRASH (thread in hook unsafe)** |
 | **v0.8017** | **07-22** | **Synchronous string scan, 5s timeout, retry on failure** |
 | **v0.8018** | **07-22** | **2s timeout, no retry, scan once** |
-| **v0.8019** | **07-22** | **Diagnostic redirect logging** |
+| **v0.8019** | **07-22** | **Diagnostic redirect logging — 288 pack_assets_all detections, only 2 redirects** |
+| **v0.8020** | **07-22** | **Metadata region scan (±256MB), comprehensive file-open logging** |
+| **v0.8021** | **07-23** | **Scan trigger moved to therollingstones_pack_assets_all (OPEN #738)** |
 
 ## Next Steps
 
-1. **Analyze redirect log (v0.8019)** — See when32 redirects fire (at startup or when song list UI renders)
-2. **Find correct trigger point** — If redirects fire at UI render time, trigger scan AFTER redirects complete
-3. **Implement deferred scan** — Trigger scan at the right point in the game lifecycle
-4. **Verify metadata patching** — Confirm strings are found and patched at correct trigger point
+1. **Test v0.8021 on PS4** — Verify scan fires at correct time (after Rolling Stones pack loads)
+2. **Analyze scan results** — Check if strings are found after pack bundle loads
+3. **If still not found** — Strings may be in GC heap (4GB–17GB) but require longer scan or different trigger
+4. **Consider alternative approaches** — Hook into Unity rendering functions, or modify pack bundle contents directly
 5. **Expand metadata table** — Register metadata for all 32 DLC slots
 
 ## Active Knowledge Gaps
@@ -135,8 +140,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 3. ~~Class string not found~~ → **SOLVED**: Class name strings in global-metadata.dat (v0.75)
 4. ~~IL2CPP heap address on PS4~~ → **KNOWN**: Klass at 0x2012007E0, metadata at 0x293280000. Objects NOT in 4GB–17GB (klass pointer approach broken)
 5. ~~Field offsets~~ → **UNVERIFIED** but may not matter if string content search works
-6. ~~Timing~~ → **SOLVED**: Pack bundle detection fires at startup. Background thread scans periodically until strings found
-7. **Memory injection** — **IN PROGRESS**: v0.8016 implementing string content search approach
+6. ~~Timing~~ → **PARTIALLY SOLVED**: Scan now triggers at therollingstones_pack_assets_all (OPEN #738). Previous triggers fired too early (OPEN #207).
+7. **String location** → **UNKNOWN**: Strings NOT in metadata mmap (±256MB around 0x293280000). May be in GC heap but scan can't complete before timeout.
+8. **Memory injection** — **IN PROGRESS**: v0.8021 testing correct trigger timing
 
 ## References
 

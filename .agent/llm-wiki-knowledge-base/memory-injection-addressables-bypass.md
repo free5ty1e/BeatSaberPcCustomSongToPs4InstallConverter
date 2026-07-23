@@ -13,7 +13,7 @@ When pack bundle modification is blocked by dual validation (m_BundleSize AND m_
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
 
-**Status:** 🟡 **String content search implemented (v0.8017).** Synchronous scan with 5s timeout, no threads (unsafe in hook context). Klass pointer approach ABANDONED after 10+ versions. Awaiting user test.
+**Status:** 🟡 **Scan trigger moved to Rolling Stones pack load (v0.8021).** Previous scans fired at OPEN #207 but target pack loads at OPEN #738. Now triggers at therollingstones_pack_assets_all detection. Awaiting test results.
 
 ## 🔴 CRITICAL: Klass Pointer Approach is Broken
 
@@ -26,12 +26,12 @@ After 10+ versions of trying different ranges, diagnostic logging, and timing st
 
 **New approach (v0.8017):** Search for exact UTF-16LE song name strings ("Start Me Up", "The Rolling Stones") in memory and patch them in-place. Synchronous execution with 5-second timeout (no threads — unsafe in PS4 hook context). Retry on failure.
 
-## Implementation — Current Architecture (v0.8017)
+## Implementation — Current Architecture (v0.8021)
 
 ### Component Overview
 
 ```
-open_hook (detects pack_assets_all OR per-song redirect)
+open_hook (detects therollingstones_pack_assets_all at OPEN #738)
     │
     ▼
 memory_inject_try_patch()  [gated behind g_feature_song_metadata_modification]
@@ -41,28 +41,27 @@ memory_inject_try_patch()  [gated behind g_feature_song_metadata_modification]
     ├── [2] patch_strings_by_content(SCAN_START_ADDR, SCAN_END_ADDR)
     │       │
     │       ├── Build lookup tables (UTF-16LE + UTF-8 patterns from metadata)
-    │       ├── Scan memory at 64KB granularity with 5s timeout
+    │       ├── Scan memory at 64KB granularity with 10s timeout
     │       │   └── try_read_mem() with signal handlers for safe probing
     │       ├── Match string content against known original song names
     │       └── Patch matched strings in-place (UTF-16LE or UTF-8)
     │
     └── [3] Restore signal handlers
-         └── Reset g_patching_done to 0 on failure (allows retry)
+         └── Set g_patching_done = -1 on failure (permanent stop)
 ```
 
 ### Hook-Triggered Execution (Synchronous, No Threads)
 
 The original v0.66 implementation used a 30-second pthread for deferred scanning. This caused CE-34878-0 crashes. v0.8016 tried `scePthreadCreate` inside the hook callback — also crashed. **Thread creation inside PS4 hook callbacks is fundamentally unsafe.**
 
-Since v0.8017, the scan runs synchronously inside the `open_hook()` callback with a 5-second timeout:
+Since v0.8017, the scan runs synchronously inside the `open_hook()` callback. Since v0.8021, the trigger is `therollingstones_pack_assets_all` (OPEN #738) instead of the first `pack_assets_all` (OPEN #207):
 
-- **Primary trigger:** `open_hook` detects pack bundle load (`pack_assets_all`) at startup → calls `memory_inject_try_patch()`
-- **Secondary trigger:** `open_hook` detects per-song bundle redirect → calls `memory_inject_try_patch()`
+- **Primary trigger:** `open_hook` detects Rolling Stones pack load (`therollingstones_pack_assets_all`) at startup → calls `memory_inject_try_patch()`
 - **Re-entrancy guard:** `g_patching_done` flag prevents multiple simultaneous scans
-- **Retry on failure:** `g_patching_done` reset to 0 on failure, allowing retry on next trigger
+- **Scan once:** On failure, `g_patching_done = -1` (permanent stop, no retry)
 - **Feature flag:** All memory injection gated behind `g_feature_song_metadata_modification`
 - **Signal handlers:** Installed once at scan start, restored at end (saves ~524K sigaction syscalls)
-- **Timeout:** 5-second hard limit prevents indefinite hook blocking
+- **Timeout:** 10-second hard limit prevents indefinite hook blocking
 
 ### Memory Probing (try_read_mem)
 
@@ -161,7 +160,11 @@ The IL2CPP GC heap was assumed to be at `0x200000000–0x400000000` (8GB–16GB)
 | v0.8014 | Diagnostic logging + scan timeout | ❌ Objects not in 8GB–8.25GB, string search caused hang |
 | **v0.8015** | **Wide-range scan 4GB–17GB + timing fix** | **❌ FAILED — 2min black screen, 0 objects found. Klass pointer approach ABANDONED** |
 | **v0.8016** | **String content search + scePthreadCreate** | **❌ CRASH — thread creation in hook callback causes CE-34878-0** |
-| **v0.8017** | **Synchronous string scan, 5s timeout, retry** | **🔄 Deployed — awaiting test** |
+| **v0.8017** | **Synchronous string scan, 5s timeout, retry** | **❌ 160s hang — 32 redirects × 5s retry storm** |
+| **v0.8018** | **2s timeout, no retry** | **⚠️ No hang, but strings not in memory at pack load** |
+| **v0.8019** | **Diagnostic redirect logging** | **⚠️ 288 pack_assets_all detections, only 2 redirects logged** |
+| **v0.8020** | **Metadata region scan (±256MB)** | **❌ Strings NOT in metadata mmap. Found full file-open sequence** |
+| **v0.8021** | **Trigger at Rolling Stones pack load (OPEN #738)** | **🔄 Deployed — awaiting test** |
 
 ## Build & Deploy
 
@@ -209,6 +212,10 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 12. **Feature flags essential for iteration** — All experimental features gated behind `features.json` flags for safe testing
 13. **Search for WHAT you want to modify, not HOW it's stored** — Instead of searching for klass pointers (which are compressed/indirect), search for the actual song name strings we want to modify. This is more direct and avoids the klass pointer issue entirely.
 14. **🔴 Thread creation in hook callbacks is UNSAFE on PS4** — Both `pthread_create` (v0.66) and `scePthreadCreate` (v0.8016) inside `open_hook` cause CE-34878-0 crashes. Hook callbacks run in a restricted context. Use synchronous execution with timeout instead.
+15. **🔴 Scan timing is critical** — Scan must fire AFTER the target pack bundle loads, not at first pack_assets_all detection. The Rolling Stones pack loads at OPEN #738, but scan was firing at OPEN #207 (500+ file opens too early). By the time scan completes, the target pack hasn't loaded yet.
+16. **🔴 Strings NOT in metadata mmap** — v0.8020 scanned ±256MB around 0x293280000, found 0 matches. String literals are heap-allocated System.String objects, not stored in global-metadata.dat region.
+17. **Pack bundles load BEFORE song bundles** — The game opens hundreds of pack_assets_all files (OPEN #207-738) before opening individual BeatmapLevelsData files (OPEN #740+). BeatmapLevelSO objects with song names are in pack bundles, not individual song files.
+18. **File-open sequence is predictable** — OPEN #1-206 (system), OPEN #207-738 (pack bundles), OPEN #738-739 (therollingstones_pack_assets_all), OPEN #740-741 (song redirects), OPEN #742+ (scenes/shaders/resources).
 
 ## See Also
 
