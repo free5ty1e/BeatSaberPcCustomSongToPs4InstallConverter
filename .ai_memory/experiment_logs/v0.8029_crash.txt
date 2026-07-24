@@ -1,0 +1,38 @@
+=== BS Deluxe v0.8029 started ===
+v0.8029 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+features: custom_song_replacements=1 metadata_modification=1
+FEATURE FLAGS: custom_song_replacements=ON  metadata_modification=ON
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 1, open #1) — retrying
+[OPEN #1] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+hooks installed
+[OPEN #2] /dev/notification0
+[OPEN #3] /dev/notification0
+[OPEN #4] /dev/notification1
+[OPEN #5] /dev/urandom
+[OPEN #6] /app0/sce_discmap.plt
+[OPEN #7] /app0/sce_discmap_patch.plt
+[OPEN #8] /app0/sce_discmap.plt
+[OPEN #9] /app0/sce_discmap_patch.plt
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 2, open #10) — retrying
+[OPEN #10] /app0/media/boot.config
+[METADATA] Found 5 modules
+[METADATA] Found IL2CPP module: Il2CppUserAssemblies.prx at 0x806c0000 (3 segments)
+[METADATA] IL2CPP base: 0x806c0000, set_text target: 0x833f5be0 (attempt 3, open #11)
+[METADATA] TMP_Text.set_text hook installed
+[OPEN #11] /dev/urandom
+[METADATA] Found 5 modules
+[METADATA] Found IL2CPP module: Il2CppUserAssemblies.prx at 0x806c0000 (3 segments)
+[METADATA] IL2CPP base: 0x806c0000, set_text target: 0x833f5be0 (attempt 4, open #12)

@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8030] — 2026-07-24
+### Fixed
+- **Stop retry after hook installed** — Added `g_tmp_hook_installed` flag to prevent double-hooking. v0.8029 crashed at attempt 4 because it installed the detour twice.
+
 ## [v0.8029] — 2026-07-24
 ### Fixed
 - **Retry TMP_Text hook installation** — Module discovery now retries on each open() call (up to 50 attempts). First 3 attempts and every 20th logged. Skips early opens (<10) when only system modules visible.

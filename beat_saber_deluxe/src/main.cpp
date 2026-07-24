@@ -14,7 +14,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8029"
+#define PLUGIN_VERSION "v0.8030"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -446,8 +446,10 @@ static uint64_t find_il2cpp_module_base(void) {
 // visible. By the time the game opens files, all modules are loaded.
 // Retries on each open until module is found (max 50 attempts).
 static int g_tmp_hook_attempts = 0;
+static int g_tmp_hook_installed = 0;
 
 static void try_install_tmp_hook(void) {
+    if (g_tmp_hook_installed) return;
     if (g_feature_song_metadata_modification == 0) return;
 
     // Skip early opens — our own log file and system devices load before game modules
@@ -475,6 +477,7 @@ static void try_install_tmp_hook(void) {
 
     Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x32);
     Detour_DetourFunction(&Detour_hook_tmp_text_set_text, target, (void*)tmp_text_set_text_hook);
+    g_tmp_hook_installed = 1;
     log_write("[METADATA] TMP_Text.set_text hook installed");
 }
 

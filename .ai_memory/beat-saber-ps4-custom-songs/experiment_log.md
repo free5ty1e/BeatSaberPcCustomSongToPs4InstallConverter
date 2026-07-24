@@ -3300,6 +3300,26 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Skips early opens (<10) when only system modules visible
   - Logs first 3 failures and every 20th attempt
   - Detects when IL2CPP modules become available and installs hook
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ❌ **CRASH — CE-34878-0** — Hook installed successfully at attempt 3 (open #11), but no `g_tmp_hook_installed` flag to prevent retry. Attempt 4 installed detour a second time → crash.
+- **Key Findings:**
+  - **IL2CPP module found!** `Il2CppUserAssemblies.prx` at `0x806c0000` (3 segments)
+  - Module becomes visible after ~10 file opens (game loads system modules first)
+  - `sceKernelGetModuleList` returns 3→5 modules as game initializes
+  - **Double detour installation causes CE-34878-0** — must stop after first success
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8029_crash.txt`
 - **Version:** v0.8029
+- **Status:** ❌ Crashed — double-hook bug (no installed flag)
+
+### Experiment 145: v0.8030 — Stop Retry After Hook Installed
+- **Date:** 2026-07-24
+- **What:**
+  - Added `g_tmp_hook_installed` flag, set to 1 after successful detour installation
+  - Prevents double-hooking crash from v0.8029
+  - Same retry logic (up to 50 attempts, skip first 10 opens)
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Key Findings:**
+  - v0.8029 proved the approach works — module found at `0x806c0000`
+  - Just needs the installed flag to prevent crash on second attempt
+- **Version:** v0.8030
 - **Status:** ⏳ Deployed — awaiting test
