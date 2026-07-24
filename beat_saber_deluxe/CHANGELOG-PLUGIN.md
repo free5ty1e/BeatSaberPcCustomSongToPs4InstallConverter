@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8026] — 2026-07-24
+### Added
+- **TMP_Text.set_text hook** — Phase 1 of TextMeshPro UI hooking approach. Hooks `TMPro.TMP_Text::set_text(string)` (RVA `0x2D35BE0`) using `DetourMode_x32` to intercept song name/artist text in the UI. Currently logs all intercepted text matching the 13 Rolling Stones replacement table. Gated behind `enable_song_metadata_modification` feature flag. Uses `find_il2cpp_module_base()` to locate `Il2CppUserAssemblies` module and compute hook target address at runtime.
+
 ## [v0.8025] — 2026-07-23
 ### Changed
 - **Removed all memory injection code** — Memory injection approach abandoned after 14+ versions (v0.66–v0.8024) found 0 strings across all memory regions. Removed: `memory_inject.cpp`, `memory_inject.h`, `register_song_metadata()`, and all related trigger/init code. Plugin now only handles file redirects via `open()` hook. Last commit with memory injection code: `1586581`.

@@ -2,9 +2,8 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
+// v0.8026: TMP_Text.set_text hook — intercepts song name/artist text in UI.
 // v0.8025: Removed memory injection code (v0.66–v0.8024 abandoned as dead end).
-// v0.8012: Feature flags — enable_custom_song_replacements
-// v0.65: Mode selector — replace StartMeUp BeatmapLevelSO in pack bundle with 5-mode preview data.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -15,7 +14,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8025"
+#define PLUGIN_VERSION "v0.8026"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -290,7 +289,113 @@ static int close_hook(int fd) {
     return r;
 }
 
-// ── IL2CPP module base (reserved for future mode control) ───────────────────
+// ── TMP_Text.set_text hook (song metadata modification) ────────────────────
+// Hooks TMPro.TMP_Text::set_text(string) to intercept song name/artist text.
+// Gated behind g_feature_song_metadata_modification feature flag.
+// RVA: 0x2D35BE0 (virtual method, slot 66)
+// Calling convention: SysV AMD64 (this in RDI, value in RSI, method in RDX)
+HOOK_INIT(hook_tmp_text_set_text);
+static int g_tmp_text_set_text_count = 0;
+
+// Forward-declare IL2CPP's MethodInfo (opaque type)
+struct MethodInfo;
+
+// Song name/artist replacement table
+typedef struct {
+    const char* original;
+    const char* replacement;
+} SongNameReplacement;
+
+static const SongNameReplacement SONG_REPLACEMENTS[] = {
+    {"Start Me Up",                    "Espresso"},
+    {"The Rolling Stones",             "Sabrina Carpenter"},
+    {"Angry",                          "Rhythm Is A Dancer"},
+    {"Bite My Head Off",               "Escaping the Ruins"},
+    {"Can't You Hear Me Knocking",     "Spicy"},
+    {"Dead Man Walking",               "Finesse (Remix)"},
+    {"Gimme Shelter",                  "Yes I'm A Mess"},
+    {"(I Can't Get No) Satisfaction",  "Dreams Come True"},
+    {"Live by the Sword",              "Take Me to the Beach"},
+    {"Mess It Up",                     "Powersnake"},
+    {"Paint It Black",                 "Time Lapse"},
+    {"Sugar Soaker",                   "Venom of Venus"},
+    {"Sympathy for the Devil",         "LIT"},
+    {"The Whole Wide World",           "VOLUPTE"},
+    {NULL, NULL}
+};
+
+static const char* find_replacement(const char* text) {
+    if (!text) return NULL;
+    for (int i = 0; SONG_REPLACEMENTS[i].original; i++) {
+        if (strcmp(text, SONG_REPLACEMENTS[i].original) == 0) {
+            return SONG_REPLACEMENTS[i].replacement;
+        }
+    }
+    return NULL;
+}
+
+// UTF-16LE string extraction from IL2CPP System.String
+// System.String layout: klass(8) + monitor(8) + _stringLength(4) + first_char(UTF-16LE)
+// _stringLength may be at offset 0x10 or 0x14 on PS4 — try both
+static int extract_utf16_string(void* str_obj, char* out, int out_size) {
+    if (!str_obj) { out[0] = '\0'; return 0; }
+
+    // Try to read the string length at common offsets
+    uint32_t len = 0;
+    uint16_t* chars = NULL;
+
+    // Try offset 0x10 first (standard IL2CPP)
+    uint32_t len_10 = *(uint32_t*)((char*)str_obj + 0x10);
+    uint32_t len_14 = *(uint32_t*)((char*)str_obj + 0x14);
+
+    // Use whichever looks like a reasonable string length
+    if (len_10 > 0 && len_10 < 256 && len_14 == 0) {
+        len = len_10;
+        chars = (uint16_t*)((char*)str_obj + 0x14);
+    } else if (len_14 > 0 && len_14 < 256) {
+        len = len_14;
+        chars = (uint16_t*)((char*)str_obj + 0x18);
+    } else {
+        // Fallback: try both
+        len = len_10;
+        chars = (uint16_t*)((char*)str_obj + 0x14);
+    }
+
+    if (len == 0 || len >= (uint32_t)out_size) { out[0] = '\0'; return 0; }
+
+    // Convert UTF-16LE to ASCII (simplified — works for song names)
+    int i;
+    for (i = 0; i < (int)len && i < out_size - 1; i++) {
+        out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
+    }
+    out[i] = '\0';
+    return len;
+}
+
+static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo* method) {
+    g_tmp_text_set_text_count++;
+
+    // Only process when feature flag is ON
+    if (g_feature_song_metadata_modification && value) {
+        char text_buf[256];
+        extract_utf16_string(value, text_buf, sizeof(text_buf));
+
+        const char* replacement = find_replacement(text_buf);
+        if (replacement) {
+            char logmsg[512];
+            snprintf(logmsg, sizeof(logmsg), "[METADATA] set_text intercepted: '%s' -> '%s' (call #%d)",
+                     text_buf, replacement, g_tmp_text_set_text_count);
+            log_write(logmsg);
+            // TODO: Replace value with replacement string (Phase 3)
+        }
+    }
+
+    // Always call original function
+    HOOK_CONTINUE(hook_tmp_text_set_text, void (*)(void*, void*, const MethodInfo*),
+                  this_ptr, value, method);
+}
+
+// ── IL2CPP module base ──────────────────────────────────────────────────────
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[64];
     size_t available = 0;
@@ -349,6 +454,27 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_DetourFunction(&Detour_hook_close, (uint64_t)(void*)&close, (void*)close_hook);
 
     log_write("hooks installed");
+
+    // ── TMP_Text.set_text hook (song metadata modification) ────────────────
+    // Gated behind enable_song_metadata_modification feature flag.
+    // Hooks TMPro.TMP_Text::set_text(string) to intercept song name/artist text.
+    if (g_feature_song_metadata_modification) {
+        uint64_t il2cpp_base = find_il2cpp_module_base();
+        if (il2cpp_base) {
+            char logmsg[256];
+            // TMP_Text.set_text RVA = 0x2D35BE0
+            uint64_t target = il2cpp_base + 0x2D35BE0;
+            snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text target: 0x%lx",
+                     il2cpp_base, target);
+            log_write(logmsg);
+
+            Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x32);
+            Detour_DetourFunction(&Detour_hook_tmp_text_set_text, target, (void*)tmp_text_set_text_hook);
+            log_write("[METADATA] TMP_Text.set_text hook installed");
+        } else {
+            log_write("[METADATA] ERROR: Il2CppUserAssemblies module not found — hook NOT installed");
+        }
+    }
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;

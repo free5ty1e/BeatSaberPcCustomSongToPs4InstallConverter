@@ -116,6 +116,5 @@ for i in range(block_count):
 
 ## Related Pages
 - [[pack-bundle-patching]] — CRC blocking problem and all approach results
-- [[v22plus-cab-header-format]] — CAB (SerializedFile v22+) internal format
 - [[unitypy-serialization]] — UnityPy limitations for PS4 bundle manipulation
 - [[song-metadata-addressables-structure]] — How metadata is stored in pack bundles

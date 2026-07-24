@@ -138,7 +138,6 @@ Each `PreviewDifficultyBeatmap` struct (at object offset 0x10):
 
 - [[song-metadata-addressables-structure]] — Overall Addressables structure
 - [[plans/song-list-modes]] — Implementation plan with all option comparisons
-- [[../../experiment_log]] — Experiments 113-117 documenting the investigation path
 
 ---
 

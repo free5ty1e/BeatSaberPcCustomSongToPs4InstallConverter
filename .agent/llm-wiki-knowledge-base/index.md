@@ -10,15 +10,17 @@ metadata:
 > Durable, compiled knowledge about the Beat Saber PS4 Custom Song Support project.
 
 ## Architecture & Plugin System
-- [[plugin-architecture|Plugin Architecture]] — GoldHEN plugin, hook system, PRX format, CRT initialization, memory inject module
+- [[plugin-architecture|Plugin Architecture]] — GoldHEN plugin, hook system, PRX format, CRT initialization
 - [[ps4-file-system-redirects|PS4 File System & Redirects]] — AFR directory vs plugins directory, open() hook, permissions model
 - [[ps4-memory-layout-for-module-scanning|PS4 Memory Layout for Module Scanning]] — Where modules (~2GB) and IL2CPP heap (~8-16GB) live, bounds check lessons
 - [[ps4-il2cpp-metadata-loading|PS4 IL2CPP Metadata Loading]] — Class name strings live in global-metadata.dat, NOT in compiled module PRX
+- [[feature-flags|Feature Flags]] — `features.json` configuration, `enable_custom_song_replacements`, `enable_song_metadata_modification`
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset
 - [[pack-bundle-patching|Pack Bundle Patching (CRC Correction Achieved)]] — Exp 142 CRC correction via GF(2) linear algebra. Padding bytes adjusted to match original CRC (0xdc8b314f). All prior failed approaches documented. LZ4HC requirement, CAB format, m_Script PPtr fix.
 - [[unitypy-serialization|UnityPy Serialization]] — save_typetree vs set_raw_data, surrogateescape encoding
+- [[unityfs-v8-bundle-layout|UnityFS v8 Bundle Layout]] — UnityFS bundle header format, compression flags, block metadata
 
 ## Beatmap Formats, Conversion & Sync
 - [[beatmap-format-v3|PS4 Beatmap Format (V3)]] — colorNotes + colorNotesData, obstaclesData, all V3 structures
@@ -46,11 +48,18 @@ metadata:
 - [[song-metadata-addressables-structure|Song Metadata & Addressables Structure (incl. CRC Blocker)]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, **CRC validation discovery (Exp 136)**, IL2CPP hook targets (all dead)
 - [[il2cpp-dump-mode-selector-hook|IL2CPP Dump & Mode Selector Hook]] — BeatmapLevelSO class layout, get_previewDifficultyBeatmapSets at RVA 0x988E80, field offsets, hook implementation plan
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
+- [[supported-songs|Supported Songs]] — Catalog of official and custom songs
+- [[addressables-crc-validation-timing|Addressables CRC Validation Timing]] — When CRC validation happens (lazy vs eager)
+
+## Song Metadata Modification (Current Approach)
+- [[textmeshpro-ui-hooking|TextMeshPro UI Hooking]] — 🔵 **CURRENT** — Hook TMP_Text.set_text to intercept song name/artist text in UI. Pointer tracking via SetDataFromLevelAsync.
+- [[memory-injection-addressables-bypass|Memory Injection — Addressables Bypass]] — 🔴 **DEAD END** (v0.66–v0.8024): Patch BeatmapLevelSO in RAM. 14+ versions, 0 strings found across all memory regions. Preserved for historical reference.
 
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip
 - [[unitypy-serialization|save_typetree vs set_raw_data]] — set_raw_data causes serialization bugs for 3/5 objects
 - [[surrogateescape-encoding|Surrogateescape Encoding]] — latin-1 + utf-8 = corrupted binary data
+- [[note-color-field-version-differences|Note Color Field Version Differences]] — V2 uses `a`, V3 uses `c` for note color field
 
 ## Pipeline Tooling
 - [[pipeline-plugin-toggle-cli-flags|Pipeline Plugin Toggle CLI Flags]] — `--enable-plugin`/`--disable-plugin` flags for toggling the Beat Saber Deluxe plugin on PS4 without rebuilding files. Tested and verified live on console.
@@ -58,5 +67,3 @@ metadata:
 
 ## Plans
 - [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles. Updated with Exp 129 findings: typetree approach dead-end, blob format verified via hex dump against StartMeUp.
-
-- [Memory Injection — Addressables Bypass](memory-injection-addressables-bypass.md) — **Primary approach** (v0.66+): Patch BeatmapLevelSO in RAM after Addressables loads, bypassing catalog CRC entirely. Hook-triggered scanning, signal-handler safe memory probing. v0.72 fixes bounds check (real root cause).

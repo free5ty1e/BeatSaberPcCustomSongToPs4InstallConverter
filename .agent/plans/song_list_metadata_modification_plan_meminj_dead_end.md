@@ -111,12 +111,59 @@ if (g_feature_song_metadata_modification) {
 
 **Risk:** Low — limited scope but potentially viable for base game songs
 
-## Recommended Next Steps
+## Recommended Approach: Hook TMP_Text.set_text
 
-1. **Check the v0.8020 file-open log** — Does `catalog.json` appear? If so, approach A becomes viable
-2. **Research Unity UI hooking** — What framework does Beat Saber use? Can we hook text rendering?
-3. **Test approach F** — Can we redirect `resources.assets` for base game songs?
-4. **Investigate delayed trigger** — When does the song list UI actually render? Can we hook that event?
+### Why This Approach
+
+After investigating all alternatives, **hooking `TMP_Text.set_text`** is the most promising:
+
+1. **catalog.json IS hookable** — Opens at OPEN #64 (`/app0/Media/StreamingAssets/aa/catalog.json`), confirmed in v0.8020 log. Approach A (redirect pack + catalog) remains viable as a future option.
+2. **TextMeshPro is the UI framework** — Beat Saber uses `TextMeshProUGUI` for all text rendering.
+3. **`TMP_Text.set_text` is hookable** — Virtual method at RVA `0x2D35BE0`, slot 66. Being virtual means it has a vtable entry and real function body (unlikely to be inlined).
+4. **Song list cells have known field offsets** — `LevelListTableCell._songNameText` at `0x90`, `_songAuthorText` at `0x98`.
+
+### Implementation Plan
+
+**Phase 1: Hook + Diagnostic Logging** (v0.8026)
+1. Find `Il2CppUserAssemblies` module base at runtime
+2. Calculate target: `base + 0x2D35BE0`
+3. Install Detour using `DetourMode_x32` (5-byte JMP, safe for IL2CPP)
+4. Log every `set_text` call: `this` pointer, string value, call count
+5. Verify hook fires when song list displays
+
+**Phase 2: Pointer Tracking** (v0.8027)
+1. Hook `LevelListTableCell.SetDataFromLevelAsync` (RVA `0x1D36940`)
+2. When it fires, capture `this` (LevelListTableCell) and read `_songNameText` (`this+0x90`) and `_songAuthorText` (`this+0x98`)
+3. Store tracked pointers in a static table
+4. In `set_text` hook, check if `this` matches any tracked pointer
+
+**Phase 3: String Replacement** (v0.8028)
+1. When tracked pointer matches and string is in replacement table, swap the value
+2. In-place UTF-16LE modification (replacement must be ≤ original length)
+3. Or: use `il2cpp_string_new()` to create replacement strings
+
+### Key Values
+
+| Item | Value | Source |
+|------|-------|--------|
+| `TMP_Text.set_text` RVA | `0x2D35BE0` | IL2CPP dump |
+| `LevelListTableCell._songNameText` | offset `0x90` | IL2CPP dump |
+| `LevelListTableCell._songAuthorText` | offset `0x98` | IL2CPP dump |
+| `LevelListTableCell._beatmapLevel` | offset `0x118` | IL2CPP dump |
+| `LevelListTableCell.SetDataFromLevelAsync` RVA | `0x1D36940` | IL2CPP dump |
+| `AnnotatedBeatmapLevelCollectionCell._infoText` | offset `0x68` | IL2CPP dump |
+| `BeatmapLevel.songName` | offset `0x20` | IL2CPP dump |
+| `BeatmapLevel.songAuthorName` | offset `0x30` | IL2CPP dump |
+
+### Risk Factors
+
+| Risk | Likelihood | Mitigation |
+|------|------------|------------|
+| `TMP_Text.set_text` is inlined | Low | Virtual method with vtable — unlikely. Verify by disassembly. |
+| mprotect crash at hook install | Medium | Use `DetourMode_x32` (5-byte JMP). If crashes, use mprotect workaround. |
+| High call frequency | Medium | Hook body must be fast (pointer comparison + branch). |
+| Table view cell recycling | High | Re-track pointers each time cells are populated. |
+| In-place string modification breaks sharing | Medium | Use `il2cpp_string_new()` for fresh strings if needed. |
 
 ## Key Constraints
 
