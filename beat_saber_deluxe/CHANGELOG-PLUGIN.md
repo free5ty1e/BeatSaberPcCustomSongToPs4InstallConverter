@@ -6,8 +6,8 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 ## [v0.8025] — 2026-07-23
 ### Changed
-- **Removed all memory injection code** — Memory injection approach abandoned after 14+ versions (v0.66–v0.8024) found 0 strings across all memory regions. Removed: `memory_inject.cpp`, `memory_inject.h`, `register_song_metadata()`, `g_feature_song_metadata_modification`, and all related trigger/init code. Plugin now only handles file redirects via `open()` hook. Last commit with memory injection code: `1586581`.
-- **Removed `enable_song_metadata_modification` feature flag** — Flag no longer needed since memory injection code is removed. `features.json` now only supports `enable_custom_song_replacements`.
+- **Removed all memory injection code** — Memory injection approach abandoned after 14+ versions (v0.66–v0.8024) found 0 strings across all memory regions. Removed: `memory_inject.cpp`, `memory_inject.h`, `register_song_metadata()`, and all related trigger/init code. Plugin now only handles file redirects via `open()` hook. Last commit with memory injection code: `1586581`.
+- **Preserved `enable_song_metadata_modification` feature flag** — Flag kept in `features.json` and pipeline for future use when a new approach is implemented. Defaults to `false` (disabled).
 
 ## [v0.8024] — 2026-07-23
 ### Changed

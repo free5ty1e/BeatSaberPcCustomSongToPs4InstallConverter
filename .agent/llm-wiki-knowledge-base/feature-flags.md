@@ -13,7 +13,8 @@ The Beat Saber Deluxe plugin uses a `features.json` configuration file located i
 
 ```json
 {
-  "enable_custom_song_replacements": true
+  "enable_custom_song_replacements": true,
+  "enable_song_metadata_modification": false
 }
 ```
 
@@ -22,6 +23,7 @@ The Beat Saber Deluxe plugin uses a `features.json` configuration file located i
 | Flag | Default (missing file) | Purpose |
 |------|----------------------|---------|
 | `enable_custom_song_replacements` | `false` | Gates all song redirects in `open_hook`. When OFF, no bundle redirects fire — game plays original songs. |
+| `enable_song_metadata_modification` | `false` | Gates song metadata modification. **Reserved for future use** — defaults to OFF until a new approach is implemented. |
 
 ## Pipeline Integration
 
@@ -31,9 +33,13 @@ Use `--set-feature key=value` to set flags and deploy them to PS4:
 # Disable custom songs (play originals without rebooting):
 python3 tools/full_custom_song_pipeline.py --deploy-plugin --set-feature enable_custom_song_replacements=false
 
+# Enable song metadata modification (when new approach is ready):
+python3 tools/full_custom_song_pipeline.py --deploy-plugin --set-feature enable_song_metadata_modification=true
+
 # Set multiple flags at once:
 python3 tools/full_custom_song_pipeline.py --deploy-plugin \
-  --set-feature enable_custom_song_replacements=true
+  --set-feature enable_custom_song_replacements=true \
+  --set-feature enable_song_metadata_modification=true
 ```
 
 The pipeline writes `features.json` locally and uploads it to PS4 via FTP.
@@ -45,8 +51,8 @@ The pipeline writes `features.json` locally and uploads it to PS4 via FTP.
 4. **Reloading:** Plugin reads this file at `module_start` (startup). Restart the game to apply configuration changes.
 
 ## Plugin Source
-- `main.cpp`: Reads `features.json` via `load_features()`, stores in `g_feature_custom_song_replacements` global
+- `main.cpp`: Reads `features.json` via `load_features()`, stores in `g_feature_custom_song_replacements` and `g_feature_song_metadata_modification` globals
 - Gates: `open_hook` redirect logic
 
-## Removed Flags (Historical)
-- ~~`enable_song_metadata_modification`~~ — Removed in v0.8025. Memory injection approach abandoned after 14+ versions found 0 strings.
+## Removed Code (Historical)
+- ~~Memory injection code~~ — Removed in v0.8025. The `enable_song_metadata_modification` flag is preserved for future use when a new approach is implemented.

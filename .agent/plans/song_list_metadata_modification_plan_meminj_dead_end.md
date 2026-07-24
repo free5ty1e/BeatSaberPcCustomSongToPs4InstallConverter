@@ -7,6 +7,23 @@
 
 We need to modify song list metadata (song names, artist names, sub-names) displayed in the Beat Saber PS4 song selection UI. 13 Rolling Stones DLC slots are replaced with custom songs, but the UI still shows original names/artists.
 
+## Feature Flag: `enable_song_metadata_modification`
+
+**This feature flag is PRESERVED for future use.** When a new approach is implemented, it will be gated behind this same flag. The flag defaults to `false` (disabled) and must be explicitly enabled in `features.json` to activate song metadata modification.
+
+- **Flag name:** `enable_song_metadata_modification`
+- **Default:** `false` (disabled)
+- **Location:** `/data/GoldHEN/AFR/CUSA12878/features.json`
+- **Pipeline:** `--set-feature enable_song_metadata_modification=true`
+- **Plugin global:** `g_feature_song_metadata_modification`
+
+When implementing a new approach, wire it behind this flag in `main.cpp`:
+```c
+if (g_feature_song_metadata_modification) {
+    // new approach code here
+}
+```
+
 ## What We've Tried (All Failed)
 
 ### 1. Memory Injection (v0.66–v0.8024) — DEAD

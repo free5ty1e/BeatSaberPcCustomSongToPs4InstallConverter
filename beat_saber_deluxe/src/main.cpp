@@ -34,6 +34,7 @@ static int REDIRECT_COUNT = 0;
 // Read from /data/GoldHEN/AFR/CUSA12878/features.json at startup.
 // Missing file or missing key = false (default off for safety).
 static int g_feature_custom_song_replacements = 0;
+static int g_feature_song_metadata_modification = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
@@ -78,12 +79,14 @@ static void load_features(void) {
 
         if (strcmp(key, "enable_custom_song_replacements") == 0) {
             g_feature_custom_song_replacements = val;
+        } else if (strcmp(key, "enable_song_metadata_modification") == 0) {
+            g_feature_song_metadata_modification = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d",
-             g_feature_custom_song_replacements);
+    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d",
+             g_feature_custom_song_replacements, g_feature_song_metadata_modification);
     log_write(logmsg);
 }
 
@@ -320,13 +323,17 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s",
-                 g_feature_custom_song_replacements ? "ON" : "OFF");
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s",
+                 g_feature_custom_song_replacements ? "ON" : "OFF",
+                 g_feature_song_metadata_modification ? "ON" : "OFF");
         log_write(flog);
     }
 
     if (!g_feature_custom_song_replacements) {
         log_write("DISABLED: custom_song_replacements is OFF — redirects will NOT fire");
+    }
+    if (!g_feature_song_metadata_modification) {
+        log_write("DISABLED: song_metadata_modification is OFF — awaiting new approach");
     }
 
     // fopen hook

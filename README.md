@@ -124,12 +124,14 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 | Flag | Default | Description |
 |------|---------|-------------|
 | `enable_custom_song_replacements` | `false` | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs |
+| `enable_song_metadata_modification` | `false` | Gates song metadata modification — reserved for future use when a new approach is implemented |
 
 ### Example `features.json`
 
 ```json
 {
-  "enable_custom_song_replacements": true
+  "enable_custom_song_replacements": true,
+  "enable_song_metadata_modification": false
 }
 ```
 
@@ -139,7 +141,8 @@ You can deploy these settings using the pipeline:
 # Deploy the plugin and update features.json
 python3 tools/full_custom_song_pipeline.py \
     --deploy-plugin \
-    --set-feature enable_custom_song_replacements=true
+    --set-feature enable_custom_song_replacements=true \
+    --set-feature enable_song_metadata_modification=true
 
 # Disable custom songs (play originals without rebooting)
 python3 tools/full_custom_song_pipeline.py \
