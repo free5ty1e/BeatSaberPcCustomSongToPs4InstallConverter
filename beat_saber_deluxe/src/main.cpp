@@ -14,7 +14,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8027"
+#define PLUGIN_VERSION "v0.8028"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -234,10 +234,16 @@ static FILE *fh(const char *p, const char *m) {
 static int g_redirect_count = 0;
 static int g_open_count = 0;
 
+// Forward declaration — deferred TMP_Text hook (defined after open_hook)
+static void try_install_tmp_hook(void);
+
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
     in_hook = 1;
     g_open_count++;
+
+    // Deferred TMP_Text hook — install once after game modules are loaded
+    try_install_tmp_hook();
 
     const char *np = NULL;
     if (path) {
@@ -435,6 +441,33 @@ static uint64_t find_il2cpp_module_base(void) {
 }
 
 
+// ── Deferred TMP_Text hook installation ─────────────────────────────────────
+// Must be called from open_hook() — at plugin load time, only 3 modules are
+// visible. By the time the game opens files, all modules are loaded.
+static int g_tmp_hook_installed = 0;
+
+static void try_install_tmp_hook(void) {
+    if (g_tmp_hook_installed) return;
+    if (!g_feature_song_metadata_modification) return;
+    g_tmp_hook_installed = 1;  // prevent retry even on failure
+
+    uint64_t il2cpp_base = find_il2cpp_module_base();
+    if (!il2cpp_base) {
+        log_write("[METADATA] ERROR: IL2CPP module not found — hook NOT installed");
+        return;
+    }
+
+    char logmsg[256];
+    uint64_t target = il2cpp_base + 0x2D35BE0;
+    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text target: 0x%lx",
+             il2cpp_base, target);
+    log_write(logmsg);
+
+    Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x32);
+    Detour_DetourFunction(&Detour_hook_tmp_text_set_text, target, (void*)tmp_text_set_text_hook);
+    log_write("[METADATA] TMP_Text.set_text hook installed");
+}
+
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
     OrbisNotificationRequest notif;
@@ -477,27 +510,6 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_DetourFunction(&Detour_hook_close, (uint64_t)(void*)&close, (void*)close_hook);
 
     log_write("hooks installed");
-
-    // ── TMP_Text.set_text hook (song metadata modification) ────────────────
-    // Gated behind enable_song_metadata_modification feature flag.
-    // Hooks TMPro.TMP_Text::set_text(string) to intercept song name/artist text.
-    if (g_feature_song_metadata_modification) {
-        uint64_t il2cpp_base = find_il2cpp_module_base();
-        if (il2cpp_base) {
-            char logmsg[256];
-            // TMP_Text.set_text RVA = 0x2D35BE0
-            uint64_t target = il2cpp_base + 0x2D35BE0;
-            snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text target: 0x%lx",
-                     il2cpp_base, target);
-            log_write(logmsg);
-
-            Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x32);
-            Detour_DetourFunction(&Detour_hook_tmp_text_set_text, target, (void*)tmp_text_set_text_hook);
-            log_write("[METADATA] TMP_Text.set_text hook installed");
-        } else {
-            log_write("[METADATA] ERROR: Il2CppUserAssemblies module not found — hook NOT installed");
-        }
-    }
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;

@@ -3265,9 +3265,23 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Added diagnostic logging: logs all 20+ module names when IL2CPP module not found
   - Added `sceKernelGetModuleList` failure logging
   - Same TMP_Text.set_text hook, same feature flag gating
-- **Result:** ⏳ **AWAITING TEST** — deployed, needs PS4 restart
+- **Result:** ❌ **Only 3 modules visible at plugin load time** — `eboot.bin`, `libSceFios2.prx`, +1 more. IL2CPP modules not loaded yet when `module_start()` runs.
 - **Key Findings:**
-  - Root cause of v0.8026 failure: module buffer too small
-  - Diagnostic logging will reveal actual module names on PS4
+  - `sceKernelGetModuleList` at `module_start()` time only shows modules loaded by the game at plugin load
+  - IL2CPP assemblies (`Il2CppUserAssemblies`) are loaded later by the game runtime
+  - Old memory_inject code found modules inside the `open()` hook — that's when they're visible
+  - **Root cause:** Hook installation in `module_start()` is too early — must defer to `open()` hook
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8027_test.txt`
 - **Version:** v0.8027
+- **Status:** ❌ Tested — modules not yet loaded at plugin load time
+
+### Experiment 143: v0.8028 — Deferred Hook Installation
+- **Date:** 2026-07-24
+- **What:**
+  - Moved `find_il2cpp_module_base()` + `DetourInstall` from `module_start()` to `open_hook()`
+  - Single-shot flag `g_tmp_hook_installed` prevents retry
+  - Hook installs on first `open()` call — by then game modules are loaded
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Version:** v0.8028
 - **Status:** ⏳ Deployed — awaiting test

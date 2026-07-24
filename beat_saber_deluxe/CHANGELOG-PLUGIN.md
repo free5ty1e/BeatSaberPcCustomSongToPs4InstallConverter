@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8028] — 2026-07-24
+### Fixed
+- **Deferred TMP_Text hook installation** — Moved from `module_start()` to `open_hook()`. At plugin load time only 3 modules visible; by first file open, all IL2CPP modules loaded. Single-shot flag prevents re-attempt.
+
 ## [v0.8027] — 2026-07-24
 ### Fixed
 - **IL2CPP module buffer too small** — Increased `OrbisKernelModule` buffer from 64 to 256. PS4 loads more than 64 modules, causing `find_il2cpp_module_base()` to miss `Il2CppUserAssemblies`. Added diagnostic logging: logs all 20+ module names when IL2CPP module not found.
