@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8032] — 2026-07-24
+### Added
+- **String reading + match detection** — Phase 1 now reads UTF-16LE string from value parameter and checks against 14-song replacement table. Logs matches. DetourMode_x64 confirmed safe.
+
 ## [v0.8031] — 2026-07-24
 ### Fixed
 - **Minimal hook callback** — Removed all string reading from hook. Phase 1 diagnostic only: log that hook fired with pointer values. Also switched from DetourMode_x32 to DetourMode_x64 (open/close hooks use x64 successfully).

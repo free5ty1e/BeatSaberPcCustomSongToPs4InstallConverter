@@ -3333,6 +3333,24 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Removed all string reading from hook callback — diagnostic only (log pointer values)
   - Switched from DetourMode_x32 to DetourMode_x64 (open/close hooks use x64 successfully)
   - Hook still fires on every `TMP_Text.set_text` call
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ✅ **NO CRASH — Hook fires and logs correctly**
+- **Key Findings:**
+  - **DetourMode_x64 works** — no crash, hook fires correctly
+  - **DetourMode_x32 was the crash cause** — splits IL2CPP instructions (v0.8030)
+  - Hook fires 10+ times during song list navigation
+  - All calls use same `method` pointer (`0x2114b48c8`) — consistent virtual dispatch
+  - `this` pointers vary (song list text objects), `value` pointers vary (string objects)
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8031_test.txt`
 - **Version:** v0.8031
+- **Status:** ✅ Tested — hook fires correctly, no crash
+
+### Experiment 147: v0.8032 — String Reading + Match Detection
+- **Date:** 2026-07-24
+- **What:**
+  - Added back `extract_utf16_string` + `find_replacement` to hook callback
+  - Logs when text matches any of 14 song names in replacement table
+  - Same DetourMode_x64, same retry logic
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Version:** v0.8032
 - **Status:** ⏳ Deployed — awaiting test
