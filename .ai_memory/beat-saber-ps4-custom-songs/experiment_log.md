@@ -3282,6 +3282,24 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Moved `find_il2cpp_module_base()` + `DetourInstall` from `module_start()` to `open_hook()`
   - Single-shot flag `g_tmp_hook_installed` prevents retry
   - Hook installs on first `open()` call — by then game modules are loaded
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ❌ **Still only 3 modules** — first `open()` is our own `bs_log.txt` (OPEN #1), triggered by `log_write()` inside `module_start()`. Game modules not loaded yet.
+- **Key Findings:**
+  - OPEN #1 is the plugin's own log file open, not a game file open
+  - `sceKernelGetModuleList` at OPEN #1 only shows: `eboot.bin`, `libSceFios2.prx`, `libc.prx`
+  - IL2CPP modules are loaded much later by the game runtime
+  - Need to skip early opens and retry until game modules appear
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8028_test.txt`
 - **Version:** v0.8028
+- **Status:** ❌ Tested — first open is plugin's own log, not game modules
+
+### Experiment 144: v0.8029 — Retry Module Discovery
+- **Date:** 2026-07-24
+- **What:**
+  - Retries `find_il2cpp_module_base()` on each open() call (up to 50 attempts)
+  - Skips early opens (<10) when only system modules visible
+  - Logs first 3 failures and every 20th attempt
+  - Detects when IL2CPP modules become available and installs hook
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Version:** v0.8029
 - **Status:** ⏳ Deployed — awaiting test

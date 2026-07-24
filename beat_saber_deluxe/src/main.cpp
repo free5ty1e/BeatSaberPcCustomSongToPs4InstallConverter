@@ -14,7 +14,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8028"
+#define PLUGIN_VERSION "v0.8029"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -444,23 +444,33 @@ static uint64_t find_il2cpp_module_base(void) {
 // ── Deferred TMP_Text hook installation ─────────────────────────────────────
 // Must be called from open_hook() — at plugin load time, only 3 modules are
 // visible. By the time the game opens files, all modules are loaded.
-static int g_tmp_hook_installed = 0;
+// Retries on each open until module is found (max 50 attempts).
+static int g_tmp_hook_attempts = 0;
 
 static void try_install_tmp_hook(void) {
-    if (g_tmp_hook_installed) return;
-    if (!g_feature_song_metadata_modification) return;
-    g_tmp_hook_installed = 1;  // prevent retry even on failure
+    if (g_feature_song_metadata_modification == 0) return;
+
+    // Skip early opens — our own log file and system devices load before game modules
+    if (g_tmp_hook_attempts > 0 && g_open_count < 10) return;
+    g_tmp_hook_attempts++;
 
     uint64_t il2cpp_base = find_il2cpp_module_base();
     if (!il2cpp_base) {
-        log_write("[METADATA] ERROR: IL2CPP module not found — hook NOT installed");
+        if (g_tmp_hook_attempts <= 3 || g_tmp_hook_attempts % 20 == 0) {
+            char logmsg[256];
+            snprintf(logmsg, sizeof(logmsg), "[METADATA] Module not found (attempt %d, open #%d) — retrying",
+                     g_tmp_hook_attempts, g_open_count);
+            log_write(logmsg);
+        }
+        if (g_tmp_hook_attempts < 50) return;  // keep retrying
+        log_write("[METADATA] ERROR: IL2CPP module not found after 50 attempts — giving up");
         return;
     }
 
     char logmsg[256];
     uint64_t target = il2cpp_base + 0x2D35BE0;
-    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text target: 0x%lx",
-             il2cpp_base, target);
+    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text target: 0x%lx (attempt %d, open #%d)",
+             il2cpp_base, target, g_tmp_hook_attempts, g_open_count);
     log_write(logmsg);
 
     Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x32);

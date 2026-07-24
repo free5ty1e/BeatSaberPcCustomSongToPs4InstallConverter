@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8029] — 2026-07-24
+### Fixed
+- **Retry TMP_Text hook installation** — Module discovery now retries on each open() call (up to 50 attempts). First 3 attempts and every 20th logged. Skips early opens (<10) when only system modules visible.
+
 ## [v0.8028] — 2026-07-24
 ### Fixed
 - **Deferred TMP_Text hook installation** — Moved from `module_start()` to `open_hook()`. At plugin load time only 3 modules visible; by first file open, all IL2CPP modules loaded. Single-shot flag prevents re-attempt.
