@@ -14,7 +14,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8030"
+#define PLUGIN_VERSION "v0.8031"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -381,19 +381,12 @@ static int extract_utf16_string(void* str_obj, char* out, int out_size) {
 static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo* method) {
     g_tmp_text_set_text_count++;
 
-    // Only process when feature flag is ON
-    if (g_feature_song_metadata_modification && value) {
-        char text_buf[256];
-        extract_utf16_string(value, text_buf, sizeof(text_buf));
-
-        const char* replacement = find_replacement(text_buf);
-        if (replacement) {
-            char logmsg[512];
-            snprintf(logmsg, sizeof(logmsg), "[METADATA] set_text intercepted: '%s' -> '%s' (call #%d)",
-                     text_buf, replacement, g_tmp_text_set_text_count);
-            log_write(logmsg);
-            // TODO: Replace value with replacement string (Phase 3)
-        }
+    // Phase 1: Diagnostic only — just log that the hook fired
+    if (g_tmp_text_set_text_count <= 10) {
+        char logmsg[256];
+        snprintf(logmsg, sizeof(logmsg), "[METADATA] set_text fired #%d: this=%p value=%p method=%p",
+                 g_tmp_text_set_text_count, this_ptr, value, method);
+        log_write(logmsg);
     }
 
     // Always call original function
@@ -475,7 +468,7 @@ static void try_install_tmp_hook(void) {
              il2cpp_base, target, g_tmp_hook_attempts, g_open_count);
     log_write(logmsg);
 
-    Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x32);
+    Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_tmp_text_set_text, target, (void*)tmp_text_set_text_hook);
     g_tmp_hook_installed = 1;
     log_write("[METADATA] TMP_Text.set_text hook installed");

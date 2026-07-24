@@ -3317,9 +3317,22 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Added `g_tmp_hook_installed` flag, set to 1 after successful detour installation
   - Prevents double-hooking crash from v0.8029
   - Same retry logic (up to 50 attempts, skip first 10 opens)
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ❌ **CRASH — CE-34878-0** — Hook installed successfully (no double-hook), but callback crashed on first fire. Crash from hook callback itself, not from retry bug.
 - **Key Findings:**
-  - v0.8029 proved the approach works — module found at `0x806c0000`
-  - Just needs the installed flag to prevent crash on second attempt
+  - Hook callback `tmp_text_set_text_hook` crashes when fired
+  - Crash could be from: (1) `extract_utf16_string` reading invalid memory, (2) `DetourMode_x32` splitting IL2CPP instruction, (3) calling convention mismatch
+  - Need to simplify callback to minimal diagnostic-only code
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8030_crash.txt`
 - **Version:** v0.8030
+- **Status:** ❌ Crashed — hook callback crash on first fire
+
+### Experiment 146: v0.8031 — Minimal Hook Callback + DetourMode_x64
+- **Date:** 2026-07-24
+- **What:**
+  - Removed all string reading from hook callback — diagnostic only (log pointer values)
+  - Switched from DetourMode_x32 to DetourMode_x64 (open/close hooks use x64 successfully)
+  - Hook still fires on every `TMP_Text.set_text` call
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Version:** v0.8031
 - **Status:** ⏳ Deployed — awaiting test

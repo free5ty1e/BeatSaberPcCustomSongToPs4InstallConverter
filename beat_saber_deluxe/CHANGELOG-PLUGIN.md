@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8031] — 2026-07-24
+### Fixed
+- **Minimal hook callback** — Removed all string reading from hook. Phase 1 diagnostic only: log that hook fired with pointer values. Also switched from DetourMode_x32 to DetourMode_x64 (open/close hooks use x64 successfully).
+
 ## [v0.8030] — 2026-07-24
 ### Fixed
 - **Stop retry after hook installed** — Added `g_tmp_hook_installed` flag to prevent double-hooking. v0.8029 crashed at attempt 4 because it installed the detour twice.
