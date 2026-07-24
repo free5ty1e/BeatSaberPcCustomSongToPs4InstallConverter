@@ -2,8 +2,8 @@
 
 ## v0.5301 (2026-07-19)
 - **Feature flags support** — Added `--set-feature key=value` CLI argument. Writes `features.json` locally and deploys it to PS4 via FTP.
-- **Supported flags:** `enable_custom_song_replacements` (default: false), `enable_song_metadata_modification` (default: false)
-- Usage: `--set-feature enable_song_metadata_modification=true` or `--set-feature enable_custom_song_replacements=false`
+- **Supported flags:** `enable_custom_song_replacements` (default: false)
+- Usage: `--set-feature enable_custom_song_replacements=false`
 - **BeatSaver API override** — Added `--beatsaver-api-base` to override the default BeatSaver API URL (useful for mirrors/local servers).
 
 ## v1.49 (2026-07-17)

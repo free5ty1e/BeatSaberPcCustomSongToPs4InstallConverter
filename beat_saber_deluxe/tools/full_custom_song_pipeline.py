@@ -1498,8 +1498,7 @@ def manage_redirect_config(
 
 FEATURES_FILENAME = "features.json"
 DEFAULT_FEATURES = {
-    "enable_custom_song_replacements": True,
-    "enable_song_metadata_modification": False
+    "enable_custom_song_replacements": True
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -1564,7 +1563,7 @@ def apply_feature_flags(set_features: list, config: dict):
     Apply feature flag changes from --set-feature arguments.
 
     Args:
-        set_features: List of "key=value" strings (e.g. ["enable_song_metadata_modification=false"])
+        set_features: List of "key=value" strings (e.g. ["enable_custom_song_replacements=false"])
         config: PS4 config dict
     """
     if not set_features:

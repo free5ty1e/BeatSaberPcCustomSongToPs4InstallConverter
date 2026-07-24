@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8025] — 2026-07-23
+### Changed
+- **Removed all memory injection code** — Memory injection approach abandoned after 14+ versions (v0.66–v0.8024) found 0 strings across all memory regions. Removed: `memory_inject.cpp`, `memory_inject.h`, `register_song_metadata()`, `g_feature_song_metadata_modification`, and all related trigger/init code. Plugin now only handles file redirects via `open()` hook. Last commit with memory injection code: `1586581`.
+- **Removed `enable_song_metadata_modification` feature flag** — Flag no longer needed since memory injection code is removed. `features.json` now only supports `enable_custom_song_replacements`.
+
 ## [v0.8024] — 2026-07-23
 ### Changed
 - **Scan four memory ranges** — Added low memory (16MB–4GB) and extended heap (4GB–8GB) to scan. Pack bundles may be memory-mapped or read into buffers in low memory where Il2Cpp assemblies load (~2GB). Increased timeout to 15s for wider scan.

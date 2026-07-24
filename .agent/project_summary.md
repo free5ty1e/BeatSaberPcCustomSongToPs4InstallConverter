@@ -20,8 +20,7 @@
 1. **Synchronous scan** — Runs in hook callback with 15-second timeout (no threads — unsafe in PS4 hook context)
 2. **Search for strings** — Scan for UTF-16LE/UTF-8 patterns matching original song names
 3. **Patch in-place** — Overwrite string content with custom names
-4. **Feature flag gated** — All behind `enable_song_metadata_modification`
-5. **Scan once** — On failure, `g_patching_done = -1` (permanent stop)
+4. **Scan once** — On failure, `g_patching_done = -1` (permanent stop)
 
 ### Key Design Decisions
 
@@ -32,7 +31,6 @@
 | 10-second timeout | Enough for 512MB scan, prevents indefinite hook blocking |
 | Scan once, no retry | Prevents multi-minute hang from retry storm (v0.8017) |
 | UTF-16LE pattern matching | Direct — search for WHAT we want to modify |
-| Feature flag gating | All memory injection behind `enable_song_metadata_modification` flag |
 | Trigger at Rolling Stones pack | Scan must fire AFTER pack bundle loads (OPEN #738), not at first pack_assets_all (OPEN #207) |
 
 ## Key Technical Findings

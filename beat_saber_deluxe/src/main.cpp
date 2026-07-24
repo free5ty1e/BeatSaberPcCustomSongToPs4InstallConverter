@@ -2,23 +2,8 @@
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
 // All redirects come from the external config file — no hardcoded fallback.
-// v0.8024: Scan FOUR ranges: low memory (16MB-4GB), GC heap, metadata, extended heap (4GB-8GB). Pack bundles mmap'd below 4GB.
-// v0.8023: Trigger scan at BeatmapLevelsData redirect (OPEN #740) instead of pack load (OPEN #738).
-// v0.8022: Scan BOTH GC heap (0x200000000-0x210000000) AND metadata mmap (±256MB).
-// v0.8021: Scan trigger moved to therollingstones_pack_assets_all (OPEN #738) instead of first pack_assets_all (OPEN #207).
-// v0.8020: Scan metadata region (±256MB around 0x293280000), log all file opens.
-// v0.8012: Feature flags — enable_custom_song_replacements, enable_song_metadata_modification
-// v0.8011: Memory injection — optimized string search (8× faster, dual-format matching).
-// v0.79: Memory injection — STRDEBUG logging to determine System_String length offset on PS4.
-// v0.75: Memory injection — wide-range heap scan (1GB-32GB, coarse). Discovered class strings in global-metadata.dat.
-// v0.74: Memory injection — signal handlers installed once per scan, heap scan range reduced.
-// v0.73: Memory injection — pattern-based klass finding (string not in module text segment).
-// v0.72: Memory injection — fixed bounds check rejecting valid module addresses (<4GB).
-// v0.71: Memory injection — fixed with signal-handler-based memory probing (mincore/msync were stubs on PS4).
-// v0.70: Memory injection — fixed msync page checking (mincore was a stub on PS4).
-// v0.69: Memory injection — fixed. Removed guard timer, trigger on any redirect.
-// v0.68: Memory injection — fixed CE-34878-0 crash. Removed pack bundle redirect from redirects.json.
-// v0.66: Memory injection — patch BeatmapLevelSO in RAM bypassing CRC validation.
+// v0.8025: Removed memory injection code (v0.66–v0.8024 abandoned as dead end).
+// v0.8012: Feature flags — enable_custom_song_replacements
 // v0.65: Mode selector — replace StartMeUp BeatmapLevelSO in pack bundle with 5-mode preview data.
 
 #include <stddef.h>
@@ -30,9 +15,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#include "memory_inject.h"
-
-#define PLUGIN_VERSION "v0.8024"
+#define PLUGIN_VERSION "v0.8025"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -51,7 +34,6 @@ static int REDIRECT_COUNT = 0;
 // Read from /data/GoldHEN/AFR/CUSA12878/features.json at startup.
 // Missing file or missing key = false (default off for safety).
 static int g_feature_custom_song_replacements = 0;
-static int g_feature_song_metadata_modification = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
@@ -96,14 +78,12 @@ static void load_features(void) {
 
         if (strcmp(key, "enable_custom_song_replacements") == 0) {
             g_feature_custom_song_replacements = val;
-        } else if (strcmp(key, "enable_song_metadata_modification") == 0) {
-            g_feature_song_metadata_modification = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d",
-             g_feature_custom_song_replacements, g_feature_song_metadata_modification);
+    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d",
+             g_feature_custom_song_replacements);
     log_write(logmsg);
 }
 
@@ -277,28 +257,12 @@ static int open_hook(const char *path, int flags, ...) {
             }
 
             // ── Diagnostic: log ALL file opens with original path ─────────────
-            // Shows the full load sequence. Logs every open with sequential counter.
             {
                 char dbuf[512];
-                const char *filename = strrchr(path, '/');
-                filename = filename ? filename + 1 : path;
                 snprintf(dbuf, sizeof(dbuf), "[OPEN #%d] %s%s",
                          g_open_count, path,
                          np ? " -> REDIRECTED" : "");
                 log_write(dbuf);
-            }
-
-            // ── Trigger memory injection on BeatmapLevelsData redirect ──────────
-            // BeatmapLevelSO objects are deserialized lazily — only when the game
-            // actually reads the song data. The pack bundle header loads at OPEN #738
-            // but objects aren't in GC heap until the game uses them.
-            // Trigger at the first BeatmapLevelsData redirect (OPEN #740) when the
-            // game actually reads song data and objects should be in memory.
-            if (np && g_feature_song_metadata_modification) {
-                if (strstr(lower_path, "beatmaplevelsdata/")) {
-                    log_write("[MEMINJ] BeatmapLevelsData redirect — scanning now");
-                    memory_inject_try_patch();
-                }
             }
         }
     }
@@ -314,7 +278,7 @@ static int open_hook(const char *path, int flags, ...) {
     return r;
 }
 
-// ── Close hook (no longer retries MEMINJ — strings not in memory at startup) ──
+// ── Close hook ──────────────────────────────────────────────────────────────
 static int close_hook(int fd) {
     if (in_hook) return HOOK_CONTINUE(hook_close, int (*)(int), fd);
     in_hook = 1;
@@ -339,36 +303,6 @@ static uint64_t find_il2cpp_module_base(void) {
     return 0;
 }
 
-// ── Register Song Metadata for Memory Injection ─────────────────────────
-// Matches the 13 Rolling Stones pack replacement slots.
-// level_id must match the _levelID in the BeatmapLevelSO for the slot.
-static void register_song_metadata(void) {
-    SongMetadataEntry entries[] = {
-        {"startmeup",               "Espresso",           "", "Sabrina Carpenter",       "", "Start Me Up",           "", "The Rolling Stones"},
-        {"angry",                   "Rhythm Is A Dancer", "", "Pegboard Nerds",          "", "Angry",                 "", "The Rolling Stones"},
-        {"bitemyheadoff",           "Escaping the Ruins", "", "MDK / Gareth Coker",      "", "Bite My Head Off",      "", "The Rolling Stones"},
-        {"cantyouhearmeknocking",   "Spicy",              "", "aespa",                   "", "Can't You Hear Me Knocking", "", "The Rolling Stones"},
-        {"deadmanwalking",          "Finesse (Remix)",    "", "Various",                 "", "Dead Man Walking",      "", "The Rolling Stones"},
-        {"gimmeshelter",            "Yes I'm A Mess",     "", "AJR",                     "", "Gimme Shelter",          "", "The Rolling Stones"},
-        {"icantgetnosatisfaction",  "Dreams Come True",   "", "Various",                 "", "(I Can't Get No) Satisfaction", "", "The Rolling Stones"},
-        {"livebythesword",          "Take Me to the Beach","", "Imagine Dragons",         "", "Live by the Sword",     "", "The Rolling Stones"},
-        {"messitup",                "Powersnake",         "", "Brothers of Metal",       "", "Mess It Up",            "", "The Rolling Stones"},
-        {"paintitblack",            "Time Lapse",         "", "TheFatRat",               "", "Paint It Black",        "", "The Rolling Stones"},
-        {"sugarsoaker",             "Venom of Venus",     "", "Powerwolf",               "", "Sugar Soaker",          "", "The Rolling Stones"},
-        {"sympathyforthedevil",     "LIT",                "", "Polyphia",                "", "Sympathy for the Devil", "", "The Rolling Stones"},
-        {"wholewideworld",          "VOLUPTE",            "", "REZZ / Tare",             "", "The Whole Wide World",  "", "The Rolling Stones"},
-    };
-
-    int count = sizeof(entries) / sizeof(entries[0]);
-    for (int i = 0; i < count; i++) {
-        memory_inject_register(&entries[i]);
-    }
-
-    char buf[128];
-    snprintf(buf, sizeof(buf), "Registered %d song metadata entries for memory injection", count);
-    log_write(buf);
-}
-
 
 extern "C" int module_start(size_t argc, const void *args) {
     (void)argc;(void)args;
@@ -386,17 +320,13 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s",
-                 g_feature_custom_song_replacements ? "ON" : "OFF",
-                 g_feature_song_metadata_modification ? "ON" : "OFF");
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s",
+                 g_feature_custom_song_replacements ? "ON" : "OFF");
         log_write(flog);
     }
 
     if (!g_feature_custom_song_replacements) {
         log_write("DISABLED: custom_song_replacements is OFF — redirects will NOT fire");
-    }
-    if (!g_feature_song_metadata_modification) {
-        log_write("DISABLED: song_metadata_modification is OFF — memory injection will NOT run");
     }
 
     // fopen hook
@@ -407,20 +337,11 @@ extern "C" int module_start(size_t argc, const void *args) {
     Detour_Construct(&Detour_hook_open, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_open, (uint64_t)(void*)&open, (void*)open_hook);
 
-    // close hook — retries MEMINJ after per-song bundle close
+    // close hook
     Detour_Construct(&Detour_hook_close, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_close, (uint64_t)(void*)&close, (void*)close_hook);
 
     log_write("hooks installed");
-
-    // Memory injection — register song metadata and start patcher thread
-    // Only active when enable_song_metadata_modification feature flag is ON.
-    if (g_feature_song_metadata_modification) {
-        register_song_metadata();
-        memory_inject_init();
-    } else {
-        log_write("DISABLED: song_metadata_modification is OFF — memory injection skipped");
-    }
 
     // Notification
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;

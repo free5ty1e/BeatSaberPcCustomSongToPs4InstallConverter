@@ -1,19 +1,52 @@
 ---
 name: memory-injection-addressables-bypass
-description: "Memory injection approach to bypass Addressables catalog CRC validation by patching BeatmapLevelSO in RAM — implemented as hook-triggered, signal-handler-based scanning with wide-range heap sweep"
+description: "Memory injection approach to bypass Addressables catalog CRC validation by patching BeatmapLevelSO in RAM — CONCLUDED DEAD END as of v0.8024. Do not pursue further."
 metadata:
   type: reference
 ---
 
 # Memory Injection — Addressables Catalog Bypass Approach
 
-## Summary
+## 🔴🔴🔴 STATUS: DEAD END — Do Not Pursue (2026-07-23)
+
+**After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, memory injection is conclusively abandoned.**
+
+### Why It Failed
+
+| Scan Target | Versions | Result |
+|-------------|----------|--------|
+| Klass pointer `0x2012007E0` in heap | v0.66–v0.8015 (10+ versions) | **0 objects found** — PS4 IL2CPP uses compressed/indirect klass pointers |
+| UTF-16LE strings in GC heap (8–8.25GB) | v0.8017–v0.8024 (7 versions) | **0 strings found** — strings not in scannable heap |
+| UTF-16LE strings in metadata mmap (10.5–10.8GB) | v0.8020–v0.8024 (4 versions) | **0 strings found** — string literals are heap-allocated, not in mmap |
+| UTF-16LE strings in low memory (16MB–4GB) | v0.8024 (1 version) | **0 strings found** — pack bundles mmap'd here but no strings |
+| UTF-16LE strings in extended heap (4–8GB) | v0.8024 (1 version) | **0 strings found** — no matching patterns |
+| **Total pages scanned** | v0.8017–v0.8024 | **~15,000 pages (~960MB), 0 string matches** |
+
+### Root Causes (Inferred)
+
+1. **BeatmapLevelSO objects are lazily instantiated** — Created only when the song list UI renders, not during pack bundle load at startup
+2. **System.String objects may be in non-scannable memory** — Could be in a GC generation or memory region not accessible via `try_read_mem`
+3. **PS4 IL2CPP uses compressed pointers** — Klass-based object search fundamentally broken on this platform
+
+### Last Commit with Memory Injection Code
+- Commit `1586581` — reference if ever needed again
+- Code removed in subsequent cleanup (v0.8025+)
+
+### What We Know Works (Preserved)
+- `try_read_mem()` with signal handlers — safe memory probing on PS4
+- Feature flags system — all experimental features gated behind `features.json`
+- Deploy path: `/data/GoldHEN/plugins/` (NOT `/data/GoldHEN/AFR/`)
+- File-open sequence: system → pack bundles (#207–738) → song redirects (#740+) → scenes/shaders
+
+---
+
+## Historical Content Below (Preserved for Reference)
+
+### Original Summary (Pre-Dead-End)
 
 When pack bundle modification is blocked by dual validation (m_BundleSize AND m_Crc), fallback to **memory injection**: patch BeatmapLevelSO objects in RAM after Addressables loads and validates the pack bundle. This bypasses catalog CRC validation entirely.
 
 **Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
-
-**Status:** 🔴 **Memory injection string search FAILED across all memory regions (v0.8024).** After 14+ versions scanning 16MB–8GB + metadata mmap, 0 strings found. Approach likely not viable. Need fundamentally different strategy.
 
 ## 🔴 CRITICAL: Klass Pointer Approach is Broken
 

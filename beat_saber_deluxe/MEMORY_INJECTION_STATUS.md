@@ -1,13 +1,47 @@
-# Memory Injection — Status Report (2026-07-17)
+# Memory Injection — Status Report (2026-07-23)
 
-## Executive Summary
+## 🔴🔴🔴 STATUS: DEAD END — Do Not Pursue
 
-**Status:** ✅ Implementation complete — prototype integrated into plugin v0.66  
-**Previous Blocker:** Option B (uncompressed block injection) BLOCKED due to shared decompressed stream  
-**New Approach:** Memory injection bypasses Addressables CRC validation entirely  
-**Current Phase:** Code integrated, awaiting PS4 hardware testing
+After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, memory injection is conclusively abandoned.
 
-## Architecture
+### Why It Failed
+
+| Scan Target | Versions | Result |
+|-------------|----------|--------|
+| Klass pointer `0x2012007E0` in heap | v0.66–v0.8015 (10+ versions) | **0 objects found** — PS4 IL2CPP uses compressed/indirect klass pointers |
+| UTF-16LE strings in GC heap (8–8.25GB) | v0.8017–v0.8024 (7 versions) | **0 strings found** — strings not in scannable heap |
+| UTF-16LE strings in metadata mmap (10.5–10.8GB) | v0.8020–v0.8024 (4 versions) | **0 strings found** — string literals are heap-allocated, not in mmap |
+| UTF-16LE strings in low memory (16MB–4GB) | v0.8024 (1 version) | **0 strings found** — pack bundles mmap'd here but no strings |
+| UTF-16LE strings in extended heap (4–8GB) | v0.8024 (1 version) | **0 strings found** — no matching patterns |
+| **Total pages scanned** | v0.8017–v0.8024 | **~15,000 pages (~960MB), 0 string matches** |
+
+### Root Causes (Inferred)
+
+1. **BeatmapLevelSO objects are lazily instantiated** — Created only when the song list UI renders, not during pack bundle load at startup
+2. **System.String objects may be in non-scannable memory** — Could be in a GC generation or memory region not accessible via `try_read_mem`
+3. **PS4 IL2CPP uses compressed pointers** — Klass-based object search fundamentally broken on this platform
+
+### Last Commit with Memory Injection Code
+- Commit `1586581` — reference if ever needed again
+- Code removed in subsequent cleanup (v0.8025+)
+
+### What We Know Works (Preserved)
+- `try_read_mem()` with signal handlers — safe memory probing on PS4
+- Feature flags system — all experimental features gated behind `features.json`
+- Deploy path: `/data/GoldHEN/plugins/` (NOT `/data/GoldHEN/AFR/`)
+- File-open sequence: system → pack bundles (#207–738) → song redirects (#740+) → scenes/shaders
+
+---
+
+## Historical Content Below (Preserved for Reference)
+
+### Original Summary (Pre-Dead-End)
+
+When pack bundle modification is blocked by dual validation (m_BundleSize AND m_Crc), fallback to **memory injection**: patch BeatmapLevelSO objects in RAM after Addressables loads and validates the pack bundle. This bypasses catalog CRC validation entirely.
+
+**Key Insight:** Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile). This gives us a window to patch objects in RAM before the game reads their metadata.
+
+## Architecture (Historical)
 
 ```
 module_start()
@@ -15,7 +49,7 @@ module_start()
   ├── install_fopen_hook()
   ├── install_open_hook()
   ├── register_song_metadata()      — 13 Rolling Stones entries
-  ├── memory_inject_init()          ← NEW
+  ├── memory_inject_init()          ← REMOVED in v0.8025
   │     └── pthread_create()        — detached worker thread
   │           └── patch_worker()
   │                 ├── usleep(30s)  — wait for game init
@@ -25,7 +59,7 @@ module_start()
   └── notification
 ```
 
-## Key Technical Details
+## Key Technical Details (Historical)
 
 ### Finding BeatmapLevelSO Class Metadata
 1. Use `sceKernelGetModuleList()` to find Il2CppUserAssemblies module base
@@ -50,41 +84,17 @@ module_start()
 - Write new length at +0x10, new chars at +0x14, zero-fill remainder
 - This avoids GC complications entirely
 
-## Progress Summary
-
-### Completed
-- [x] **Research Phase** — Determined Addressables validates CRC LAZILY (when contents accessed, not during LoadFromFile)
-- [x] **IL2CPP Hook Analysis** — Confirmed all previous IL2CPP method hooks are dead ends (inlined/never called)
-- [x] **Test Script Created** — `development/scripts/memory_inject_test.py` verifies scanning and patching logic
-- [x] **Plugin Skeleton Created** — `development/scripts/memory_inject_plugin.cpp` provides framework
-- [x] **Implementation Plan Documented** — `development/scripts/memory_scan_implementation.md` details approach
-- [x] **Full Implementation** — `src/memory_inject.h` + `src/memory_inject.cpp` integrated into plugin v0.66
-  - Worker thread with 30s delay
-  - BeatmapLevelSO klass finding via string search in Il2CppUserAssemblies
-  - Process memory scan for BeatmapLevelSO instances
-  - In-place string patching (song name, artist, level ID, sub name, mapper)
-  - 13 Rolling Stones metadata entries registered
-
-### In Progress / Pending Testing
-- [ ] **PS4 Hardware Test** — Deploy v0.66 and verify:
-  - Game does not crash
-  - Metadata is correctly patched in song selection menu
-  - All 13 Rolling Stones songs show correct names + artists
-  - Mode selector still works (5 modes)
-- [ ] **Edge Cases** — Handle songs with names longer than original capacity
-- [ ] **Cover Image Patching** — Replace album art in BeatmapLevelSO
-
-## Implementation Files
+## Implementation Files (Historical)
 
 | File | Purpose |
 |------|---------|
 | `src/memory_inject.h` | Public API: init, register, SongMetadataEntry |
-| `src/memory_inject.cpp` | Full implementation (~550 lines) |
+| `src/memory_inject.cpp` | Full implementation (~996 lines) |
 | `src/main.cpp` | Integration: v0.66, includes metadata registration |
 | `development/scripts/memory_inject_test.py` | Test script (Python simulation) |
 | `development/scripts/memory_scan_implementation.md` | Design document |
 
-## Verification
+## Verification (Historical)
 
 The implementation uses the **exact** struct layouts verified from the IL2CPP dump:
 - `BeatmapLevelSO_Fields` at `il2cpp.h:381156`
