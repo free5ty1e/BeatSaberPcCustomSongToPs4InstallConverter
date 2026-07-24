@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8027] — 2026-07-24
+### Fixed
+- **IL2CPP module buffer too small** — Increased `OrbisKernelModule` buffer from 64 to 256. PS4 loads more than 64 modules, causing `find_il2cpp_module_base()` to miss `Il2CppUserAssemblies`. Added diagnostic logging: logs all 20+ module names when IL2CPP module not found.
+
 ## [v0.8026] — 2026-07-24
 ### Added
 - **TMP_Text.set_text hook** — Phase 1 of TextMeshPro UI hooking approach. Hooks `TMPro.TMP_Text::set_text(string)` (RVA `0x2D35BE0`) using `DetourMode_x32` to intercept song name/artist text in the UI. Currently logs all intercepted text matching the 13 Rolling Stones replacement table. Gated behind `enable_song_metadata_modification` feature flag. Uses `find_il2cpp_module_base()` to locate `Il2CppUserAssemblies` module and compute hook target address at runtime.

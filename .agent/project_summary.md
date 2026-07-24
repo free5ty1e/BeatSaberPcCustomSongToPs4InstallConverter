@@ -1,37 +1,36 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-23
-**Status:** 🔴 **Memory injection approach may not be viable (v0.8024).** After 14+ versions and scanning every memory region (16MB–8GB + metadata mmap), 0 strings found. Strings don't exist in scannable memory at scan time. Need fundamentally different approach.
+**Last Updated:** 2026-07-24
+**Status:** 🔄 **TextMeshPro UI hooking approach (v0.8027).** Memory injection abandoned after 14+ versions. New approach: hook `TMP_Text.set_text` to intercept song name/artist text in UI. Phase 1 (diagnostic logging) deployed, awaiting PS4 test results.
 
-## Current Approach: Synchronous String Content Search (v0.8024)
+## Current Approach: TextMeshPro UI Hooking (v0.8027)
 
-**The klass pointer approach is broken.** After 10+ versions, we know:
-- Klass struct found at `0x2012007E0` via metadata search
-- 0 objects found with this klass as first 8 bytes in 4GB–17GB range
-- PS4 IL2CPP uses compressed/indirect klass pointers
+**Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found. Strings don't exist in scannable memory at scan time.
 
-**String content search also appears broken.** After 6+ versions scanning different ranges, 0 strings found:
-- GC heap (8–8.25GB): 0 strings
-- Metadata mmap (10.5–10.8GB): 0 strings
-- Low memory (16MB–4GB): 0 strings
-- Extended heap (4–8GB): 0 strings
+**New approach:** Hook `TMPro.TMP_Text::set_text(string)` to intercept song name/artist text when the UI renders.
 
-**Root cause hypothesis:** Strings are loaded on-demand when song list UI renders, not during startup when scan fires. The scan runs at BeatmapLevelsData redirect (OPEN #740) but the song list UI may not render until much later.
-
-1. **Synchronous scan** — Runs in hook callback with 15-second timeout (no threads — unsafe in PS4 hook context)
-2. **Search for strings** — Scan for UTF-16LE/UTF-8 patterns matching original song names
-3. **Patch in-place** — Overwrite string content with custom names
-4. **Scan once** — On failure, `g_patching_done = -1` (permanent stop)
+1. **TMP_Text.set_text hook** — Catches all TextMeshPro text updates
+2. **UTF-16LE extraction** — Reads the text string from Unity's managed memory
+3. **Diagnostic logging** — Phase 1 logs text matching 13 Rolling Stones song replacements
+4. **String replacement** — Phase 3 will replace text with custom metadata
 
 ### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
-| String content search (not klass) | Klass pointer approach broken after 10+ versions |
-| Synchronous scan (not thread) | `scePthreadCreate` in hook callback causes CE-34878-0 crash (v0.8016) |
-| 10-second timeout | Enough for 512MB scan, prevents indefinite hook blocking |
-| Scan once, no retry | Prevents multi-minute hang from retry storm (v0.8017) |
-| UTF-16LE pattern matching | Direct — search for WHAT we want to modify |
-| Trigger at Rolling Stones pack | Scan must fire AFTER pack bundle loads (OPEN #738), not at first pack_assets_all (OPEN #207) |
+| Hook TMP_Text.set_text (not memory scan) | Memory injection failed across ALL regions after 14+ versions |
+| DetourMode_x32 (5-byte JMP) | IL2CPP instructions are variable-length; x64 mode splits instructions |
+| SysV AMD64 calling convention | PS4 uses SysV, not MS ABI — `this` in RDI, `value` in RSI |
+| Feature flag gating | `enable_song_metadata_modification` controls hook installation |
+| Phase 1 diagnostic first | Verify hook fires before attempting replacement |
+
+### TextMeshPro Hook Architecture
+
+- **Hook target:** `TMP_Text.set_text(string)` — RVA `0x2D35BE0`
+- **Hook mode:** `DetourMode_x32` (5-byte JMP, safe for IL2CPP)
+- **Calling convention:** SysV AMD64 — `this` in RDI, `value` in RSI, `method` in RDX
+- **Module discovery:** `sceKernelGetModuleList` with 256-module buffer
+- **Field offsets:** `_songNameText` at `0x90`, `_songAuthorText` at `0x98`, `_beatmapLevel` at `0x118`
+- **SetDataFromLevelAsync RVA:** `0x1D36940` (Phase 2 — pointer tracking)
 
 ## Key Technical Findings
 
@@ -98,6 +97,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **138** | **v0.8022** | **Scan both GC heap AND metadata** | **❌ 5275 pages, 0 strings** |
 | **139** | **v0.8023** | **Trigger at BeatmapLevelsData redirect** | **❌ 5276 pages, 0 strings** |
 | **140** | **v0.8024** | **Scan four memory ranges (16MB–8GB)** | **❌ 7021 pages, 0 strings. Strings not in any region** |
+| **141** | **v0.8026** | **TMP_Text.set_text hook (Phase 1)** | **❌ Module not found — 64-slot buffer too small** |
+| **142** | **v0.8027** | **TMP_Text hook + 256-module buffer** | **⏳ Deployed — awaiting test** |
 
 ## Memory Injection Versions
 
@@ -137,11 +138,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **🔴 Reconsider approach** — Memory injection string search has failed across ALL memory regions after 14+ versions. Strings not found in 16MB–8GB or metadata mmap.
-2. **Alternative: Hook Unity rendering** — Intercept string display at the UI rendering level
-3. **Alternative: Modify pack bundle directly** — Patch pack bundle file contents before Addressables loads it
-4. **Alternative: Trigger scan later** — Hook into song list UI population to fire scan when strings are actually in memory
-5. **Expand metadata table** — Register metadata for all 32 DLC slots (if approach is viable)
+1. **⏳ Analyze v0.8027 log** — Check diagnostic output for IL2CPP module name and hook installation
+2. **Phase 2: Pointer tracking** — Hook `SetDataFromLevelAsync` to track which `TextMeshProUGUI*` pointers are song name/artist fields
+3. **Phase 3: String replacement** — Replace text with custom metadata from replacement table
+4. **Expand replacement table** — Register metadata for all 32 DLC slots
 
 ## Active Knowledge Gaps
 
@@ -151,8 +151,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 4. ~~IL2CPP heap address on PS4~~ → **KNOWN**: Klass at 0x2012007E0, metadata at 0x293280000. Objects NOT in 4GB–17GB (klass pointer approach broken)
 5. ~~Field offsets~~ → **UNVERIFIED** but may not matter if string content search works
 6. ~~Timing~~ → **TESTED**: Scanned at pack load (OPEN #738) and BeatmapLevelsData redirect (OPEN #740). Strings not found at either time.
-7. **String location** → **NOT FOUND**: Strings NOT in any scanned region (16MB–8GB + metadata). After 14+ versions, strings are conclusively not in scannable memory at scan time.
-8. **Memory injection** — **🔴 LIKELY NOT VIABLE**: String content search failed across all memory regions. Need fundamentally different approach.
+7. ~~String location~~ → **NOT FOUND**: Strings NOT in any scanned region (16MB–8GB + metadata). Memory injection approach abandoned.
+8. **Memory injection** → **🔴 DEAD END**: Failed across all memory regions after 14+ versions. Code removed in v0.8025.
+9. **TextMeshPro hook** → **⏳ IN PROGRESS**: Phase 1 (diagnostic) deployed as v0.8027. Hook infrastructure correct, module discovery being debugged.
 
 ## References
 

@@ -3239,3 +3239,35 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - Hook into Unity rendering functions to intercept string display
 - Modify the pack bundle file contents directly (bypass Addressables validation)
 - Use a different trigger point (e.g., hook into song list UI population)
+
+### Experiment 141: v0.8026 — TMP_Text.set_text Hook (Phase 1)
+- **Date:** 2026-07-24
+- **What:**
+  - New approach: Hook `TMPro.TMP_Text::set_text(string)` to intercept song name/artist text in UI
+  - Uses `DetourMode_x32` (5-byte JMP) for IL2CPP safety
+  - Hook gated behind `enable_song_metadata_modification` feature flag
+  - Phase 1: Diagnostic logging only — logs text matching 13 Rolling Stones replacement table
+  - `find_il2cpp_module_base()` scans 64 modules for "Il2Cpp" in name
+- **Result:** ❌ **HOOK NOT INSTALLED** — `Il2CppUserAssemblies` module not found (buffer too small)
+- **Key Findings:**
+  - `find_il2cpp_module_base()` only scanned 64 modules — PS4 loads more than 64
+  - Module name "Il2CppUserAssemblies" not in first 64 modules
+  - TextMeshPro hook infrastructure is correct, just needs module discovery fix
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8026_test.txt`
+- **Version:** v0.8026
+- **Status:** ❌ Tested — module not found, hook not installed
+
+### Experiment 142: v0.8027 — Increased Module Buffer + Diagnostic Logging
+- **Date:** 2026-07-24
+- **What:**
+  - Increased `OrbisKernelModule` buffer from 64 to 256
+  - Added diagnostic logging: logs all 20+ module names when IL2CPP module not found
+  - Added `sceKernelGetModuleList` failure logging
+  - Same TMP_Text.set_text hook, same feature flag gating
+- **Result:** ⏳ **AWAITING TEST** — deployed, needs PS4 restart
+- **Key Findings:**
+  - Root cause of v0.8026 failure: module buffer too small
+  - Diagnostic logging will reveal actual module names on PS4
+- **Version:** v0.8027
+- **Status:** ⏳ Deployed — awaiting test

@@ -14,7 +14,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8026"
+#define PLUGIN_VERSION "v0.8027"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -397,16 +397,39 @@ static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────
 static uint64_t find_il2cpp_module_base(void) {
-    OrbisKernelModule modules[64];
+    OrbisKernelModule modules[256];
     size_t available = 0;
-    if (sceKernelGetModuleList(modules, 64, &available) < 0) return 0;
+    if (sceKernelGetModuleList(modules, 256, &available) < 0) {
+        log_write("[METADATA] sceKernelGetModuleList failed");
+        return 0;
+    }
+
+    char logmsg[256];
+    snprintf(logmsg, sizeof(logmsg), "[METADATA] Found %zu modules", available);
+    log_write(logmsg);
+
     for (size_t i = 0; i < available; i++) {
         OrbisKernelModuleInfo info;
         memset(&info, 0, sizeof(info));
         info.size = sizeof(info);
         if (sceKernelGetModuleInfo(modules[i], &info) < 0) continue;
-        if (strstr(info.name, "Il2Cpp") != NULL && info.segmentCount > 0)
+        if (strstr(info.name, "Il2Cpp") != NULL && info.segmentCount > 0) {
+            snprintf(logmsg, sizeof(logmsg), "[METADATA] Found IL2CPP module: %s at 0x%lx (%d segments)",
+                     info.name, (uint64_t)info.segmentInfo[0].address, info.segmentCount);
+            log_write(logmsg);
             return (uint64_t)info.segmentInfo[0].address;
+        }
+    }
+
+    // Log first 20 module names for diagnostics
+    log_write("[METADATA] IL2CPP module not found. First 20 modules:");
+    for (size_t i = 0; i < available && i < 20; i++) {
+        OrbisKernelModuleInfo info;
+        memset(&info, 0, sizeof(info));
+        info.size = sizeof(info);
+        if (sceKernelGetModuleInfo(modules[i], &info) < 0) continue;
+        snprintf(logmsg, sizeof(logmsg), "  [%zu] %s", i, info.name);
+        log_write(logmsg);
     }
     return 0;
 }

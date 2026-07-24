@@ -92,12 +92,19 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] ~~No known way to bypass or redirect the catalog~~ → **SOLVED** — lazy CRC validation gives window for RAM patching
 
 ### In Progress — Memory Injection Testing
-- [ ] **(v0.75)** Wide-range pattern scan (1GB–32GB) finds BeatmapLevelSO klass
-- [ ] **(v0.75+)** Verify object patching: `[MEMINJ] Patched N/13 objects`
-- [ ] **(v0.75+)** Address timing: injection fires on per-song redirect (during play), but song list metadata comes from pack bundle (loaded earlier). UI text caching may prevent display updates.
-- [ ] **(v0.75+)** Verify field offsets from il2cpp.h vs actual PS4 layout (dump is truncated)
-- [ ] **(Future)** Cover image patching via BeatmapLevelSO Sprite* at offset 0x70
-- [ ] **(Future)** Expand metadata table to all 32 DLC slots
+- [ ] ~~**(v0.75)** Wide-range pattern scan (1GB–32GB) finds BeatmapLevelSO klass~~ → **DEAD END** (v0.8024)
+- [ ] ~~**(v0.75+)** Verify object patching~~ → **DEAD END** — strings not found in any memory region
+- [ ] ~~**(v0.75+)** Address timing~~ → **DEAD END** — strings not in memory at any scan time
+- [ ] ~~**(v0.75+)** Verify field offsets~~ → **DEAD END** — approach abandoned
+- [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
+- [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
+
+### Alternative: TextMeshPro UI Hooking (Current)
+- [x] **(v0.8026)** Hook `TMP_Text.set_text` — infrastructure implemented, DetourMode_x32, SysV calling convention
+- [ ] **(v0.8027)** Module discovery — 256-module buffer, diagnostic logging deployed, awaiting test
+- [ ] **(Phase 2)** Pointer tracking — hook `SetDataFromLevelAsync` to identify song name/artist TextMeshPro pointers
+- [ ] **(Phase 3)** String replacement — replace text with custom metadata from replacement table
+- [ ] **(Future)** Expand replacement table to all 32 DLC slots
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management
