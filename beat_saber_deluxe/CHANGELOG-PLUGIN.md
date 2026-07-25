@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8034] — 2026-07-24
+### Added
+- **Phase 3: String replacement** — Creates new IL2CPP System.String with replacement text using klass pointer from original. Passes replacement to original `set_text` call. Frees allocated memory after call returns.
+
 ## [v0.8033] — 2026-07-24
 ### Fixed
 - **Signal-protected string extraction** — `extract_utf16_string` now uses sigsetjmp/siglongjmp to catch SIGSEGV when `value` is not a valid IL2CPP string. v0.8032 crashed because hook fires for ALL TMP_Text.set_text calls, not just strings.

@@ -16,7 +16,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8033"
+#define PLUGIN_VERSION "v0.8034"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -400,6 +400,35 @@ static int extract_utf16_string(void* str_obj, char* out, int out_size) {
     return result;
 }
 
+// Create a new IL2CPP System.String from a C string
+// System.String layout: klass(8) + monitor(8) + _stringLength(4) + first_char(UTF-16LE)
+// Uses the klass pointer from an existing string object
+static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
+    if (!klass_ptr || !cstr) return NULL;
+
+    int len = strlen(cstr);
+    // Size: 16 (klass+monitor) + 4 (length) + (len * 2) (UTF-16LE chars) + 2 (null terminator)
+    int total = 16 + 4 + (len * 2) + 2;
+    void* str_mem = malloc(total);
+    if (!str_mem) return NULL;
+
+    // Copy klass pointer (8 bytes)
+    memcpy(str_mem, klass_ptr, 8);
+    // Zero monitor (8 bytes)
+    memset((char*)str_mem + 8, 0, 8);
+    // Set string length
+    *(uint32_t*)((char*)str_mem + 16) = (uint32_t)len;
+    // Convert ASCII to UTF-16LE
+    uint16_t* chars = (uint16_t*)((char*)str_mem + 20);
+    for (int i = 0; i < len; i++) {
+        chars[i] = (uint16_t)(unsigned char)cstr[i];
+    }
+    // Null terminator (optional but safe)
+    chars[len] = 0;
+
+    return str_mem;
+}
+
 static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo* method) {
     g_tmp_text_set_text_count++;
 
@@ -412,6 +441,7 @@ static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo
     }
 
     // Read string and check for matches (with null guard)
+    void* new_value = value;
     if (g_feature_song_metadata_modification && value) {
         char text_buf[256] = {0};
         int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
@@ -420,16 +450,27 @@ static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo
             const char* replacement = find_replacement(text_buf);
             if (replacement) {
                 char logmsg[512];
-                snprintf(logmsg, sizeof(logmsg), "[METADATA] MATCH #%d: '%s' -> '%s'",
+                snprintf(logmsg, sizeof(logmsg), "[METADATA] REPLACE #%d: '%s' -> '%s'",
                          g_tmp_text_set_text_count, text_buf, replacement);
                 log_write(logmsg);
+
+                // Create replacement string using klass from original
+                void* replacement_str = create_il2cpp_string(value, replacement);
+                if (replacement_str) {
+                    new_value = replacement_str;
+                }
             }
         }
     }
 
-    // Always call original function
+    // Call original function with (possibly replaced) value
     HOOK_CONTINUE(hook_tmp_text_set_text, void (*)(void*, void*, const MethodInfo*),
-                  this_ptr, value, method);
+                  this_ptr, new_value, method);
+
+    // Free replacement string after original function returns
+    if (new_value != value) {
+        free(new_value);
+    }
 }
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────

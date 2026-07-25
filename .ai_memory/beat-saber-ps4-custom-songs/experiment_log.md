@@ -3370,6 +3370,28 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Added `#include <setjmp.h>` and `#include <signal.h>`
   - Added basic pointer sanity check (reject < 0x1000000)
   - Added "set_text fired" diagnostic logging (first 15 calls)
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 restart and test
+- **Result:** ✅ **SUCCESS — Hook works, matches found!**
+- **Key Findings:**
+  - **Signal-protected string extraction works** — no crashes
+  - **"The Rolling Stones" matched 14 times** → logged as "Sabrina Carpenter"
+  - **"Start Me Up" matched 3 times** → logged as "Espresso"
+  - Hook fires 300+ times during song list navigation (every TMP_Text.set_text call)
+  - Matches found at calls #198–#300 (song list rendering phase)
+  - String reads are safe — non-string values handled by signal handler
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8033_test.txt`
 - **Version:** v0.8033
+- **Status:** ✅ **Phase 1 COMPLETE** — hook fires, strings read, matches detected
+
+### Experiment 149: v0.8034 — Phase 3 String Replacement
+- **Date:** 2026-07-24
+- **What:**
+  - Creates new IL2CPP System.String using `create_il2cpp_string()`:
+    - Copies klass pointer from original string (first 8 bytes)
+    - Allocates new memory: 16 (header) + 4 (length) + (len×2) (UTF-16LE chars) + 2 (null)
+    - Converts ASCII replacement text to UTF-16LE
+  - Passes new string to original `set_text` instead of original value
+  - Frees allocated memory after original function returns
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Version:** v0.8034
 - **Status:** ⏳ Deployed — awaiting test
