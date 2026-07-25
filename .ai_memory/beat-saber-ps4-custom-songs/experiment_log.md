@@ -3351,6 +3351,25 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Added back `extract_utf16_string` + `find_replacement` to hook callback
   - Logs when text matches any of 14 song names in replacement table
   - Same DetourMode_x64, same retry logic
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ❌ **CRASH — silent** — `extract_utf16_string` crashes on first call reading invalid pointer. No "set_text fired" lines in log (counter never increments past crash). v0.8031 worked because it didn't dereference `value`.
+- **Key Findings:**
+  - `value` parameter is not always a valid IL2CPP System.String
+  - Hook fires for ALL TMP_Text.set_text calls, not just string arguments
+  - Direct pointer dereference at offsets 0x10/0x14 crashes on non-string values
+  - Need signal handler protection for unsafe memory reads
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8032_test.txt`
 - **Version:** v0.8032
+- **Status:** ❌ Crashed — extract_utf16_string dereferences invalid pointer
+
+### Experiment 148: v0.8033 — Signal-Protected String Extraction
+- **Date:** 2026-07-24
+- **What:**
+  - Added sigsetjmp/siglongjmp signal handler around `extract_utf16_string`
+  - Catches SIGSEGV/SIGBUS when `value` is not a valid string pointer
+  - Added `#include <setjmp.h>` and `#include <signal.h>`
+  - Added basic pointer sanity check (reject < 0x1000000)
+  - Added "set_text fired" diagnostic logging (first 15 calls)
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 restart and test
+- **Version:** v0.8033
 - **Status:** ⏳ Deployed — awaiting test

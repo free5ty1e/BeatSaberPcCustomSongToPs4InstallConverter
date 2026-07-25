@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8033] — 2026-07-24
+### Fixed
+- **Signal-protected string extraction** — `extract_utf16_string` now uses sigsetjmp/siglongjmp to catch SIGSEGV when `value` is not a valid IL2CPP string. v0.8032 crashed because hook fires for ALL TMP_Text.set_text calls, not just strings.
+
 ## [v0.8032] — 2026-07-24
 ### Added
 - **String reading + match detection** — Phase 1 now reads UTF-16LE string from value parameter and checks against 14-song replacement table. Logs matches. DetourMode_x64 confirmed safe.

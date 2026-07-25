@@ -9,12 +9,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8032"
+#define PLUGIN_VERSION "v0.8033"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -343,55 +345,85 @@ static const char* find_replacement(const char* text) {
 // UTF-16LE string extraction from IL2CPP System.String
 // System.String layout: klass(8) + monitor(8) + _stringLength(4) + first_char(UTF-16LE)
 // _stringLength may be at offset 0x10 or 0x14 on PS4 — try both
+// Protected by signal handler — value may not always be a valid string
+static sigjmp_buf g_extract_jmp_buf;
+
 static int extract_utf16_string(void* str_obj, char* out, int out_size) {
     if (!str_obj) { out[0] = '\0'; return 0; }
 
-    // Try to read the string length at common offsets
-    uint32_t len = 0;
-    uint16_t* chars = NULL;
+    // Basic sanity check — reject clearly invalid pointers
+    if ((uint64_t)str_obj < 0x1000000ULL) { out[0] = '\0'; return 0; }
 
-    // Try offset 0x10 first (standard IL2CPP)
-    uint32_t len_10 = *(uint32_t*)((char*)str_obj + 0x10);
-    uint32_t len_14 = *(uint32_t*)((char*)str_obj + 0x14);
+    // Use signal handler to catch SIGSEGV from invalid pointer dereference
+    struct sigaction old_sa, new_sa;
+    memset(&new_sa, 0, sizeof(new_sa));
+    new_sa.__sa_handler.__sa_sigaction = [](int, struct __siginfo*, void*) {
+        siglongjmp(g_extract_jmp_buf, 1);
+    };
+    new_sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGSEGV, &new_sa, &old_sa);
+    sigaction(SIGBUS, &new_sa, &old_sa);
 
-    // Use whichever looks like a reasonable string length
-    if (len_10 > 0 && len_10 < 256 && len_14 == 0) {
-        len = len_10;
-        chars = (uint16_t*)((char*)str_obj + 0x14);
-    } else if (len_14 > 0 && len_14 < 256) {
-        len = len_14;
-        chars = (uint16_t*)((char*)str_obj + 0x18);
+    int result = 0;
+    if (sigsetjmp(g_extract_jmp_buf, 1) == 0) {
+        uint32_t len_10 = *(uint32_t*)((char*)str_obj + 0x10);
+        uint32_t len_14 = *(uint32_t*)((char*)str_obj + 0x14);
+
+        uint32_t len = 0;
+        uint16_t* chars = NULL;
+
+        if (len_10 > 0 && len_10 < 256 && len_14 == 0) {
+            len = len_10;
+            chars = (uint16_t*)((char*)str_obj + 0x14);
+        } else if (len_14 > 0 && len_14 < 256) {
+            len = len_14;
+            chars = (uint16_t*)((char*)str_obj + 0x18);
+        } else {
+            len = len_10;
+            chars = (uint16_t*)((char*)str_obj + 0x14);
+        }
+
+        if (len > 0 && len < (uint32_t)out_size) {
+            int i;
+            for (i = 0; i < (int)len && i < out_size - 1; i++) {
+                out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
+            }
+            out[i] = '\0';
+            result = len;
+        }
     } else {
-        // Fallback: try both
-        len = len_10;
-        chars = (uint16_t*)((char*)str_obj + 0x14);
+        out[0] = '\0';
     }
 
-    if (len == 0 || len >= (uint32_t)out_size) { out[0] = '\0'; return 0; }
-
-    // Convert UTF-16LE to ASCII (simplified — works for song names)
-    int i;
-    for (i = 0; i < (int)len && i < out_size - 1; i++) {
-        out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
-    }
-    out[i] = '\0';
-    return len;
+    sigaction(SIGSEGV, &old_sa, NULL);
+    sigaction(SIGBUS, &old_sa, NULL);
+    return result;
 }
 
 static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo* method) {
     g_tmp_text_set_text_count++;
 
-    // Read string and check for matches
-    if (g_feature_song_metadata_modification && value) {
-        char text_buf[256];
-        extract_utf16_string(value, text_buf, sizeof(text_buf));
+    // Log first 15 calls unconditionally — verify hook fires
+    if (g_tmp_text_set_text_count <= 15) {
+        char logmsg[256];
+        snprintf(logmsg, sizeof(logmsg), "[METADATA] set_text #%d: this=%p value=%p",
+                 g_tmp_text_set_text_count, this_ptr, value);
+        log_write(logmsg);
+    }
 
-        const char* replacement = find_replacement(text_buf);
-        if (replacement && g_tmp_text_set_text_count <= 100) {
-            char logmsg[512];
-            snprintf(logmsg, sizeof(logmsg), "[METADATA] MATCH #%d: '%s' -> '%s'",
-                     g_tmp_text_set_text_count, text_buf, replacement);
-            log_write(logmsg);
+    // Read string and check for matches (with null guard)
+    if (g_feature_song_metadata_modification && value) {
+        char text_buf[256] = {0};
+        int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
+
+        if (len > 0) {
+            const char* replacement = find_replacement(text_buf);
+            if (replacement) {
+                char logmsg[512];
+                snprintf(logmsg, sizeof(logmsg), "[METADATA] MATCH #%d: '%s' -> '%s'",
+                         g_tmp_text_set_text_count, text_buf, replacement);
+                log_write(logmsg);
+            }
         }
     }
 
