@@ -1499,7 +1499,7 @@ def manage_redirect_config(
 FEATURES_FILENAME = "features.json"
 DEFAULT_FEATURES = {
     "enable_custom_song_replacements": True,
-    "enable_song_metadata_modification": False
+    "enable_song_metadata_modification": True
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -1595,8 +1595,100 @@ def apply_feature_flags(set_features: list, config: dict):
 
 
 # ============================================================================
-# BeatSaver Song Downloader
+# Song Metadata Management
 # ============================================================================
+
+SONG_METADATA_FILENAME = "song_metadata.json"
+
+def _get_song_metadata_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to song_metadata.json in the project root."""
+    return os.path.join(project_root, SONG_METADATA_FILENAME)
+
+def _get_remote_song_metadata_path(config: dict) -> str:
+    """Return the remote AFR path for song_metadata.json."""
+    cfg_paths = config.get('paths', {})
+    cfg_title = config.get('title', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    return f"{afr_base}/{title_id}/{SONG_METADATA_FILENAME}"
+
+def _load_local_song_metadata(local_path: str) -> dict:
+    """Load a local song_metadata.json file. Returns default structure if missing."""
+    default = {"song_names": {}, "song_artists": {}}
+    if not os.path.exists(local_path):
+        return default
+    try:
+        with open(local_path, 'r') as f:
+            data = json.load(f)
+        data.setdefault('song_names', {})
+        data.setdefault('song_artists', {})
+        return data
+    except (json.JSONDecodeError, IOError):
+        log.warning(f"  ⚠️  Failed to parse {local_path}, starting fresh")
+        return default
+
+def _deploy_song_metadata_to_ps4(config: dict):
+    """Upload the local song_metadata.json to PS4 via FTP."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    local_path = _get_song_metadata_path()
+    remote_path = _get_remote_song_metadata_path(config)
+
+    if not os.path.exists(local_path):
+        log.warning(f"  ⚠️  Local song_metadata.json not found at {local_path}")
+        return
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_path} -o {remote_path}; quit"]
+    log.info(f"  Deploying song_metadata.json to PS4: {remote_path}")
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info("  ✅ Song metadata deployed")
+    else:
+        log.warning(f"  ⚠️  Song metadata deploy failed: {result.stderr}")
+
+def manage_song_metadata(
+    config: dict,
+    song_name: str | None = None,
+    artist: str | None = None,
+    target_name: str | None = None,
+    deploy: bool = False,
+):
+    """
+    Manage the song_metadata.json configuration file.
+
+    When song_name and target_name are provided, adds/updates the song_names entry.
+    When artist and target_name are provided, adds/updates the song_artists entry.
+    Always deploys to PS4 when deploy=True.
+    """
+    local_path = _get_song_metadata_path()
+    metadata = _load_local_song_metadata(local_path)
+
+    if song_name and target_name:
+        metadata['song_names'][target_name] = song_name
+        log.info(f"  Song metadata: '{target_name}' -> '{song_name}'")
+    if artist and target_name:
+        metadata['song_artists'][target_name] = artist
+        log.info(f"  Artist metadata: '{target_name}' -> '{artist}'")
+
+    os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
+    with open(local_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+        f.write('\n')
+    count_names = len(metadata.get('song_names', {}))
+    count_artists = len(metadata.get('song_artists', {}))
+    log.info(f"  Saved song_metadata.json ({count_names} names, {count_artists} artists)")
+
+    if deploy:
+        _deploy_song_metadata_to_ps4(config)
+
+    return metadata
 
 BEATSAVER_API_BASE = "https://api.beatsaver.com"
 
@@ -2083,6 +2175,18 @@ Examples:
     # -----------------------------------------------------------------------
     if args.set_feature:
         apply_feature_flags(args.set_feature, config)
+
+    # -----------------------------------------------------------------------
+    # Step 11: Song metadata (song_metadata.json)
+    # -----------------------------------------------------------------------
+    if args.song_name or args.artist or args.deploy:
+        manage_song_metadata(
+            config,
+            song_name=args.song_name,
+            artist=args.artist,
+            target_name=args.target,
+            deploy=args.deploy,
+        )
 
     log.info("Pipeline complete!")
     log.info(f"  Bundle: {args.output}")

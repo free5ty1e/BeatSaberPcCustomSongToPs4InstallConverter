@@ -1,5 +1,11 @@
 # Pipeline Changelog
 
+## v0.5302 (2026-07-26)
+- **Song metadata management** — Added `manage_song_metadata()` function and `--song-name`/`--artist` CLI arguments. Generates/updates `song_metadata.json` with song name and artist replacements for the TMP_Text hook.
+- **Auto-deploy on `--deploy`** — `song_metadata.json` is automatically deployed to PS4 alongside `redirects.json` and `features.json` when `--deploy` is used.
+- **`deploy_all.sh` updated** — Step 3.5 now deploys `song_metadata.json` to `/data/GoldHEN/AFR/CUSA12878/song_metadata.json`.
+- **Feature flag default updated** — `enable_song_metadata_modification` defaults to `false` in `DEFAULT_FEATURES`.
+
 ## v0.5301 (2026-07-19)
 - **Feature flags support** — Added `--set-feature key=value` CLI argument. Writes `features.json` locally and deploys it to PS4 via FTP.
 - **Supported flags:** `enable_custom_song_replacements` (default: false), `enable_song_metadata_modification` (default: false — preserved for future use)
