@@ -3413,6 +3413,18 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Added `il2cpp_string_new()` via `dlsym(RTLD_DEFAULT, "il2cpp_string_new")` — tries IL2CPP runtime for GC-managed strings first, falls back to manual `create_il2cpp_string`.
   - Added `this` pointer logging for replacements (identifies song name vs artist fields)
   - Added hex dump of original string first 24 bytes for layout diagnosis
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ✅ **Song details FIXED** — "Espresso" by "Sabrina Carpenter" shows correctly in both pause menu and song details panel. No regressions.
+- **Key Findings:**
+  - **`il2cpp_string_new` not found via dlsym** — still using manual `create_il2cpp_string`, but it works correctly now
+  - **String layout confirmed**: klass(8) + monitor(8) + _stringLength(4 @ 0x10) + UTF-16LE chars (0x14). Length `0x12` = 18 chars for "The Rolling Stones"
+  - **25 total replacements** — "The Rolling Stones" artist replaced 21 times, "Start Me Up" name replaced 4 times
+  - **Song name and artist fields have different `this` pointers** — song name at `2a56a6800`, `2a5272800`, `2a57e6000`; artist at many others
+  - **Blind replacement problem**: Replacing "The Rolling Stones" → "Sabrina Carpenter" in ALL text fields causes ALL Rolling Stones songs to show "Sabrina Carpenter" as artist. Need Phase 2 pointer tracking to replace only in specific fields.
+- **Remaining Issues:**
+  - Song list names: some Rolling Stones songs still show original names (not in replacement table)
+  - Artist replacement too broad: "The Rolling Stones" → "Sabrina Carpenter" applied to ALL artist fields, not just specific songs
+  - Need field-aware replacement: song name table separate from artist table
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8035_test.txt`
 - **Version:** v0.8035
-- **Status:** ⏳ Deployed — awaiting test
+- **Status:** ✅ **CORE FEATURE WORKING** — song details, pause menu, artist all display correctly. Song list needs field-aware replacement.
