@@ -1,7 +1,9 @@
 // Beat Saber Deluxe — dynamic redirect plugin
 // Reads song redirect table from /data/GoldHEN/AFR/<TITLE_ID>/redirects.json
 // Feature flags from /data/GoldHEN/AFR/<TITLE_ID>/features.json
-// All redirects come from the external config file — no hardcoded fallback.
+// Song metadata from /data/GoldHEN/AFR/<TITLE_ID>/song_metadata.json
+// All redirects and metadata come from external config files — no hardcoded fallback.
+// v0.8036: External song_metadata.json — replaces hardcoded replacement table.
 // v0.8026: TMP_Text.set_text hook — intercepts song name/artist text in UI.
 // v0.8025: Removed memory injection code (v0.66–v0.8024 abandoned as dead end).
 
@@ -17,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8035"
+#define PLUGIN_VERSION "v0.8036"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -25,6 +27,8 @@
 #define FEATURES_PATH AFR_BASE "/" TITLE_ID "/features.json"
 #define MAX_REDIRECTS 256
 #define MAX_PATH 256
+#define METADATA_PATH AFR_BASE "/" TITLE_ID "/song_metadata.json"
+#define METADATA_MAX 128
 
 // ── Dynamic redirect table ──────────────────────────────────────────────────
 static char *REDIRECT_KEYS[MAX_REDIRECTS];
@@ -37,6 +41,15 @@ static int REDIRECT_COUNT = 0;
 // Missing file or missing key = false (default off for safety).
 static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
+
+// ── Song metadata replacement table ──────────────────────────────────────────
+// Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
+static char *METADATA_NAME_KEYS[METADATA_MAX];
+static char *METADATA_NAME_VALS[METADATA_MAX];
+static int METADATA_NAME_COUNT = 0;
+static char *METADATA_ARTIST_KEYS[METADATA_MAX];
+static char *METADATA_ARTIST_VALS[METADATA_MAX];
+static int METADATA_ARTIST_COUNT = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
@@ -309,35 +322,99 @@ static int g_tmp_text_set_text_count = 0;
 // Forward-declare IL2CPP's MethodInfo (opaque type)
 struct MethodInfo;
 
-// Song name/artist replacement table
-typedef struct {
-    const char* original;
-    const char* replacement;
-} SongNameReplacement;
+// ── Load song metadata from JSON config file ────────────────────────────────
+// Parses "song_names" and "song_artists" sections from song_metadata.json
+// Uses same parse_json_pairs() as redirects loading.
+static void load_song_metadata(void) {
+    int fd = open(METADATA_PATH, O_RDONLY, 0);
+    if (fd < 0) fd = sceKernelOpen(METADATA_PATH, O_RDONLY, 0);
+    if (fd < 0) {
+        log_write("song_metadata.json not found — no metadata replacements active");
+        return;
+    }
 
-static const SongNameReplacement SONG_REPLACEMENTS[] = {
-    {"Start Me Up",                    "Espresso"},
-    {"The Rolling Stones",             "Sabrina Carpenter"},
-    {"Angry",                          "Rhythm Is A Dancer"},
-    {"Bite My Head Off",               "Escaping the Ruins"},
-    {"Can't You Hear Me Knocking",     "Spicy"},
-    {"Dead Man Walking",               "Finesse (Remix)"},
-    {"Gimme Shelter",                  "Yes I'm A Mess"},
-    {"(I Can't Get No) Satisfaction",  "Dreams Come True"},
-    {"Live by the Sword",              "Take Me to the Beach"},
-    {"Mess It Up",                     "Powersnake"},
-    {"Paint It Black",                 "Time Lapse"},
-    {"Sugar Soaker",                   "Venom of Venus"},
-    {"Sympathy for the Devil",         "LIT"},
-    {"The Whole Wide World",           "VOLUPTE"},
-    {NULL, NULL}
-};
+    char buf[16384];
+    ssize_t got = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (got <= 0) {
+        log_write("song_metadata.json is empty");
+        return;
+    }
+    buf[got] = '\0';
 
-static const char* find_replacement(const char* text) {
+    // Parse "song_names" section
+    char *sn = strstr(buf, "\"song_names\"");
+    if (sn) {
+        sn += 12;
+        while (*sn && (*sn == ' ' || *sn == '\t' || *sn == '\n' || *sn == '\r' || *sn == ':' || *sn == '"')) sn++;
+        if (*sn == '{') {
+            char keys[METADATA_MAX][MAX_PATH];
+            char vals[METADATA_MAX][MAX_PATH];
+            int n = parse_json_pairs(sn, METADATA_MAX, keys, vals);
+            for (int i = 0; i < n && i < METADATA_MAX; i++) {
+                METADATA_NAME_KEYS[i] = (char*)malloc(strlen(keys[i]) + 1);
+                METADATA_NAME_VALS[i] = (char*)malloc(strlen(vals[i]) + 1);
+                if (METADATA_NAME_KEYS[i] && METADATA_NAME_VALS[i]) {
+                    strcpy(METADATA_NAME_KEYS[i], keys[i]);
+                    strcpy(METADATA_NAME_VALS[i], vals[i]);
+                    METADATA_NAME_COUNT++;
+                }
+            }
+        }
+    }
+
+    // Parse "song_artists" section
+    char *sa = strstr(buf, "\"song_artists\"");
+    if (sa) {
+        sa += 14;
+        while (*sa && (*sa == ' ' || *sa == '\t' || *sa == '\n' || *sa == '\r' || *sa == ':' || *sa == '"')) sa++;
+        if (*sa == '{') {
+            char keys[METADATA_MAX][MAX_PATH];
+            char vals[METADATA_MAX][MAX_PATH];
+            int n = parse_json_pairs(sa, METADATA_MAX, keys, vals);
+            for (int i = 0; i < n && i < METADATA_MAX; i++) {
+                METADATA_ARTIST_KEYS[i] = (char*)malloc(strlen(keys[i]) + 1);
+                METADATA_ARTIST_VALS[i] = (char*)malloc(strlen(vals[i]) + 1);
+                if (METADATA_ARTIST_KEYS[i] && METADATA_ARTIST_VALS[i]) {
+                    strcpy(METADATA_ARTIST_KEYS[i], keys[i]);
+                    strcpy(METADATA_ARTIST_VALS[i], vals[i]);
+                    METADATA_ARTIST_COUNT++;
+                }
+            }
+        }
+    }
+
+    char logmsg[256];
+    snprintf(logmsg, sizeof(logmsg), "loaded song_metadata: %d name replacements, %d artist replacements",
+             METADATA_NAME_COUNT, METADATA_ARTIST_COUNT);
+    log_write(logmsg);
+}
+
+static void free_metadata(void) {
+    for (int i = 0; i < METADATA_NAME_COUNT; i++) {
+        free(METADATA_NAME_KEYS[i]);
+        free(METADATA_NAME_VALS[i]);
+    }
+    for (int i = 0; i < METADATA_ARTIST_COUNT; i++) {
+        free(METADATA_ARTIST_KEYS[i]);
+        free(METADATA_ARTIST_VALS[i]);
+    }
+    METADATA_NAME_COUNT = 0;
+    METADATA_ARTIST_COUNT = 0;
+}
+
+static const char* find_metadata_replacement(const char* text) {
     if (!text) return NULL;
-    for (int i = 0; SONG_REPLACEMENTS[i].original; i++) {
-        if (strcmp(text, SONG_REPLACEMENTS[i].original) == 0) {
-            return SONG_REPLACEMENTS[i].replacement;
+    // Search song names first
+    for (int i = 0; i < METADATA_NAME_COUNT; i++) {
+        if (strcmp(text, METADATA_NAME_KEYS[i]) == 0) {
+            return METADATA_NAME_VALS[i];
+        }
+    }
+    // Then search song artists
+    for (int i = 0; i < METADATA_ARTIST_COUNT; i++) {
+        if (strcmp(text, METADATA_ARTIST_KEYS[i]) == 0) {
+            return METADATA_ARTIST_VALS[i];
         }
     }
     return NULL;
@@ -470,7 +547,7 @@ static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo
         int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
 
         if (len > 0) {
-            const char* replacement = find_replacement(text_buf);
+            const char* replacement = find_metadata_replacement(text_buf);
             if (replacement) {
                 // Log this pointer to identify song name vs artist vs detail fields
                 char logmsg[512];
@@ -606,6 +683,9 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Load feature flags first — they gate everything else
     load_redirects();
     load_features();
+    if (g_feature_song_metadata_modification) {
+        load_song_metadata();
+    }
 
     // Log feature flag state for debugging
     {
@@ -620,7 +700,7 @@ extern "C" int module_start(size_t argc, const void *args) {
         log_write("DISABLED: custom_song_replacements is OFF — redirects will NOT fire");
     }
     if (!g_feature_song_metadata_modification) {
-        log_write("DISABLED: song_metadata_modification is OFF — awaiting new approach");
+        log_write("DISABLED: song_metadata_modification is OFF — metadata replacements disabled");
     }
 
     // fopen hook
@@ -648,5 +728,6 @@ extern "C" int module_start(size_t argc, const void *args) {
 extern "C" int module_stop(size_t argc, const void *args) {
     (void)argc;(void)args;
     free_redirects();
+    free_metadata();
     return 0;
 }

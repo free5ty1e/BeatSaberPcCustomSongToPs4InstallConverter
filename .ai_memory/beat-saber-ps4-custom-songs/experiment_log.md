@@ -3428,3 +3428,28 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - `.ai_memory/experiment_logs/v0.8035_test.txt`
 - **Version:** v0.8035
 - **Status:** ✅ **CORE FEATURE WORKING** — song details, pause menu, artist all display correctly. Song list needs field-aware replacement.
+
+### Experiment 151: v0.8036 — External song_metadata.json + Pipeline Integration
+- **Date:** 2026-07-26
+- **What:**
+  - Replaced hardcoded 13-entry `SONG_REPLACEMENTS[]` C array with data-driven metadata loaded from `/data/GoldHEN/AFR/CUSA12878/song_metadata.json`
+  - Added `load_song_metadata()` — reads JSON file using same pattern as `load_redirects()`. Parses `"song_names"` and `"song_artists"` sections separately via `parse_json_pairs()`.
+  - Added `find_metadata_replacement()` — searches song names first, then artists. Returns replacement string for hook callback.
+  - Added `free_metadata()` — cleans up allocated metadata arrays on plugin unload.
+  - Metadata loading gated behind `enable_song_metadata_modification` feature flag (already exists).
+  - Song replacement format: "CustomName / CustomArtist" in song name field, artist field blanked for single-artist packs.
+  - Created `song_metadata.json` with 32 song name entries and 3 artist entries (Rolling Stones, Billie Eilish, Lizzo).
+  - Added missing packs to `beat_saber_song_ids.json`: ostvol8 (6 songs), coldplay (12 songs), theprodigy (6 songs) — now 39 packs, 329 songs.
+- **Result:** 🔲 **DEPLOYED — awaiting PS4 test**
+- **Known Limitations:**
+  - Artist replacement is global — "The Rolling Stones" → " " affects all Rolling Stones songs (correct for single-artist packs, may show blank for all).
+  - Combined "Name / Artist" format in song name field — works but is a workaround.
+  - Deferred: Field-aware replacement (Phase 2) will fix artist accuracy for multi-artist packs.
+- **Pipeline Integration Status:**
+  - ✅ `song_metadata.json` created (32 song names, 3 artist blanks)
+  - ✅ Plugin reads from PS4 file instead of hardcoded table
+  - ⏳ Pipeline generation (Step 2) — pending
+  - ⏳ deploy_all.sh update (Step 3) — pending
+- **Roadmap Entry Added:** "Song Metadata Feature Iteration" — evaluate/fix/rewrite options documented
+- **Version:** v0.8036
+- **Status:** 🔲 **DEPLOYED — awaiting test** — external metadata loading, pipeline integration in progress

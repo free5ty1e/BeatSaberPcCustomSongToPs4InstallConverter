@@ -1,43 +1,40 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-24
-**Status:** ✅ **TextMeshPro UI hooking PROVEN WORKING (v0.8034).** Pause menu replacement works perfectly. Song list partially works. Song details show "?" for name. Memory injection abandoned.
+**Last Updated:** 2026-07-26
+**Status:** ✅ **External song_metadata.json loading PROVEN WORKING (v0.8036).** 32 songs replaced with "Name / Artist" format. Pipeline integration in progress.
 
-## Current Approach: TextMeshPro UI Hooking (v0.8034)
+## Current Approach: TextMeshPro UI Hooking + External Metadata (v0.8036)
 
 **Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found. Strings don't exist in scannable memory at scan time.
 
-**New approach:** Hook `TMPro.TMP_Text::set_text(string)` to intercept song name/artist text when the UI renders.
+**New approach:** Hook `TMPro.TMP_Text::set_text(string)` to intercept song name/artist text when the UI renders. External `song_metadata.json` loaded from PS4 for data-driven replacement.
 
 ### Key Breakthroughs
 
 1. **Module discovery timing**: At `module_start()` only 3 modules visible. IL2CPP loads later. Defer to `open_hook()`, retry until found (open #10-11).
 2. **DetourMode**: Use `DetourMode_x64`, NOT x32. x32 splits IL2CPP instructions → crash.
-3. **Signal-protected extraction**: Hook fires 300+ times on ALL text, not just songs. Must catch SIGSEGV from non-string values.
+3. **Signal-protected extraction**: Hook fires 500+ times on ALL text, not just songs. Must catch SIGSEGV from non-string values.
 4. **String replacement works**: `create_il2cpp_string()` with klass pointer copy creates valid replacement strings.
-
-1. **TMP_Text.set_text hook** — Catches all TextMeshPro text updates
-2. **UTF-16LE extraction** — Reads the text string from Unity's managed memory
-3. **Diagnostic logging** — Phase 1 logs text matching 13 Rolling Stones song replacements
-4. **String replacement** — Phase 3 will replace text with custom metadata
+5. **External metadata**: `song_metadata.json` replaces hardcoded C array. Same JSON pattern as `redirects.json`.
 
 ### Key Design Decisions
 
 | Decision | Rationale |
 |----------|-----------|
 | Hook TMP_Text.set_text (not memory scan) | Memory injection failed across ALL regions after 14+ versions |
-| DetourMode_x32 (5-byte JMP) | IL2CPP instructions are variable-length; x64 mode splits instructions |
+| DetourMode_x64 (14-byte JMP) | IL2CPP instructions are variable-length; x32 mode splits instructions |
 | SysV AMD64 calling convention | PS4 uses SysV, not MS ABI — `this` in RDI, `value` in RSI |
-| Feature flag gating | `enable_song_metadata_modification` controls hook installation |
-| Phase 1 diagnostic first | Verify hook fires before attempting replacement |
+| Feature flag gating | `enable_song_metadata_modification` controls hook installation + metadata loading |
+| External JSON config | Same pattern as `redirects.json` — `parse_json_pairs()` for flat key/value |
+| "Name / Artist" combined format | Single replacement field for both song name and artist — works for single-artist packs |
 
 ### TextMeshPro Hook Architecture
 
 - **Hook target:** `TMP_Text.set_text(string)` — RVA `0x2D35BE0`
-- **Hook mode:** `DetourMode_x32` (5-byte JMP, safe for IL2CPP)
+- **Hook mode:** `DetourMode_x64` (14-byte JMP)
 - **Calling convention:** SysV AMD64 — `this` in RDI, `value` in RSI, `method` in RDX
 - **Module discovery:** `sceKernelGetModuleList` with 256-module buffer
-- **Field offsets:** `_songNameText` at `0x90`, `_songAuthorText` at `0x98`, `_beatmapLevel` at `0x118`
-- **SetDataFromLevelAsync RVA:** `0x1D36940` (Phase 2 — pointer tracking)
+- **Metadata source:** `/data/GoldHEN/AFR/CUSA12878/song_metadata.json`
+- **Metadata format:** `{"song_names": {"original": "replacement"}, "song_artists": {"original": "replacement"}}`
 
 ## Key Technical Findings
 

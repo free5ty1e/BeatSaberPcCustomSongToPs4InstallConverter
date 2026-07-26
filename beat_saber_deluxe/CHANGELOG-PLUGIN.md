@@ -4,6 +4,22 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8036] — 2026-07-26
+### Added
+- **External `song_metadata.json` loading** — Replaces hardcoded 13-entry `SONG_REPLACEMENTS[]` array with data-driven metadata loaded from `/data/GoldHEN/AFR/CUSA12878/song_metadata.json`. Two flat tables: `song_names` and `song_artists`.
+- **`load_song_metadata()`** — Reads JSON file using same pattern as `load_redirects()`. Parses `"song_names"` and `"song_artists"` sections separately via `parse_json_pairs()`.
+- **`find_metadata_replacement()`** — Searches song names first, then artists. Returns replacement string for hook callback.
+- **`free_metadata()`** — Cleans up allocated metadata arrays on plugin unload.
+
+### Changed
+- **Feature flag gating** — Metadata loading only occurs when `enable_song_metadata_modification` is `true` in `features.json`. Hook still fires but skips replacement when flag is off.
+- **Song replacement format** — Combined "CustomName / CustomArtist" format for song names. Artist field blanked for single-artist packs (e.g., "The Rolling Stones" → " ").
+
+### Known Limitations
+- Artist replacement is global — "The Rolling Stones" → " " affects all Rolling Stones songs, which is correct for single-artist packs but may show blank artist for all songs in the pack.
+- Combined "Name / Artist" format in song name field — works but is a workaround for inability to replace artist independently.
+- Deferred: Field-aware replacement (Phase 2) will fix artist accuracy for multi-artist packs.
+
 ## [v0.8035] — 2026-07-24
 ### Fixed
 - **Remove free() of replacement strings** — set_text stores string reference internally for deferred rendering. Freeing caused use-after-free → "?" in song details.

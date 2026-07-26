@@ -36,21 +36,15 @@
 - [x] BPMInfo.dat eb too small — beatmap scan now cross-checks BPMInfo.dat (v0.52c)
 
 ## M2 — Song Metadata & Database (In Progress)
-- [x] `beat_saber_song_ids.json` — 306 official songs cataloged
+- [x] `beat_saber_song_ids.json` — official songs cataloged (reference file)
 - [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)
 - [x] Song testing log document (`song_testing_log.md`)
 - [ ] Difficulty metadata extraction from all 306 bundles
 - [x] DLC song name extraction from addressables packs — BeatmapLevelSO objects found in `aa/PS4/therollingstones_pack_assets_all_*.bundle` (Exp 111)
 - [ ] DLC song `BeatmapCharacteristicSO` references — need to locate OneSaber/90Degree PIDs in external CAB `CAB-cb38b3e2985c65d4cf8a63437da74a89` (Exp 111)
-- [x] **(NEW) Memory injection metadata patching** — v0.66–v0.72 plugin patches BeatmapLevelSO fields (song name, artist) in RAM after Addressables load, bypassing CRC validation. Implemented in `src/memory_inject.cpp`.
-- [x] **v0.72 deployed** — Real root cause found after 6 versions: bounds check in `try_read_mem()` rejected module segment addresses (~2GB) with a 4GB lower bound. Signal-handler memory probing implemented.
-- [x] **v0.72–v0.75 debugging saga** — Three root causes addressed:
-  - v0.72: Bounds check fixed (4GB→16MB) — try_read_mem works, but class string NOT found
-  - v0.73: Pattern matcher (full 8GB scan) — ❌ black screen hang, too slow for hook callback
-  - v0.74: Persistent signal handlers (once per scan), 256MB range — no objects found in assumed heap range
-  - v0.75: **PS4 dump analysis** — "BeatmapLevelSO" string is in global-metadata.dat, NOT in module. Heap address unverified. Wide-range pattern scan (1GB–32GB) deployed.
-  - v0.76: **String ptr validation threshold 4GB→16MB** — real bug in v0.73–v0.75: try_read_mem accepted 16MB+, but pattern validation rejected <4GB. Scan range 16MB–64GB.
-- [ ] **(PENDING TESTING)** Verify v0.79: (1) determine System_String._stringLength offset, (2) fix length check, (3) find klass, (4) patch objects issue (injection fires during play, but song list metadata comes from pack bundle)
+- [x] ~~Memory injection metadata patching~~ → **DEAD END** (v0.66–v0.8024, 14+ versions, 0 strings found)
+- [x] **TextMeshPro UI hooking** — v0.8035 proven working, replaces text in pause menu, song details, song artist
+- [x] **v0.8036** External `song_metadata.json` — replaces hardcoded replacement table
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors
@@ -104,10 +98,19 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **(v0.8031)** Hook fires correctly, no crash
 - [x] **(v0.8033)** Signal-protected string extraction — matches found!
 - [x] **(v0.8034)** Phase 3 string replacement — pause menu PERFECT, song list partially works
-- [ ] **(v0.8035+)** Fix song details "?" issue — klass pointer or encoding mismatch
+- [x] **(v0.8035)** Fix song details "?" issue — removed free() on replacement strings (use-after-free fix)
+- [x] **(v0.8036)** External `song_metadata.json` — replaces hardcoded replacement table, loaded from PS4
 - [ ] **(Phase 2)** Pointer tracking — hook `SetDataFromLevelAsync` to identify song name vs artist fields
 - [ ] **(Phase 2)** Selective replacement — only replace in known song name/artist TMP_Text fields
 - [ ] **(Future)** Expand replacement table to all 32 DLC slots
+
+### Song Metadata Feature Iteration (Planned)
+- [ ] **Evaluate current implementation** — "Name / Artist" combined format works for single-artist packs, but global artist replacement is inaccurate for multi-artist packs
+- [ ] **Option A: Fix current approach** — add field-aware replacement via `SetDataFromLevelAsync` pointer tracking (Phase 2)
+- [ ] **Option B: Rewrite with IL2CPP reflection** — use `il2cpp_class_get_method_from_name` to call `get_songName`/`get_songAuthorName` directly on BeatmapLevelSO objects, bypassing TMP_Text entirely
+- [ ] **Option C: Hybrid** — keep TMP_Text hook for song list, add targeted IL2CPP calls for artist field only
+- [ ] **Document limitations** in README for current release — single-artist packs work correctly, multi-artist packs have global artist replacement side effect
+- [ ] **Always have working v0.8036 release to fall back to** if newer approaches hit dead ends
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management
