@@ -3405,3 +3405,14 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - `.ai_memory/experiment_logs/v0.8034_test.txt`
 - **Version:** v0.8034
 - **Status:** ✅ **Phase 3 PARTIAL SUCCESS** — pause menu perfect, song list partially works
+
+### Experiment 150: v0.8035 — Fix Use-After-Free + il2cpp_string_new
+- **Date:** 2026-07-24
+- **What:**
+  - Removed `free()` of replacement strings — `set_text` stores reference internally for deferred rendering. Freeing caused use-after-free → "?" in song details.
+  - Added `il2cpp_string_new()` via `dlsym(RTLD_DEFAULT, "il2cpp_string_new")` — tries IL2CPP runtime for GC-managed strings first, falls back to manual `create_il2cpp_string`.
+  - Added `this` pointer logging for replacements (identifies song name vs artist fields)
+  - Added hex dump of original string first 24 bytes for layout diagnosis
+- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Version:** v0.8035
+- **Status:** ⏳ Deployed — awaiting test

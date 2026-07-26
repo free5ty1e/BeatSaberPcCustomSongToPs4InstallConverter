@@ -13,10 +13,11 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8034"
+#define PLUGIN_VERSION "v0.8035"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -400,7 +401,29 @@ static int extract_utf16_string(void* str_obj, char* out, int out_size) {
     return result;
 }
 
-// Create a new IL2CPP System.String from a C string
+// ── IL2CPP runtime string creation ──────────────────────────────────────────
+// Try to use il2cpp_string_new() for proper GC-managed strings
+typedef void* (*il2cpp_string_new_func)(const char*);
+static il2cpp_string_new_func g_il2cpp_string_new = NULL;
+static int g_il2cpp_string_new_tried = 0;
+
+static void* try_il2cpp_string_new(const char* cstr) {
+    if (!g_il2cpp_string_new_tried) {
+        g_il2cpp_string_new_tried = 1;
+        g_il2cpp_string_new = (il2cpp_string_new_func)dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+        if (g_il2cpp_string_new) {
+            log_write("[METADATA] il2cpp_string_new found via dlsym");
+        } else {
+            log_write("[METADATA] il2cpp_string_new NOT found — using manual string creation");
+        }
+    }
+    if (g_il2cpp_string_new) {
+        return g_il2cpp_string_new(cstr);
+    }
+    return NULL;
+}
+
+// Create a new IL2CPP System.String from a C string (manual fallback)
 // System.String layout: klass(8) + monitor(8) + _stringLength(4) + first_char(UTF-16LE)
 // Uses the klass pointer from an existing string object
 static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
@@ -449,15 +472,34 @@ static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo
         if (len > 0) {
             const char* replacement = find_replacement(text_buf);
             if (replacement) {
+                // Log this pointer to identify song name vs artist vs detail fields
                 char logmsg[512];
-                snprintf(logmsg, sizeof(logmsg), "[METADATA] REPLACE #%d: '%s' -> '%s'",
-                         g_tmp_text_set_text_count, text_buf, replacement);
+                snprintf(logmsg, sizeof(logmsg), "[METADATA] REPLACE #%d: this=%p '%s' -> '%s'",
+                         g_tmp_text_set_text_count, this_ptr, text_buf, replacement);
                 log_write(logmsg);
 
-                // Create replacement string using klass from original
-                void* replacement_str = create_il2cpp_string(value, replacement);
+                // Create replacement string — try IL2CPP runtime first, manual fallback
+                void* replacement_str = try_il2cpp_string_new(replacement);
+                if (!replacement_str) {
+                    replacement_str = create_il2cpp_string(value, replacement);
+                }
                 if (replacement_str) {
                     new_value = replacement_str;
+                }
+
+                // Hex dump first 24 bytes of original string for layout diagnosis
+                if (g_tmp_text_set_text_count <= 300) {
+                    uint8_t* raw = (uint8_t*)value;
+                    char hex[128];
+                    snprintf(hex, sizeof(hex), "[METADATA] RAW this=%p val=%p: "
+                             "%02x %02x %02x %02x %02x %02x %02x %02x | "
+                             "%02x %02x %02x %02x %02x %02x %02x %02x | "
+                             "%02x %02x %02x %02x %02x %02x %02x %02x",
+                             this_ptr, value,
+                             raw[0],raw[1],raw[2],raw[3],raw[4],raw[5],raw[6],raw[7],
+                             raw[8],raw[9],raw[10],raw[11],raw[12],raw[13],raw[14],raw[15],
+                             raw[16],raw[17],raw[18],raw[19],raw[20],raw[21],raw[22],raw[23]);
+                    log_write(hex);
                 }
             }
         }
@@ -467,10 +509,9 @@ static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo
     HOOK_CONTINUE(hook_tmp_text_set_text, void (*)(void*, void*, const MethodInfo*),
                   this_ptr, new_value, method);
 
-    // Free replacement string after original function returns
-    if (new_value != value) {
-        free(new_value);
-    }
+    // DO NOT free replacement string — set_text stores the reference internally
+    // for deferred rendering. Freeing it causes use-after-free → "?" in UI.
+    // Strings are small (~50 bytes each), leak is acceptable for now.
 }
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────

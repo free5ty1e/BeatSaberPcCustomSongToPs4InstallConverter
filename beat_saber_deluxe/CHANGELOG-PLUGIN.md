@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8035] — 2026-07-24
+### Fixed
+- **Remove free() of replacement strings** — set_text stores string reference internally for deferred rendering. Freeing caused use-after-free → "?" in song details.
+- **Try il2cpp_string_new() first** — Uses IL2CPP runtime to create GC-managed strings. Falls back to manual create_il2cpp_string if not found.
+- **Enhanced diagnostic logging** — Logs `this` pointer for replacements (identifies song name vs artist fields), hex dump of original string bytes for layout diagnosis.
+
 ## [v0.8034] — 2026-07-24
 ### Added
 - **Phase 3: String replacement** — Creates new IL2CPP System.String with replacement text using klass pointer from original. Passes replacement to original `set_text` call. Frees allocated memory after call returns.
