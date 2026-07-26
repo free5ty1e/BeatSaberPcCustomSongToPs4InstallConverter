@@ -3392,6 +3392,16 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
     - Converts ASCII replacement text to UTF-16LE
   - Passes new string to original `set_text` instead of original value
   - Frees allocated memory after original function returns
-- **Result:** ⏳ **DEPLOYED** — awaiting PS4 test
+- **Result:** ✅ **MAJOR SUCCESS — Text replacement works!**
+- **Key Findings:**
+  - **Pause menu**: Shows "Espresso" and "Sabrina Carpenter" PERFECTLY
+  - **Song artist in list**: "The Rolling Stones" → "Sabrina Carpenter" works
+  - **17 total replacements** in a typical session
+  - **Song name in list**: Some still show original names (not all text goes through TMP_Text.set_text)
+  - **Song details (selection panel)**: Shows "?" for name, empty for artist — klass pointer or layout mismatch for this context
+  - **Hook fires 300+ times** per session on ALL text updates, not just songs
+  - **Signal handler works** — no crashes from invalid pointer reads
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8034_test.txt`
 - **Version:** v0.8034
-- **Status:** ⏳ Deployed — awaiting test
+- **Status:** ✅ **Phase 3 PARTIAL SUCCESS** — pause menu perfect, song list partially works

@@ -1,12 +1,19 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-24
-**Status:** 🔄 **TextMeshPro UI hooking approach (v0.8027).** Memory injection abandoned after 14+ versions. New approach: hook `TMP_Text.set_text` to intercept song name/artist text in UI. Phase 1 (diagnostic logging) deployed, awaiting PS4 test results.
+**Status:** ✅ **TextMeshPro UI hooking PROVEN WORKING (v0.8034).** Pause menu replacement works perfectly. Song list partially works. Song details show "?" for name. Memory injection abandoned.
 
-## Current Approach: TextMeshPro UI Hooking (v0.8027)
+## Current Approach: TextMeshPro UI Hooking (v0.8034)
 
 **Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found. Strings don't exist in scannable memory at scan time.
 
 **New approach:** Hook `TMPro.TMP_Text::set_text(string)` to intercept song name/artist text when the UI renders.
+
+### Key Breakthroughs
+
+1. **Module discovery timing**: At `module_start()` only 3 modules visible. IL2CPP loads later. Defer to `open_hook()`, retry until found (open #10-11).
+2. **DetourMode**: Use `DetourMode_x64`, NOT x32. x32 splits IL2CPP instructions → crash.
+3. **Signal-protected extraction**: Hook fires 300+ times on ALL text, not just songs. Must catch SIGSEGV from non-string values.
+4. **String replacement works**: `create_il2cpp_string()` with klass pointer copy creates valid replacement strings.
 
 1. **TMP_Text.set_text hook** — Catches all TextMeshPro text updates
 2. **UTF-16LE extraction** — Reads the text string from Unity's managed memory
@@ -97,8 +104,14 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **138** | **v0.8022** | **Scan both GC heap AND metadata** | **❌ 5275 pages, 0 strings** |
 | **139** | **v0.8023** | **Trigger at BeatmapLevelsData redirect** | **❌ 5276 pages, 0 strings** |
 | **140** | **v0.8024** | **Scan four memory ranges (16MB–8GB)** | **❌ 7021 pages, 0 strings. Strings not in any region** |
-| **141** | **v0.8026** | **TMP_Text.set_text hook (Phase 1)** | **❌ Module not found — 64-slot buffer too small** |
-| **142** | **v0.8027** | **TMP_Text hook + 256-module buffer** | **⏳ Deployed — awaiting test** |
+| **142** | **v0.8027** | **TMP_Text hook + 256-module buffer** | **❌ Only 3 modules at module_start()** |
+| **143** | **v0.8028** | **Deferred hook to open_hook()** | **❌ Still 3 modules at first open** |
+| **144** | **v0.8029** | **Retry module discovery** | **❌ Hook installed but double-hook crash** |
+| **145** | **v0.8030** | **Stop retry + DetourMode_x32** | **❌ Crash — DetourMode_x32 splits instructions** |
+| **146** | **v0.8031** | **DetourMode_x64, minimal callback** | **✅ Hook fires correctly, no crash** |
+| **147** | **v0.8032** | **Add string reading back** | **❌ Crash — extract_utf16_string on invalid pointer** |
+| **148** | **v0.8033** | **Signal-protected extraction** | **✅ Matches found! Rolling Stones → Sabrina Carpenter** |
+| **149** | **v0.8034** | **Phase 3 string replacement** | **✅ Pause menu PERFECT, song list partially works** |
 
 ## Memory Injection Versions
 
@@ -138,9 +151,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **⏳ Analyze v0.8027 log** — Check diagnostic output for IL2CPP module name and hook installation
-2. **Phase 2: Pointer tracking** — Hook `SetDataFromLevelAsync` to track which `TextMeshProUGUI*` pointers are song name/artist fields
-3. **Phase 3: String replacement** — Replace text with custom metadata from replacement table
+1. **Investigate "?" in song details** — `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
+2. **Phase 2: Pointer tracking** — Hook `SetDataFromLevelAsync` to identify song name vs artist TextMeshPro pointers
+3. **Selective replacement** — Only replace text in known song name/artist fields, not all TMP_Text calls
 4. **Expand replacement table** — Register metadata for all 32 DLC slots
 
 ## Active Knowledge Gaps
@@ -152,8 +165,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
 5. ~~Field offsets~~ → **UNVERIFIED** but may not matter if string content search works
 6. ~~Timing~~ → **TESTED**: Scanned at pack load (OPEN #738) and BeatmapLevelsData redirect (OPEN #740). Strings not found at either time.
 7. ~~String location~~ → **NOT FOUND**: Strings NOT in any scanned region (16MB–8GB + metadata). Memory injection approach abandoned.
-8. **Memory injection** → **🔴 DEAD END**: Failed across all memory regions after 14+ versions. Code removed in v0.8025.
-9. **TextMeshPro hook** → **⏳ IN PROGRESS**: Phase 1 (diagnostic) deployed as v0.8027. Hook infrastructure correct, module discovery being debugged.
+8. ~~Memory injection~~ → **🔴 DEAD END**: Failed across all memory regions after 14+ versions. Code removed in v0.8025.
+9. ~~TextMeshPro hook~~ → **✅ PROVEN WORKING**: Hook fires, strings read, replacements displayed in pause menu (v0.8034).
+10. **Song details "?" issue** → **IN PROGRESS**: `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
+11. **Selective replacement** → **TODO**: Currently replaces in ALL TMP_Text calls. Need Phase 2 pointer tracking to identify song name vs artist fields.
 
 ## References
 

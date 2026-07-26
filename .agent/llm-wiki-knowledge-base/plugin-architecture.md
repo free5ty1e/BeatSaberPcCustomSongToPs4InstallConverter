@@ -19,7 +19,8 @@ The plugin consists of two source files:
   3. Loads redirect table from `redirects.json` (external config, not hardcoded)
   4. Stores `open()` log to `bs_log.txt` for debugging
   5. Sends notification via `/dev/notification0` on plugin load
-  6. **[v0.8026+]** Hooks `TMP_Text.set_text` for song metadata modification (feature-flagged)
+  6. **[v0.8034+]** Hooks `TMP_Text.set_text` for song metadata modification (feature-flagged)
+  7. **[v0.8034+]** Creates replacement IL2CPP strings and passes to original `set_text`
 
 ## Deploy Path
 

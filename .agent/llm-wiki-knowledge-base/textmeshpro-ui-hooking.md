@@ -11,7 +11,20 @@ metadata:
 
 After memory injection failed (v0.66–v0.8024), the new approach hooks Unity's TextMeshPro text rendering pipeline to intercept and modify displayed song names/artists in the song list UI.
 
-**Status:** 🔵 Implementation planned (v0.8026+)
+**Status:** ✅ **PROVEN WORKING** (v0.8034) — Hook fires, strings read, replacements displayed in pause menu. Song list partially works, song details show "?" for some fields.
+
+## Breakthrough Results (v0.8034)
+
+### What Works
+- **Pause menu**: Shows replacement song name AND artist perfectly ("Espresso" / "Sabrina Carpenter")
+- **Song artist in list**: "The Rolling Stones" → "Sabrina Carpenter" replaces correctly
+- **No crashes**: Signal-protected string extraction handles non-string arguments safely
+- **300+ hook calls per session**: Performance is fine, no hangs
+
+### Known Issues
+- **Song name in list**: Some song names still show original Rolling Stones names (not all text goes through TMP_Text.set_text)
+- **Song details (selection panel)**: Shows "?" for name and empty for artist — the `create_il2cpp_string()` klass pointer or layout may be wrong for this context
+- **Artist mismatch**: Replaces "The Rolling Stones" → "Sabrina Carpenter" in artist field, but the real Beat Saber artists for other songs (Megaphonix, Boom Kitty, Jaroslav Beck) are correct
 
 ## UI Framework: TextMeshPro
 
@@ -54,26 +67,44 @@ StandardLevelDetailViewController (detail panel)
 
 ## Hook Strategy: TMP_Text.set_text with Pointer Tracking
 
-### Phase 1: Hook + Diagnostic (v0.8026)
+### Phase 1: Hook + Diagnostic ✅ COMPLETE (v0.8026–v0.8031)
 1. Find `Il2CppUserAssemblies` module base via `sceKernelGetModuleList()`
 2. Calculate target: `module_base + 0x2D35BE0`
-3. Install Detour using `DetourMode_x32` (5-byte JMP — safe for IL2CPP)
+3. Install Detour using `DetourMode_x64`
 4. Log every call: `this` pointer, string value (first 32 chars), call count
+5. Signal-protected string extraction for safe pointer reads
 
-### Phase 2: Pointer Tracking (v0.8027)
+### Phase 2: Pointer Tracking (FUTURE)
 1. Hook `LevelListTableCell.SetDataFromLevelAsync` (RVA `0x1D36940`)
 2. When it fires, capture `this` (LevelListTableCell)
 3. Read `_songNameText` at `this+0x90` and `_songAuthorText` at `this+0x98`
 4. Store in tracking table: `{TextMeshProUGUI*, original_name, original_artist}`
 5. In `set_text` hook, check if `this` matches tracked pointer
 
-### Phase 3: String Replacement (v0.8028)
-1. When tracked pointer matches AND string is in replacement table:
-   - Option A: In-place UTF-16LE overwrite (replacement ≤ original length)
-   - Option B: Use `il2cpp_string_new()` to create fresh managed string
+### Phase 3: String Replacement ✅ PARTIALLY WORKING (v0.8034)
+1. When string is in replacement table:
+   - Create new IL2CPP System.String using `create_il2cpp_string()`
+   - Copy klass pointer from original string
+   - Convert ASCII replacement to UTF-16LE
 2. Call original `set_text` with replacement string
+3. Free allocated memory after original function returns
+
+**Phase 3 status**: Works for pause menu, partially works for artist in song list, "?" for song details name.
 
 ## Critical Implementation Details
+
+### Module Discovery Timing (CRITICAL)
+
+**At `module_start()`: only 3 modules visible** (`eboot.bin`, `libSceFios2.prx`, `libc.prx`).
+IL2CPP modules not loaded yet. `Il2CppUserAssemblies.prx` becomes visible at ~open #10-11.
+
+**Solution**: Defer `find_il2cpp_module_base()` to `open_hook()`, retry on each call until found. Module list grows from 3→5 as game initializes.
+
+### DetourMode Selection (CORRECTED)
+
+- **Use `DetourMode_x64`** (14-byte JMP) — works correctly, used by open/close hooks
+- ~~`DetourMode_x32`~~ (5-byte JMP) — **CRASHES** (v0.8030). Splits IL2CPP variable-length instructions.
+- Previous knowledge base note recommending x32 was **WRONG** — corrected in v0.8031.
 
 ### Calling Convention
 PS4 IL2CPP uses **SysV AMD64** (NOT MS x64):
@@ -82,40 +113,82 @@ PS4 IL2CPP uses **SysV AMD64** (NOT MS x64):
 - `method` in **RDX**
 - No `__attribute__((ms_abi))` — crashes if used
 
-### DetourMode Selection
-- **Use `DetourMode_x32`** (5-byte JMP `E9 xx xx xx xx`)
-- `DetourMode_x64` (14-byte JMP) can split IL2CPP instructions and crash
-- Range ±2GB — always satisfied on PS4 (modules load at 0x80000000–0x90000000)
-
-### System.String Layout (PS4)
+### System.String Layout (PS4 — VERIFIED)
 ```
 System.String_o:
-  0x00: klass (Il2CppClass*)
+  0x00: klass (Il2CppClass*) — first 8 bytes, copy to create replacement strings
   0x08: monitor (void*)
-  0x10: _stringLength (int32)  — may be at 0x14 or 0x18 on PS4
-  0x14: first_char (UTF-16LE)  — or 0x18/0x1C depending on _stringLength offset
+  0x10: _stringLength (int32) — verified at 0x10, fallback to 0x14
+  0x14: first_char (UTF-16LE) — or 0x18 depending on _stringLength offset
 ```
 
-### IL2CPP Runtime Functions
-To create managed strings from C++:
+### Signal-Protected String Extraction (REQUIRED)
+
+The `TMP_Text.set_text` hook fires on **ALL text updates** (~300+ per session), not just song names. Most calls pass non-string values or pointers to strings with different memory layouts.
+
+**Solution**: Wrap `extract_utf16_string()` in `sigsetjmp`/`siglongjmp` with `SIGSEGV`/`SIGBUS` handlers. Catches invalid pointer dereferences and returns 0 (no match) instead of crashing.
+
 ```c
-// Find via dlsym on Il2CppUserAssemblies.prx
-typedef void* (*il2cpp_string_new_func)(const char*);
-il2cpp_string_new_func il2cpp_string_new = dlsym(RTLD_DEFAULT, "il2cpp_string_new");
+static sigjmp_buf g_extract_jmp_buf;
+// In extract_utf16_string:
+new_sa.sa_sigaction = [](int, struct __siginfo*, void*) {
+    siglongjmp(g_extract_jmp_buf, 1);
+};
+sigaction(SIGSEGV, &new_sa, &old_sa);
+if (sigsetjmp(g_extract_jmp_buf, 1) == 0) {
+    // safe to dereference str_obj pointers here
+} else {
+    // SIGSEGV caught — invalid pointer, return 0
+}
+sigaction(SIGSEGV, &old_sa, NULL);
 ```
+
+### create_il2cpp_string() — Replacement String Creation
+
+```c
+static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
+    int len = strlen(cstr);
+    int total = 16 + 4 + (len * 2) + 2;  // klass + monitor + length + chars + null
+    void* str_mem = malloc(total);
+    memcpy(str_mem, klass_ptr, 8);         // copy klass from original
+    memset((char*)str_mem + 8, 0, 8);      // zero monitor
+    *(uint32_t*)((char*)str_mem + 16) = len; // string length
+    // ASCII → UTF-16LE conversion
+    uint16_t* chars = (uint16_t*)((char*)str_mem + 20);
+    for (int i = 0; i < len; i++) chars[i] = (uint16_t)(unsigned char)cstr[i];
+    chars[len] = 0;
+    return str_mem;
+}
+```
+
+**Known issue**: Works for pause menu text, but shows "?" for song details name. Possible cause: different TMP_Text subclass hierarchy or different encoding expectations in StandardLevelDetailViewController.
 
 ### Cell Recycling
 Table views reuse cells. The same `TextMeshProUGUI*` pointer may display different songs. Must re-track pointers each time `SetDataFromLevelAsync` fires.
 
-## Risk Assessment
+## Hook Call Pattern (v0.8034 Test Data)
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| `set_text` is inlined | Low | High | Virtual method with vtable — unlikely. Verify via disassembly. |
-| mprotect crash at install | Medium | High | Use `DetourMode_x32`. If crashes, `mprotect()` the page first. |
-| High call frequency | Medium | Low | Hook body: just pointer comparison + branch. Fast enough. |
-| Cell recycling breaks tracking | High | Medium | Re-track on every `SetDataFromLevelAsync` call. |
-| String sharing (in-place modify affects other refs) | Medium | Medium | Use `il2cpp_string_new()` for fresh strings if needed. |
+| Call Range | Context | Notes |
+|------------|---------|-------|
+| #1–#15 | Plugin startup | Menu text, buttons |
+| #15–#200 | Song list navigation | Scrolling through packs |
+| #200–#270 | Rolling Stones pack selected | "The Rolling Stones" artist matches, "Start Me Up" name matches |
+| #270–#320 | Song selected, detail view | Replacements fire but "?" appears for name |
+
+**17 total replacements** in a typical session (all 14 artist + 3 song name matches).
+
+## Risk Assessment (UPDATED)
+
+| Risk | Likelihood | Impact | Status |
+|------|------------|--------|--------|
+| `set_text` is inlined | Low | High | ✅ Not inlined — virtual method works |
+| DetourMode crash | ~~Medium~~ | High | ✅ **RESOLVED**: Use x64, NOT x32 |
+| Module not found | High | High | ✅ **RESOLVED**: Defer to open_hook(), retry |
+| SIGSEGV from invalid pointers | High | High | ✅ **RESOLVED**: Signal handler protection |
+| High call frequency | Medium | Low | ✅ Fine — fast pointer comparison + branch |
+| Cell recycling breaks tracking | High | Medium | Phase 2 — re-track on SetDataFromLevelAsync |
+| String layout mismatch | Medium | Medium | ⚠️ Song details show "?" — needs investigation |
+| malloc in hook callback | Low | Medium | Works but may need IL2CPP GC allocation |
 
 ## Related
 

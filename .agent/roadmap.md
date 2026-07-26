@@ -99,11 +99,14 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
 - [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
 
-### Alternative: TextMeshPro UI Hooking (Current)
-- [x] **(v0.8026)** Hook `TMP_Text.set_text` — infrastructure implemented, DetourMode_x32, SysV calling convention
-- [ ] **(v0.8027)** Module discovery — 256-module buffer, diagnostic logging deployed, awaiting test
-- [ ] **(Phase 2)** Pointer tracking — hook `SetDataFromLevelAsync` to identify song name/artist TextMeshPro pointers
-- [ ] **(Phase 3)** String replacement — replace text with custom metadata from replacement table
+### Alternative: TextMeshPro UI Hooking (Current) — ✅ PROVEN WORKING
+- [x] **(v0.8026–v0.8031)** Hook infrastructure — module discovery, DetourMode_x64, retry logic
+- [x] **(v0.8031)** Hook fires correctly, no crash
+- [x] **(v0.8033)** Signal-protected string extraction — matches found!
+- [x] **(v0.8034)** Phase 3 string replacement — pause menu PERFECT, song list partially works
+- [ ] **(v0.8035+)** Fix song details "?" issue — klass pointer or encoding mismatch
+- [ ] **(Phase 2)** Pointer tracking — hook `SetDataFromLevelAsync` to identify song name vs artist fields
+- [ ] **(Phase 2)** Selective replacement — only replace in known song name/artist TMP_Text fields
 - [ ] **(Future)** Expand replacement table to all 32 DLC slots
 
 ## M5 — Polishing (Future)
