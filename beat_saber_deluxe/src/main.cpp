@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8036"
+#define PLUGIN_VERSION "v0.8037"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -317,6 +317,7 @@ static int close_hook(int fd) {
 // RVA: 0x2D35BE0 (virtual method, slot 66)
 // Calling convention: SysV AMD64 (this in RDI, value in RSI, method in RDX)
 HOOK_INIT(hook_tmp_text_set_text);
+HOOK_INIT(hook_tmp_text_set_text2);
 static int g_tmp_text_set_text_count = 0;
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)
@@ -529,66 +530,50 @@ static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
     return str_mem;
 }
 
-static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo* method) {
-    g_tmp_text_set_text_count++;
+// Shared replacement logic for both set_text and SetText hooks
+static void* apply_metadata_replacement(void* this_ptr, void* value) {
+    if (!g_feature_song_metadata_modification || !value) return value;
 
-    // Log first 15 calls unconditionally — verify hook fires
-    if (g_tmp_text_set_text_count <= 15) {
-        char logmsg[256];
-        snprintf(logmsg, sizeof(logmsg), "[METADATA] set_text #%d: this=%p value=%p",
-                 g_tmp_text_set_text_count, this_ptr, value);
-        log_write(logmsg);
-    }
+    char text_buf[256] = {0};
+    int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
 
-    // Read string and check for matches (with null guard)
-    void* new_value = value;
-    if (g_feature_song_metadata_modification && value) {
-        char text_buf[256] = {0};
-        int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
+    if (len > 0) {
+        const char* replacement = find_metadata_replacement(text_buf);
+        if (replacement) {
+            g_tmp_text_set_text_count++;
 
-        if (len > 0) {
-            const char* replacement = find_metadata_replacement(text_buf);
-            if (replacement) {
-                // Log this pointer to identify song name vs artist vs detail fields
-                char logmsg[512];
-                snprintf(logmsg, sizeof(logmsg), "[METADATA] REPLACE #%d: this=%p '%s' -> '%s'",
-                         g_tmp_text_set_text_count, this_ptr, text_buf, replacement);
-                log_write(logmsg);
+            char logmsg[512];
+            snprintf(logmsg, sizeof(logmsg), "[METADATA] REPLACE #%d: this=%p '%s' -> '%s'",
+                     g_tmp_text_set_text_count, this_ptr, text_buf, replacement);
+            log_write(logmsg);
 
-                // Create replacement string — try IL2CPP runtime first, manual fallback
-                void* replacement_str = try_il2cpp_string_new(replacement);
-                if (!replacement_str) {
-                    replacement_str = create_il2cpp_string(value, replacement);
-                }
-                if (replacement_str) {
-                    new_value = replacement_str;
-                }
-
-                // Hex dump first 24 bytes of original string for layout diagnosis
-                if (g_tmp_text_set_text_count <= 300) {
-                    uint8_t* raw = (uint8_t*)value;
-                    char hex[128];
-                    snprintf(hex, sizeof(hex), "[METADATA] RAW this=%p val=%p: "
-                             "%02x %02x %02x %02x %02x %02x %02x %02x | "
-                             "%02x %02x %02x %02x %02x %02x %02x %02x | "
-                             "%02x %02x %02x %02x %02x %02x %02x %02x",
-                             this_ptr, value,
-                             raw[0],raw[1],raw[2],raw[3],raw[4],raw[5],raw[6],raw[7],
-                             raw[8],raw[9],raw[10],raw[11],raw[12],raw[13],raw[14],raw[15],
-                             raw[16],raw[17],raw[18],raw[19],raw[20],raw[21],raw[22],raw[23]);
-                    log_write(hex);
-                }
+            void* replacement_str = try_il2cpp_string_new(replacement);
+            if (!replacement_str) {
+                replacement_str = create_il2cpp_string(value, replacement);
+            }
+            if (replacement_str) {
+                return replacement_str;
             }
         }
     }
+    return value;
+}
 
-    // Call original function with (possibly replaced) value
+static void tmp_text_set_text_hook(void* this_ptr, void* value, const MethodInfo* method) {
+    void* new_value = apply_metadata_replacement(this_ptr, value);
+
     HOOK_CONTINUE(hook_tmp_text_set_text, void (*)(void*, void*, const MethodInfo*),
                   this_ptr, new_value, method);
+}
 
-    // DO NOT free replacement string — set_text stores the reference internally
-    // for deferred rendering. Freeing it causes use-after-free → "?" in UI.
-    // Strings are small (~50 bytes each), leak is acceptable for now.
+// TMP_Text.SetText(string, bool) — used by song list for song name text
+// RVA: 0x2D3E1D0 (non-virtual method)
+// Calling convention: SysV AMD64 (this in RDI, value in RSI, syncInput in EDX, method in RCX)
+static void tmp_text_set_text2_hook(void* this_ptr, void* value, int sync_input, const MethodInfo* method) {
+    void* new_value = apply_metadata_replacement(this_ptr, value);
+
+    HOOK_CONTINUE(hook_tmp_text_set_text2, void (*)(void*, void*, int, const MethodInfo*),
+                  this_ptr, new_value, sync_input, method);
 }
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────
@@ -661,14 +646,19 @@ static void try_install_tmp_hook(void) {
 
     char logmsg[256];
     uint64_t target = il2cpp_base + 0x2D35BE0;
-    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text target: 0x%lx (attempt %d, open #%d)",
-             il2cpp_base, target, g_tmp_hook_attempts, g_open_count);
+    uint64_t target2 = il2cpp_base + 0x2D3E1D0;
+    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text: 0x%lx, SetText: 0x%lx (attempt %d, open #%d)",
+             il2cpp_base, target, target2, g_tmp_hook_attempts, g_open_count);
     log_write(logmsg);
 
     Detour_Construct(&Detour_hook_tmp_text_set_text, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_tmp_text_set_text, target, (void*)tmp_text_set_text_hook);
+
+    Detour_Construct(&Detour_hook_tmp_text_set_text2, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_tmp_text_set_text2, target2, (void*)tmp_text_set_text2_hook);
+
     g_tmp_hook_installed = 1;
-    log_write("[METADATA] TMP_Text.set_text hook installed");
+    log_write("[METADATA] TMP_Text.set_text + SetText hooks installed");
 }
 
 extern "C" int module_start(size_t argc, const void *args) {

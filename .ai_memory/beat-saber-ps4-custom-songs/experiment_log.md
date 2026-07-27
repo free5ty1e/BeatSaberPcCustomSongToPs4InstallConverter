@@ -3452,4 +3452,28 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - ⏳ deploy_all.sh update (Step 3) — pending
 - **Roadmap Entry Added:** "Song Metadata Feature Iteration" — evaluate/fix/rewrite options documented
 - **Version:** v0.8036
-- **Status:** 🔲 **DEPLOYED — awaiting test** — external metadata loading, pipeline integration in progress
+- **Status:** ✅ **DEPLOYED AND TESTED** — external metadata loading works. Feature flag was initially `false` (old features.json), fixed to `true`. Artist blanking works in song list. Song details and pause menu show correct custom names. Song list song names NOT modified.
+
+### Experiment 152: v0.8037 — SetText Hook for Song List Names
+- **Date:** 2026-07-26
+- **What:**
+  - Added second hook for `TMP_Text.SetText(string, bool)` at RVA `0x2D3E1D0` — song list uses `SetText()` instead of `set_text()` property setter for song name text
+  - Refactored: extracted `apply_metadata_replacement()` shared function used by both hooks
+  - Both hooks install together in `try_install_tmp_hook()`
+- **Result:** 🔲 **DEPLOYED AND TESTED** — SetText hook fires and replacements are applied (log confirms "Start Me Up" → "Espresso / Sabrina Carpenter" at new `this` pointers `2a4ed2800`, `2a4a9a800`). BUT song list still shows original names.
+- **Key Findings:**
+  - **Feature flag issue (v0.8036):** `enable_song_metadata_modification` was `false` in deployed features.json. Fixed by updating local file and redeploying.
+  - **SetText hook fires correctly** — new `this` pointers appear in log, replacements are applied
+  - **Song list re-rendering problem** — Despite replacement being applied via SetText hook, the song list STILL shows original names. The game's song list UI likely re-renders from a data model (BeatmapLevelSO) after our hook fires, overwriting the replacement. The hook intercepts the text being set, but the UI framework then re-applies the original text from its data source.
+  - **What works:** Artist blanking in song list ✅, song details panel ✅, pause menu ✅
+  - **What doesn't work:** Song list song names ❌ — replaced by hook but immediately overwritten by UI re-render
+- **Root Cause Analysis:**
+  - Song list artists ARE blanked (set_text hook catches "The Rolling Stones" → " ")
+  - Song list song names ARE replaced by SetText hook (confirmed in log)
+  - But the replacement is overwritten — the song list UI reads from BeatmapLevelSO data model and re-renders periodically
+  - This means hooking text output methods (set_text/SetText) is fundamentally limited for song list names
+  - Need to hook the DATA SOURCE instead (BeatmapLevelSO fields) or use a different interception point
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8037_test.txt`
+- **Version:** v0.8037
+- **Status:** ⚠️ **PARTIAL SUCCESS** — song list names still not modified despite hook firing. Song list re-renders from data model. Need different approach for song list names.

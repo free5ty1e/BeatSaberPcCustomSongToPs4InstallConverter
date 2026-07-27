@@ -93,23 +93,24 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
 - [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
 
-### Alternative: TextMeshPro UI Hooking (Current) — ✅ PROVEN WORKING
+### Alternative: TextMeshPro UI Hooking (Current) — ⚠️ PARTIAL SUCCESS
 - [x] **(v0.8026–v0.8031)** Hook infrastructure — module discovery, DetourMode_x64, retry logic
 - [x] **(v0.8031)** Hook fires correctly, no crash
 - [x] **(v0.8033)** Signal-protected string extraction — matches found!
 - [x] **(v0.8034)** Phase 3 string replacement — pause menu PERFECT, song list partially works
 - [x] **(v0.8035)** Fix song details "?" issue — removed free() on replacement strings (use-after-free fix)
 - [x] **(v0.8036)** External `song_metadata.json` — replaces hardcoded replacement table, loaded from PS4
-- [ ] **(Phase 2)** Pointer tracking — hook `SetDataFromLevelAsync` to identify song name vs artist fields
-- [ ] **(Phase 2)** Selective replacement — only replace in known song name/artist TMP_Text fields
+- [x] **(v0.8037)** SetText hook — second hook for `TMP_Text.SetText(string, bool)` at RVA `0x2D3E1D0`
+- [ ] **(v0.8037 finding)** Song list re-renders from data model — SetText hook fires and replacement applied, but UI overwrites with original. Need to hook BeatmapLevelSO data source instead.
+- [ ] **(Future)** Hook `BeatmapLevelSO` fields directly — modify `songName`/`songAuthorName` at the data model level before UI renders
 - [ ] **(Future)** Expand replacement table to all 32 DLC slots
 
-### Song Metadata Feature Iteration (Planned)
-- [ ] **Evaluate current implementation** — "Name / Artist" combined format works for single-artist packs, but global artist replacement is inaccurate for multi-artist packs
-- [ ] **Option A: Fix current approach** — add field-aware replacement via `SetDataFromLevelAsync` pointer tracking (Phase 2)
-- [ ] **Option B: Rewrite with IL2CPP reflection** — use `il2cpp_class_get_method_from_name` to call `get_songName`/`get_songAuthorName` directly on BeatmapLevelSO objects, bypassing TMP_Text entirely
-- [ ] **Option C: Hybrid** — keep TMP_Text hook for song list, add targeted IL2CPP calls for artist field only
-- [ ] **Document limitations** in README for current release — single-artist packs work correctly, multi-artist packs have global artist replacement side effect
+### Song Metadata Feature Iteration (Current)
+- [x] **Evaluate current implementation** — TMP_Text hooks work for details/pause menu, artist blanking works. Song list names NOT modified (re-rendered from data model).
+- [x] **SetText hook attempt** (v0.8037) — Hook fires and replaces, but song list re-renders from BeatmapLevelSO, overwriting replacement. Fundamental limitation of text-output hooking.
+- [ ] **Option A: Hook BeatmapLevelSO directly** — Use `il2cpp_class_get_method_from_name` to modify `songName`/`songAuthorName` fields on the data model objects before UI renders
+- [ ] **Option B: Hook `SetDataFromLevelAsync`** — Intercept when song data is set on UI, identify TMP_Text pointers, replace in batch after data model is set
+- [ ] **Option C: Hybrid** — Keep TMP_Text hook for details/pause menu (works), add data-model hook for song list names
 - [ ] **Always have working v0.8036 release to fall back to** if newer approaches hit dead ends
 
 ## M5 — Polishing (Future)

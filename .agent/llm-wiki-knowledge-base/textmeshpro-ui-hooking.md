@@ -59,8 +59,9 @@ StandardLevelDetailViewController (detail panel)
 
 | Method | RVA | Notes |
 |--------|-----|-------|
-| `TMP_Text.set_text(string)` | **0x2D35BE0** | Virtual method, slot 66. Hook target. |
+| `TMP_Text.set_text(string)` | **0x2D35BE0** | Virtual method, slot 66. Hook target for details/pause menu. |
 | `TMP_Text.get_text()` | 0x2D35A60 | Virtual method, slot 65 |
+| `TMP_Text.SetText(string, bool)` | **0x2D3E1D0** | Non-virtual, explicit bool overload. Hook target for song list names (but replacement overwritten by data model re-render). |
 | `LevelListTableCell.SetDataFromLevelAsync` | **0x1D36940** | Async — populates cell with song data |
 | `LevelCollectionTableView.CellForIdx` | 0x1B95D40 | Returns TableCell for index |
 | `LevelCollectionTableView.SetData` | 0x1B95360 | Sets song list data |
@@ -81,15 +82,17 @@ StandardLevelDetailViewController (detail panel)
 4. Store in tracking table: `{TextMeshProUGUI*, original_name, original_artist}`
 5. In `set_text` hook, check if `this` matches tracked pointer
 
-### Phase 3: String Replacement ✅ PARTIALLY WORKING (v0.8034)
+### Phase 3: String Replacement ⚠️ PARTIALLY WORKING (v0.8034–v0.8037)
 1. When string is in replacement table:
    - Create new IL2CPP System.String using `create_il2cpp_string()`
    - Copy klass pointer from original string
    - Convert ASCII replacement to UTF-16LE
-2. Call original `set_text` with replacement string
-3. Free allocated memory after original function returns
+2. Call original `set_text` or `SetText` with replacement string
 
-**Phase 3 status**: Works for pause menu, partially works for artist in song list, "?" for song details name.
+**Phase 3 status**: Works for song details panel ✅, pause menu ✅, artist blanking in song list ✅. **Song list song names NOT visible** — SetText hook fires and replacement applied (v0.8037 log confirms), but song list UI re-renders from BeatmapLevelSO data model, overwriting the replacement.
+
+### Key Finding: Song List Re-rendering (v0.8037 — CRITICAL)
+The song list uses `TMP_Text.SetText(string, bool)` for song name text. The SetText hook fires and applies the replacement, but the song list UI framework then re-applies the original text from its data model (BeatmapLevelSO), overwriting our hook's output. This means **hooking text output methods is fundamentally limited for song list names** — need to hook the data source (BeatmapLevelSO fields) instead.
 
 ## Critical Implementation Details
 

@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8037] — 2026-07-26
+### Added
+- **Second hook: `TMP_Text.SetText(string, bool)`** — RVA `0x2D3E1D0`. Song list uses `SetText()` for song name text instead of `set_text()` property setter. Both hooks now fire for song name and artist text.
+- **Shared replacement logic** — Extracted `apply_metadata_replacement()` function used by both hooks. Reduces code duplication.
+### Known Limitations
+- **Song list names still not visible** — SetText hook fires and replacements are applied (log confirms), but song list still shows original names. Song list likely re-renders from a data model after our hook fires, overwriting the replacement. Need to investigate the rendering pipeline.
+
 ## [v0.8036] — 2026-07-26
 ### Added
 - **External `song_metadata.json` loading** — Replaces hardcoded 13-entry `SONG_REPLACEMENTS[]` array with data-driven metadata loaded from `/data/GoldHEN/AFR/CUSA12878/song_metadata.json`. Two flat tables: `song_names` and `song_artists`.

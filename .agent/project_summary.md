@@ -1,12 +1,15 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-26
-**Status:** ✅ **External song_metadata.json loading PROVEN WORKING (v0.8036).** 32 songs replaced with "Name / Artist" format. Pipeline integration in progress.
+**Status:** ⚠️ **Song list song name replacement NOT working (v0.8037).** Artist blanking works, song details/pause menu work, but song list shows original names despite hooks firing. Song list re-renders from data model, overwriting replacement.
 
-## Current Approach: TextMeshPro UI Hooking + External Metadata (v0.8036)
+## Current Approach: TextMeshPro UI Hooking + External Metadata (v0.8037)
 
 **Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found. Strings don't exist in scannable memory at scan time.
 
-**New approach:** Hook `TMPro.TMP_Text::set_text(string)` to intercept song name/artist text when the UI renders. External `song_metadata.json` loaded from PS4 for data-driven replacement.
+**New approach:** Hook `TMP_Text.set_text(string)` AND `TMP_Text.SetText(string, bool)` to intercept song name/artist text when the UI renders. External `song_metadata.json` loaded from PS4 for data-driven replacement.
+
+### Known Limitation (v0.8037)
+- **Song list song names NOT modified** — SetText hook fires and replacements are applied (log confirms), but the song list UI re-renders from BeatmapLevelSO data model, overwriting the replacement. Artist blanking works (set_text hook catches it). Need to hook the data source instead of text output.
 
 ### Key Breakthroughs
 
@@ -29,7 +32,8 @@
 
 ### TextMeshPro Hook Architecture
 
-- **Hook target:** `TMP_Text.set_text(string)` — RVA `0x2D35BE0`
+- **Hook 1:** `TMP_Text.set_text(string)` — RVA `0x2D35BE0` (virtual Slot 66 property setter) — catches details panel, pause menu
+- **Hook 2:** `TMP_Text.SetText(string, bool)` — RVA `0x2D3E1D0` (non-virtual, explicit bool overload) — catches song list names (but replacement overwritten)
 - **Hook mode:** `DetourMode_x64` (14-byte JMP)
 - **Calling convention:** SysV AMD64 — `this` in RDI, `value` in RSI, `method` in RDX
 - **Module discovery:** `sceKernelGetModuleList` with 256-module buffer
@@ -109,6 +113,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **147** | **v0.8032** | **Add string reading back** | **❌ Crash — extract_utf16_string on invalid pointer** |
 | **148** | **v0.8033** | **Signal-protected extraction** | **✅ Matches found! Rolling Stones → Sabrina Carpenter** |
 | **149** | **v0.8034** | **Phase 3 string replacement** | **✅ Pause menu PERFECT, song list partially works** |
+| **150** | **v0.8035** | **use-after-free fix, 13-entry replacement table** | **✅ Details panel, pause menu, artist blanking all work** |
+| **151** | **v0.8036** | **External song_metadata.json** | **✅ Works. Song details/pause menu correct, artist blanking in song list** |
+| **152** | **v0.8037** | **SetText hook for song list names** | **⚠️ Hook fires, replacement applied, but song list re-renders from data model — names still original** |
 
 ## Memory Injection Versions
 
