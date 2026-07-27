@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8038] — 2026-07-26
+### Added
+- **Hooked `LevelListTableCell.SetDataFromLevelAsync`** — RVA `0x1D36940`. Modifies `BeatmapLevel.songName` (offset 0x20) and `songAuthorName` (offset 0x30) in-place BEFORE the original async method runs. The UI reads our replacement from the data source, bypassing the TMP_Text re-rendering issue.
+### Approach
+- This is the **data source modification** approach — instead of hooking text output methods (set_text/SetText), we modify the BeatmapLevel object that the UI reads from. Since BeatmapLevel fields are `readonly` (only enforced at compile time), we can write directly to the memory.
+- The SetDataFromLevelAsync hook fires for each song list cell, reads the BeatmapLevel, and replaces songName/songAuthorName before the cell is populated.
+
 ## [v0.8037] — 2026-07-26
 ### Added
 - **Second hook: `TMP_Text.SetText(string, bool)`** — RVA `0x2D3E1D0`. Song list uses `SetText()` for song name text instead of `set_text()` property setter. Both hooks now fire for song name and artist text.

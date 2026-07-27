@@ -3477,3 +3477,37 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - `.ai_memory/experiment_logs/v0.8037_test.txt`
 - **Version:** v0.8037
 - **Status:** ⚠️ **PARTIAL SUCCESS** — song list names still not modified despite hook firing. Song list re-renders from data model. Need different approach for song list names.
+
+### Experiment 153: v0.8038 — SetDataFromLevelAsync Hook (Data Source Modification)
+- **Date:** 2026-07-26
+- **What:**
+  - Hooked `LevelListTableCell.SetDataFromLevelAsync` at RVA `0x1D36940` — the async method that populates song list cells with BeatmapLevel data
+  - Modifies `BeatmapLevel.songName` (offset 0x20) and `songAuthorName` (offset 0x30) in-place BEFORE the original method runs
+  - This way the UI reads our replacement strings from the data source itself — no TMP_Text hook needed for song list
+  - `BeatmapLevel` fields are `readonly` in C# but in IL2CPP they're just memory — writable at any time
+  - Key insight: instead of hooking text OUTPUT (which gets overwritten by re-rendering), modify text INPUT (the data model)
+- **Root Cause Analysis (v0.8037):**
+  - The song list re-renders from `BeatmapLevel` data model AFTER TMP_Text hooks fire
+  - `set_text` hook works for artists because artist text is set via `set_text(string)` and doesn't get overwritten
+  - `SetText` hook fires for song names but replacement is overwritten by subsequent UI re-render from data model
+  - The song list UI calls `SetDataFromLevelAsync` which reads from `BeatmapLevel.songName` and sets `_songNameText`
+  - Our hook replaces the string passed to `SetText`, but the UI framework then re-applies from the data model
+  - This is a fundamental limitation of text-output hooking — the data model is the source of truth
+- **Result:** 🔲 **DEPLOYED — awaiting PS4 test**
+- **BeatmapLevel Field Layout:**
+  - Offset 0x10: `version` (int)
+  - Offset 0x14: `hasPrecalculatedData` (bool)
+  - Offset 0x18: `levelID` (string) — used for audio file lookup, DO NOT MODIFY
+  - Offset 0x20: `songName` (string) — safe to modify (display only)
+  - Offset 0x28: `songSubName` (string)
+  - Offset 0x30: `songAuthorName` (string) — safe to modify (display only)
+  - Offset 0x38: `allMappers` (string[])
+  - Offset 0x40: `allLighters` (string[])
+- **LevelListTableCell Field Layout:**
+  - Offset 0x90: `_songNameText` (TextMeshProUGUI)
+  - Offset 0x98: `_songAuthorText` (TextMeshProUGUI)
+  - Offset 0x118: `_beatmapLevel` (BeatmapLevel)
+- **Archived Logs:**
+  - `.ai_memory/experiment_logs/v0.8037_test.txt`
+- **Version:** v0.8038
+- **Status:** 🔲 **DEPLOYED — awaiting test** — data source modification approach
