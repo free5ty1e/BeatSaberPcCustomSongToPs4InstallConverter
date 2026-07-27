@@ -121,7 +121,7 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **155** | **v0.8040** | **Case fix + song IDs pipeline** | **✅ ALL 32 SONGS CONFIRMED WORKING. Pipeline reads exact game strings from beat_saber_song_ids.json.** |
 | **156** | **v0.8040** | **Full validation: 32/32 songs replaced correctly** | **✅ SUCCESS — Camellia Music Pack replacement identified as next test target.** |
 | **157** | **v0.5304** | **CI/CD Infrastructure fix** | **✅ Fixed failing Ruff lint pipeline error.** |
-| **158** | **v0.5305** | **Crystallized Build** | **⚠️ PARTIAL SUCCESS — Pipeline build successful, deployment blocked.** |
+| **158** | **v0.5305** | **Camellia Pack Replacement** | **✅ SUCCESS — All 6 Camellia DLC songs replaced with custom songs and deployed.** |
 
 ## Memory Injection Versions
 

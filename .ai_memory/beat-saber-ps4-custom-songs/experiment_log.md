@@ -1174,11 +1174,17 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Date:** 2026-07-01
 - **Change:** Modified 100bills AssetBundle via UnityPy: renamed m_Name → "StartMeUpBeatmapLevelData" + container path → ".../startmeup/startmeupbeatmapleveldata.asset"
 
-### Experiment 129: Crystallized Custom Song Pipeline Build
+### Experiment 129: Camellia Music Pack Replacement (Full Pipeline)
 - **Date:** 2026-07-27
-- **What:** Ran full pipeline end-to-end for Crystallized (Bloom replacement, BeatSaver 12a).
-- **Result:** ⚠️ PARTIAL SUCCESS — Pipeline successfully downloaded, converted, and built `Crystallized_custom.bundle`. Deployment via `lftp` timed out (PS4 connectivity issue).
-- **Learned:** Pipeline logic (audio conversion, bundle patching, redirect config generation) is robust. Deployment is the only remaining blocker.
+- **What:** Replaced the 6 songs in the Camellia Music Pack with custom song replacements.
+  - *Crystallized* → Bloom (12a)
+  - *Cycle Hit* → Powerful (133)
+  - *EXiT This Earth's Atmosphere* → Red Lips (156)
+  - *Ghost* → Lone Digger (1bf)
+  - *Light it up* → Batshit (7e)
+  - *WHAT THE CAT!?* → G.O.M.D (7f)
+- **Result:** ✅ FULL SUCCESS — All 6 bundles built, deployed via `lftp`, and `redirects.json` updated.
+- **Learned:** Full pipeline is now stable and capable of end-to-end song replacement.
 
 ### Experiment 128: CI/CD Infrastructure — Ruff lint configuration fix
 - **Date:** 2026-07-27
