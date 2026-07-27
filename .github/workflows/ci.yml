@@ -95,5 +95,5 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff check
-        run: ruff check tools/ --output-format=github || true
+        run: python -m ruff check tools/ --output-format=github --statistics
         continue-on-error: true

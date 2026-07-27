@@ -61,15 +61,17 @@ def check_tool(name):
 def run_lint(fix=False):
     """Run linting on the tools/ directory."""
     banner("Linting tools/")
-    if check_tool("ruff"):
-        cmd = ["ruff", "check", TOOLS_DIR]
+    # Try ruff via python -m (more reliable than bare 'ruff' on PATH)
+    code, _, _ = run_cmd([sys.executable, "-m", "ruff", "--version"])
+    if code == 0:
+        cmd = [sys.executable, "-m", "ruff", "check", TOOLS_DIR]
         if fix:
             cmd.append("--fix")
         code, stdout, stderr = run_cmd(cmd)
         print(stdout or stderr)
         return code
     elif check_tool("flake8"):
-        cmd = ["flake8", TOOLS_DIR, "--max-line-length=120", "--ignore=E501,W503,E402"]
+        cmd = ["flake8", TOOLS_DIR, "--max-line-length=120", "--ignore=E501,E402"]
         if fix:
             cmd = ["autopep8", "--in-place", "--recursive", TOOLS_DIR]
         code, stdout, stderr = run_cmd(cmd)
