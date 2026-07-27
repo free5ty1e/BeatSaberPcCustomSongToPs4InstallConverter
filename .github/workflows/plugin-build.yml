@@ -169,12 +169,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Beat Saber Deluxe ${{ github.ref_name }}
-          bodyPath: beat_saber_deluxe/CI_RELEASE.md
+          body_path: beat_saber_deluxe/CI_RELEASE.md
           files: |
-            release-artifacts/beat_saber_deluxe.prx
-            release-artifacts/beat_saber_deluxe_debug.prx
+            release-artifacts/beat_saber_deluxe/beat_saber_deluxe.prx
+            release-artifacts/beat_saber_deluxe/beat_saber_deluxe_debug.prx
             release-artifacts/plugins.ini
             release-artifacts/redirects.json
-            release-artifacts/CHANGELOG-PLUGIN.md
-            release-artifacts/CHANGELOG-PIPELINE.md
-            release-artifacts/tools/*
+            release-artifacts/beat_saber_deluxe/CHANGELOG-PLUGIN.md
+            release-artifacts/beat_saber_deluxe/CHANGELOG-PIPELINE.md
+            release-artifacts/beat_saber_deluxe/tools/*

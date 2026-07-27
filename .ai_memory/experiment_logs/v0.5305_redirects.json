@@ -34,11 +34,11 @@
     "BeatmapLevelsData/Tempo": "Tempo_v3",
     "BeatmapLevelsData/TruthHurts": "TruthHurts_v3",
     "BeatmapLevelsData/Worship": "Worship_v3",
-    "BeatmapLevelsData/Crystallized": "Crystallized_v3",
-    "BeatmapLevelsData/CycleHit": "CycleHit_v3",
-    "BeatmapLevelsData/ExitThisEarthsAtomosphere": "ExitThisEarthsAtomosphere_v3",
-    "BeatmapLevelsData/Ghost": "Ghost_v3",
-    "BeatmapLevelsData/LightItUp": "LightItUp_v3",
-    "BeatmapLevelsData/WhatTheCat": "WhatTheCat_v3"
+    "Crystallized": "Crystallized_v3",
+    "CycleHit": "CycleHit_v3",
+    "ExitThisEarthsAtomosphere": "ExitThisEarthsAtomosphere_v3",
+    "Ghost": "Ghost_v3",
+    "LightItUp": "LightItUp_v3",
+    "WhatTheCat": "WhatTheCat_v3"
   }
 }

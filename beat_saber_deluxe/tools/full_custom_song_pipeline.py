@@ -1475,7 +1475,11 @@ def manage_redirect_config(
 
     # If we have a target, add/update the entry
     if target_name and should_generate:
-        bundle_name = f"{target_name}{bundle_suffix}"
+        # Ensure target_name has the correct BeatmapLevelsData prefix
+        if not target_name.startswith('BeatmapLevelsData/'):
+            target_name = f"BeatmapLevelsData/{target_name}"
+            
+        bundle_name = f"{target_name.split('/')[-1]}{bundle_suffix}"
         redirect_data.setdefault('redirects', {})[target_name] = bundle_name
         log.info(f"  Added redirect: {target_name} -> {bundle_name}")
 
