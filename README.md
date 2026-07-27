@@ -63,9 +63,17 @@ The pipeline can target **any** song present in the game's dump — if the song 
 8. [Architecture Overview](#8-architecture-overview)
 9. [Unit Testing](#9-unit-testing)
 10. [Roadmap](#10-roadmap)
-11. [License & Credits](#11-license--credits)
+11. [Developer Information](#11-developer-information)
+12. [License & Credits](#12-license--credits)
 
 ---
+
+...
+
+## 11. Developer Information
+See [docs/developer-info.md](docs/developer-info.md) for build, test, and release procedures.
+
+## 12. License & Credits
 
 ## 1. Devcontainer Setup
 
