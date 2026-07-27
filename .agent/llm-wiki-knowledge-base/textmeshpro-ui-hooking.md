@@ -118,7 +118,7 @@ Game uses different casing than expected for many songs:
 - Some songs have **trailing spaces**: "You Should See Me In A Crown " (trailing space)
 - Some songs have **missing articles**: "Whole Wide World" (no "The" prefix)
 
-**Solution:** Pipeline now reads exact song names from `beat_saber_song_ids.json` via `_lookup_song_name()`. Plugin trims trailing spaces before comparison. The `beat_saber_song_ids.json` file is the authoritative source for exact game strings.
+**⚠️ Solution (CRITICAL):** The plugin's `open_hook` now reads exact song names from `beat_saber_song_ids.json` via `_lookup_song_name()`. The pipeline also reads from this file. `beat_saber_song_ids.json` is the **authoritative source** for exact game strings — never hardcode song names or assume casing. Plugin trims trailing spaces before comparison to handle edge cases. Without this, 11 of 32 songs failed to match (Exp 155).
 
 ## Critical Implementation Details
 

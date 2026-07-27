@@ -93,7 +93,7 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
 - [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
 
-### Alternative: TextMeshPro UI Hooking (Current) — ⚠️ PARTIAL SUCCESS
+### TextMeshPro UI Hooking (PROVEN WORKING — v0.8040)
 - [x] **(v0.8026–v0.8031)** Hook infrastructure — module discovery, DetourMode_x64, retry logic
 - [x] **(v0.8031)** Hook fires correctly, no crash
 - [x] **(v0.8033)** Signal-protected string extraction — matches found!
@@ -101,21 +101,18 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **(v0.8035)** Fix song details "?" issue — removed free() on replacement strings (use-after-free fix)
 - [x] **(v0.8036)** External `song_metadata.json` — replaces hardcoded replacement table, loaded from PS4
 - [x] **(v0.8037)** SetText hook — second hook for `TMP_Text.SetText(string, bool)` at RVA `0x2D3E1D0`
-- [ ] **(v0.8037 finding)** Song list re-renders from data model — SetText hook fires and replacement applied, but UI overwrites with original. Need to hook BeatmapLevel data source instead.
-- [x] **(v0.8038)** SetDataFromLevelAsync hook attempt — **FAILED**: async wrapper at RVA 0x1D36940 is a trampoline inlined by `AsyncVoidMethodBuilder.Start<T>()`. Zero log entries.
-- [ ] **(v0.8039)** Hook `MoveNext()` at RVA 0x1D377C0 — modifies BeatmapLevel fields before state machine reads them. DEPLOYED, awaiting test.
-- [ ] **(Future)** Hook `BeatmapLevelSO` fields directly — modify `songName`/`songAuthorName` at the data model level before UI renders
-- [ ] **(Future)** Expand replacement table to all 32 DLC slots
+- [x] **(v0.8038)** SetDataFromLevelAsync hook — FAILED: async wrapper inlined, never fires
+- [x] **(v0.8039)** MoveNext() hook — WORKS! Modifies BeatmapLevel fields before state machine reads them. 21/32 songs correct, 11 had case mismatches.
+- [x] **(v0.8040)** Case fix + song IDs pipeline — **ALL 32 SONGS CONFIRMED WORKING** ✅
+- [ ] **(Future)** Camellia Music Pack replacement — next test target
 
-### Song Metadata Feature Iteration (Current)
-- [x] **Evaluate current implementation** — TMP_Text hooks work for details/pause menu, artist blanking works. Song list names NOT modified (re-rendered from data model).
-- [x] **SetText hook attempt** (v0.8037) — Hook fires and replaces, but song list re-renders from BeatmapLevelSO, overwriting replacement. Fundamental limitation of text-output hooking.
-- [x] **SetDataFromLevelAsync hook attempt** (v0.8038) — Hook target was async trampoline, never fired. Inlined by AsyncVoidMethodBuilder.Start<T>().
-- [ ] **MoveNext() hook** (v0.8039) — Hook state machine's MoveNext() at RVA 0x1D377C0. Modifies BeatmapLevel fields before original reads them. DEPLOYED, awaiting test.
-- [ ] **Option A: Hook BeatmapLevelSO directly** — Use `il2cpp_class_get_method_from_name` to modify `songName`/`songAuthorName` fields on the data model objects before UI renders
-- [ ] **Option B: Hook `SetDataFromLevelAsync`** — Intercept when song data is set on UI, identify TMP_Text pointers, replace in batch after data model is set
-- [ ] **Option C: Hybrid** — Keep TMP_Text hook for details/pause menu (works), add data-model hook for song list names
-- [ ] **Always have working v0.8036 release to fall back to** if newer approaches hit dead ends
+### Song Metadata Feature — COMPLETE (v0.8040)
+- [x] **Evaluate current implementation** — TMP_Text hooks work for details/pause menu, artist blanking works.
+- [x] **SetText hook attempt** (v0.8037) — Hook fires and replaces, but song list re-renders from BeatmapLevelSO, overwriting replacement.
+- [x] **SetDataFromLevelAsync hook** (v0.8038) — Hook target was async trampoline, never fired. Inlined by AsyncVoidMethodBuilder.Start<T>().
+- [x] **MoveNext() hook** (v0.8039) — Modifies BeatmapLevel fields before state machine reads them. 21/32 correct.
+- [x] **Case sensitivity fix** (v0.8040) — Pipeline reads exact game strings from `beat_saber_song_ids.json`. All 32 songs confirmed working.
+- [ ] **Camellia Music Pack replacement** — NEXT: Replace all songs in Camellia DLC pack.
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

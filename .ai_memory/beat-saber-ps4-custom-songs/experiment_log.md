@@ -3535,7 +3535,18 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - **Pipeline fix:** `manage_song_metadata()` now resolves slot IDs to exact game strings via `_lookup_song_name()` using `beat_saber_song_ids.json`
   - **Data fix:** Regenerated `song_metadata.json` with exact game strings from song IDs file
   - Copied `beat_saber_song_ids.json` to `beat_saber_deluxe/` for pipeline access
-- **Result:** 🔲 **DEPLOYED — awaiting test** — all 32 songs should now match
-- **Archived Logs:** (pending)
+- **Result:** ✅ **SUCCESS — ALL 32 SONGS CONFIRMED WORKING**
 - **Version:** v0.8040
-- **Status:** 🔲 **DEPLOYED — awaiting test** — case fix + song IDs pipeline
+- **Status:** ✅ Song metadata modification feature **COMPLETE**
+
+### Experiment 156: Full Validation — All 32 Songs on PS4 (v0.8040)
+- **Date:** 2026-07-26
+- **What:** User tested all 32 replaced songs on PS4 to validate the case sensitivity fix from Exp 155. Every song displays the correct replacement name and artist in the song list UI.
+- **Result:** ✅ **SUCCESS — ALL 32 SONGS CONFIRMED WORKING.** MoveNext() hook correctly modifies BeatmapLevel fields before the state machine reads them. Case sensitivity fix resolved all 11 previously-failing songs.
+- **Key Learnings:**
+  - `beat_saber_song_ids.json` is the authoritative source for exact game strings — never hardcode or assume casing
+  - Plugin trims trailing spaces before comparison to handle edge cases
+  - Pipeline reads from `beat_saber_song_ids.json` via `_lookup_song_name()` for metadata generation
+- **Next Steps:** Camellia Music Pack replacement identified as the next test target.
+- **Version:** v0.8040
+- **Status:** ✅ Feature COMPLETE

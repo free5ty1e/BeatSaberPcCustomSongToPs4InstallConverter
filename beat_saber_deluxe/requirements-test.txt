@@ -1,0 +1,10 @@
+# Test dependencies for Beat Saber Deluxe
+pytest>=9.0
+pytest-cov>=5.0
+coverage>=7.0
+ruff>=0.4
+
+# Runtime dependencies (needed for import testing)
+UnityPy>=1.20
+soundfile>=0.12
+numpy>=1.24

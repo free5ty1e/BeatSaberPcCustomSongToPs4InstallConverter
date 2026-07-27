@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-26
-**Status:** ✅ **Song metadata modification PROVEN WORKING (v0.8039).** MoveNext() hook replaces song names in song list. v0.8040 fixes case mismatches for remaining 11 songs. All 32 songs should now be replaced.
+**Status:** ✅ **Song metadata modification PROVEN WORKING (v0.8040).** All 32 songs replaced correctly — case sensitivity fix confirmed. MoveNext() hook modifies BeatmapLevel fields before UI renders. Next test: Camellia Music Pack replacement.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline (v0.8040)
 
@@ -118,7 +118,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **152** | **v0.8037** | **SetText hook for song list names** | **⚠️ Hook fires, replacement applied, but song list re-renders from data model — names still original** |
 | **153** | **v0.8038** | **SetDataFromLevelAsync hook (data source mod)** | **❌ Hook never fired — async wrapper inlined by builder. Zero log entries.** |
 | **154** | **v0.8039** | **Hook MoveNext() instead** | **✅ WORKS! Song list names replaced for 21/32 songs. Missing 11 had case mismatches.** |
-| **155** | **v0.8040** | **Case fix + song IDs pipeline** | **🔲 DEPLOYED — awaiting test. All 32 songs should match now.** |
+| **155** | **v0.8040** | **Case fix + song IDs pipeline** | **✅ ALL 32 SONGS CONFIRMED WORKING. Pipeline reads exact game strings from beat_saber_song_ids.json.** |
+| **156** | **v0.8040** | **Full validation: 32/32 songs replaced correctly** | **✅ SUCCESS — Camellia Music Pack replacement identified as next test target.** |
 
 ## Memory Injection Versions
 
@@ -158,10 +159,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Investigate "?" in song details** — `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
-2. **Phase 2: Pointer tracking** — Hook `SetDataFromLevelAsync` to identify song name vs artist TextMeshPro pointers
-3. **Selective replacement** — Only replace text in known song name/artist fields, not all TMP_Text calls
-4. **Expand replacement table** — Register metadata for all 32 DLC slots
+1. **Camellia Music Pack replacement** — Next test target. Replace all songs in Camellia DLC pack with custom songs.
+2. **Investigate "?" in song details** — `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
+3. **Selective replacement** — Currently replaces in ALL TMP_Text calls. Need pointer tracking to identify song name vs artist fields specifically.
+4. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 32 slots.
 
 ## Active Knowledge Gaps
 

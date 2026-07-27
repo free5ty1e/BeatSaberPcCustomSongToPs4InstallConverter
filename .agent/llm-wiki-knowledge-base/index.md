@@ -67,3 +67,7 @@ metadata:
 
 ## Plans
 - [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles. Updated with Exp 129 findings: typetree approach dead-end, blob format verified via hex dump against StartMeUp.
+
+## Feature Documentation
+- `beat_saber_deluxe/docs/features/custom-song-replacement.md` — Custom Song Replacement: `open()` hook file redirection, `redirects.json` config, AFR deploy path, and AssetBundle naming.
+- `beat_saber_deluxe/docs/features/song-metadata-modification.md` — Song Metadata Modification: MoveNext() hook, `song_metadata.json`, `beat_saber_song_ids.json` case sensitivity, and TMP_Text replacement.

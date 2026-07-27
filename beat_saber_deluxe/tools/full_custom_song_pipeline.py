@@ -554,6 +554,8 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
     # Read BPM from Info.dat for V2→V3 conversion (used in bpmEvents)
     bpm = 120.0
     info_path = os.path.join(beatmap_dir, "Info.dat")
+    if not os.path.exists(info_path):
+        info_path = os.path.join(beatmap_dir, "info.dat")
     if os.path.exists(info_path):
         with open(info_path) as f:
             info = json.load(f)
@@ -2047,6 +2049,22 @@ Examples:
         log.error(f"Song directory not found: {args.song_dir}")
         sys.exit(1)
 
+    # Pre-load song metadata from Info.dat (used in Step 6.5 and beatmap counting)
+    song_name = os.path.basename(args.song_dir)
+    song_artist = ""
+    bpm = 120.0
+    note_count_standard = 0
+    # BeatSaver uses lowercase info.dat; custom songs use uppercase Info.dat
+    info_dat_path = os.path.join(args.song_dir, "Info.dat")
+    if not os.path.isfile(info_dat_path):
+        info_dat_path = os.path.join(args.song_dir, "info.dat")
+    if os.path.isfile(info_dat_path):
+        with open(info_dat_path) as f:
+            info = json.load(f)
+        song_name = info.get("_songName", song_name)
+        song_artist = info.get("_songAuthorName", song_artist)
+        bpm = float(info.get("_beatsPerMinute", 120.0))
+
     # -----------------------------------------------------------------------
     # Step 0: Audio conversion (WAV -> FSB5)
     # -----------------------------------------------------------------------
@@ -2152,6 +2170,19 @@ Examples:
                                   auto_convert=args.convert_to_v3)
     log.info(f"Beatmaps replaced: {replaced}/5")
 
+    # Count notes from Standard beatmaps for metadata
+    for diff_file in ['Hard.dat', 'Normal.dat', 'Easy.dat', 'Expert.dat', 'ExpertPlus.dat',
+                       'HardStandard.dat', 'NormalStandard.dat', 'EasyStandard.dat',
+                       'ExpertStandard.dat', 'ExpertPlusStandard.dat']:
+        diff_path = os.path.join(args.song_dir, diff_file)
+        if os.path.isfile(diff_path):
+            try:
+                with open(diff_path) as f:
+                    bm = json.load(f)
+                note_count_standard += len(bm.get('notes', []))
+            except Exception:
+                pass
+
     # -----------------------------------------------------------------------
     # Step 6: Add mode characteristics (OneSaber, 90Degree, etc.)
     # -----------------------------------------------------------------------
@@ -2163,16 +2194,18 @@ Examples:
     # Step 6.5: Inject BeatmapLevelSO metadata for song menu display
     # -----------------------------------------------------------------------
     # Resolve song name and artist — from CLI args, Info.dat, or BeatSaver
-    info_bpm = bpm  # already loaded above if available
-    custom_name = args.song_name
-    custom_artist = args.artist
-
-    if not custom_name and os.path.isfile(os.path.join(args.song_dir, "Info.dat")):
-        with open(os.path.join(args.song_dir, "Info.dat")) as f:
+    # Re-read Info.dat after download (was loaded before song_dir was set)
+    info_dat_path = os.path.join(args.song_dir, "Info.dat")
+    if not os.path.isfile(info_dat_path):
+        info_dat_path = os.path.join(args.song_dir, "info.dat")
+    if os.path.isfile(info_dat_path):
+        with open(info_dat_path) as f:
             info = json.load(f)
-        custom_name = custom_name or info.get("_songName", song_name)
-        if not custom_artist:
-            custom_artist = info.get("_songAuthorName", song_artist)
+        song_name = info.get("_songName", song_name)
+        song_artist = info.get("_songAuthorName", song_artist)
+        bpm = float(info.get("_beatsPerMinute", bpm))
+    custom_name = args.song_name or song_name
+    custom_artist = args.artist or song_artist
 
     # BeatmapLevelSO injection (experimental — needs PS4 testing)
     inject_level_so = True  # always try to inject; game should just ignore unknown SOs
@@ -2183,7 +2216,7 @@ Examples:
             song_name=custom_name or song_name,
             song_artist=custom_artist or song_artist,
             duration_seconds=duration,
-            bpm=info_bpm,
+            bpm=bpm,
             note_count_standard=note_count_standard,
             note_count_diff_data=note_data,
         )
@@ -2235,8 +2268,8 @@ Examples:
     if args.song_name or args.artist or args.deploy:
         manage_song_metadata(
             config,
-            song_name=args.song_name,
-            artist=args.artist,
+            song_name=args.song_name or custom_name,
+            artist=args.artist or custom_artist,
             target_name=args.target,
             deploy=args.deploy,
         )

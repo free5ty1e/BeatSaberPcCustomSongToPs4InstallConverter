@@ -4,9 +4,8 @@
 
 ### Difficulty Requirements
 
-- **MUST HAVE**: All difficulty levels (Easy, Normal, Hard, Expert, Expert+)
+- **MUST HAVE**: difficulty levels Easy, Normal, Hard
 - **AVOID**: Songs with only Expert or Expert+ (user cannot play those)
-- Preferred difficulties: Easy, Normal, Hard
 
 ### Song Sources to Try
 

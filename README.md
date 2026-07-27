@@ -61,8 +61,9 @@ The pipeline can target **any** song present in the game's dump — if the song 
 6. [Full Custom Song Workflow](#6-full-custom-song-workflow)
 7. [PS4 Log Management](#7-ps4-log-management)
 8. [Architecture Overview](#8-architecture-overview)
-9. [Roadmap](#9-roadmap)
-10. [License & Credits](#10-license--credits)
+9. [Unit Testing](#9-unit-testing)
+10. [Roadmap](#10-roadmap)
+11. [License & Credits](#11-license--credits)
 
 ---
 
@@ -526,7 +527,116 @@ https://www.youtube.com/watch?v=J835HDdB-7g
 
 ---
 
-## 9. Roadmap
+## 9. Unit Testing
+
+The project includes a comprehensive pytest test suite covering the Python pipeline tools. Tests run automatically in CI on every push and pull request.
+
+### Quick Start
+
+```bash
+cd beat_saber_deluxe
+
+# Run all tests
+python3 run_tests.py
+
+# Run with coverage report
+python3 run_tests.py --coverage
+
+# Run only fast tests (skip slow/integration)
+python3 run_tests.py --fast
+
+# Test a specific module
+python3 run_tests.py --module hevag
+python3 run_tests.py --module pipeline
+```
+
+### Available Modules
+
+| Module Flag | Target | Tests |
+|-------------|--------|-------|
+| `pipeline` | `full_custom_song_pipeline.py` | Config loading, V2/V3 conversion, beatmap selection, blob building, metadata |
+| `pipeline-bugfixes` | Recent bug fixes | Info.dat case handling, metadata passthrough, note counting |
+| `hevag` | `hevag_encoder.py` | HEVAG encoding, FSB5 building, audio I/O, tone generation |
+| `lapped` | `lapped_audio.py` | BPM loading, V2 detection, lapped song detection |
+| `inject` | `inject_pack_bundle.py` | UTF-8 strings, characteristic path IDs, BeatmapLevelSO blobs |
+| `patched` | `build_patched_pack_bundle.py` | UTF-8 strings, blob building |
+| `replacement` | `build_replacement_pack.py` | UTF-16LE encoding, Unity strings, PPtrs |
+| `beatsaver` | `download_beatsaver_songs.py` | BeatSaver API calls, download flow |
+
+### Test Harness Options
+
+```bash
+python3 run_tests.py --coverage      # Coverage report (htmlcov/)
+python3 run_tests.py --lint          # Run ruff/flake8 on tools/
+python3 run_tests.py --fix           # Auto-fix lint issues
+python3 run_tests.py --ci            # CI mode (strict, coverage enforced)
+python3 run_tests.py --module hevag  # Single module
+python3 run_tests.py --fast          # Skip slow/integration tests
+```
+
+### Running pytest Directly
+
+```bash
+cd beat_saber_deluxe
+
+# All tests
+python3 -m pytest tests/ -v
+
+# With coverage
+python3 -m pytest tests/ -v --cov=tools --cov-report=term-missing
+
+# Specific test file
+python3 -m pytest tests/test_pipeline.py -v
+
+# Specific test class
+python3 -m pytest tests/test_pipeline.py::TestIsV2Beatmap -v
+
+# By marker
+python3 -m pytest tests/ -m "not slow and not integration"
+```
+
+### CI Pipeline
+
+GitHub Actions runs on every push to `main` and on pull requests. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+The CI job:
+1. Checks out the code
+2. Sets up Python 3.12
+3. Installs dependencies (pytest, coverage, UnityPy, soundfile, numpy)
+4. Runs all tests with coverage (minimum 20% enforced)
+5. Uploads coverage report and test output as artifacts
+
+### Writing New Tests
+
+Tests live in `beat_saber_deluxe/tests/`. Each test file targets one production module. Shared fixtures are in `conftest.py`.
+
+```python
+import os, sys, json, pytest
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
+
+from full_custom_song_pipeline import is_v2_beatmap
+
+class TestMyFeature:
+    def test_something(self, tmp_dir):
+        """Test description."""
+        # tmp_dir is a pytest fixture that provides a clean temp directory
+        path = os.path.join(tmp_dir, "test.dat")
+        with open(path, 'w') as f:
+            json.dump({"_version": "2.0.0", "_notes": []}, f)
+        assert True
+```
+
+### Markers
+
+| Marker | Description | Use When |
+|--------|-------------|----------|
+| `@pytest.mark.slow` | Long-running test (>5s) | Audio encoding, full pipeline runs |
+| `@pytest.mark.requires_audio` | Needs real audio files on disk | WAV/OGG processing tests |
+| `@pytest.mark.integration` | Needs game bundles on disk | Bundle loading/patching tests |
+
+---
+
+## 10. Roadmap
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
@@ -538,7 +648,7 @@ https://www.youtube.com/watch?v=J835HDdB-7g
 
 ---
 
-## 10. License & Credits
+## 11. License & Credits
 
 This project is for educational/research purposes. It does not modify Beat Saber's game code or bypass DRM. Custom songs are sourced from the community and remain the property of their respective creators.
 

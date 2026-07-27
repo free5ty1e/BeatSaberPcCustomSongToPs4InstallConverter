@@ -1,5 +1,19 @@
 # Pipeline Changelog
 
+## v0.5304 (2026-07-27)
+- **Bug fixes:**
+  - Fixed `info.dat` case sensitivity — BeatSaver uses lowercase `info.dat`, pipeline now falls back to lowercase when uppercase `Info.dat` is not found. Affects `main()` pre-load, Step 6.5 re-read, and `replace_beatmaps()`.
+  - Fixed undefined variables in `main()` — `bpm`, `song_name`, `song_artist`, and `note_count_standard` were referenced before being defined. Now initialized from Info.dat before Step 0.
+  - Fixed `manage_song_metadata()` passthrough — When `--song-name`/`--artist` not provided via CLI, resolved values from Info.dat are now passed through to metadata management.
+- **Unit testing infrastructure:**
+  - Added `run_tests.py` test harness with `--fast`, `--coverage`, `--module`, `--lint`, `--ci` options
+  - Added GitHub Actions CI workflow (`.github/workflows/ci.yml`) — runs all tests with coverage on push/PR
+  - Added `requirements-test.txt` for CI dependency installation
+  - Added 39 new tests in `test_pipeline_bugfixes.py` covering all three bug fixes
+  - Fixed broken `test_hevag_audio_compatibility.py` (syntax errors, wrong function names)
+  - Updated `pyproject.toml` with ruff linter config and improved coverage settings
+- **Test suite:** 301 total tests across 8 test files (up from 262)
+
 ## v0.5303 (2026-07-26)
 - **Song ID lookup** — Added `_load_song_ids()` and `_lookup_song_name()` functions. Pipeline now resolves slot IDs (e.g., "StartMeUp") to exact game strings via `beat_saber_song_ids.json`. Fixes case sensitivity issues where game uses different casing than expected.
 - **`beat_saber_song_ids.json` added** — Copied from `.agent/beat_saber_song_ids.json` to `beat_saber_deluxe/` for pipeline access.
