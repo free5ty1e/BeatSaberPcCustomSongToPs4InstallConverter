@@ -3510,4 +3510,18 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Archived Logs:**
   - `.ai_memory/experiment_logs/v0.8037_test.txt`
 - **Version:** v0.8038
-- **Status:** 🔲 **DEPLOYED — awaiting test** — data source modification approach
+- **Status:** ❌ **FAILED** — SetDataFromLevelAsync hook never fired (zero log entries). Async wrapper at 0x1D36940 is a trampoline inlined by AsyncVoidMethodBuilder.Start<T>(). Real work is in MoveNext().
+
+### Experiment 154: v0.8039 — Hook MoveNext() Instead of SetDataFromLevelAsync
+- **Date:** 2026-07-26
+- **What:**
+  - Changed hook target from `SetDataFromLevelAsync` (RVA 0x1D36940) to `MoveNext()` (RVA 0x1D377C0)
+  - `SetDataFromLevelAsync` at 0x1D36940 is an async wrapper — creates state machine and calls `AsyncVoidMethodBuilder.Start<T>()`. Our hook never fired because this method is inlined/optimized away.
+  - `MoveNext()` at 0x1D377C0 is the state machine's actual execution method — this is where BeatmapLevel data is read and assigned to TMP_Text fields
+  - State machine struct layout: `<>4__this` at offset 0x28, `beatmapLevel` at offset 0x30
+  - Hook modifies `beatmapLevel.songName` (offset 0x20) and `beatmapLevel.songAuthorName` (offset 0x30) at the start of MoveNext(), before original reads them
+  - `MoveNext()` is called each time the async state machine continues (multiple times per cell if there are awaits)
+- **Result:** 🔲 **DEPLOYED — awaiting test**
+- **Archived Logs:** (pending)
+- **Version:** v0.8039
+- **Status:** 🔲 **DEPLOYED — awaiting test** — MoveNext() hook approach

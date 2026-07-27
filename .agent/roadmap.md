@@ -101,13 +101,17 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **(v0.8035)** Fix song details "?" issue — removed free() on replacement strings (use-after-free fix)
 - [x] **(v0.8036)** External `song_metadata.json` — replaces hardcoded replacement table, loaded from PS4
 - [x] **(v0.8037)** SetText hook — second hook for `TMP_Text.SetText(string, bool)` at RVA `0x2D3E1D0`
-- [ ] **(v0.8037 finding)** Song list re-renders from data model — SetText hook fires and replacement applied, but UI overwrites with original. Need to hook BeatmapLevelSO data source instead.
+- [ ] **(v0.8037 finding)** Song list re-renders from data model — SetText hook fires and replacement applied, but UI overwrites with original. Need to hook BeatmapLevel data source instead.
+- [x] **(v0.8038)** SetDataFromLevelAsync hook attempt — **FAILED**: async wrapper at RVA 0x1D36940 is a trampoline inlined by `AsyncVoidMethodBuilder.Start<T>()`. Zero log entries.
+- [ ] **(v0.8039)** Hook `MoveNext()` at RVA 0x1D377C0 — modifies BeatmapLevel fields before state machine reads them. DEPLOYED, awaiting test.
 - [ ] **(Future)** Hook `BeatmapLevelSO` fields directly — modify `songName`/`songAuthorName` at the data model level before UI renders
 - [ ] **(Future)** Expand replacement table to all 32 DLC slots
 
 ### Song Metadata Feature Iteration (Current)
 - [x] **Evaluate current implementation** — TMP_Text hooks work for details/pause menu, artist blanking works. Song list names NOT modified (re-rendered from data model).
 - [x] **SetText hook attempt** (v0.8037) — Hook fires and replaces, but song list re-renders from BeatmapLevelSO, overwriting replacement. Fundamental limitation of text-output hooking.
+- [x] **SetDataFromLevelAsync hook attempt** (v0.8038) — Hook target was async trampoline, never fired. Inlined by AsyncVoidMethodBuilder.Start<T>().
+- [ ] **MoveNext() hook** (v0.8039) — Hook state machine's MoveNext() at RVA 0x1D377C0. Modifies BeatmapLevel fields before original reads them. DEPLOYED, awaiting test.
 - [ ] **Option A: Hook BeatmapLevelSO directly** — Use `il2cpp_class_get_method_from_name` to modify `songName`/`songAuthorName` fields on the data model objects before UI renders
 - [ ] **Option B: Hook `SetDataFromLevelAsync`** — Intercept when song data is set on UI, identify TMP_Text pointers, replace in batch after data model is set
 - [ ] **Option C: Hybrid** — Keep TMP_Text hook for details/pause menu (works), add data-model hook for song list names

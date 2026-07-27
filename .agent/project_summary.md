@@ -1,15 +1,15 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-26
-**Status:** ⚠️ **Song list song name replacement NOT working (v0.8037).** Artist blanking works, song details/pause menu work, but song list shows original names despite hooks firing. Song list re-renders from data model, overwriting replacement.
+**Status:** 🔲 **Song list song name replacement — v0.8039 DEPLOYED (MoveNext hook).** Awaiting test. Previous attempts: set_text/SetText hooks fire but UI re-renders from data model; SetDataFromLevelAsync hook never fired (async wrapper inlined).
 
-## Current Approach: TextMeshPro UI Hooking + External Metadata (v0.8037)
+## Current Approach: TextMeshPro UI Hooking + Data Source Modification (v0.8039)
 
 **Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found. Strings don't exist in scannable memory at scan time.
 
-**New approach:** Hook `TMP_Text.set_text(string)` AND `TMP_Text.SetText(string, bool)` to intercept song name/artist text when the UI renders. External `song_metadata.json` loaded from PS4 for data-driven replacement.
+**New approach:** Hook `TMP_Text.set_text(string)`, `TMP_Text.SetText(string, bool)`, AND `MoveNext()` of the `SetDataFromLevelAsync` state machine (RVA 0x1D377C0). The MoveNext hook modifies `BeatmapLevel.songName`/`songAuthorName` in-place before the original code reads them. External `song_metadata.json` loaded from PS4 for data-driven replacement.
 
-### Known Limitation (v0.8037)
-- **Song list song names NOT modified** — SetText hook fires and replacements are applied (log confirms), but the song list UI re-renders from BeatmapLevelSO data model, overwriting the replacement. Artist blanking works (set_text hook catches it). Need to hook the data source instead of text output.
+### Known Limitation (v0.8039)
+- **Song list song names NOT yet confirmed working** — Three approaches tried: (1) set_text/SetText hooks fire but UI re-renders from data model, overwriting replacement; (2) SetDataFromLevelAsync hook never fired (async wrapper inlined); (3) MoveNext() hook — DEPLOYED, awaiting test. If this fails, the async state machine pattern may require hooking at a different level.
 
 ### Key Breakthroughs
 
@@ -116,6 +116,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **150** | **v0.8035** | **use-after-free fix, 13-entry replacement table** | **✅ Details panel, pause menu, artist blanking all work** |
 | **151** | **v0.8036** | **External song_metadata.json** | **✅ Works. Song details/pause menu correct, artist blanking in song list** |
 | **152** | **v0.8037** | **SetText hook for song list names** | **⚠️ Hook fires, replacement applied, but song list re-renders from data model — names still original** |
+| **153** | **v0.8038** | **SetDataFromLevelAsync hook (data source mod)** | **❌ Hook never fired — async wrapper inlined by builder. Zero log entries.** |
+| **154** | **v0.8039** | **Hook MoveNext() instead** | **🔲 DEPLOYED — awaiting test** |
 
 ## Memory Injection Versions
 

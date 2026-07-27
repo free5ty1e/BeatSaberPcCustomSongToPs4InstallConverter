@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8038"
+#define PLUGIN_VERSION "v0.8039"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -318,7 +318,7 @@ static int close_hook(int fd) {
 // Calling convention: SysV AMD64 (this in RDI, value in RSI, method in RDX)
 HOOK_INIT(hook_tmp_text_set_text);
 HOOK_INIT(hook_tmp_text_set_text2);
-HOOK_INIT(hook_set_data_from_level_async);
+HOOK_INIT(hook_move_next);
 static int g_tmp_text_set_text_count = 0;
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)
@@ -577,65 +577,66 @@ static void tmp_text_set_text2_hook(void* this_ptr, void* value, int sync_input,
                   this_ptr, new_value, sync_input, method);
 }
 
-// ── LevelListTableCell.SetDataFromLevelAsync hook ────────────────────────────
-// Hooks the entry point of the async method that populates song list cells.
-// Modifies BeatmapLevel.songName (offset 0x20) and songAuthorName (offset 0x30)
-// BEFORE the original runs, so the UI reads our replacement from the data source.
-// This bypasses the re-rendering issue where TMP_Text hooks get overwritten.
-// RVA: 0x1D36940 (non-virtual method)
-// SysV AMD64: RDI=this, RSI=beatmapLevel, EDX=isFavorite, ECX=isPromoted,
-//             R8D=isUpdated, R9D=interactable, [RSP+8]=method
-static int g_set_data_hook_count = 0;
-static void set_data_from_level_async_hook(void* this_ptr, void* beatmapLevel,
-    int isFavorite, int isPromoted, int isUpdated, int interactable,
-    const MethodInfo* method) {
-    if (g_feature_song_metadata_modification && beatmapLevel) {
-        // Modify songName at BeatmapLevel + 0x20
-        void* songNamePtr = *(void**)((char*)beatmapLevel + 0x20);
-        if (songNamePtr) {
-            char buf[256] = {0};
-            int len = extract_utf16_string(songNamePtr, buf, sizeof(buf));
-            if (len > 0) {
-                const char* replacement = find_metadata_replacement(buf);
-                if (replacement) {
-                    void* newStr = try_il2cpp_string_new(replacement);
-                    if (!newStr) newStr = create_il2cpp_string(songNamePtr, replacement);
-                    if (newStr) {
-                        *(void**)((char*)beatmapLevel + 0x20) = newStr;
-                        g_set_data_hook_count++;
-                        char logmsg[512];
-                        snprintf(logmsg, sizeof(logmsg), "[METADATA] SetData #%d: songName '%s' -> '%s'",
-                                 g_set_data_hook_count, buf, replacement);
-                        log_write(logmsg);
+// ── LevelListTableCell.SetDataFromLevelAsync/d__21.MoveNext hook ─────────────
+// Hooks MoveNext() of the async state machine that populates song list cells.
+// The async wrapper (SetDataFromLevelAsync at 0x1D36940) is a trampoline that
+// gets inlined by AsyncVoidMethodBuilder.Start<T>() — our hook never fires.
+// MoveNext() at 0x1D377C0 is where the actual work happens: it reads
+// BeatmapLevel.songName/songAuthorName and assigns to TMP_Text fields.
+// Modifies BeatmapLevel fields IN-PLACE before the original runs, so the UI
+// reads our replacement from the data source directly.
+// State machine layout: <>4__this@0x28, beatmapLevel@0x30
+// RVA: 0x1D377C0 (private void MoveNext())
+static int g_move_next_hook_count = 0;
+static void move_next_hook(void* state_machine) {
+    if (g_feature_song_metadata_modification && state_machine) {
+        void* beatmapLevel = *(void**)((char*)state_machine + 0x30);
+        if (beatmapLevel) {
+            // Modify songName at BeatmapLevel + 0x20
+            void* songNamePtr = *(void**)((char*)beatmapLevel + 0x20);
+            if (songNamePtr) {
+                char buf[256] = {0};
+                int len = extract_utf16_string(songNamePtr, buf, sizeof(buf));
+                if (len > 0) {
+                    const char* replacement = find_metadata_replacement(buf);
+                    if (replacement) {
+                        void* newStr = try_il2cpp_string_new(replacement);
+                        if (!newStr) newStr = create_il2cpp_string(songNamePtr, replacement);
+                        if (newStr) {
+                            *(void**)((char*)beatmapLevel + 0x20) = newStr;
+                            g_move_next_hook_count++;
+                            char logmsg[512];
+                            snprintf(logmsg, sizeof(logmsg), "[METADATA] MoveNext #%d: songName '%s' -> '%s'",
+                                     g_move_next_hook_count, buf, replacement);
+                            log_write(logmsg);
+                        }
                     }
                 }
             }
-        }
-        // Modify songAuthorName at BeatmapLevel + 0x30
-        void* authorPtr = *(void**)((char*)beatmapLevel + 0x30);
-        if (authorPtr) {
-            char buf[256] = {0};
-            int len = extract_utf16_string(authorPtr, buf, sizeof(buf));
-            if (len > 0) {
-                const char* replacement = find_metadata_replacement(buf);
-                if (replacement) {
-                    void* newStr = try_il2cpp_string_new(replacement);
-                    if (!newStr) newStr = create_il2cpp_string(authorPtr, replacement);
-                    if (newStr) {
-                        *(void**)((char*)beatmapLevel + 0x30) = newStr;
-                        g_set_data_hook_count++;
-                        char logmsg[512];
-                        snprintf(logmsg, sizeof(logmsg), "[METADATA] SetData #%d: author '%s' -> '%s'",
-                                 g_set_data_hook_count, buf, replacement);
-                        log_write(logmsg);
+            // Modify songAuthorName at BeatmapLevel + 0x30
+            void* authorPtr = *(void**)((char*)beatmapLevel + 0x30);
+            if (authorPtr) {
+                char buf[256] = {0};
+                int len = extract_utf16_string(authorPtr, buf, sizeof(buf));
+                if (len > 0) {
+                    const char* replacement = find_metadata_replacement(buf);
+                    if (replacement) {
+                        void* newStr = try_il2cpp_string_new(replacement);
+                        if (!newStr) newStr = create_il2cpp_string(authorPtr, replacement);
+                        if (newStr) {
+                            *(void**)((char*)beatmapLevel + 0x30) = newStr;
+                            g_move_next_hook_count++;
+                            char logmsg[512];
+                            snprintf(logmsg, sizeof(logmsg), "[METADATA] MoveNext #%d: author '%s' -> '%s'",
+                                     g_move_next_hook_count, buf, replacement);
+                            log_write(logmsg);
+                        }
                     }
                 }
             }
         }
     }
-    HOOK_CONTINUE(hook_set_data_from_level_async,
-                  void (*)(void*, void*, int, int, int, int, const MethodInfo*),
-                  this_ptr, beatmapLevel, isFavorite, isPromoted, isUpdated, interactable, method);
+    HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);
 }
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────
@@ -709,8 +710,8 @@ static void try_install_tmp_hook(void) {
     char logmsg[256];
     uint64_t target = il2cpp_base + 0x2D35BE0;
     uint64_t target2 = il2cpp_base + 0x2D3E1D0;
-    uint64_t target3 = il2cpp_base + 0x1D36940;
-    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text: 0x%lx, SetText: 0x%lx, SetData: 0x%lx (attempt %d, open #%d)",
+    uint64_t target3 = il2cpp_base + 0x1D377C0;  // MoveNext, not SetDataFromLevelAsync
+    snprintf(logmsg, sizeof(logmsg), "[METADATA] IL2CPP base: 0x%lx, set_text: 0x%lx, SetText: 0x%lx, MoveNext: 0x%lx (attempt %d, open #%d)",
              il2cpp_base, target, target2, target3, g_tmp_hook_attempts, g_open_count);
     log_write(logmsg);
 
@@ -720,11 +721,11 @@ static void try_install_tmp_hook(void) {
     Detour_Construct(&Detour_hook_tmp_text_set_text2, DetourMode_x64);
     Detour_DetourFunction(&Detour_hook_tmp_text_set_text2, target2, (void*)tmp_text_set_text2_hook);
 
-    Detour_Construct(&Detour_hook_set_data_from_level_async, DetourMode_x64);
-    Detour_DetourFunction(&Detour_hook_set_data_from_level_async, target3, (void*)set_data_from_level_async_hook);
+    Detour_Construct(&Detour_hook_move_next, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_move_next, target3, (void*)move_next_hook);
 
     g_tmp_hook_installed = 1;
-    log_write("[METADATA] TMP_Text.set_text + SetText + SetDataFromLevelAsync hooks installed");
+    log_write("[METADATA] TMP_Text.set_text + SetText + MoveNext hooks installed");
 }
 
 extern "C" int module_start(size_t argc, const void *args) {

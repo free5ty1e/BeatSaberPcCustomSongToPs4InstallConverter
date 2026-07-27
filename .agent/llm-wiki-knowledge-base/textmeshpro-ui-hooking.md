@@ -62,7 +62,8 @@ StandardLevelDetailViewController (detail panel)
 | `TMP_Text.set_text(string)` | **0x2D35BE0** | Virtual method, slot 66. Hook target for details/pause menu. |
 | `TMP_Text.get_text()` | 0x2D35A60 | Virtual method, slot 65 |
 | `TMP_Text.SetText(string, bool)` | **0x2D3E1D0** | Non-virtual, explicit bool overload. Hook target for song list names (but replacement overwritten by data model re-render). |
-| `LevelListTableCell.SetDataFromLevelAsync` | **0x1D36940** | Async — populates cell with song data |
+| `LevelListTableCell.SetDataFromLevelAsync` | 0x1D36940 | **⚠️ DO NOT HOOK** — async wrapper, gets inlined by AsyncVoidMethodBuilder.Start<T>(). Never fires. |
+| `LevelListTableCell.SetDataFromLevelAsync/d__21.MoveNext()` | **0x1D377C0** | **ACTUAL HOOK TARGET** — state machine execution. Modifies BeatmapLevel fields before original reads them. |
 | `LevelCollectionTableView.CellForIdx` | 0x1B95D40 | Returns TableCell for index |
 | `LevelCollectionTableView.SetData` | 0x1B95360 | Sets song list data |
 
@@ -75,12 +76,13 @@ StandardLevelDetailViewController (detail panel)
 4. Log every call: `this` pointer, string value (first 32 chars), call count
 5. Signal-protected string extraction for safe pointer reads
 
-### Phase 2: Pointer Tracking (FUTURE)
-1. Hook `LevelListTableCell.SetDataFromLevelAsync` (RVA `0x1D36940`)
-2. When it fires, capture `this` (LevelListTableCell)
-3. Read `_songNameText` at `this+0x90` and `_songAuthorText` at `this+0x98`
-4. Store in tracking table: `{TextMeshProUGUI*, original_name, original_artist}`
-5. In `set_text` hook, check if `this` matches tracked pointer
+### Phase 2: Data Source Modification — IN PROGRESS (v0.8038–v0.8039)
+1. ~~Hook `LevelListTableCell.SetDataFromLevelAsync` (RVA `0x1D36940`)~~ — **FAILED**: async wrapper inlined, never fires
+2. Hook `MoveNext()` of the state machine (RVA `0x1D377C0`)
+3. In `MoveNext()` hook: `this` = state machine struct
+4. Read `beatmapLevel` from `this + 0x30`
+5. Modify `beatmapLevel.songName` at offset 0x20 and `beatmapLevel.songAuthorName` at offset 0x30
+6. Call original `MoveNext()` — it reads our modified fields
 
 ### Phase 3: String Replacement ⚠️ PARTIALLY WORKING (v0.8034–v0.8037)
 1. When string is in replacement table:
@@ -89,10 +91,25 @@ StandardLevelDetailViewController (detail panel)
    - Convert ASCII replacement to UTF-16LE
 2. Call original `set_text` or `SetText` with replacement string
 
-**Phase 3 status**: Works for song details panel ✅, pause menu ✅, artist blanking in song list ✅. **Song list song names NOT visible** — SetText hook fires and replacement applied (v0.8037 log confirms), but song list UI re-renders from BeatmapLevelSO data model, overwriting the replacement.
+**Phase 3 status**: Works for song details panel ✅, pause menu ✅, artist blanking in song list ✅. **Song list song names NOT visible** — SetText hook fires and replacement applied (v0.8037 log confirms), but song list UI re-renders from BeatmapLevelSO data model, overwriting the replacement. MoveNext() hook (v0.8039) attempts to fix this by modifying BeatmapLevel fields before the state machine reads them.
 
 ### Key Finding: Song List Re-rendering (v0.8037 — CRITICAL)
 The song list uses `TMP_Text.SetText(string, bool)` for song name text. The SetText hook fires and applies the replacement, but the song list UI framework then re-applies the original text from its data model (BeatmapLevelSO), overwriting our hook's output. This means **hooking text output methods is fundamentally limited for song list names** — need to hook the data source (BeatmapLevelSO fields) instead.
+
+### Key Finding: Async Wrapper Inlining (v0.8038 — CRITICAL)
+IL2CPP async methods like `SetDataFromLevelAsync` are compiled into state machines. The method at the declared RVA (`0x1D36940`) is just a trampoline that creates the state machine and calls `AsyncVoidMethodBuilder.Start<T>()`. This trampoline gets **inlined** — our detour hook at that RVA **never fires** (zero log entries in v0.8038 test).
+
+**Solution:** Hook `MoveNext()` at the state machine's actual RVA (`0x1D377C0`). `MoveNext()` is where the real work happens — it reads `BeatmapLevel.songName`/`songAuthorName` and assigns to TMP_Text fields. The state machine struct layout:
+- Offset 0x00: `<>1__state` (int)
+- Offset 0x08: `<>t__builder` (AsyncVoidMethodBuilder)
+- Offset 0x28: `<>4__this` (LevelListTableCell)
+- Offset 0x30: `beatmapLevel` (BeatmapLevel)
+- Offset 0x38: `interactable` (bool)
+- Offset 0x39: `isFavorite` (bool)
+- Offset 0x3A: `isPromoted` (bool)
+- Offset 0x3B: `isUpdated` (bool)
+
+**Lesson:** Never hook an async method's declared RVA — always hook the state machine's `MoveNext()` instead.
 
 ## Critical Implementation Details
 
