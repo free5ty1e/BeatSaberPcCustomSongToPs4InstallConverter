@@ -1173,6 +1173,12 @@ Before building v0.35, I analyzed the difference between the original file and `
 ### Experiment 61 — AssetBundle rename via UnityPy (v0.37) [🎉 COMPLETED — SONG REPLACEMENT WORKS!]
 - **Date:** 2026-07-01
 - **Change:** Modified 100bills AssetBundle via UnityPy: renamed m_Name → "StartMeUpBeatmapLevelData" + container path → ".../startmeup/startmeupbeatmapleveldata.asset"
+
+### Experiment 128: CI/CD Infrastructure — Ruff lint configuration fix
+- **Date:** 2026-07-27
+- **What:** Fixed failing lint step in CI pipeline. Ruff configuration was using `github` output format with `--statistics` flag, which is mutually exclusive. Removed `--statistics` to resolve the pipeline error.
+- **Result:** ✅ FIXED — CI workflow now passes lint check.
+- **Learned:** `--output-format=github` is incompatible with `--statistics` in Ruff.
 - **Result:** ✅ **$100 BILLS PLAYED WHEN START ME UP WAS SELECTED!** 🎉 The user confirmed the correct level data displayed and the song played. They also tested another song (Paint It Black) to confirm interception only works on Start Me Up — that song played normally without interference.
 - **Log evidence:**
   ```

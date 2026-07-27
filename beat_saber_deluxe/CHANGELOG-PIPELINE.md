@@ -1,5 +1,9 @@
 # Pipeline Changelog
 
+## v0.5305 (2026-07-27)
+- **CI/CD Infrastructure:**
+  - Fixed failing lint check in CI pipeline. Ruff configuration was using incompatible `--output-format=github` and `--statistics` flags simultaneously. Removed `--statistics` to fix the pipeline error.
+
 ## v0.5304 (2026-07-27)
 - **Bug fixes:**
   - Fixed `info.dat` case sensitivity — BeatSaver uses lowercase `info.dat`, pipeline now falls back to lowercase when uppercase `Info.dat` is not found. Affects `main()` pre-load, Step 6.5 re-read, and `replace_beatmaps()`.
