@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8039"
+#define PLUGIN_VERSION "v0.8040"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -407,15 +407,20 @@ static void free_metadata(void) {
 
 static const char* find_metadata_replacement(const char* text) {
     if (!text) return NULL;
+    // Trim trailing spaces for robustness (game data sometimes has trailing spaces)
+    int len = strlen(text);
+    while (len > 0 && text[len - 1] == ' ') len--;
     // Search song names first
     for (int i = 0; i < METADATA_NAME_COUNT; i++) {
-        if (strcmp(text, METADATA_NAME_KEYS[i]) == 0) {
+        int klen = strlen(METADATA_NAME_KEYS[i]);
+        if (klen == len && memcmp(text, METADATA_NAME_KEYS[i], len) == 0) {
             return METADATA_NAME_VALS[i];
         }
     }
     // Then search song artists
     for (int i = 0; i < METADATA_ARTIST_COUNT; i++) {
-        if (strcmp(text, METADATA_ARTIST_KEYS[i]) == 0) {
+        int klen = strlen(METADATA_ARTIST_KEYS[i]);
+        if (klen == len && memcmp(text, METADATA_ARTIST_KEYS[i], len) == 0) {
             return METADATA_ARTIST_VALS[i];
         }
     }

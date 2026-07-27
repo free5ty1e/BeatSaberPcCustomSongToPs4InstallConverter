@@ -1599,10 +1599,53 @@ def apply_feature_flags(set_features: list, config: dict):
 # ============================================================================
 
 SONG_METADATA_FILENAME = "song_metadata.json"
+SONG_IDS_FILENAME = "beat_saber_song_ids.json"
 
 def _get_song_metadata_path(project_root: str = PROJECT_ROOT) -> str:
     """Return the local path to song_metadata.json in the project root."""
     return os.path.join(project_root, SONG_METADATA_FILENAME)
+
+def _get_song_ids_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to beat_saber_song_ids.json in the project root."""
+    return os.path.join(project_root, SONG_IDS_FILENAME)
+
+def _load_song_ids() -> dict:
+    """Load beat_saber_song_ids.json. Returns {slot_id: song_name} mapping."""
+    path = _get_song_ids_path()
+    if not os.path.exists(path):
+        log.warning(f"  ⚠️  Song IDs file not found at {path}")
+        return {}
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+        mapping = {}
+        for album in data.get('albums', []):
+            for song in album.get('songs', []):
+                slot_id = song.get('songID', '')
+                song_name = song.get('songName', '').strip()
+                if slot_id and song_name:
+                    mapping[slot_id] = song_name
+        return mapping
+    except (json.JSONDecodeError, IOError):
+        log.warning(f"  ⚠️  Failed to parse {path}")
+        return {}
+
+def _lookup_song_name(slot_or_name: str, song_ids: dict) -> str:
+    """Look up exact game song name from song IDs.
+
+    Tries exact slot ID match first (e.g. 'StartMeUp'), then case-insensitive
+    slot match, then falls back to the input string stripped of trailing spaces.
+    """
+    # Direct slot ID match (e.g. "StartMeUp" -> "Start Me Up")
+    if slot_or_name in song_ids:
+        return song_ids[slot_or_name]
+    # Case-insensitive slot match
+    lower = slot_or_name.lower()
+    for slot, name in song_ids.items():
+        if slot.lower() == lower:
+            return name
+    # Fall back to stripped input
+    return slot_or_name.strip()
 
 def _get_remote_song_metadata_path(config: dict) -> str:
     """Return the remote AFR path for song_metadata.json."""
@@ -1665,10 +1708,20 @@ def manage_song_metadata(
 
     When song_name and target_name are provided, adds/updates the song_names entry.
     When artist and target_name are provided, adds/updates the song_artists entry.
+    target_name can be a slot ID (e.g. "StartMeUp") or exact song name — it will
+    be resolved to the exact game string via beat_saber_song_ids.json.
     Always deploys to PS4 when deploy=True.
     """
     local_path = _get_song_metadata_path()
     metadata = _load_local_song_metadata(local_path)
+
+    # Resolve target_name to exact game song name via song IDs
+    song_ids = _load_song_ids()
+    if target_name and song_ids:
+        resolved = _lookup_song_name(target_name, song_ids)
+        if resolved != target_name:
+            log.info(f"  Resolved '{target_name}' -> '{resolved}' (from song IDs)")
+        target_name = resolved
 
     if song_name and target_name:
         metadata['song_names'][target_name] = song_name

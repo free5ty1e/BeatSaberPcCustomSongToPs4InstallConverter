@@ -4,6 +4,13 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8040] — 2026-07-26
+### Fixed
+- **Case-insensitive metadata matching** — `find_metadata_replacement()` now trims trailing spaces before comparison. Game uses different casing than expected (e.g. "all the good girls go to hell" vs "All The Good Girls Go to Hell", "Mess it Up" vs "Mess It Up").
+### Changed
+- **Pipeline reads exact song names from `beat_saber_song_ids.json`** — `manage_song_metadata()` now resolves slot IDs to exact game strings via `_lookup_song_name()`. No more manual casing guesswork.
+- **`beat_saber_song_ids.json` copied to `beat_saber_deluxe/`** — Pipeline can access authoritative song names directly.
+
 ## [v0.8039] — 2026-07-26
 ### Changed
 - **Hooked `MoveNext()` instead of `SetDataFromLevelAsync`** — RVA `0x1D377C0`. The async wrapper at `0x1D36940` is a trampoline that gets inlined by `AsyncVoidMethodBuilder.Start<T>()` — our hook never fired (zero log entries). `MoveNext()` is where the actual work happens: reads `BeatmapLevel.songName`/`songAuthorName` and assigns to TMP_Text fields.

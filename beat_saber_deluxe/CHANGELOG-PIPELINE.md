@@ -1,5 +1,10 @@
 # Pipeline Changelog
 
+## v0.5303 (2026-07-26)
+- **Song ID lookup** — Added `_load_song_ids()` and `_lookup_song_name()` functions. Pipeline now resolves slot IDs (e.g., "StartMeUp") to exact game strings via `beat_saber_song_ids.json`. Fixes case sensitivity issues where game uses different casing than expected.
+- **`beat_saber_song_ids.json` added** — Copied from `.agent/beat_saber_song_ids.json` to `beat_saber_deluxe/` for pipeline access.
+- **`manage_song_metadata()` updated** — Now resolves `target_name` to exact game song name before writing to `song_metadata.json`.
+
 ## v0.5302 (2026-07-26)
 - **Song metadata management** — Added `manage_song_metadata()` function and `--song-name`/`--artist` CLI arguments. Generates/updates `song_metadata.json` with song name and artist replacements for the TMP_Text hook.
 - **Auto-deploy on `--deploy`** — `song_metadata.json` is automatically deployed to PS4 alongside `redirects.json` and `features.json` when `--deploy` is used.

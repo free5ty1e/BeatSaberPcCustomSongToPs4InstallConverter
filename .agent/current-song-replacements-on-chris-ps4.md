@@ -1,9 +1,9 @@
 # Current Song Replacements on Chris's PS4
 
-> **Plugin:** Beat Saber Deluxe v0.8039  
+> **Plugin:** Beat Saber Deluxe v0.8040  
 > **All 32 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo) with custom community songs.  
-> **Last rebuilt:** 2026-07-26 (v0.8039 — MoveNext hook for data source modification)  
-> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). **MoveNext() hook deployed** (v0.8039) — modifies BeatmapLevel fields before UI reads them. **Awaiting test.**
+> **Last rebuilt:** 2026-07-26 (v0.8040 — case fix + song IDs pipeline)  
+> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). **MoveNext() hook deployed** (v0.8039) — modifies BeatmapLevel fields before UI reads them. **Case fix** (v0.8040) — exact game strings from song IDs. **Awaiting test.**
 
 ## Rolling Stones Replacements (13 songs)
 

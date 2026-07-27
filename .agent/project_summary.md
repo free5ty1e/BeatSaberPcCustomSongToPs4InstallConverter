@@ -1,15 +1,15 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-26
-**Status:** 🔲 **Song list song name replacement — v0.8039 DEPLOYED (MoveNext hook).** Awaiting test. Previous attempts: set_text/SetText hooks fire but UI re-renders from data model; SetDataFromLevelAsync hook never fired (async wrapper inlined).
+**Status:** ✅ **Song metadata modification PROVEN WORKING (v0.8039).** MoveNext() hook replaces song names in song list. v0.8040 fixes case mismatches for remaining 11 songs. All 32 songs should now be replaced.
 
-## Current Approach: TextMeshPro UI Hooking + Data Source Modification (v0.8039)
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline (v0.8040)
 
-**Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found. Strings don't exist in scannable memory at scan time.
+**Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found.
 
-**New approach:** Hook `TMP_Text.set_text(string)`, `TMP_Text.SetText(string, bool)`, AND `MoveNext()` of the `SetDataFromLevelAsync` state machine (RVA 0x1D377C0). The MoveNext hook modifies `BeatmapLevel.songName`/`songAuthorName` in-place before the original code reads them. External `song_metadata.json` loaded from PS4 for data-driven replacement.
+**Working approach:** Hook `MoveNext()` of the `SetDataFromLevelAsync` state machine (RVA 0x1D377C0). Modifies `BeatmapLevel.songName`/`songAuthorName` in-place before the original code reads them. Pipeline reads exact game strings from `beat_saber_song_ids.json` to ensure correct casing.
 
-### Known Limitation (v0.8039)
-- **Song list song names NOT yet confirmed working** — Three approaches tried: (1) set_text/SetText hooks fire but UI re-renders from data model, overwriting replacement; (2) SetDataFromLevelAsync hook never fired (async wrapper inlined); (3) MoveNext() hook — DEPLOYED, awaiting test. If this fails, the async state machine pattern may require hooking at a different level.
+### Known Limitation (v0.8040)
+- **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.
 
 ### Key Breakthroughs
 
@@ -117,7 +117,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **151** | **v0.8036** | **External song_metadata.json** | **✅ Works. Song details/pause menu correct, artist blanking in song list** |
 | **152** | **v0.8037** | **SetText hook for song list names** | **⚠️ Hook fires, replacement applied, but song list re-renders from data model — names still original** |
 | **153** | **v0.8038** | **SetDataFromLevelAsync hook (data source mod)** | **❌ Hook never fired — async wrapper inlined by builder. Zero log entries.** |
-| **154** | **v0.8039** | **Hook MoveNext() instead** | **🔲 DEPLOYED — awaiting test** |
+| **154** | **v0.8039** | **Hook MoveNext() instead** | **✅ WORKS! Song list names replaced for 21/32 songs. Missing 11 had case mismatches.** |
+| **155** | **v0.8040** | **Case fix + song IDs pipeline** | **🔲 DEPLOYED — awaiting test. All 32 songs should match now.** |
 
 ## Memory Injection Versions
 

@@ -13,10 +13,19 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 >   ```
 >   The dump must include the unpacked patch files (eboot.bin, Media/ directory, etc.). Tools like PS4 Dumper on a jailbroken PS4 create this via the `split=3` config option.
 
+## Features
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md) | ✅ Working | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection |
+| [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working | Display custom song names and artists in-game via IL2CPP MoveNext hook |
+| Extra Game Modes | 🟡 Experimental | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
+| Note Colors | ⏳ Planned | Custom left/right saber colors per song |
+
 > **⚠️ Current limitations:**
-> - **Song menu is untouched** — song names, artists, and cover art in the menu still show the original song's metadata. You must remember which custom song is mapped to which slot.
-> - **No note color customization** — left/right saber colors are the game's default red/blue. Custom color schemes are planned.
-> - **Extra game modes (OneSaber, 90Degree) are experimental** — mode selector buttons may appear via IL2CPP hook, but labels show "Standard" for all modes. Actual mode selection during gameplay works for OneSaber and 90Degree if modes are set via `--add-mode-characteristics`.
+> - **Single-artist packs only** — Song metadata modification works perfectly for single-artist packs (Rolling Stones, Billie Eilish, Lizzo). Multi-artist packs would incorrectly blank all artist names. Currently only single-artist packs are targeted.
+> - **Artist line is blank** — For single-artist packs, the artist line in the song list is intentionally blanked. The custom song name and artist are combined on the song name line (e.g., "Espresso / Sabrina Carpenter").
+> - **Extra game modes** — Mode selector buttons may appear via IL2CPP hook, but labels show "Standard" for all modes. Actual mode selection during gameplay works for OneSaber and 90Degree if modes are set via `--add-mode-characteristics`.
 
 ## Available Song Slots (Default Targets)
 
@@ -124,7 +133,7 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 | Flag | Default | Description |
 |------|---------|-------------|
 | `enable_custom_song_replacements` | `false` | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs |
-| `enable_song_metadata_modification` | `false` | Gates song metadata modification — reserved for future use when a new approach is implemented |
+| `enable_song_metadata_modification` | `false` | Gates song metadata modification — when ON, hooks MoveNext() to replace song names/artists in the UI |
 
 ### Example `features.json`
 
@@ -521,10 +530,11 @@ https://www.youtube.com/watch?v=J835HDdB-7g
 
 | Milestone | Status | Description |
 |-----------|--------|-------------|
-| M1: Song Replacement | ✅ Complete | 13 slots replaced with custom audio + beatmaps |
-| M2: Mode Selector | 🟡 In Progress | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
-| M3: Note Colors | ⏳ Planned | Custom left/right saber colors per song |
-| M4: Pack Bundle Metadata | 🔬 Researching | Display custom song name/artist in-game (memory injection approach) |
+| M1: Song Replacement | ✅ Complete | Any song slot replaced with custom audio + beatmaps |
+| M2: Song Metadata | ✅ Complete | Custom song names and artists displayed in-game (single-artist packs) |
+| M3: Mode Selector | 🟡 In Progress | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
+| M4: Note Colors | ⏳ Planned | Custom left/right saber colors per song |
+| M5: Multi-Artist Packs | 🔬 Researching | Artist replacement for multi-artist packs without global blanking |
 
 ---
 

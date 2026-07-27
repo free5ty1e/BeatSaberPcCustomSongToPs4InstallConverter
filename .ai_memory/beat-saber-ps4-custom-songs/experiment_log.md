@@ -3524,4 +3524,18 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Result:** 🔲 **DEPLOYED — awaiting test**
 - **Archived Logs:** (pending)
 - **Version:** v0.8039
-- **Status:** 🔲 **DEPLOYED — awaiting test** — MoveNext() hook approach
+- **Status:** ✅ **SUCCESS** — MoveNext() hook works! Song list names replaced correctly for matching songs.
+
+### Experiment 155: v0.8040 — Case-Insensitive Metadata + Song IDs Pipeline
+- **Date:** 2026-07-26
+- **What:**
+  - v0.8039 test showed MoveNext hook working for 21/32 songs. Missing 11 songs had case mismatches between JSON keys and actual game strings.
+  - Root cause: Game uses different casing than expected (e.g. "all the good girls go to hell" lowercase, "Mess it Up" lowercase 'i', "Sympathy For The Devil" capitalized, "Whole Wide World" without "The", trailing space on "You Should See Me In A Crown ")
+  - **Plugin fix:** `find_metadata_replacement()` now trims trailing spaces before comparison
+  - **Pipeline fix:** `manage_song_metadata()` now resolves slot IDs to exact game strings via `_lookup_song_name()` using `beat_saber_song_ids.json`
+  - **Data fix:** Regenerated `song_metadata.json` with exact game strings from song IDs file
+  - Copied `beat_saber_song_ids.json` to `beat_saber_deluxe/` for pipeline access
+- **Result:** 🔲 **DEPLOYED — awaiting test** — all 32 songs should now match
+- **Archived Logs:** (pending)
+- **Version:** v0.8040
+- **Status:** 🔲 **DEPLOYED — awaiting test** — case fix + song IDs pipeline

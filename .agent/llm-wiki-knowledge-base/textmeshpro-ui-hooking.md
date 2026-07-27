@@ -111,6 +111,15 @@ IL2CPP async methods like `SetDataFromLevelAsync` are compiled into state machin
 
 **Lesson:** Never hook an async method's declared RVA — always hook the state machine's `MoveNext()` instead.
 
+### Key Finding: Case Sensitivity in Metadata Matching (v0.8040 — CRITICAL)
+Game uses different casing than expected for many songs:
+- Billie Eilish songs are **all lowercase** in the game: "all the good girls go to hell", "bad guy", "bellyache", "bury a friend"
+- Some songs have **different capitalization**: "Mess it Up" (lowercase 'i'), "Sympathy For The Devil" (capitalized), "Good As Hell" (capitalized)
+- Some songs have **trailing spaces**: "You Should See Me In A Crown " (trailing space)
+- Some songs have **missing articles**: "Whole Wide World" (no "The" prefix)
+
+**Solution:** Pipeline now reads exact song names from `beat_saber_song_ids.json` via `_lookup_song_name()`. Plugin trims trailing spaces before comparison. The `beat_saber_song_ids.json` file is the authoritative source for exact game strings.
+
 ## Critical Implementation Details
 
 ### Module Discovery Timing (CRITICAL)
