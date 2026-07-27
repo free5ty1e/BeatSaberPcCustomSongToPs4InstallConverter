@@ -1174,6 +1174,12 @@ Before building v0.35, I analyzed the difference between the original file and `
 - **Date:** 2026-07-01
 - **Change:** Modified 100bills AssetBundle via UnityPy: renamed m_Name → "StartMeUpBeatmapLevelData" + container path → ".../startmeup/startmeupbeatmapleveldata.asset"
 
+### Experiment 129: Crystallized Custom Song Pipeline Build
+- **Date:** 2026-07-27
+- **What:** Ran full pipeline end-to-end for Crystallized (Bloom replacement, BeatSaver 12a).
+- **Result:** ⚠️ PARTIAL SUCCESS — Pipeline successfully downloaded, converted, and built `Crystallized_custom.bundle`. Deployment via `lftp` timed out (PS4 connectivity issue).
+- **Learned:** Pipeline logic (audio conversion, bundle patching, redirect config generation) is robust. Deployment is the only remaining blocker.
+
 ### Experiment 128: CI/CD Infrastructure — Ruff lint configuration fix
 - **Date:** 2026-07-27
 - **What:** Fixed failing lint step in CI pipeline. Ruff configuration was using `github` output format with `--statistics` flag, which is mutually exclusive. Removed `--statistics` to resolve the pipeline error.
