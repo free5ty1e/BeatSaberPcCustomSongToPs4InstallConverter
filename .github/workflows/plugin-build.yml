@@ -126,9 +126,10 @@ jobs:
 
       - name: Bundle release zip
         run: |
-          PLUGIN_VER=$(grep -oP 'PLUGIN_VERSION "\K[^"]+' beat_saber_deluxe/src/main.cpp)
+          PLUGIN_VER=$(grep '#define PLUGIN_VERSION' beat_saber_deluxe/src/main.cpp | sed 's/.*"\(.*\)".*/\1/')
           PIPELINE_VER=$(cat beat_saber_deluxe/VERSION)
           ZIP_NAME="beat-saber-deluxe-${PLUGIN_VER}-pipeline-${PIPELINE_VER}.zip"
+          echo "Plugin: ${PLUGIN_VER}, Pipeline: ${PIPELINE_VER}, Zip: ${ZIP_NAME}"
           mkdir -p release-zip/plugins
           mkdir -p release-zip/docs/features
           mkdir -p release-zip/docs/examples
@@ -172,7 +173,7 @@ jobs:
 
       - name: Verify artifacts
         run: |
-          PLUGIN_VER=$(grep -oP 'PLUGIN_VERSION "\K[^"]+' beat_saber_deluxe/src/main.cpp)
+          PLUGIN_VER=$(grep '#define PLUGIN_VERSION' beat_saber_deluxe/src/main.cpp | sed 's/.*"\(.*\)".*/\1/')
           PIPELINE_VER=$(cat beat_saber_deluxe/VERSION)
           ZIP_NAME="beat-saber-deluxe-${PLUGIN_VER}-pipeline-${PIPELINE_VER}.zip"
           echo "=== Release zip ==="
