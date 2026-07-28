@@ -165,6 +165,11 @@ jobs:
           name: beat-saber-deluxe-plugin
           path: release-artifacts
 
+      - name: Filter empty files from release artifacts
+        run: |
+          find release-artifacts -type f -empty -delete
+          echo "Removed empty files from release artifacts"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
