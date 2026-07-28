@@ -28,14 +28,13 @@ Pipeline Steps:
     8. Deploy to PS4 via FTP (optional)
 """
 
-import os
-import sys
-import json
-import gzip
-import struct
 import argparse
-import wave
+import gzip
+import json
 import logging
+import os
+import struct
+import sys
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -91,26 +90,22 @@ def load_config(config_path: str) -> dict:
 # ---------------------------------------------------------------------------
 # Imports from our toolchain
 # ---------------------------------------------------------------------------
+import soundfile as sf
 import UnityPy
 from UnityPy.streams import EndianBinaryReader
-import soundfile as sf
 
 try:
-    from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
-                                build_fsb5, build_vorbis_fsb5,
-                                build_pcm16_fsb5)
+    from hevag_encoder import build_fsb5, build_pcm16_fsb5, build_vorbis_fsb5, fast_pcm_to_hevag
 except ImportError:
     # Fallback: try to import directly
     sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
-    from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
-                                build_fsb5, build_vorbis_fsb5,
-                                build_pcm16_fsb5)
+    from hevag_encoder import build_fsb5, build_pcm16_fsb5, build_vorbis_fsb5, fast_pcm_to_hevag
 
 try:
-    from lapped_audio import lap_audio_if_needed, detect_lapped, lap_audio
+    from lapped_audio import detect_lapped, lap_audio
 except ImportError:
     sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
-    from lapped_audio import lap_audio_if_needed, detect_lapped, lap_audio
+    from lapped_audio import detect_lapped, lap_audio
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -281,7 +276,7 @@ def _scan_beatmap_max_beat(song_dir: str) -> float:
                 t = note.get('_time', note.get('b', 0))
                 if isinstance(t, (int, float)) and t > max_beat:
                     max_beat = t
-        except:
+        except Exception:
             pass
     return max_beat
 
@@ -627,7 +622,7 @@ def save_bundle(bf, output_path: str):
     """
     Save the modified bundle with LZ4 compression (matching original PS4 format).
     """
-    log.info(f"Saving bundle with LZ4 compression...")
+    log.info("Saving bundle with LZ4 compression...")
     result = bf.save(packer="lz4")
     with open(output_path, 'wb') as f:
         f.write(result)
@@ -940,14 +935,14 @@ def inject_beatmap_level_so(
 def build_plugin(project_root: str, debug: bool = False) -> str:
     """
     Build the GoldHEN plugin.
-    
+
     Args:
         project_root: Path to the plugin project root (contains Makefile)
         debug: If True, builds with VERBOSE_LOG enabled
-        
+
     Returns:
         Path to the built .prx file
-        
+
     Raises:
         RuntimeError: If the build fails
     """
@@ -995,7 +990,6 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
     Read the existing plugins.ini from PS4, ensure our plugin entry exists
     under [CUSA12878], then re-upload. Idempotent — preserves other plugins.
     """
-    import subprocess as sp
     import tempfile
 
     ps4_cfg = config.get('ps4', {})
@@ -1097,7 +1091,7 @@ def enable_plugin(config: dict, debug: bool = False):
     """
     ps4_cfg = config.get('ps4', {})
     title_cfg = config.get('title', {})
-    paths_cfg = config.get('paths', {})
+    _paths_cfg = config.get('paths', {})
 
     title_id = title_cfg.get('id', 'CUSA12878')
     host = ps4_cfg.get('ip', '192.168.100.117')
@@ -1192,7 +1186,7 @@ def enable_plugin(config: dict, debug: bool = False):
                                 [f"put {local_ini} -o {ini_remote}"],
                                 timeout=30)
         if rc == 0:
-            log.info(f"  ✅ plugins.ini updated — plugin ENABLED")
+            log.info("  ✅ plugins.ini updated — plugin ENABLED")
         else:
             log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
 
@@ -1216,7 +1210,7 @@ def disable_plugin(config: dict):
 
     ini_remote = "/data/GoldHEN/plugins.ini"
 
-    log.info(f"Disabling Beat Saber Deluxe plugin on PS4...")
+    log.info("Disabling Beat Saber Deluxe plugin on PS4...")
 
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -1285,11 +1279,10 @@ def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
     """
     Upload the plugin .prx to PS4 and ensure plugins.ini has our entry.
     """
-    import subprocess as sp
 
     ps4_cfg = config.get('ps4', {})
     title_cfg = config.get('title', {})
-    title_id = title_cfg.get('id', 'CUSA12878')
+    _title_id = title_cfg.get('id', 'CUSA12878')
 
     host = ps4_cfg.get('ip', '192.168.100.117')
     port = ps4_cfg.get('ftp_port', 2121)
@@ -1358,8 +1351,8 @@ def _download_redirect_from_ps4(config: dict) -> dict | None:
     Download redirects.json from PS4 via FTP.
     Returns the parsed JSON dict, or None if the file doesn't exist.
     """
-    import tempfile
     import subprocess as sp
+    import tempfile
 
     ps4_cfg = config.get('ps4', {})
     host = ps4_cfg.get('ip', '192.168.100.117')
@@ -1478,7 +1471,7 @@ def manage_redirect_config(
         # Ensure target_name has the correct BeatmapLevelsData prefix
         if not target_name.startswith('BeatmapLevelsData/'):
             target_name = f"BeatmapLevelsData/{target_name}"
-            
+
         bundle_name = f"{target_name.split('/')[-1]}{bundle_suffix}"
         redirect_data.setdefault('redirects', {})[target_name] = bundle_name
         log.info(f"  Added redirect: {target_name} -> {bundle_name}")
@@ -1787,11 +1780,10 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None,
     Returns:
         Path to the extracted song directory containing info.dat/Easy.dat/etc.
     """
-    import urllib.request
-    import urllib.error
     import tempfile
+    import urllib.error
+    import urllib.request
     import zipfile
-    import shutil
 
     base = api_base or BEATSAVER_API_BASE
     download_url = f"{base}/maps/id/{map_id}/download"

@@ -33,6 +33,17 @@ exclude_lines = [
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+exclude = [
+    "tools/build_patched_pack_bundle.py",
+    "tools/build_replacement_pack.py",
+    "tools/build_replacement_pack_final.py",
+    "tools/build_replacement_pack_v2.py",
+    "tools/build_replacement_pack_v3.py",
+    "tools/build_replacement_pack_v4.py",
+    "tools/build_per_song_metadata.py",
+    "tools/inject_pack_bundle.py",
+    "tools/patch_pack_bundle.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

@@ -19,12 +19,11 @@ Usage:
 """
 
 import json
+import logging
 import os
-import wave
-import struct
+
 import numpy as np
 import soundfile as sf
-import logging
 
 log = logging.getLogger('lapped_audio')
 
