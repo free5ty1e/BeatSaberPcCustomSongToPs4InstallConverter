@@ -119,7 +119,53 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) via pipeline (v0.5305) ✅
 - [ ] **(Future)** Multi-artist pack metadata — Need per-field tracking instead of global artist blanking
 
-## M5 — Polishing (Future)
-- [ ] GUI for song management
-- [ ] Batch deployment
-- [ ] HEVAG/Vorbis encoder workaround for compressed audio
+## M5 — Beatmap Mode Generators (Pipeline, Planned)
+
+### Objective
+Generate mode-specific beatmaps from Standard source files by applying algorithmic transformations.
+These run as pipeline steps, producing dedicated `.dat` files that feed into the mode mapping feature.
+
+### "No Arrows" Mode Generator
+Take a Standard beatmap and convert all arrow notes (`_cutDirection`/`d` > 0) to dot notes
+(`d` = 8, any direction). Walls, bombs, chains, sliders pass through unchanged.
+
+- [ ] Pipeline function: `convert_to_no_arrows(beatmap_data) -> beatmap_data`
+- [ ] CLI flag: `--generate-no-arrows` (outputs e.g. `ExpertNoArrows.dat`)
+- [ ] Must run AFTER Standard beatmaps are created, BEFORE mode mapping
+
+### "One Saber" Mode Generator
+Take a Standard beatmap and convert all notes to single-saber (left color only, `a`=0/`c`=0).
+Detect note pairs with overlapping timing windows that are impossible to hit with a single
+saber and remove one note of each conflicting pair.
+
+Detection heuristic:
+- Notes within < 1 beat of each other on different columns → conflict
+- If notes have opposing cut directions in close succession → conflict
+- When conflict detected: remove the later note (preserves flow)
+
+- [ ] Pipeline function: `convert_to_one_saber(beatmap_data) -> beatmap_data`
+- [ ] Conflict detection algorithm: spatial + temporal window analysis per note pair
+- [ ] CLI flag: `--generate-one-saber` (outputs e.g. `ExpertPlusOneSaber.dat`)
+- [ ] Optional: `--one-saber-remove-threshold <beats>` (default: 1.0)
+
+### "90 Degree" Mode Generator
+Take a Standard beatmap and insert rotation events (`rotationEvents`) that cycle through
+lane angles every N measures. Provides configurable cycle rate and randomization.
+
+Rotation scheme:
+- Cycle sequence: 0° → 90° → 180° → 270° or any subset
+- Insert `{"b": start_beat, "e": rotation_degrees}` at interval boundaries
+- Wrap around after each full cycle
+
+- [ ] Pipeline function: `generate_90_degree_rotations(beatmap_data, ...) -> beatmap_data`
+- [ ] CLI flag: `--generate-90-degree` (outputs e.g. `ExpertPlus90Degree.dat`)
+- [ ] `--90-degree-cycle <beats>` — fixed cycle length (default: 8 beats = 2 measures)
+- [ ] `--90-degree-random` — randomize interval length between min/max
+- [ ] `--90-degree-min-cycle <beats>` (default: 4)
+- [ ] `--90-degree-max-cycle <beats>` (default: 16)
+- [ ] `--90-degree-angles 0,90,180,270` — custom rotation angle sequence
+
+### Implementation Order
+1. No Arrows (simplest — pure note filter, no timing analysis)
+2. One Saber (requires conflict detection algorithm)
+3. 90 Degree (requires UI testing for rotation event compatibility)

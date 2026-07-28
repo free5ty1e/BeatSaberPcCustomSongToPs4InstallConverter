@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8040"
+#define PLUGIN_VERSION "v0.8041"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -41,6 +41,7 @@ static int REDIRECT_COUNT = 0;
 // Missing file or missing key = false (default off for safety).
 static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
+static int g_feature_beatmap_mode_mapping = 0;
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -96,12 +97,15 @@ static void load_features(void) {
             g_feature_custom_song_replacements = val;
         } else if (strcmp(key, "enable_song_metadata_modification") == 0) {
             g_feature_song_metadata_modification = val;
+        } else if (strcmp(key, "enable_beatmap_mode_mapping") == 0) {
+            g_feature_beatmap_mode_mapping = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d",
-             g_feature_custom_song_replacements, g_feature_song_metadata_modification);
+    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d",
+             g_feature_custom_song_replacements, g_feature_song_metadata_modification,
+             g_feature_beatmap_mode_mapping);
     log_write(logmsg);
 }
 
@@ -752,9 +756,10 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s",
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s",
                  g_feature_custom_song_replacements ? "ON" : "OFF",
-                 g_feature_song_metadata_modification ? "ON" : "OFF");
+                 g_feature_song_metadata_modification ? "ON" : "OFF",
+                 g_feature_beatmap_mode_mapping ? "ON" : "OFF");
         log_write(flog);
     }
 
@@ -763,6 +768,9 @@ extern "C" int module_start(size_t argc, const void *args) {
     }
     if (!g_feature_song_metadata_modification) {
         log_write("DISABLED: song_metadata_modification is OFF — metadata replacements disabled");
+    }
+    if (!g_feature_beatmap_mode_mapping) {
+        log_write("DISABLED: beatmap_mode_mapping is OFF — mode mapping disabled");
     }
 
     // fopen hook

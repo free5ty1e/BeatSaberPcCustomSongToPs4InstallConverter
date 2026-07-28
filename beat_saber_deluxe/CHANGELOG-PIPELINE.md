@@ -1,5 +1,15 @@
 # Pipeline Changelog
 
+## v0.5307 (2026-07-28)
+- **Beatmap mode mapping (Phase 1):**
+  - Added `detect_song_modes(song_dir)` — auto-detects characteristic modes from beatmap .dat/.json filename patterns. Handles suffix-style (`ExpertPlusOneSaber.dat`), prefix-style (`OneSaberExpert.dat`), bare (`Expert.dat` → Standard), and `.beatmap.dat` variants. Aliases: `SingleSaber`→`OneSaber`, `Lawless`→`NoArrows`, `Legacy`→`Standard`. Excludes `Info.dat`, `BPMInfo.dat`, `Lightshow`, `AudioData`. Returns canonically-ordered difficulty lists per mode.
+  - Added `build_mode_mapping(detected_modes, fallback_mode_map)` — resolves the 5 game characteristic slots using detected modes with configurable fallback chain. Default: `360Degree→NoArrows→Standard`, `NoArrows→Standard`, `90Degree→Standard`, `OneSaber→Standard`. Custom overrides via `SRC=DEST` format.
+  - Added `apply_mode_mapping(cab, enabled_modes)` — calls existing `add_mode_characteristics()` to inject new mode sets into the per-song bundle's BeatmapLevel.
+  - New CLI flags: `--enable-beatmap-mode-mapping`, `--fallback-mode-map SRC=DEST`.
+  - Feature flag `enable_beatmap_mode_mapping` added to `DEFAULT_FEATURES` (default `True`) and `features.json`.
+  - 22 new unit tests + 4 new integration tests — 361 total.
+  - `beat_saber_song_ids.json` enriched with `characteristicModes` field for all 305 songs (94 multi-mode) from bundle scan.
+
 ## v0.5306 (2026-07-28)
 - **Integration testing:**
   - Expanded `test_integration.py` from 1 test to 34 tests covering: PCM16 FSB5 build, V2→V3 beatmap conversion, beatmap file selection priority, redirect config management, song metadata management, song ID lookup, config loading, and metadata file handling.

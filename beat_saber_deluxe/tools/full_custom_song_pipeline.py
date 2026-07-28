@@ -758,6 +758,213 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
 
 
 # ============================================================================
+# Feature: Beatmap Mode Mapping (auto-detect characteristic modes)
+# ============================================================================
+
+GAME_CHARACTERISTIC_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+
+KNOWN_MODE_SUFFIXES = [
+    "Standard", "OneSaber", "NoArrows", "360Degree", "90Degree",
+    "Legacy", "Lawless", "SingleSaber"
+]
+
+MODE_ALIASES = {
+    "SingleSaber": "OneSaber",
+    "Lawless": "NoArrows",
+    "Legacy": "Standard",
+}
+
+
+def detect_song_modes(song_dir: str) -> dict[str, list[str]]:
+    """
+    Scan a custom song directory and detect which characteristic modes
+    have beatmap files and which difficulties are available per mode.
+
+    Parses beatmap .dat/.json filenames using known mode suffixes/prefixes.
+    Bare files (e.g. "Expert.dat") are classified as Standard.
+
+    Returns:
+        dict mapping mode name -> list of difficulty names found
+        e.g. {"Standard": ["Easy", "Normal", "Hard", "Expert", "ExpertPlus"],
+              "OneSaber": ["ExpertPlus"]}
+    """
+    import glob as _glob
+    DIFF_NAMES = {"Easy", "Normal", "Hard", "Expert", "ExpertPlus"}
+
+    def _extract_mode_and_diff(stem: str):
+        """Try to extract (mode, difficulty) from a filename stem.
+        Returns (mode, diff) or (None, None) if unclassifiable."""
+        stem_lower = stem.lower()
+
+        # Check for prefix-style: mode before difficulty (e.g. OneSaberExpert)
+        for mode_prefix in sorted(KNOWN_MODE_SUFFIXES + ["Standard"], key=len, reverse=True):
+            mode_lower = mode_prefix.lower()
+            if stem_lower.startswith(mode_lower):
+                rest = stem[len(mode_prefix):]
+                if rest in DIFF_NAMES:
+                    canonical = MODE_ALIASES.get(mode_prefix, mode_prefix)
+                    return canonical, rest
+
+        # Check for suffix-style: difficulty before mode (e.g. ExpertPlusOneSaber)
+        for mode_suffix in sorted(KNOWN_MODE_SUFFIXES, key=len, reverse=True):
+            mode_lower = mode_suffix.lower()
+            if stem_lower.endswith(mode_lower) and len(stem) > len(mode_suffix):
+                diff = stem[:-len(mode_suffix)]
+                if diff in DIFF_NAMES:
+                    canonical = MODE_ALIASES.get(mode_suffix, mode_suffix)
+                    return canonical, diff
+
+        # Bare difficulty name (no mode suffix)
+        if stem in DIFF_NAMES:
+            return "Standard", stem
+
+        # .beatmap.dat variant: e.g. "ExpertPlus.beatmap"
+        if '.beatmap' in stem_lower:
+            bare_stem = stem.split('.beatmap')[0]
+            if bare_stem in DIFF_NAMES:
+                return "Standard", bare_stem
+
+        return None, None
+
+    modes: dict[str, list[str]] = {}
+    for fname in sorted(_glob.glob(os.path.join(song_dir, "*.dat"))):
+        base = os.path.basename(fname)
+        base_lower = base.lower()
+        if base_lower in ('info.dat', 'bpminfo.dat'):
+            continue
+        if 'lightshow' in base_lower or 'audiodata' in base_lower:
+            continue
+
+        stem = base.replace('.dat', '')
+        mode, diff = _extract_mode_and_diff(stem)
+        if mode and diff:
+            if diff not in modes.setdefault(mode, []):
+                modes[mode].append(diff)
+
+    # Also check .json files (some BeatSaver songs use .json)
+    for fname in sorted(_glob.glob(os.path.join(song_dir, "*.json"))):
+        base = os.path.basename(fname)
+        base_lower = base.lower()
+        if base_lower in ('info.dat', 'bpminfo.dat', 'info.json'):
+            continue
+        if 'lightshow' in base_lower or 'audiodata' in base_lower:
+            continue
+
+        stem = base.replace('.json', '')
+        mode, diff = _extract_mode_and_diff(stem)
+        if mode and diff:
+            if diff not in modes.setdefault(mode, []):
+                modes[mode].append(diff)
+
+    # Sort difficulties in each mode by canonical order for consistent output
+    diff_order = {d: i for i, d in enumerate(["Easy", "Normal", "Hard", "Expert", "ExpertPlus"])}
+    for mode in modes:
+        modes[mode].sort(key=lambda d: diff_order.get(d, 999))
+
+    return modes
+
+
+def build_mode_mapping(
+    detected_modes: dict[str, list[str]],
+    fallback_mode_map: list[str] | None = None,
+) -> list[str]:
+    """
+    Build the list of game characteristic modes to enable in the BeatmapLevel
+    based on detected modes, with a configurable fallback chain.
+
+    The 5 game slots are: Standard, OneSaber, NoArrows, 90Degree, 360Degree.
+    Standard must always be present.
+
+    Default fallback chain (used when a game slot has no detected files):
+        OneSaber   ← Standard
+        NoArrows   ← Standard
+        90Degree   ← Standard
+        360Degree  ← NoArrows ← Standard
+
+    Custom fallback via --fallback-mode-map uses SRC=DEST format, e.g.:
+        --fallback-mode-map NoArrows=Standard  (skip 360Degree→NoArrows fallback)
+        --fallback-mode-map 360Degree=90Degree (chain 360Degree→90Degree instead)
+
+    Args:
+        detected_modes: Output of detect_song_modes()
+        fallback_mode_map: List of "SRC=DEST" fallback overrides
+
+    Returns:
+        List of mode names to enable (e.g. ["Standard", "OneSaber"])
+    """
+    if not detected_modes:
+        return ["Standard"]
+
+    # Parse custom fallback overrides
+    custom_fallback: dict[str, str] = {}
+    if fallback_mode_map:
+        for entry in fallback_mode_map:
+            if '=' in entry:
+                src, dest = entry.split('=', 1)
+                custom_fallback[src.strip()] = dest.strip()
+
+    # Default fallback chain (most specific to least specific)
+    default_fallback: dict[str, str] = {
+        "360Degree": "NoArrows",
+        "NoArrows": "Standard",
+        "90Degree": "Standard",
+        "OneSaber": "Standard",
+    }
+    # Apply custom overrides
+    for src, dest in custom_fallback.items():
+        if src in default_fallback:
+            default_fallback[src] = dest
+
+    def _resolve(src: str, seen: set | None = None) -> bool:
+        """Check if a mode can be resolved via fallback chain.
+        Standard is always considered resolved."""
+        if seen is None:
+            seen = set()
+        if src in detected_modes:
+            return True
+        if src == "Standard":
+            return True
+        if src in seen:
+            return False
+        seen.add(src)
+        if src not in default_fallback:
+            return False
+        fallback = default_fallback[src]
+        if fallback == src:
+            return False
+        return _resolve(fallback, seen)
+
+    modes_to_enable = []
+    for mode in GAME_CHARACTERISTIC_MODES:
+        if mode == "Standard":
+            modes_to_enable.append(mode)
+        elif mode in detected_modes:
+            modes_to_enable.append(mode)
+        elif _resolve(mode):
+            modes_to_enable.append(mode)
+
+    return modes_to_enable
+
+
+def apply_mode_mapping(cab, enabled_modes: list[str]) -> int:
+    """
+    Apply mode mapping to a CAB bundle by enabling the given characteristic modes.
+
+    Internally uses add_mode_characteristics() which clones Standard beatmap
+    assets for each new mode set in the BeatmapLevel.
+
+    Args:
+        cab: Unity CAB bundle containing BeatmapLevel
+        enabled_modes: List of mode names to enable (from build_mode_mapping)
+
+    Returns:
+        Number of modes added
+    """
+    modes_to_add = [m for m in enabled_modes if m != "Standard"]
+    return add_mode_characteristics(cab, modes_to_add)
+
+
+# ============================================================================
 # Inject BeatmapLevelSO metadata into the per-song CAB bundle
 # ============================================================================
 
@@ -1498,7 +1705,8 @@ def manage_redirect_config(
 FEATURES_FILENAME = "features.json"
 DEFAULT_FEATURES = {
     "enable_custom_song_replacements": True,
-    "enable_song_metadata_modification": True
+    "enable_song_metadata_modification": True,
+    "enable_beatmap_mode_mapping": True,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -1940,6 +2148,16 @@ Examples:
                         help='Comma-separated list of additional beatmap characteristics to enable '
                              '(e.g. "OneSaber,90Degree,Degree"). Makes the song playable in those '
                              'modes by cloning the Standard beatmaps.')
+    parser.add_argument('--enable-beatmap-mode-mapping', action='store_true',
+                        help='Auto-detect custom song beatmap files and map them to game '
+                             'characteristic slots (OneSaber, NoArrows, 90Degree, 360Degree). '
+                             'Uses fallback chain for slots without detected files. '
+                             'Overrides --enable-modes for detected modes.')
+    parser.add_argument('--fallback-mode-map', action='append', default=None,
+                        help='Override fallback chain for a mode slot. Format: SRC=DEST '
+                             '(e.g. "360Degree=90Degree" or "NoArrows=Standard"). '
+                             'Can be used multiple times. Only meaningful with '
+                             '--enable-beatmap-mode-mapping.')
     parser.add_argument('--vorbis', action='store_true',
                         help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
     parser.add_argument('--pcm16', action='store_true',
@@ -2208,6 +2426,18 @@ Examples:
     enable_modes = args.enable_modes.split(',') if args.enable_modes else None
     if enable_modes:
         add_mode_characteristics(cab, [m.strip() for m in enable_modes if m.strip()])
+
+    # -----------------------------------------------------------------------
+    # Step 6a: Auto-detect and apply beatmap mode mapping
+    # -----------------------------------------------------------------------
+    if args.enable_beatmap_mode_mapping:
+        log.info("  Beatmap mode mapping enabled — auto-detecting modes...")
+        detected = detect_song_modes(args.song_dir)
+        log.info(f"  Detected modes: {detected}")
+        enabled = build_mode_mapping(detected, args.fallback_mode_map)
+        log.info(f"  Modes to enable: {enabled}")
+        mode_count = apply_mode_mapping(cab, enabled)
+        log.info(f"  Mode sets added: {mode_count}")
 
     # -----------------------------------------------------------------------
     # Step 6.5: Inject BeatmapLevelSO metadata for song menu display

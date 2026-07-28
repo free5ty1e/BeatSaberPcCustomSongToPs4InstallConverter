@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
-pipeline_version: "0.5306" # in beat_saber_deluxe/VERSION
+plugin_version: "0.8041"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
+pipeline_version: "0.5307" # in beat_saber_deluxe/VERSION
 
 # Platform Constraints
 target_platform: PS4
@@ -58,6 +58,7 @@ plugin_features:
 feature_flags:
   enable_custom_song_replacements: false  # gates bundle redirects
   enable_song_metadata_modification: false # gates MoveNext() hook
+  enable_beatmap_mode_mapping: true       # gates mode mapping (pipeline v0.5307+)
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:
@@ -80,7 +81,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "335 tests across 10 files (as of v0.5306)"
+test_count: "361 tests across 10 files (as of v0.5307)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
@@ -101,6 +102,7 @@ docs_files:
   - beat_saber_deluxe/docs/camellia-pack-example.md
   - beat_saber_deluxe/docs/features/custom-song-replacement.md
   - beat_saber_deluxe/docs/features/song-metadata-modification.md
+  - beat_saber_deluxe/docs/features/beatmap-mode-mapping.md
   - docs/developer-info.md
 
 # Knowledge Base

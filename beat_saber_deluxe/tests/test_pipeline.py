@@ -36,6 +36,9 @@ from full_custom_song_pipeline import (
     _get_remote_song_metadata_path,
     _load_local_song_metadata,
     load_bpm_regions,
+    detect_song_modes,
+    build_mode_mapping,
+    GAME_CHARACTERISTIC_MODES,
     DIFFICULTIES,
     PROJECT_ROOT,
     REDIRECT_CONFIG_FILENAME,
@@ -788,3 +791,210 @@ class TestDifficultyNames:
     def test_standard_difficulties(self):
         expected = ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']
         assert DIFFICULTIES == expected
+
+
+# ======================================================================
+# Beatmap Mode Detection
+# ======================================================================
+class TestDetectSongModes:
+    """Test detect_song_modes() with various beatmap file arrangements."""
+
+    def test_bare_standard_files(self, tmp_dir):
+        """Bare .dat files (no mode suffix) are detected as Standard."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}.dat"), 'w') as f:
+                json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert len(modes['Standard']) == 5
+
+    def test_standard_suffix_files(self, tmp_dir):
+        """Files with Standard suffix are detected."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert len(modes['Standard']) == 5
+
+    def test_one_saber_suffix(self, tmp_dir):
+        """ExpertPlusOneSaber.dat is detected as OneSaber/ExpertPlus."""
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'ExpertPlus' in modes['OneSaber']
+
+    def test_one_saber_prefix(self, tmp_dir):
+        """OneSaberExpert.dat (prefix-style) is detected as OneSaber/Expert."""
+        with open(os.path.join(tmp_dir, "OneSaberExpert.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'Expert' in modes['OneSaber']
+
+    def test_multiple_modes(self, tmp_dir):
+        """Song with Standard + OneSaber + 360Degree is detected completely."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({}, f)
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Expert360Degree.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Normal360Degree.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes and len(modes['Standard']) == 5
+        assert 'OneSaber' in modes and modes['OneSaber'] == ['ExpertPlus']
+        assert '360Degree' in modes
+        assert 'Expert' in modes['360Degree']
+        assert 'Normal' in modes['360Degree']
+
+    def test_alias_single_saber(self, tmp_dir):
+        """SingleSaber is aliased to OneSaber."""
+        with open(os.path.join(tmp_dir, "ExpertPlusSingleSaber.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'SingleSaber' not in modes
+
+    def test_excludes_info_lightshow(self, tmp_dir):
+        """Info.dat, BPMInfo.dat, and Lightshow files are excluded."""
+        with open(os.path.join(tmp_dir, "Info.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "BPMInfo.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "LightshowExpert.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "AudioData.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert modes == {} or 'Standard' not in modes
+
+    def test_empty_dir(self, tmp_dir):
+        """Empty directory returns empty dict."""
+        modes = detect_song_modes(tmp_dir)
+        assert modes == {}
+
+    def test_legacy_mode(self, tmp_dir):
+        """Legacy files (from official songs) are detected as Standard."""
+        with open(os.path.join(tmp_dir, "EasyLegacy.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert modes.get('Standard') == ['Easy']
+
+    def test_beatmap_dot_format(self, tmp_dir):
+        """Expert.beatmap.dat format is detected as Standard/Expert."""
+        with open(os.path.join(tmp_dir, "ExpertPlus.beatmap.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert 'ExpertPlus' in modes['Standard']
+
+    def test_no_arrows(self, tmp_dir):
+        """NoArrows mode detection."""
+        with open(os.path.join(tmp_dir, "HardNoArrows.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'NoArrows' in modes
+        assert modes['NoArrows'] == ['Hard']
+
+    def test_lawless_alias(self, tmp_dir):
+        """Lawless is aliased to NoArrows."""
+        with open(os.path.join(tmp_dir, "ExpertLawless.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'NoArrows' in modes
+        assert 'Lawless' not in modes
+
+
+# ======================================================================
+# Mode Mapping Builder
+# ======================================================================
+class TestBuildModeMapping:
+    """Test build_mode_mapping() with various fallback scenarios."""
+
+    def test_standard_only(self):
+        """Only Standard detected — all modes resolved via fallback chain."""
+        modes = {"Standard": ["Easy", "Normal", "Hard", "Expert", "ExpertPlus"]}
+        result = build_mode_mapping(modes)
+        assert result == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_one_saber_detected(self):
+        """Standard + OneSaber detected — both enabled."""
+        modes = {
+            "Standard": ["Easy", "Normal", "Hard", "Expert", "ExpertPlus"],
+            "OneSaber": ["ExpertPlus"],
+        }
+        result = build_mode_mapping(modes)
+        assert "Standard" in result
+        assert "OneSaber" in result
+
+    def test_all_five_modes_detected(self):
+        """All 5 modes detected — all enabled."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "OneSaber": list(DIFFICULTIES),
+            "NoArrows": list(DIFFICULTIES),
+            "90Degree": list(DIFFICULTIES),
+            "360Degree": list(DIFFICULTIES),
+        }
+        result = build_mode_mapping(modes)
+        assert result == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_noarrows_falls_back_standard(self):
+        """NoArrows not detected — falls back to Standard."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "360Degree": ["Expert"],
+        }
+        result = build_mode_mapping(modes)
+        # NoArrows not detected, fallback chain: NoArrows←Standard
+        assert "NoArrows" in result  # resolved via fallback
+
+    def test_360_falls_back_noarrows_standard(self):
+        """360Degree falls back through NoArrows→Standard."""
+        modes = {"Standard": list(DIFFICULTIES)}
+        result = build_mode_mapping(modes)
+        # 360Degree chain: 360Degree→NoArrows→Standard → resolved
+        assert "360Degree" in result
+
+    def test_custom_fallback_360_to_standard(self):
+        """Custom fallback 360Degree=Standard skips NoArrows."""
+        modes = {"Standard": list(DIFFICULTIES)}
+        result = build_mode_mapping(modes, fallback_mode_map=["360Degree=Standard"])
+        assert "360Degree" in result
+
+    def test_custom_fallback_noarrows_skip(self):
+        """Custom fallback NoArrows=360Degree."""
+        modes = {"Standard": list(DIFFICULTIES), "360Degree": ["Expert"]}
+        result = build_mode_mapping(modes, fallback_mode_map=["NoArrows=360Degree"])
+        assert "NoArrows" in result
+
+    def test_empty_detected(self):
+        """Empty detected modes returns just Standard."""
+        result = build_mode_mapping({})
+        assert result == ["Standard"]
+
+    def test_partial_detected(self):
+        """Only OneSaber and 360Degree detected without Standard.
+        Standard is always present, so all 4 other modes resolve via fallback."""
+        modes = {"OneSaber": ["Expert"], "360Degree": ["Hard"]}
+        result = build_mode_mapping(modes)
+        assert result == list(GAME_CHARACTERISTIC_MODES)
+        # OneSaber resolved from detected, 360Degree from detected
+        # NoArrows, 90Degree resolved via Standard fallback
+
+    def test_noarrows_and_90degree_detected(self):
+        """NoArrows and 90Degree detected, but not OneSaber."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "NoArrows": ["Easy", "Normal", "Hard", "Expert"],
+            "90Degree": ["Normal"],
+        }
+        result = build_mode_mapping(modes)
+        assert "NoArrows" in result
+        assert "90Degree" in result
+        assert "OneSaber" in result  # falls back to Standard
+        assert "360Degree" in result  # falls back through NoArrows→Standard

@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8041] — 2026-07-28
+### Added
+- **Feature flag `g_feature_beatmap_mode_mapping`** — parsed from `features.json` `enable_beatmap_mode_mapping` key. No runtime behavior in this release (pipeline-side only in v0.5307). Gating scaffold for Phase 2 (plugin runtime mode injection).
+
 ## [v0.8040] — 2026-07-27
 ### Fixed
 - **Case-insensitive metadata matching** — `find_metadata_replacement()` now trims trailing spaces before comparison. Game uses different casing than expected (e.g. "all the good girls go to hell" vs "All The Good Girls Go to Hell", "Mess it Up" vs "Mess It Up").

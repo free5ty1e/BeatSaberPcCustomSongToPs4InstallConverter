@@ -32,6 +32,9 @@ from full_custom_song_pipeline import (
     _load_local_song_metadata,
     manage_redirect_config,
     manage_song_metadata,
+    detect_song_modes,
+    build_mode_mapping,
+    GAME_CHARACTERISTIC_MODES,
     DIFFICULTIES,
 )
 
@@ -436,3 +439,117 @@ class TestConfigLoading:
         config = load_config(config_path)
         assert config['ps4']['ip'] == '10.0.0.1'
         assert config['title']['id'] == 'CUSA99999'
+
+
+# ======================================================================
+# Beatmap Mode Mapping Integration
+# ======================================================================
+class TestBeatmapModeMappingIntegration:
+    """Integration test for detect→build→apply mode mapping chain."""
+
+    def test_detect_build_chain(self, tmp_dir):
+        """Full detect→build cycle with multi-mode song directory."""
+        # Create Standard beatmaps (bare .dat files)
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            data = {"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                    "obstacles": [], "sliders": [], "burstSliders": [],
+                    "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                    "rotationEvents": [], "basicEventTypesWithKeywords": {"d": []},
+                    "useNormalEventsAsCompatibleEvents": True}
+            with open(os.path.join(tmp_dir, f"{diff}.dat"), 'w') as f:
+                json.dump(data, f)
+
+        # Create OneSaber files (2 difficulties)
+        for diff in ['Expert', 'ExpertPlus']:
+            data = {"version": "3.2.0", "colorNotes": [{"b": 0, "x": 0, "y": 2, "a": 0, "c": 0, "d": 1}],
+                    "bombNotes": [], "obstacles": [], "sliders": [], "burstSliders": [],
+                    "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                    "rotationEvents": [], "basicEventTypesWithKeywords": {"d": []},
+                    "useNormalEventsAsCompatibleEvents": True}
+            with open(os.path.join(tmp_dir, f"{diff}OneSaber.dat"), 'w') as f:
+                json.dump(data, f)
+
+        # Create 360Degree files (1 difficulty)
+        with open(os.path.join(tmp_dir, "Normal360Degree.dat"), 'w') as f:
+            json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                       "obstacles": [], "sliders": [], "burstSliders": [],
+                       "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                       "rotationEvents": [], "basicEventTypesWithKeywords": {"d": []},
+                       "useNormalEventsAsCompatibleEvents": True}, f)
+
+        # Step 1: Detect
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert len(modes['Standard']) == 5
+        assert 'OneSaber' in modes
+        assert modes['OneSaber'] == ['Expert', 'ExpertPlus']
+        assert '360Degree' in modes
+        assert modes['360Degree'] == ['Normal']
+        assert 'NoArrows' not in modes
+        assert '90Degree' not in modes
+
+        # Step 2: Build mapping (default fallback)
+        enabled = build_mode_mapping(modes)
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)  # all 5 resolved
+
+        # Step 3: Build mapping with custom fallback
+        enabled_custom = build_mode_mapping(modes, fallback_mode_map=["360Degree=Standard"])
+        assert enabled_custom == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_no_standard_edge_case(self, tmp_dir):
+        """Song directory with only non-Standard mode files."""
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'Standard' not in modes
+
+        # Even without Standard files, all 5 modes resolve via fallback
+        enabled = build_mode_mapping(modes)
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_single_difficulty_mode(self, tmp_dir):
+        """OneSaber with only ExpertPlus file."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                           "obstacles": [], "sliders": [], "burstSliders": [],
+                           "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                           "rotationEvents": [],
+                           "basicEventTypesWithKeywords": {"d": []},
+                           "useNormalEventsAsCompatibleEvents": True}, f)
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+
+        modes = detect_song_modes(tmp_dir)
+        assert modes['OneSaber'] == ['ExpertPlus']
+        enabled = build_mode_mapping(modes)
+        assert 'OneSaber' in enabled
+
+    def test_all_modes_detected_integration(self, tmp_dir):
+        """Song with files for all 5 modes."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                           "obstacles": [], "sliders": [], "burstSliders": [],
+                           "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                           "rotationEvents": [],
+                           "basicEventTypesWithKeywords": {"d": []},
+                           "useNormalEventsAsCompatibleEvents": True}, f)
+        for mode in ['OneSaber', 'NoArrows']:
+            for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+                with open(os.path.join(tmp_dir, f"{diff}{mode}.dat"), 'w') as f:
+                    json.dump({}, f)
+        for mode in ['90Degree', '360Degree']:
+            with open(os.path.join(tmp_dir, f"Expert{mode}.dat"), 'w') as f:
+                json.dump({}, f)
+
+        modes = detect_song_modes(tmp_dir)
+        assert set(modes.keys()) == {'Standard', 'OneSaber', 'NoArrows', '90Degree', '360Degree'}
+        assert modes['Standard'] == list(DIFFICULTIES)
+        assert modes['OneSaber'] == list(DIFFICULTIES)
+        assert modes['NoArrows'] == list(DIFFICULTIES)
+
+        enabled = build_mode_mapping(modes)
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)

@@ -1,4 +1,4 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8040 / v0.5306)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8041 / v0.5307)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
@@ -46,6 +46,8 @@ python3 tools/full_custom_song_pipeline.py \
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) |
 | `--generate-config` | Update `redirects.json` config on PS4 |
 | `--enable-modes` | Comma-separated list of extra beatmap modes to enable (e.g. `OneSaber,90Degree`). Clones Standard beatmaps into the new characteristics so they appear in the in-game mode selector. |
+| `--enable-beatmap-mode-mapping` | Auto-detect custom song beatmap files and map them to game characteristic slots. Uses fallback chain for slots without dedicated files. Overrides `--enable-modes` for detected modes. |
+| `--fallback-mode-map SRC=DEST` | Override fallback chain for a mode slot (repeatable). E.g. `"360Degree=90Degree"` or `"NoArrows=Standard"`. Only meaningful with `--enable-beatmap-mode-mapping`. |
 | `--enable-plugin` | Enable the Beat Saber Deluxe plugin on PS4 (uncomments .prx entry in plugins.ini under [CUSA12878]) — tested and verified live on console |
 | `--disable-plugin` | Disable the Beat Saber Deluxe plugin on PS4 (play original Rolling Stones songs) — comments out entries with `#;` |
 | `--song-name NAME` | Override song display name for metadata injection into per-song bundle |
