@@ -120,15 +120,15 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pip install pytest pytest-cov
+          pip install -r beat_saber_deluxe/requirements-test.txt
           cd beat_saber_deluxe
           python3 -m pytest tests/ -v --cov=tools --cov-report=html:htmlcov --cov-report=term-missing --cov-config=pyproject.toml
-        continue-on-error: true
 
       - name: Bundle release zip
         run: |
-          VERSION=$(cat beat_saber_deluxe/VERSION)
-          ZIP_NAME="beat-saber-deluxe-v${VERSION}.zip"
+          PLUGIN_VER=$(grep -oP 'PLUGIN_VERSION "\K[^"]+' beat_saber_deluxe/src/main.cpp)
+          PIPELINE_VER=$(cat beat_saber_deluxe/VERSION)
+          ZIP_NAME="beat-saber-deluxe-${PLUGIN_VER}-pipeline-${PIPELINE_VER}.zip"
           mkdir -p release-zip/plugins
           mkdir -p release-zip/docs/features
           mkdir -p release-zip/docs/examples
@@ -172,8 +172,9 @@ jobs:
 
       - name: Verify artifacts
         run: |
-          VERSION=$(cat beat_saber_deluxe/VERSION)
-          ZIP_NAME="beat-saber-deluxe-v${VERSION}.zip"
+          PLUGIN_VER=$(grep -oP 'PLUGIN_VERSION "\K[^"]+' beat_saber_deluxe/src/main.cpp)
+          PIPELINE_VER=$(cat beat_saber_deluxe/VERSION)
+          ZIP_NAME="beat-saber-deluxe-${PLUGIN_VER}-pipeline-${PIPELINE_VER}.zip"
           echo "=== Release zip ==="
           ls -lh "${ZIP_NAME}"
           echo "=== Zip contents ==="
@@ -201,7 +202,7 @@ jobs:
             beat_saber_deluxe/development/scripts/
             beat_saber_deluxe/Makefile
             beat_saber_deluxe/htmlcov/
-            beat-saber-deluxe-v*.zip
+            beat-saber-deluxe-*-pipeline-*.zip
           retention-days: 90
 
   release:
@@ -232,4 +233,4 @@ jobs:
           name: Beat Saber Deluxe ${{ github.ref_name }}
           body_path: beat_saber_deluxe/CI_RELEASE.md
           files: |
-            release-artifacts/beat-saber-deluxe-v*.zip
+            release-artifacts/beat-saber-deluxe-*-pipeline-*.zip

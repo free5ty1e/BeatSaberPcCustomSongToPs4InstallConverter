@@ -96,4 +96,3 @@ jobs:
 
       - name: Run ruff check
         run: python -m ruff check tools/ --output-format=github
-        continue-on-error: true
