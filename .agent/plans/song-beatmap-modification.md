@@ -15,28 +15,68 @@ Scan `song_dir` for `.dat`/`.json` files and categorize them by mode and difficu
 **Input:** `song_dir` path  
 **Output:** `dict[str, dict[str, str]]` — `{mode: {difficulty: filename}}`
 
+**Real-world example** (from BeatSaver songs in the repo — official songs don't have external .dat files):
+
 ```python
+# BeatSaver song with 360Degree (all 5 diffs) + Standard (all 5 diffs)
+# e.g. songs_repo/81970cd2d5d3b2dff908e6569648a9a51e494e65/
 {
     "Standard": {
-        "Easy": "EasyStandard.dat",
-        "Normal": "Normal.dat",
-        "Hard": "Hard.dat",
+        "Easy":   "EasyStandard.dat",
+        "Normal": "NormalStandard.dat",
+        "Hard":   "HardStandard.dat",
+        "Expert": "ExpertStandard.dat",
+        "ExpertPlus": "ExpertPlusStandard.dat"
+    },
+    "360Degree": {
+        "Easy":   "Easy360Degree.dat",
+        "Normal": "Normal360Degree.dat",
+        "Hard":   "Hard360Degree.dat",
+        "Expert": "Expert360Degree.dat",
+        "ExpertPlus": "ExpertPlus360Degree.dat"
+    }
+}
+```
+
+```python
+# BeatSaver song with OneSaber + Standard (partial coverage, prefix-style naming)
+# e.g. songs_repo/5f3b03223b3cf960802005f0910175f1802bd8b2/
+{
+    "Standard": {
+        "Easy":   "EasyStandard.dat",
+        "Normal": "NormalStandard.dat",
+        "Hard":   "HardStandard.dat",
         "Expert": "ExpertStandard.dat",
         "ExpertPlus": "ExpertPlusStandard.dat"
     },
     "OneSaber": {
-        "ExpertPlus": "ExpertPlusOneSaber.dat"
-    },
-    "360Degree": {
-        "Expert": "Expert360Degree.dat"
+        "Easy":   "EasyOneSaber.dat",
+        "Normal": "NormalOneSaber.dat",
+        "Hard":   "HardOneSaber.dat",
+        "Expert": "OneSaberExpert.dat",  # prefix-style: mode before difficulty
+    }
+}
+```
+
+```python
+# BeatSaver song with no mode suffix (bare .dat files)
+# e.g. songs_repo/050d447ebe73685cdb5515867dd7f065e0001fb7/
+{
+    "Standard": {
+        "Easy":   "Easy.dat",
+        "Normal": "Normal.dat",
+        "Hard":   "Hard.dat",
+        "Expert": "Expert.dat",
+        "ExpertPlus": "ExpertPlus.dat"
     }
 }
 ```
 
 **Filename parsing logic:**
-- Strip mode suffix from stem: `ExpertPlusOneSaber` → difficulty=`ExpertPlus`, mode=`OneSaber`
-- Known suffixes: `Standard`, `OneSaber`, `NoArrows`, `90Degree`, `360Degree`, `Legacy`, `Lawless`, `SingleSaber`, `Lightshow` (excluded)
-- Bare `.dat` (no suffix) → `Standard`
+- Strip known mode suffix from stem: `ExpertPlusOneSaber` → difficulty=`ExpertPlus`, mode=`OneSaber`
+- Check for prefix-style (mode before difficulty): `OneSaberExpert.dat` → mode=`OneSaber`, difficulty=`Expert`
+- Known mode suffixes/prefixes: `Standard`, `OneSaber`, `NoArrows`, `90Degree`, `360Degree`, `Legacy`, `Lawless`, `SingleSaber`
+- Bare `.dat` (no mode token) → `Standard`
 - `.beatmap.dat` → `Standard` (alternate format)
 - Exclude: `Info.dat`, `BPMInfo.dat`, files containing `Lightshow` or `AudioData`
 
@@ -219,6 +259,8 @@ If pack bundle patching is too risky, the fallback is:
 6. Add plugin feature flag `g_feature_beatmap_mode_mapping` (gating only)
 7. Tests for all new functions
 8. Documentation updates
+   - `beat_saber_deluxe/README.md` — Add summary of the new featureset (beatmap mode mapping + configurable fallback) in the mode control section, link to detailed feature doc
+   - Create `beat_saber_deluxe/docs/features/beatmap-mode-mapping.md` — Detailed explanation: how auto-detection works, fallback chains, CLI flags, examples, relationship to `--enable-modes`, limitations (UI mode selector is separate concern)
 
 ### Phase 2 (Future)
 9. Plugin runtime `BeatmapLevel._difficultyBeatmapSets` injection (Part 2)

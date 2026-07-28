@@ -5,8 +5,9 @@
     "totalSongs": 305,
     "totalPacks": 36,
     "templateDir": "/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData",
-    "notes": "Extracted from pack asset bundles in aa/PS4/*_pack_assets_all_*.bundle and BeatmapLevelsData/* bundles",
-    "generated": "2026-07-11T23:05:04"
+    "notes": "Extracted from pack asset bundles in aa/PS4/*_pack_assets_all_*.bundle and BeatmapLevelsData/* bundles Added characteristicModes per song from bundle scan 2026-07-28.",
+    "generated": "2026-07-11T23:05:04",
+    "updated": "2026-07-28T20:00:00+00:00"
   },
   "albums": [
     {
@@ -36,7 +37,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "360Degree": [
+              "Normal"
+            ],
+            "90Degree": [
+              "Normal"
+            ]
+          }
         },
         {
           "songID": "BalearicPumping",
@@ -61,7 +86,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BeatSaber",
@@ -86,7 +135,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Easy"
+            ],
+            "90Degree": [
+              "Easy"
+            ]
+          }
         },
         {
           "songID": "Breezer",
@@ -111,7 +184,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "CommercialPumping",
@@ -136,7 +233,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Normal"
+            ],
+            "90Degree": [
+              "Normal"
+            ]
+          }
         },
         {
           "songID": "CountryRounds",
@@ -161,7 +282,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "Escape",
@@ -186,7 +331,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "Legend",
@@ -211,7 +380,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ]
+          }
         },
         {
           "songID": "LvlInsane",
@@ -236,7 +429,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "TurnMeOn",
@@ -261,7 +478,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "360Degree": [
+              "Easy"
+            ],
+            "90Degree": [
+              "Easy"
+            ]
+          }
         }
       ]
     },
@@ -292,7 +533,25 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "Elixia",
@@ -317,7 +576,25 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "INeedYou",
@@ -342,7 +619,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Easy"
+            ],
+            "90Degree": [
+              "Easy"
+            ]
+          }
         },
         {
           "songID": "RumNBass",
@@ -367,7 +668,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "UnlimitedPower",
@@ -392,7 +717,33 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ]
+          }
         }
       ]
     },
@@ -423,7 +774,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FullCharge",
@@ -448,7 +808,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GiveALittleLove",
@@ -473,7 +842,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Immortal",
@@ -498,7 +876,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Normal"
+            ],
+            "90Degree": [
+              "Normal"
+            ]
+          }
         },
         {
           "songID": "Origins",
@@ -523,7 +916,31 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ReasonForLiving",
@@ -548,7 +965,27 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -579,7 +1016,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ItTakesMe",
@@ -604,7 +1055,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LudicrousPlus",
@@ -629,7 +1089,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SpinEternally",
@@ -654,7 +1128,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -685,7 +1168,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DollarSeventyEight",
@@ -710,7 +1202,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FinalBossChan",
@@ -735,7 +1236,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Firestarter",
@@ -760,7 +1270,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "IWannaBeAMachine",
@@ -785,7 +1309,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Magic",
@@ -810,7 +1343,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -841,7 +1388,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HeavyWeight",
@@ -866,7 +1422,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LiftOff",
@@ -891,7 +1456,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PowerOfTheSaberBlade",
@@ -916,7 +1490,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TempoKatana",
@@ -941,7 +1524,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -972,7 +1564,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Lustre",
@@ -997,7 +1598,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheMaster",
@@ -1022,7 +1632,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Untamed",
@@ -1047,7 +1666,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WorldWideWeb",
@@ -1072,7 +1700,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -1101,7 +1738,16 @@
             1,
             2,
             3
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Metronome",
@@ -1118,7 +1764,16 @@
           ],
           "difficultyEnums": [
             1
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PerformanceTest",
@@ -1137,7 +1792,16 @@
           "difficultyEnums": [
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -1168,7 +1832,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "AngelVoices",
@@ -1193,7 +1866,25 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "NoArrows": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "OneSaber": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "CrabRave",
@@ -1218,7 +1909,25 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ]
+          }
         },
         {
           "songID": "Danger",
@@ -1243,7 +1952,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "EscapeRemix",
@@ -1268,7 +1986,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FitBeat",
@@ -1293,7 +2020,29 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "360Degree": [
+              "Normal",
+              "Hard",
+              "Expert"
+            ],
+            "90Degree": [
+              "Normal",
+              "Hard",
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "OneHope",
@@ -1318,7 +2067,19 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "PopStars",
@@ -1343,7 +2104,25 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Expert"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SpookyBeat",
@@ -1368,7 +2147,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -1436,6 +2224,15 @@
               "chains": 0,
               "walls": 70
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1498,6 +2295,15 @@
               "chains": 0,
               "walls": 137
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1560,6 +2366,15 @@
               "chains": 0,
               "walls": 151
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1622,6 +2437,15 @@
               "chains": 0,
               "walls": 113
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1684,6 +2508,20 @@
               "chains": 0,
               "walls": 76
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1746,6 +2584,15 @@
               "chains": 0,
               "walls": 127
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1808,6 +2655,15 @@
               "chains": 0,
               "walls": 68
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1870,6 +2726,15 @@
               "chains": 0,
               "walls": 124
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1932,6 +2797,20 @@
               "chains": 0,
               "walls": 78
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -1994,6 +2873,15 @@
               "chains": 0,
               "walls": 107
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         }
       ]
@@ -2025,7 +2913,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Circus",
@@ -2050,7 +2947,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GimmeMore",
@@ -2075,7 +2981,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ImASlave4U",
@@ -2100,7 +3015,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MeAgainstTheMusic",
@@ -2125,7 +3049,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "OopsIDidItAgain",
@@ -2150,7 +3083,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Overprotected",
@@ -2175,7 +3117,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Scream&Shout",
@@ -2200,7 +3151,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TillTheWorldEnds",
@@ -2225,7 +3185,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Toxic",
@@ -2250,7 +3219,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Womanizer",
@@ -2275,7 +3253,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -2306,7 +3293,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BoyWithLuv",
@@ -2331,7 +3327,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BurningUp",
@@ -2356,7 +3361,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Dionysus",
@@ -2381,7 +3395,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Dna",
@@ -2406,7 +3429,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Dope",
@@ -2431,7 +3463,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Dynamite",
@@ -2456,7 +3497,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FakeLove",
@@ -2481,7 +3536,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Idol",
@@ -2506,7 +3570,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MicDrop",
@@ -2531,7 +3604,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "NotToday",
@@ -2556,7 +3643,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Ugh",
@@ -2581,7 +3677,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -2612,7 +3717,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "CycleHit",
@@ -2637,7 +3751,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ExitThisEarthsAtomosphere",
@@ -2662,7 +3790,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Ghost",
@@ -2687,7 +3824,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LightItUp",
@@ -2712,7 +3863,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WhatTheCat",
@@ -2737,7 +3897,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -2768,7 +3937,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "AroundTheWorldHarderBetterFasterStronger",
@@ -2793,7 +3971,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DaFunkDaftendirekt",
@@ -2818,7 +4005,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GetLucky",
@@ -2843,7 +4039,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HarderBetterFasterStronger",
@@ -2868,7 +4073,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LoseYourselfToDance",
@@ -2893,7 +4107,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "OneMoreTime",
@@ -2918,7 +4141,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PrimeTimeOfYourLifeBrainwasherRollinAliveLive2007",
@@ -2943,7 +4175,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Technologic",
@@ -2968,7 +4209,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "VeridisQuo",
@@ -2993,7 +4243,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -3024,7 +4283,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Animals",
@@ -3049,7 +4317,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Freestyler",
@@ -3074,7 +4351,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GhostsNStuff",
@@ -3099,7 +4385,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Icarus",
@@ -3124,7 +4424,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Sandstorm",
@@ -3149,7 +4463,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "StayTheNight",
@@ -3174,7 +4497,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheRockafellerSkank",
@@ -3199,7 +4531,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WaitingAllNight",
@@ -3224,7 +4565,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Witchcraft",
@@ -3249,7 +4599,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -3280,7 +4639,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DanceDance",
@@ -3305,7 +4673,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "IDontCare",
@@ -3330,7 +4707,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Immortals",
@@ -3355,7 +4746,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Irresistible",
@@ -3380,7 +4780,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MySongsKnow",
@@ -3405,7 +4814,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ThisAintAScene",
@@ -3430,7 +4853,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ThnksFrThMmrs",
@@ -3455,7 +4887,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -3486,7 +4927,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BoulevardOfBrokenDreams",
@@ -3511,7 +4966,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FatherOfAll",
@@ -3536,7 +5000,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Normal"
+            ],
+            "90Degree": [
+              "Normal"
+            ]
+          }
         },
         {
           "songID": "FireReadyAim",
@@ -3561,7 +5040,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "Holiday",
@@ -3586,7 +5080,27 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Minority",
@@ -3611,7 +5125,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -3642,7 +5165,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Anaconda",
@@ -3667,7 +5199,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GinAndJuice",
@@ -3692,7 +5233,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Godzilla",
@@ -3717,7 +5267,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HeyYA",
@@ -3742,7 +5301,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Hypnotize",
@@ -3767,7 +5335,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "NuthinButAGThang",
@@ -3792,7 +5369,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheMessage",
@@ -3817,7 +5403,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheWoo",
@@ -3842,7 +5437,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -3873,7 +5477,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Believer",
@@ -3898,7 +5518,36 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Normal",
+              "Hard"
+            ],
+            "90Degree": [
+              "Normal",
+              "Hard"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Bones",
@@ -3923,7 +5572,21 @@
             4,
             0,
             2
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Digital",
@@ -3948,7 +5611,29 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Enemy",
@@ -3973,7 +5658,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ItsTime",
@@ -3998,7 +5697,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Machine",
@@ -4023,7 +5738,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Natural",
@@ -4048,7 +5779,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Radioactive",
@@ -4073,7 +5820,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Thunder",
@@ -4098,7 +5861,29 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Warriors",
@@ -4123,7 +5908,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WhateverItTakes",
@@ -4148,7 +5949,28 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -4179,7 +6001,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DnaLamar",
@@ -4204,7 +6035,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DontCha",
@@ -4229,7 +6074,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PartyRockAnthem",
@@ -4254,7 +6108,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Rollin",
@@ -4279,7 +6142,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Sugar",
@@ -4304,7 +6176,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheSweetEscape",
@@ -4329,7 +6215,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -4360,7 +6255,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BadRomance",
@@ -4385,7 +6289,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BornThisWay",
@@ -4410,7 +6323,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "JustDance",
@@ -4435,7 +6357,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Paparazzi",
@@ -4460,7 +6391,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PokerFace",
@@ -4485,7 +6425,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "RainOnMe",
@@ -4510,7 +6464,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "StupidLove",
@@ -4535,7 +6503,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Telephone",
@@ -4560,7 +6537,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheEdgeOfGlory",
@@ -4585,7 +6571,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -4616,7 +6611,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BreakingTheHabit",
@@ -4641,7 +6652,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Faint",
@@ -4666,7 +6693,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GivenUp",
@@ -4691,7 +6734,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "InTheEnd",
@@ -4716,7 +6775,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "NewDivide",
@@ -4741,7 +6816,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Numb",
@@ -4766,7 +6857,28 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "OneStepCloser",
@@ -4791,7 +6903,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Papercut",
@@ -4816,7 +6944,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SomewhereIBelong",
@@ -4841,7 +6985,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WhatIveDone",
@@ -4866,7 +7026,28 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -4897,7 +7078,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Crawling",
@@ -4922,7 +7112,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FightingMyself",
@@ -4947,7 +7146,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "InMyHead",
@@ -4972,7 +7180,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Lost",
@@ -4997,7 +7214,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MoreTheVictim",
@@ -5022,7 +7248,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "NumbEncore",
@@ -5047,7 +7282,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "RememberTheName",
@@ -5072,7 +7316,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -5140,6 +7393,20 @@
               "chains": 1,
               "walls": 35
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5202,6 +7469,20 @@
               "chains": 16,
               "walls": 59
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5264,6 +7545,15 @@
               "chains": 0,
               "walls": 41
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5326,6 +7616,15 @@
               "chains": 15,
               "walls": 30
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5388,6 +7687,15 @@
               "chains": 3,
               "walls": 2
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5450,6 +7758,15 @@
               "chains": 16,
               "walls": 32
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5512,6 +7829,15 @@
               "chains": 8,
               "walls": 71
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5574,6 +7900,15 @@
               "chains": 0,
               "walls": 11
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         },
         {
@@ -5636,6 +7971,15 @@
               "chains": 3,
               "walls": 21
             }
+          },
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
           }
         }
       ]
@@ -5667,7 +8011,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Battery",
@@ -5692,7 +8045,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Blackened",
@@ -5717,7 +8079,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "CreepingDeath",
@@ -5742,7 +8113,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "EnterSandman",
@@ -5767,7 +8147,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FadeToBlack",
@@ -5792,7 +8181,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ForWhomTheBellTolls",
@@ -5817,7 +8215,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Fuel",
@@ -5842,7 +8249,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HitTheLights",
@@ -5867,7 +8283,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "KingNothing",
@@ -5892,7 +8317,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LuxAeterna",
@@ -5917,7 +8351,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MasterOfPuppets",
@@ -5942,7 +8385,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "NothingElseMatters",
@@ -5967,7 +8419,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "One",
@@ -5992,7 +8453,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SadButTrue",
@@ -6017,7 +8487,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SeekAndDestroy",
@@ -6042,7 +8521,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheUnforgiven",
@@ -6067,7 +8555,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -6098,7 +8595,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "EmojiVIP",
@@ -6123,7 +8634,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Epic",
@@ -6148,7 +8668,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ]
+          }
         },
         {
           "songID": "FeelingStronger",
@@ -6173,7 +8708,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Overkill",
@@ -6198,7 +8742,27 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Rattlesnake",
@@ -6223,7 +8787,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Stronger",
@@ -6248,7 +8827,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ThisTime",
@@ -6273,7 +8861,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TillItsOver",
@@ -6298,7 +8900,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Easy"
+            ],
+            "90Degree": [
+              "Easy"
+            ]
+          }
         },
         {
           "songID": "WeWontBeAlone",
@@ -6323,7 +8940,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -6354,7 +8980,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Dabadabadabadaba",
@@ -6379,7 +9014,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DeadManWalking",
@@ -6404,7 +9048,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Endgame",
@@ -6429,7 +9082,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FinalBoss",
@@ -6454,7 +9116,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MemoryBank",
@@ -6479,7 +9150,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Mercenary",
@@ -6504,7 +9184,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Pump",
@@ -6529,7 +9218,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Rad",
@@ -6554,7 +9252,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "RIOT",
@@ -6579,7 +9286,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ThronesOfBlood",
@@ -6604,7 +9320,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WakeUp",
@@ -6629,7 +9354,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -6660,7 +9394,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DancingsNotACrime",
@@ -6685,7 +9428,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "EmperorsNewClothes",
@@ -6710,7 +9462,29 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Expert"
+            ],
+            "90Degree": [
+              "Expert"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HeyLookMaIMadeIt",
@@ -6735,7 +9509,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HighHopes",
@@ -6760,7 +9543,34 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SayAmen",
@@ -6785,7 +9595,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SugarSoaker",
@@ -6810,7 +9629,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheGreatestShow",
@@ -6835,7 +9663,34 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Victorious",
@@ -6860,7 +9715,23 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "Legacy": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "VivaLasVengeance",
@@ -6885,7 +9756,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -6916,7 +9796,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BohemianRhapsody",
@@ -6941,7 +9830,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "CrazyLittleThingCalledLove",
@@ -6966,7 +9869,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DontStopMeNow",
@@ -6991,7 +9903,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "IWantItAll",
@@ -7016,7 +9942,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "KillerQueen",
@@ -7041,7 +9976,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "OneVision",
@@ -7066,7 +10010,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SomebodyToLove",
@@ -7091,7 +10044,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "StoneColdCrazy",
@@ -7116,7 +10078,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WeAreTheChampions",
@@ -7141,7 +10112,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WeWillRockYou",
@@ -7166,7 +10146,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -7197,7 +10186,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "ExpertPlus"
+            ],
+            "90Degree": [
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LuvUNeedU",
@@ -7222,7 +10226,27 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Play",
@@ -7247,7 +10271,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "RockIt",
@@ -7272,7 +10310,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Shiawase",
@@ -7297,7 +10344,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TestMe",
@@ -7322,7 +10378,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -7353,7 +10418,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "EyeOfTheTiger",
@@ -7378,7 +10457,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FreeBird",
@@ -7403,7 +10491,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "IWasMadeLovingYou",
@@ -7428,7 +10525,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SevenNationArmy",
@@ -7453,7 +10559,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SmellsLikeTeenSpirit",
@@ -7478,7 +10593,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SweetChildOMine",
@@ -7503,7 +10627,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ThePretender",
@@ -7528,7 +10661,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -7559,7 +10706,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Houdini",
@@ -7584,7 +10740,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "NotLikeUs",
@@ -7609,7 +10774,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -7640,7 +10814,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Butterflies",
@@ -7665,7 +10853,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DontGo",
@@ -7690,7 +10887,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "FirstOfTheYear",
@@ -7715,7 +10921,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "RaggaBomb",
@@ -7740,7 +10960,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "RockNRoll",
@@ -7765,7 +10994,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ScaryMonstersAndNiceSprites",
@@ -7790,7 +11028,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheDevilsDen",
@@ -7815,7 +11062,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -7846,7 +11102,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "BiteMyHeadOff",
@@ -7871,7 +11136,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "CantYouHearMeKnocking",
@@ -7896,7 +11170,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "GimmeShelter",
@@ -7921,7 +11204,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "ICantGetNoSatisfaction",
@@ -7946,7 +11238,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LiveByTheSword",
@@ -7971,7 +11272,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "MessItUp",
@@ -7996,7 +11306,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PaintItBlack",
@@ -8021,7 +11340,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "StartMeUp",
@@ -8046,7 +11374,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SympathyForTheDevil",
@@ -8071,7 +11408,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WholeWideWorld",
@@ -8096,7 +11442,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -8127,7 +11482,21 @@
             4,
             0,
             2
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "CantFeelMyFace",
@@ -8152,7 +11521,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "DieForYou",
@@ -8177,7 +11555,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HowDoIMakeYouLoveMe",
@@ -8202,7 +11589,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "IFeelItComing",
@@ -8227,7 +11623,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "LessThanZero",
@@ -8252,7 +11657,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "PrayForMe",
@@ -8277,7 +11691,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Sacrifice",
@@ -8302,7 +11725,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "SaveYourTears",
@@ -8327,7 +11759,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Starboy",
@@ -8352,7 +11798,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TakeMyBreath",
@@ -8377,7 +11832,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "TheHills",
@@ -8402,7 +11866,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     },
@@ -8433,7 +11906,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "Famous",
@@ -8458,7 +11945,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "HasAMeaning",
@@ -8483,7 +11979,22 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "360Degree": [
+              "Hard"
+            ],
+            "90Degree": [
+              "Hard"
+            ]
+          }
         },
         {
           "songID": "WhatILike",
@@ -8508,7 +12019,16 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         },
         {
           "songID": "WhileWereYoung",
@@ -8533,7 +12053,21 @@
             2,
             3,
             4
-          ]
+          ],
+          "characteristicModes": {
+            "Standard": [
+              "Easy",
+              "Normal",
+              "Hard",
+              "Expert",
+              "ExpertPlus"
+            ],
+            "OneSaber": [
+              "Normal",
+              "Expert",
+              "ExpertPlus"
+            ]
+          }
         }
       ]
     }
