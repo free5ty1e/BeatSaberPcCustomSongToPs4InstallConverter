@@ -118,18 +118,72 @@ jobs:
           echo "redirects.json generated:"
           python3 -m json.tool redirects.json | head -5
 
+      - name: Run tests with coverage
+        run: |
+          pip install pytest pytest-cov
+          cd beat_saber_deluxe
+          python3 -m pytest tests/ -v --cov=tools --cov-report=html:htmlcov --cov-report=term-missing --cov-config=pyproject.toml
+        continue-on-error: true
+
+      - name: Bundle release zip
+        run: |
+          VERSION=$(cat beat_saber_deluxe/VERSION)
+          ZIP_NAME="beat-saber-deluxe-v${VERSION}.zip"
+          mkdir -p release-zip/plugins
+          mkdir -p release-zip/docs/features
+          mkdir -p release-zip/docs/examples
+
+          # Plugin binaries
+          cp beat_saber_deluxe/beat_saber_deluxe.prx release-zip/plugins/
+          cp beat_saber_deluxe/beat_saber_deluxe_debug.prx release-zip/plugins/
+
+          # Config files
+          cp plugins.ini release-zip/
+          cp redirects.json release-zip/
+
+          # Changelogs and version
+          cp beat_saber_deluxe/CHANGELOG-PLUGIN.md release-zip/
+          cp beat_saber_deluxe/CHANGELOG-PIPELINE.md release-zip/
+          cp beat_saber_deluxe/VERSION release-zip/
+
+          # Main README
+          cp README.md release-zip/
+
+          # Feature docs
+          cp beat_saber_deluxe/docs/features/custom-song-replacement.md release-zip/docs/features/
+          cp beat_saber_deluxe/docs/features/song-metadata-modification.md release-zip/docs/features/
+
+          # Example / how-to docs
+          cp beat_saber_deluxe/docs/camellia-pack-example.md release-zip/docs/examples/
+          cp beat_saber_deluxe/docs/how-to-replace-pack.md release-zip/docs/
+
+          # Test coverage report
+          if [ -d "beat_saber_deluxe/htmlcov" ]; then
+            cp -r beat_saber_deluxe/htmlcov release-zip/coverage-report
+          fi
+
+          # Pipeline tools
+          cp -r beat_saber_deluxe/tools release-zip/
+
+          # Create the zip
+          cd release-zip && zip -r "../${ZIP_NAME}" . && cd ..
+          echo "Created ${ZIP_NAME}"
+          ls -lh "${ZIP_NAME}"
+
       - name: Verify artifacts
         run: |
+          VERSION=$(cat beat_saber_deluxe/VERSION)
+          ZIP_NAME="beat-saber-deluxe-v${VERSION}.zip"
+          echo "=== Release zip ==="
+          ls -lh "${ZIP_NAME}"
+          echo "=== Zip contents ==="
+          unzip -l "${ZIP_NAME}"
           echo "=== Release PRX ==="
-          ls -la beat_saber_deluxe/beat_saber_deluxe.prx
           python3 -c "open('beat_saber_deluxe/beat_saber_deluxe.prx','rb').read(4); print('FSELF OK')"
           echo "=== Debug PRX ==="
-          ls -la beat_saber_deluxe/beat_saber_deluxe_debug.prx
           python3 -c "open('beat_saber_deluxe/beat_saber_deluxe_debug.prx','rb').read(4); print('FSELF OK')"
-          echo "=== plugins.ini ==="
-          cat plugins.ini
-          echo "=== redirects.json ==="
-          python3 -c "import json; d=json.load(open('redirects.json')); print(f'{len(d[\"redirects\"])} redirects: {list(d[\"redirects\"].keys())}')"
+          echo "=== Coverage report ==="
+          ls -la beat_saber_deluxe/htmlcov/ 2>/dev/null || echo "No coverage report (tests may have failed)"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -146,6 +200,8 @@ jobs:
             beat_saber_deluxe/tools/
             beat_saber_deluxe/development/scripts/
             beat_saber_deluxe/Makefile
+            beat_saber_deluxe/htmlcov/
+            beat-saber-deluxe-v*.zip
           retention-days: 90
 
   release:
@@ -176,10 +232,4 @@ jobs:
           name: Beat Saber Deluxe ${{ github.ref_name }}
           body_path: beat_saber_deluxe/CI_RELEASE.md
           files: |
-            release-artifacts/beat_saber_deluxe/beat_saber_deluxe.prx
-            release-artifacts/beat_saber_deluxe/beat_saber_deluxe_debug.prx
-            release-artifacts/plugins.ini
-            release-artifacts/redirects.json
-            release-artifacts/beat_saber_deluxe/CHANGELOG-PLUGIN.md
-            release-artifacts/beat_saber_deluxe/CHANGELOG-PIPELINE.md
-            release-artifacts/beat_saber_deluxe/tools/*
+            release-artifacts/beat-saber-deluxe-v*.zip
