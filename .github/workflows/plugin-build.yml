@@ -163,8 +163,8 @@ jobs:
             cp -r beat_saber_deluxe/htmlcov release-zip/coverage-report
           fi
 
-          # Pipeline tools
-          cp -r beat_saber_deluxe/tools release-zip/
+          # Pipeline tools (exclude __pycache__)
+          rsync -a --exclude='__pycache__' beat_saber_deluxe/tools/ release-zip/tools/
 
           # Create the zip
           cd release-zip && zip -r "../${ZIP_NAME}" . && cd ..
@@ -187,23 +187,11 @@ jobs:
           echo "=== Coverage report ==="
           ls -la beat_saber_deluxe/htmlcov/ 2>/dev/null || echo "No coverage report (tests may have failed)"
 
-      - name: Upload build artifacts
+      - name: Upload release zip
         uses: actions/upload-artifact@v4
         with:
-          name: beat-saber-deluxe-plugin
-          path: |
-            beat_saber_deluxe/beat_saber_deluxe.prx
-            beat_saber_deluxe/beat_saber_deluxe_debug.prx
-            plugins.ini
-            redirects.json
-            beat_saber_deluxe/CHANGELOG-PLUGIN.md
-            beat_saber_deluxe/CHANGELOG-PIPELINE.md
-            beat_saber_deluxe/VERSION
-            beat_saber_deluxe/tools/
-            beat_saber_deluxe/development/scripts/
-            beat_saber_deluxe/Makefile
-            beat_saber_deluxe/htmlcov/
-            beat-saber-deluxe-*-pipeline-*.zip
+          name: beat-saber-deluxe-release
+          path: beat-saber-deluxe-*-pipeline-*.zip
           retention-days: 90
 
   release:
@@ -220,7 +208,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: beat-saber-deluxe-plugin
+          name: beat-saber-deluxe-release
           path: release-artifacts
 
       - name: Filter empty files from release artifacts
