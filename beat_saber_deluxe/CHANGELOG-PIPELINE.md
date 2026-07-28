@@ -1,5 +1,15 @@
 # Pipeline Changelog
 
+## v0.5306 (2026-07-28)
+- **Integration testing:**
+  - Expanded `test_integration.py` from 1 test to 34 tests covering: PCM16 FSB5 build, V2→V3 beatmap conversion, beatmap file selection priority, redirect config management, song metadata management, song ID lookup, config loading, and metadata file handling.
+  - Fixed 7 pre-existing test failures in `test_pipeline_bugfixes.py::TestManageSongMetadata` — tests updated to match current `manage_song_metadata()` behavior (combined "SongName / Artist" format, original author blanking).
+  - Total test suite: 335 tests across 10 files (up from 302).
+- **Agent context:**
+  - Added `.agent/context.yml` — compact quick-reference file for giving project context to another agent with minimal token usage.
+  - Added context.yml update rule to both `CLAUDE.md` and `.opencode/rules.md` (Section 1 item 7, Section 3.1 item F2).
+  - Synced missing Section 0 (Rule Synchronization) to `.opencode/rules.md`.
+
 ## v0.5305 (2026-07-27)
 - **CI/CD Infrastructure:**
   - Fixed failing lint check in CI pipeline. Ruff configuration was using incompatible `--output-format=github` and `--statistics` flags simultaneously. Removed `--statistics` to fix the pipeline error.

@@ -1615,11 +1615,10 @@ def _get_song_ids_path(project_root: str = PROJECT_ROOT) -> str:
     """Return the local path to beat_saber_song_ids.json in the project root."""
     return os.path.join(project_root, SONG_IDS_FILENAME)
 
-def _load_song_ids() -> dict:
-    """Load beat_saber_song_ids.json. Returns {slot_id: song_name} mapping."""
+def _load_song_details() -> dict:
+    """Load beat_saber_song_ids.json. Returns {slot_id: {songName, songAuthorName}} mapping."""
     path = _get_song_ids_path()
     if not os.path.exists(path):
-        log.warning(f"  ⚠️  Song IDs file not found at {path}")
         return {}
     try:
         with open(path, 'r') as f:
@@ -1629,12 +1628,20 @@ def _load_song_ids() -> dict:
             for song in album.get('songs', []):
                 slot_id = song.get('songID', '')
                 song_name = song.get('songName', '').strip()
-                if slot_id and song_name:
-                    mapping[slot_id] = song_name
+                author_name = song.get('songAuthorName', '').strip()
+                if slot_id:
+                    mapping[slot_id] = {
+                        'songName': song_name,
+                        'songAuthorName': author_name
+                    }
         return mapping
-    except (json.JSONDecodeError, IOError):
-        log.warning(f"  ⚠️  Failed to parse {path}")
+    except Exception:
         return {}
+
+def _load_song_ids() -> dict:
+    """Load beat_saber_song_ids.json. Returns {slot_id: song_name} mapping."""
+    details = _load_song_details()
+    return {slot: d['songName'] for slot, d in details.items()}
 
 def _lookup_song_name(slot_or_name: str, song_ids: dict) -> str:
     """Look up exact game song name from song IDs.
@@ -1721,20 +1728,36 @@ def manage_song_metadata(
     local_path = _get_song_metadata_path()
     metadata = _load_local_song_metadata(local_path)
 
-    # Resolve target_name to exact game song name via song IDs
-    song_ids = _load_song_ids()
-    if target_name and song_ids:
-        resolved = _lookup_song_name(target_name, song_ids)
-        if resolved != target_name:
-            log.info(f"  Resolved '{target_name}' -> '{resolved}' (from song IDs)")
-        target_name = resolved
+    song_details = _load_song_details()
+    exact_song_name = target_name
+    original_author = None
 
-    if song_name and target_name:
-        metadata['song_names'][target_name] = song_name
-        log.info(f"  Song metadata: '{target_name}' -> '{song_name}'")
-    if artist and target_name:
-        metadata['song_artists'][target_name] = artist
-        log.info(f"  Artist metadata: '{target_name}' -> '{artist}'")
+    if target_name:
+        found = None
+        if target_name in song_details:
+            found = song_details[target_name]
+        else:
+            lower = target_name.lower()
+            for s_id, details in song_details.items():
+                if s_id.lower() == lower or details['songName'].lower() == lower:
+                    found = details
+                    break
+        if found:
+            exact_song_name = found['songName']
+            original_author = found['songAuthorName']
+            log.info(f"  Resolved target '{target_name}' -> songName='{exact_song_name}', author='{original_author}'")
+
+    if song_name and exact_song_name:
+        combined_name = f"{song_name} / {artist}" if artist else song_name
+        metadata['song_names'][exact_song_name] = combined_name
+        log.info(f"  Song metadata: '{exact_song_name}' -> '{combined_name}'")
+
+    if original_author:
+        metadata['song_artists'][original_author] = " "
+        log.info(f"  Artist metadata: blanking out original author '{original_author}' -> ' '")
+    elif artist and exact_song_name:
+        metadata['song_artists'][exact_song_name] = artist
+        log.info(f"  Artist metadata: '{exact_song_name}' -> '{artist}'")
 
     os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
     with open(local_path, 'w') as f:

@@ -3568,3 +3568,46 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Next Steps:** Camellia Music Pack replacement identified as the next test target.
 - **Version:** v0.8040
 - **Status:** ✅ Feature COMPLETE
+
+### Experiment 157: v0.8040 + v0.5304 — CI/CD Infrastructure
+- **Date:** 2026-07-27
+- **What:** CI lint check fix — removed incompatible `--statistics` flag from Ruff.
+- **Result:** ✅ CI pipeline now passes on push/PR.
+- **Version:** v0.5305
+- **Status:** ✅
+
+### Experiment 158: v0.5305 — Camellia Music Pack Replacement [FIRST FULL PACK]
+- **Date:** 2026-07-27
+- **What:** Replaced all 6 songs in the Camellia Music Pack with custom songs.
+  - Crystallized→Bloom(12a), CycleHit→Powerful(133), ExitThisEarthsAtomosphere→Red Lips(156),
+    Ghost→Lone Digger(1bf), LightItUp→Batshit(7e), WhatTheCat→G.O.M.D(7f)
+  - All built with `--pcm16 --no-pad --convert-to-v3` flags
+  - Deployed via pipeline to PS4 via FTP
+  - `song_metadata.json` regenerated with combined "SongName / Artist" format
+  - `redirects.json` updated with all 6 Camellia slot mappings
+- **Result:** ✅ **SUCCESS — ALL 6 CAMELLIA SONGS REPLACED AND DEPLOYED**
+- **User feedback:** Song names display correctly (e.g. "Bloom / ODESZA"). PCM16 confirmed as consistent requirement.
+- **Key Findings:**
+  - PCM16 is the only working audio format (confirmed across all experiments)
+  - `manage_song_metadata()` now combines song name + artist as "SongName / Artist" format
+  - Original artist blanking works via `beat_saber_song_ids.json` lookup
+  - Redirect keys auto-prepend `BeatmapLevelsData/` prefix if missing
+- **Version:** v0.5305
+- **Status:** ✅ First full pack replacement COMPLETE
+
+### Experiment 159: v0.5306 — Integration Testing + Documentation
+- **Date:** 2026-07-28
+- **What:** Expanded integration test suite from 1 to 34 tests, fixed 7 pre-existing test
+  failures, updated all documentation to reflect required flags, created agent context file.
+  - Integration tests: PCM16 FSB5 build, V2→V3 conversion, beatmap file selection, redirect
+    config management, song metadata management, song ID lookup, config loading
+  - Fixed `test_pipeline_bugfixes.py::TestManageSongMetadata` — tests updated for combined
+    "SongName / Artist" format
+  - Updated `docs/camellia-pack-example.md` and `docs/how-to-replace-pack.md` with required flags
+  - Cleaned up README.md duplication (4x repeated sections removed)
+  - Created `.agent/context.yml` for minimal-token agent context passing
+  - Added context.yml update rule to CLAUDE.md and .opencode/rules.md
+  - Created knowledge base page: `camellia-pack-replacement.md`
+- **Result:** ✅ **335 tests passing, documentation current**
+- **Version:** v0.5306
+- **Status:** ✅ Documentation and testing complete

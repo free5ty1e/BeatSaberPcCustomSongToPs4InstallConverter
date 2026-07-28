@@ -161,10 +161,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Camellia Music Pack replacement** — Next test target. Replace all songs in Camellia DLC pack with custom songs.
-2. **Investigate "?" in song details** — `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
-3. **Selective replacement** — Currently replaces in ALL TMP_Text calls. Need pointer tracking to identify song name vs artist fields specifically.
-4. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 32 slots.
+1. **Investigate "?" in song details** — `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
+2. **Selective replacement** — Currently replaces in ALL TMP_Text calls. Need pointer tracking to identify song name vs artist fields specifically.
+3. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
+4. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
 
 ## Active Knowledge Gaps
 

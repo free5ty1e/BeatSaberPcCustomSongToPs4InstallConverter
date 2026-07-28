@@ -7,6 +7,20 @@ This guide walks through the end-to-end process of replacing an entire official 
 - Pipeline script (`tools/full_custom_song_pipeline.py`) installed and configured.
 - A list of BeatSaver Map IDs for your replacements.
 
+## Required Flags
+
+All song replacements **must** use these flags:
+- `--pcm16` — PCM16 FSB5 audio encoding (lossless, required for PS4 compatibility)
+- `--no-pad` — Skip 12MB audio padding (PCM16 output is often larger than original)
+- `--convert-to-v3` — Convert V2 beatmaps to V3.2.0 format (required for Beat Saber PS4)
+
+Additional flags for pack replacement:
+- `--song-name "Name"` — Custom song display name
+- `--artist "Artist"` — Custom artist name
+- `--deploy` — Upload bundle to PS4 via FTP
+- `--generate-config` — Update `redirects.json` with new slot mapping
+- `--deploy-config` — Upload updated config to PS4
+
 ## End-to-End Workflow
 
 For each song you wish to replace, follow these steps:
@@ -21,6 +35,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target Crystallized \
     --song-name "Bloom" \
     --artist "ODESZA" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy \
     --generate-config \
     --deploy-config

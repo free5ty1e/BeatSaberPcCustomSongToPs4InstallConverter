@@ -4,6 +4,7 @@ This document records the exact steps taken to replace the official Camellia Mus
 
 ## Target Pack: Camellia
 - **Replacement Slots:** Crystallized, CycleHit, ExitThisEarthsAtomosphere, Ghost, LightItUp, WhatTheCat
+- **Required Flags:** `--pcm16 --no-pad --convert-to-v3` (PCM16 audio format, no 12MB padding, V2→V3 beatmap conversion)
 
 ## Workflow Execution Log
 
@@ -15,6 +16,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target Crystallized \
     --song-name "Bloom" \
     --artist "ODESZA" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 **Result:** ✅ Success. Pipeline converted, metadata injected, and deployed to PS4.
@@ -27,6 +29,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target CycleHit \
     --song-name "Powerful" \
     --artist "Major Lazer" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 **Result:** ✅ Success. Pipeline converted, metadata injected, and deployed to PS4.
@@ -39,6 +42,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target ExitThisEarthsAtomosphere \
     --song-name "Red Lips" \
     --artist "GTA / Mendus" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 **Result:** ✅ Success. Pipeline converted, metadata injected, and deployed to PS4.
@@ -51,6 +55,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target Ghost \
     --song-name "Lone Digger" \
     --artist "Caravan Palace" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 **Result:** ✅ Success. Pipeline converted, metadata injected, and deployed to PS4.
@@ -63,6 +68,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target LightItUp \
     --song-name "Batshit" \
     --artist "Sofi Tukker" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 **Result:** ✅ Success. Pipeline converted, metadata injected, and deployed to PS4.
@@ -75,6 +81,7 @@ python3 tools/full_custom_song_pipeline.py \
     --target WhatTheCat \
     --song-name "G.O.M.D" \
     --artist "Sickick" \
+    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 **Result:** ✅ Success. Pipeline converted, metadata injected, and deployed to PS4.

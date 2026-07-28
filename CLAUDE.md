@@ -19,6 +19,7 @@ Before proceeding with work, upon receiving experiment results, you MUST update 
 4. Update `.agent/project_summary.md` with current status
 5. Update llm-wiki style knowledge base files in `.agent/llm-wiki-knowledge-base/` if new findings affect durable knowledge
 6. Update `.agent/roadmap.md` if appropriate
+7. Update `.agent/context.yml` with any changes to versions, commands, architecture, or file paths so the quick-reference context file stays current
 
 ## 2. Rules For Performing Work
 
@@ -67,6 +68,10 @@ You MUST complete ALL of the following documentation updates BEFORE presenting r
 **F. Song Replacements Mapping (if applicable)**
 - [ ] Update `current-song-replacements-on-chris-ps4.md` when deployed custom songs change
 - [ ] This is the mapping file that lets the user find custom songs in-game manually
+
+**F2. Agent Context File (if applicable)**
+- [ ] Update `.agent/context.yml` with any changes to versions, pipeline flags, commands, architecture, or file paths
+- [ ] This is a compact quick-reference for giving project context to another agent with minimal tokens
 
 **G. Git Staging (MANDATORY before presenting)**
 - [ ] Stage ALL relevant changes with `git add` (fine-grained, not `-A`)

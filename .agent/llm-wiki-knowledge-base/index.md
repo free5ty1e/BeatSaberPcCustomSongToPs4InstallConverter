@@ -54,6 +54,7 @@ metadata:
 ## Song Metadata Modification (Current Approach)
 - [[textmeshpro-ui-hooking|TextMeshPro UI Hooking]] — 🔵 **CURRENT** — Hook TMP_Text.set_text to intercept song name/artist text in UI. Pointer tracking via SetDataFromLevelAsync.
 - [[memory-injection-addressables-bypass|Memory Injection — Addressables Bypass]] — 🔴 **DEAD END** (v0.66–v0.8024): Patch BeatmapLevelSO in RAM. 14+ versions, 0 strings found across all memory regions. Preserved for historical reference.
+- [[camellia-pack-replacement|Camellia Pack Replacement]] — First full pack replacement (6 songs). PCM16 requirement confirmed, metadata behavior documented, required flags established.
 
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip

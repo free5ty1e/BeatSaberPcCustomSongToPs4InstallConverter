@@ -12,6 +12,9 @@
 - [x] Lapped audio detection and generation
 - [x] 12-song redirect table in plugin (all Rolling Stones slots)
 - [x] Beatmap filename fallback — handles all BeatSaver naming conventions (5-tier priority)
+- [x] Song metadata management (`--song-name`/`--artist` flags, combined "Name / Artist" format)
+- [x] BeatSaver slot ID resolution via `beat_saber_song_ids.json`
+- [x] Integration test suite (34 tests covering FSB5, V2→V3, redirect config, metadata, song IDs)
 
 ## M1.5 — Dynamic Configuration & Pipeline Audit
 
@@ -104,7 +107,8 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **(v0.8038)** SetDataFromLevelAsync hook — FAILED: async wrapper inlined, never fires
 - [x] **(v0.8039)** MoveNext() hook — WORKS! Modifies BeatmapLevel fields before state machine reads them. 21/32 songs correct, 11 had case mismatches.
 - [x] **(v0.8040)** Case fix + song IDs pipeline — **ALL 32 SONGS CONFIRMED WORKING** ✅
-- [ ] **(Future)** Camellia Music Pack replacement — next test target
+- [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) ✅ (v0.5305)
+- [ ] **(Future)** Multi-artist pack metadata — Currently blanks original artist globally; need per-field tracking
 
 ### Song Metadata Feature — COMPLETE (v0.8040)
 - [x] **Evaluate current implementation** — TMP_Text hooks work for details/pause menu, artist blanking works.
@@ -112,7 +116,8 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **SetDataFromLevelAsync hook** (v0.8038) — Hook target was async trampoline, never fired. Inlined by AsyncVoidMethodBuilder.Start<T>().
 - [x] **MoveNext() hook** (v0.8039) — Modifies BeatmapLevel fields before state machine reads them. 21/32 correct.
 - [x] **Case sensitivity fix** (v0.8040) — Pipeline reads exact game strings from `beat_saber_song_ids.json`. All 32 songs confirmed working.
-- [ ] **Camellia Music Pack replacement** — NEXT: Replace all songs in Camellia DLC pack.
+- [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) via pipeline (v0.5305) ✅
+- [ ] **(Future)** Multi-artist pack metadata — Need per-field tracking instead of global artist blanking
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

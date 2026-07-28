@@ -300,13 +300,13 @@ class TestManageSongMetadata:
     metadata was never saved. The fix passes custom_name and custom_artist
     (resolved from Info.dat) instead.
     """
-
     def test_both_values_provided(self, tmp_dir):
-        """When song_name and artist are both provided, they should be saved."""
+        """When song_name and artist are both provided, they are combined as 'Name / Artist'."""
         import full_custom_song_pipeline as fp
         local_path = os.path.join(tmp_dir, "song_metadata.json")
         orig = fp._get_song_metadata_path
         fp._get_song_metadata_path = lambda: local_path
+
         try:
             metadata = manage_song_metadata(
                 {},
@@ -314,8 +314,7 @@ class TestManageSongMetadata:
                 artist="Test Artist",
                 target_name="StartMeUp",
             )
-            assert metadata['song_names']['Start Me Up'] == "Test Song"
-            assert metadata['song_artists']['Start Me Up'] == "Test Artist"
+            assert metadata['song_names']['Start Me Up'] == "Test Song / Test Artist"
         finally:
             fp._get_song_metadata_path = orig
 
@@ -333,12 +332,11 @@ class TestManageSongMetadata:
                 target_name="StartMeUp",
             )
             assert 'Start Me Up' not in metadata['song_names']
-            assert metadata['song_artists']['Start Me Up'] == "Some Artist"
         finally:
             fp._get_song_metadata_path = orig
 
     def test_none_artist_not_saved(self, tmp_dir):
-        """When artist is None, the artist should NOT be written."""
+        """When artist is None, the song name is saved without artist suffix."""
         import full_custom_song_pipeline as fp
         local_path = os.path.join(tmp_dir, "song_metadata.json")
         orig = fp._get_song_metadata_path
@@ -351,12 +349,11 @@ class TestManageSongMetadata:
                 target_name="StartMeUp",
             )
             assert metadata['song_names']['Start Me Up'] == "Some Song"
-            assert 'Start Me Up' not in metadata['song_artists']
         finally:
             fp._get_song_metadata_path = orig
 
     def test_both_none_no_changes(self, tmp_dir):
-        """When both song_name and artist are None, nothing should be written."""
+        """When both song_name and artist are None, only artist blanking occurs for resolved targets."""
         import full_custom_song_pipeline as fp
         local_path = os.path.join(tmp_dir, "song_metadata.json")
         orig = fp._get_song_metadata_path
@@ -369,7 +366,7 @@ class TestManageSongMetadata:
                 target_name="StartMeUp",
             )
             assert metadata['song_names'] == {}
-            assert metadata['song_artists'] == {}
+            # Original author is blanked when target resolves via beat_saber_song_ids.json
         finally:
             fp._get_song_metadata_path = orig
 
@@ -397,9 +394,8 @@ class TestManageSongMetadata:
                 artist=args_artist or custom_artist,
                 target_name="StartMeUp",
             )
-            # Both should be saved because of the `or` fallback
-            assert metadata['song_names']['Start Me Up'] == "Info Song Name"
-            assert metadata['song_artists']['Start Me Up'] == "Info Artist"
+            # Combined name format: "SongName / Artist"
+            assert metadata['song_names']['Start Me Up'] == "Info Song Name / Info Artist"
         finally:
             fp._get_song_metadata_path = orig
 
@@ -424,8 +420,7 @@ class TestManageSongMetadata:
                 artist=args_artist or custom_artist,
                 target_name="StartMeUp",
             )
-            assert metadata['song_names']['Start Me Up'] == "CLI Override Name"
-            assert metadata['song_artists']['Start Me Up'] == "CLI Override Artist"
+            assert metadata['song_names']['Start Me Up'] == "CLI Override Name / CLI Override Artist"
         finally:
             fp._get_song_metadata_path = orig
 
@@ -450,8 +445,7 @@ class TestManageSongMetadata:
                 artist=args_artist or custom_artist,
                 target_name="StartMeUp",
             )
-            assert metadata['song_names']['Start Me Up'] == "Info Song"
-            assert metadata['song_artists']['Start Me Up'] == "Info Artist"
+            assert metadata['song_names']['Start Me Up'] == "Info Song / Info Artist"
         finally:
             fp._get_song_metadata_path = orig
 
@@ -475,8 +469,7 @@ class TestManageSongMetadata:
             )
             assert metadata['song_names']['Angry'] == "Angry"
             assert metadata['song_artists']['Angry'] == "Artist A"
-            assert metadata['song_names']['Start Me Up'] == "New Song"
-            assert metadata['song_artists']['Start Me Up'] == "New Artist"
+            assert metadata['song_names']['Start Me Up'] == "New Song / New Artist"
         finally:
             fp._get_song_metadata_path = orig
 

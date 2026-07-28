@@ -1,4 +1,4 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.57)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8040 / v0.5306)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
@@ -34,6 +34,8 @@ python3 tools/full_custom_song_pipeline.py \
 | Flag | Purpose |
 |------|---------|
 | `--song-dir` | Directory with song audio + beatmap .dat files |
+| `--song-name NAME` | Override song display name for metadata injection (displayed as "Name / Artist") |
+| `--artist NAME` | Override artist/song-author name for metadata injection |
 | `--download-beat-saver-song <id>` | Download map directly from BeatSaver using map ID |
 | `--target` | Target slot (e.g. `startmeup`, `Oxytocin`, `2BeLoved`) |
 | `--pcm16` | PCM16 FSB5 audio (lossless) |
@@ -219,39 +221,7 @@ All previous hooking attempts have been experimentally proven dead:
 - `get_DisplayName()` and `get_songName()` are inlined by IL2CPP
 - Constructor hooks never fire for Addressables-deserialized objects
 - `SetData`/`SetContent` hooks crash or never reach payload
-
 ### Per-Song Bundle Mode Support
-Our pipeline creates `BeatmapLevel` objects with only `"Standard"` characteristics by default. The `--enable-modes` flag adds additional entries:
-```bash
-python3 full_custom_song_pipeline.py --song-dir ./MySong --enable-modes OneSaber,90Degree --deploy
-```
-
-To add other modes, we would need to:
-1. Add `_difficultyBeatmapSets` entries for OneSaber/90Degree/etc.
-2. Create (or proxy) the `.beatmap.gz` and `.lightshow.gz` assets for those modes
-3. The game uses class ID 114 for `BeatmapLevel` objects
-
-## Hooking Strategy — ALL IL2CPP Approaches DEAD
-
-Previous hooking attempts have ALL failed experimentally:
-
-| Approach | Experiment | Result |
-|----------|-----------|--------|
-| `get_DisplayName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| `get_songName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| Constructor hook | Exp 123-131 | Never fires for Addressables-deserialized objects |
-| `SetData` hook | Exp 131 | Conditional in code — never reaches our payload |
-| `SetContent` hook | Exp 131 | Crashes the game |
-
-## Current Strategy — Per-Song Bundle Modifications (Bypassing Pack Bundle)
-
-Since pack bundle modification is blocked by CRC validation, and IL2CPP hooks are proven dead, the current approach is to modify **per-song bundles** instead:
-
-1. **Mode Selector** (Exp 138): Build per-song bundles with `--enable-modes OneSaber,90Degree,...` to add extra characteristic modes. These bundles are loaded per-song, not at startup, and their redirects work independently of the pack bundle.
-2. **Song Name Display**: The BeatmapLevelSO with display info is in the pack bundle, not in per-song bundles. Changing display names requires pack bundle modification, which is currently blocked.
-3. The pipeline's `add_mode_characteristics()` in `full_custom_song_pipeline.py` adds mode entries to per-song bundles.
-
-## Per-Song Bundle Mode Support
 
 Our pipeline creates `BeatmapLevel` objects with only `"Standard"` characteristics by default. The `--enable-modes` flag adds additional entries:
 ```bash
@@ -262,58 +232,6 @@ To add other modes, we would need to:
 1. Add `_difficultyBeatmapSets` entries for OneSaber/90Degree/etc.
 2. Create (or proxy) the `.beatmap.gz` and `.lightshow.gz` assets for those modes
 3. The game uses class ID 114 for `BeatmapLevel` objects
-
-## Hooking Strategy — ALL IL2CPP Approaches DEAD
-
-Previous hooking attempts have ALL failed experimentally:
-
-| Approach | Experiment | Result |
-|----------|-----------|--------|
-| `get_DisplayName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| `get_songName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| Constructor hook | Exp 123-131 | Never fires for Addressables-deserialized objects |
-| `SetData` hook | Exp 131 | Conditional in code — never reaches our payload |
-| `SetContent` hook | Exp 131 | Crashes the game |
-
-## Current Strategy — Per-Song Bundle Modifications (Bypassing Pack Bundle)
-
-Since pack bundle modification is blocked by CRC validation, and IL2CPP hooks are proven dead, the current approach is to modify **per-song bundles** instead:
-
-1. **Mode Selector** (Exp 138): Build per-song bundles with `--enable-modes OneSaber,90Degree,...` to add extra characteristic modes. These bundles are loaded per-song, not at startup, and their redirects work independently of the pack bundle.
-2. **Song Name Display**: The BeatmapLevelSO with display info is in the pack bundle, not in per-song bundles. Changing display names requires pack bundle modification, which is currently blocked.
-3. The pipeline's `add_mode_characteristics()` in `full_custom_song_pipeline.py` adds mode entries to per-song bundles.
-
-## Per-Song Bundle Mode Support
-
-Our pipeline creates `BeatmapLevel` objects with only `"Standard"` characteristics by default. The `--enable-modes` flag adds additional entries:
-```bash
-python3 full_custom_song_pipeline.py --song-dir ./MySong --enable-modes OneSaber,90Degree --deploy
-```
-
-To add other modes, we would need to:
-1. Add `_difficultyBeatmapSets` entries for OneSaber/90Degree/etc.
-2. Create (or proxy) the `.beatmap.gz` and `.lightshow.gz` assets for those modes
-3. The game uses class ID 114 for `BeatmapLevel` objects
-
-## Hooking Strategy — ALL IL2CPP Approaches DEAD
-
-Previous hooking attempts have ALL failed experimentally:
-
-| Approach | Experiment | Result |
-|----------|-----------|--------|
-| `get_DisplayName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| `get_songName()` hook | Multiple | Inlined by IL2CPP — hook never fires |
-| Constructor hook | Exp 123-131 | Never fires for Addressables-deserialized objects |
-| `SetData` hook | Exp 131 | Conditional in code — never reaches our payload |
-| `SetContent` hook | Exp 131 | Crashes the game |
-
-## Current Strategy — Per-Song Bundle Modifications (Bypassing Pack Bundle)
-
-Since pack bundle modification is blocked by CRC validation, and IL2CPP hooks are proven dead, the current approach is to modify **per-song bundles** instead:
-
-1. **Mode Selector** (Exp 138): Build per-song bundles with `--enable-modes OneSaber,90Degree,...` to add extra characteristic modes. These bundles are loaded per-song, not at startup, and their redirects work independently of the pack bundle.
-2. **Song Name Display**: The BeatmapLevelSO with display info is in the pack bundle, not in per-song bundles. Changing display names requires pack bundle modification, which is currently blocked.
-3. The pipeline's `add_mode_characteristics()` in `full_custom_song_pipeline.py` adds mode entries to per-song bundles.
 
 ## Per-Song Bundle Mode Support
 
