@@ -17,6 +17,9 @@
 ### Experiment Log
 - [📋 Experiment Log](beat-saber-ps4-custom-songs/experiment_log.md) — **Complete chronological log of ALL 19+ experiments and tests with results. Updated every test cycle.**
 
+### Memory Injection & Metadata
+- [BeatmapLevelSO in Patch Metadata](beatmap-levelso-in-patch-metadata.md) — The "BeatmapLevelSO" class name is stored only in the game patch's global-metadata.dat (version 31, offset 0x23cb6e). NOT in app metadata or module segments.
+
 ### Plugin Architecture
 - [crtlib.o module_start analysis](beat-saber-ps4-custom-songs/crtlib-o-module-start-analysis.md) — Root cause: plugin_main() never called by CRT. Fix: use __attribute__((constructor)) or define module_start directly.
 - [RB4DX Plugin Architecture Reference](beat-saber-ps4-custom-songs/rb4dx-plugin-architecture-reference.md) — Working GoldHEN plugin pattern: crtprx.o, -e _init, GoldHEN SDK HOOK macros.
@@ -52,6 +55,13 @@
 - [User Preferences](beat-saber-ps4-custom-songs/user_preferences.md) — Difficulty requirements, UI preferences
 - [Conversation History](beat-saber-ps4-custom-songs/conversation_history.md) — Full conversation history from initial pipeline phase
 - [Session Persistence Fix](beat-saber-ps4-custom-songs/session-persistence-fix.md) — Fixed session discoverability: added cz-recent, cz-last, cz-resume commands to setup script
+
+### Pack Bundle Patching — ALL BLOCKED by CRC Check
+- [📌 Addressables Catalog CRC Validation](addressables-catalog-crc-validation.md) — **ROOT CAUSE FOUND!** Catalog stores per-bundle CRC32. Any modified bundle fails validation. All pack bundle modification approaches currently blocked.
+- [Pack Bundle Patching](pack-bundle-patching.md) — Pack bundle patching reference (LZ4HC requirement, CAB format, current blocked state, UnityPy limitations)
+- [PS4 UnityFS Compression Requirements](ps4-unityfs-compression-requirements.md) — PS4 requires LZ4HC (flag=3) for ALL UnityFS blocks. LZ4 (flag=2) crashes.
+- [UnityPy Serialization Limitations](unitypy-serialization-limitations.md) — UnityPy save_typetree() ignores BeatmapLevelSO modifications in Unity 2022.3. cab.save() produces incompatible CAB.
+- [v22+ CAB Header Format](v22plus-cab-header-format.md) — Unity 2022.3 SerializedFile header layout (big-endian fields, object table format)
 
 ## ⚙️ Operating Rules
 - [Project Summary Update Rule](project-summary-update-rule.md) — **Enforcement:** Always update project_summary.md after every task completion or before reporting to user.

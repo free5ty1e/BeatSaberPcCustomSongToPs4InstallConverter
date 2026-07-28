@@ -1,0 +1,8 @@
+=== BS Deluxe v0.68 started ===
+v0.68 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (hook-triggered mode)

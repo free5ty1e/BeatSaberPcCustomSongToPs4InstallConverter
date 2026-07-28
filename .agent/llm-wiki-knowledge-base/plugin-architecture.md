@@ -11,11 +11,34 @@ The Beat Saber Deluxe plugin is a GoldHEN PRX (PS4 PRX plugin) that intercepts f
 
 ## Component Overview
 
-The plugin consists of a single file (`src/main.cpp`) that:
-1. Hooks the `open()` syscall via GoldHEN's HOOK_INIT/HOOK_CONTINUE macros
-2. Intercepts paths containing `BeatmapLevelData/startmeup`
-3. Redirects them to an AssetBundle stored in `/data/GoldHEN/AFR/CUSA12878/`
-4. Logs all file operations to `bs_log.txt` for debugging
+The plugin consists of two source files:
+
+- **`src/main.cpp`** — Main plugin logic:
+  1. Hooks the `open()` syscall via GoldHEN's HOOK_INIT/HOOK_CONTINUE macros
+  2. Intercepts paths containing `BeatmapLevelData/<song_id>` and redirects to custom AssetBundles
+  3. Loads redirect table from `redirects.json` (external config, not hardcoded)
+  4. Stores `open()` log to `bs_log.txt` for debugging
+  5. Sends notification via `/dev/notification0` on plugin load
+  6. **[v0.8034+]** Hooks `TMP_Text.set_text` for song metadata modification (feature-flagged)
+  7. **[v0.8034+]** Creates replacement IL2CPP strings and passes to original `set_text`
+
+## Deploy Path
+
+**CRITICAL:** The plugin `.prx` file must be deployed to the **plugins directory**, NOT the AFR directory:
+
+| Component | Deploy Path | Purpose |
+|-----------|------------|---------|
+| **Plugin PRX** | `/data/GoldHEN/plugins/beat_saber_deluxe.prx` | GoldHEN plugin loader (configured by `plugins.ini`) |
+| **Asset bundles** | `/data/GoldHEN/AFR/CUSA12878/<song_id>` | Open() hook redirect target |
+| **Redirects config** | `/data/GoldHEN/AFR/CUSA12878/redirects.json` | Redirect table read by plugin at startup |
+
+The plugin loader config is at `/data/GoldHEN/plugins.ini`:
+```
+[CUSA12878]
+/data/GoldHEN/plugins/beat_saber_deluxe.prx
+```
+
+Uploading the PRX to the AFR directory has NO EFFECT — the plugin loader doesn't read from there. This distinction cost several test cycles (v0.71 deployed to AFR instead of plugins/).
 
 ## Key Architecture Decisions
 
@@ -126,4 +149,16 @@ beat_saber_deluxe/
   custom_songs/          — Generated custom AssetBundles
 ```
 
-See also: [[ps4-file-system-redirects]], [[toolchain-and-build]], [[development-workflow]]
+## Memory Inject Module (ABANDONED — Dead End)
+
+**Status:** 🔴 Removed in v0.8025. After 14+ versions (v0.66–v0.8024), memory injection found 0 strings across all memory regions. See [[memory-injection-addressables-bypass]] for full history.
+
+The plugin previously included `src/memory_inject.cpp` for patching BeatmapLevelSO objects in RAM. This code has been removed from the codebase. Last commit with memory injection code: `1586581`.
+
+### What Was Tried (Historical)
+- Klass pointer search: 0 objects found (PS4 IL2CPP uses compressed pointers)
+- UTF-16LE string search: 0 strings found in GC heap, metadata mmap, or low memory
+- Thread creation in hook callback: CE-34878-0 crash
+- Signal handler-based memory probing: works but irrelevant since strings not found
+
+See also: [[ps4-file-system-redirects]], [[toolchain-and-build]], [[development-workflow]], [[ps4-memory-layout-for-module-scanning]]

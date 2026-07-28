@@ -36,6 +36,7 @@ Records which custom songs have been tested on PS4, their sync status, and any i
 | 2026-06-28 | Bruises | Fox Stevenson | 174 | 224.8s | PCM16 FSB5 | ❌ | N/A | Desynced — beatmap appears poorly authored. |
 | 2026-06-28 | Bruises (lapped) | Fox Stevenson | 174 | 678.6s | PCM16 FSB5 | ❌ | N/A | Lapped version — wrongfully extended audio. |
 | 2026-07-11 | 360 | Charli xcx | 120 | ~203s | PCM16 FSB5 | ❌ | N/A | **Removed.** Song has 360-degree characteristics. Not suitable for PS4 VR. Replaced with Duvet. |
+| 2026-07-14 | Espresso (Start Me Up slot) | Sabrina Carpenter | 104 | ~177s | PCM16 FSB5 | ✅ Perfect | ✅ | **v0.64 redirect test** — No crash, full gameplay verified on Hard difficulty. v0.64 removes all IL2CPP hooks; redirect-only stable. |
 
 ### Billie Eilish Replacements (Deployed 2026-07-11, Not Yet Tested)
 
@@ -78,3 +79,11 @@ Records which custom songs have been tested on PS4, their sync status, and any i
 - BEATS→seconds conversion: `time_seconds = time_beats * (60.0 / bpm)`
 - `--download-beat-saver-song <key>` downloads from BeatSaver CDN (requires map key from beatsaver.com/maps/<key>)
 - `--deploy` now auto-generates and auto-deploys redirects.json (no separate --deploy-config needed)
+
+---
+### 2026-07-15 — Plugin Toggle System Test (Exp 129)
+| Date | Feature | Method | Result | Notes |
+|------|---------|--------|--------|-------|
+| 2026-07-15 | `--enable-plugin` | Pipeline CLI flag → FTP plugins.ini edit | ✅ Verified on PS4 | Uncommented entry under [CUSA12878] |
+| 2026-07-15 | `--disable-plugin` | Pipeline CLI flag → FTP plugins.ini edit | ✅ Verified on PS4 | Commented out release + debug entries with `#;` |
+| 2026-07-15 | BeatmapLevelSO CAB binary injection | inject_pack_bundle.py → raw byte replacement at CAB offset 79924 | 📦 Build complete / deploy blocked | Patched Espresso(1257B), Duvet(1222B), Time Lapse(1251B) CABs verified on disk. PS4 offline — needs AFR redirect or direct bundle patching when powered on.

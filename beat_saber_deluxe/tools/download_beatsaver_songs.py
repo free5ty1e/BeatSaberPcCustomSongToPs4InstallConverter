@@ -13,18 +13,17 @@ Usage:
     python3 download_beatsaver_songs.py --list-missing
 """
 
+import argparse
+import glob
+import io
+import json
 import os
 import sys
-import json
-import gzip
-import io
-import zipfile
-import urllib.request
+import time
 import urllib.error
 import urllib.parse
-import argparse
-import time
-import glob
+import urllib.request
+import zipfile
 
 BEATSAVER_API = "https://api.beatsaver.com"
 REPO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -51,7 +50,7 @@ def api_get(path: str, retries=3):
                     return None
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                print(f"  Not found (404)")
+                print("  Not found (404)")
                 return None
             if e.code == 429:
                 wait = (attempt + 1) * 5
@@ -86,7 +85,7 @@ def download_zip(url: str, dest_dir: str) -> bool:
             zf.extractall(dest_dir)
         return True
     except zipfile.BadZipFile:
-        print(f"  Not a valid zip file")
+        print("  Not a valid zip file")
         return False
 
 
@@ -128,11 +127,11 @@ def download_by_hash(hash_str: str, dest_dir: str = None) -> str:
     print(f"  Difficulties: {', '.join(char_info[:10])}")
 
     # Check if arks/chains exist
-    has_arcs = any("arc" in str(d).lower() for d in versions[0].get("diffs", [])) if versions else False
+    _has_arcs = any("arc" in str(d).lower() for d in versions[0].get("diffs", [])) if versions else False
     for d in versions[0].get("diffs", []) if versions else []:
         if d.get("arcs", False) or d.get("chains", False):
-            has_arcs = True
-            print(f"  ✅ Has arcs/chains!")
+            _has_arcs = True
+            print("  ✅ Has arcs/chains!")
             break
 
     # Download
@@ -152,7 +151,7 @@ def download_by_hash(hash_str: str, dest_dir: str = None) -> str:
         print(f"  Beatmap files: {len(beatmap_files)}")
         return dest_dir
     else:
-        print(f"  ❌ Download failed")
+        print("  ❌ Download failed")
         return None
 
 
@@ -203,7 +202,7 @@ def download_by_key(key: str, dest_dir: str = None):
     # Get the hash from the latest version
     versions = info.get("versions", [])
     if not versions:
-        print(f"  No versions found")
+        print("  No versions found")
         return None
 
     hash_str = versions[0].get("hash", "")
@@ -231,7 +230,7 @@ def search_and_download(query: str, max_results: int = 10):
     downloaded = 0
     for i, doc in enumerate(docs[:max_results]):
         key = doc.get('id', '')
-        name = doc.get('name', 'Unknown')
+        _name = doc.get('name', 'Unknown')
         metadata = doc.get('metadata', {})
         song = metadata.get('songName', 'Unknown')
         artist = metadata.get('songAuthorName', 'Unknown')
@@ -249,7 +248,7 @@ def search_and_download(query: str, max_results: int = 10):
                 downloaded += 1
                 print(f"    Downloaded to: {hash_str[:16]}...")
             else:
-                print(f"    Download failed")
+                print("    Download failed")
         time.sleep(1)  # Be nice to BeatSaver API
 
     print(f"\nDone! Downloaded {downloaded} songs")

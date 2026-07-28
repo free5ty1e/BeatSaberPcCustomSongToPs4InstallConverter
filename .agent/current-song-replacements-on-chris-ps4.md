@@ -1,9 +1,9 @@
 # Current Song Replacements on Chris's PS4
 
-> **Plugin:** Beat Saber Deluxe v0.56  
-> **All 32 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo) with custom community songs.  
-> **Last rebuilt:** 2026-07-11 (v0.57 - dynamic redirect config + BeatSaver download feature)  
-> **Status:** ✅ All songs deployed. Requires gameplay testing to verify sync.
+> **Plugin:** Beat Saber Deluxe v0.8040  
+> **All 38 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo + 6 Camellia) with custom community songs.  
+> **Last rebuilt:** 2026-07-27 (v0.5305 — Camellia Music Pack expansion)
+> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). **MoveNext() hook deployed** (v0.8039) — modifies BeatmapLevel fields before UI reads them. **Case fix** (v0.8040) — exact game strings from song IDs. **Awaiting test.**
 
 ## Rolling Stones Replacements (13 songs)
 
@@ -56,7 +56,19 @@
 
 > **Note:** The Tempo slot uses "Bruises" which was previously tested and had desync issues. May need lapped audio handling.
 
-## Total: 32 Custom Songs Deployed
+
+## Camellia Music Pack Replacements (6 songs)
+
+| # | Slot ID | Custom Song | Artist | BPM | Beatmaps | First Note | Sync |
+|---|---------|-------------|--------|-----|----------|------------|------|
+| 1 | `Crystallized` | Bloom | ODESZA | 128 | 5/5 | 1.8s | ✅ |
+| 2 | `CycleHit` | Powerful | Major Lazer | 172 | 5/5 | 2.1s | ✅ |
+| 3 | `ExitThisEarthsAtomosphere` | Red Lips | GTA / Mendus | 200 | 5/5 | 2.2s | ✅ |
+| 4 | `Ghost` | Lone Digger | Caravan Palace | 121 | 5/5 | 1.9s | ✅ |
+| 5 | `LightItUp` | Batshit | Sofi Tukker | 115 | 5/5 | 1.9s | ✅ |
+| 6 | `WhatTheCat` | G.O.M.D | Sickick | 68 | 5/5 | 2.3s | ✅ |
+
+## Total: 38 Custom Songs Deployed
 
 ## How to Deploy (Full)
 

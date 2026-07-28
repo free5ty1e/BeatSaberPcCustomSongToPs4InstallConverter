@@ -16,7 +16,42 @@ if (strstr(path, "BeatmapLevelsData/startmeup"))
     np = AFR_BASE "/" TITLE_ID "/startmeup_v3";
 ```
 
-### ⚠️ CRITICAL: Deploy Path Must Match Plugin Redirect
+### ⚠️ CRITICAL: AFR vs Plugin Deploy Paths
+
+**Two separate mechanisms exist on GoldHEN, with different directories:**
+
+### 1. AFR (Application File Redirect) — Asset Bundles Only
+
+**Path:** `/data/GoldHEN/AFR/<TITLE_ID>/`
+**Purpose:** Stores redirected AssetBundle files (song bundles, resources)
+**Config:** Redirect table in `redirects.json` loaded by the plugin at runtime
+**Deploy command:**
+```bash
+lftp -u anonymous, -p 2121 192.168.100.117 \
+  -e "put custom_song.bundle -o /data/GoldHEN/AFR/CUSA12878/startmeup_v3; quit"
+```
+
+### 2. GoldHEN Plugins — PRX Plugin Files
+
+**Path:** `/data/GoldHEN/plugins/`
+**Purpose:** Stores `.prx` plugin files loaded by GoldHEN's plugin loader
+**Config:** `/data/GoldHEN/plugins.ini` maps plugin files to game title IDs
+**Deploy command:**
+```bash
+lftp -u anonymous, -p 2121 192.168.100.117 \
+  -e "put beat_saber_deluxe.prx -o /data/GoldHEN/plugins/beat_saber_deluxe.prx; quit"
+```
+
+**plugins.ini content:**
+```
+[default]
+/data/GoldHEN/plugins/game_patch.prx
+
+[CUSA12878]
+/data/GoldHEN/plugins/beat_saber_deluxe.prx
+```
+
+**IMPORTANT:** Uploading the plugin PRX to the AFR directory has NO EFFECT — GoldHEN's plugin loader reads from `plugins/` as configured in `plugins.ini`. The AFR directory is for **asset redirects only**, not plugin loading. This mistake cost several test cycles (v0.71 deployed to AFR instead of plugins/).
 
 | Plugin matches | Redirects to | Deploy absolute path |
 |---|---|---|

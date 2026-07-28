@@ -28,14 +28,13 @@ Pipeline Steps:
     8. Deploy to PS4 via FTP (optional)
 """
 
-import os
-import sys
-import json
-import gzip
-import struct
 import argparse
-import wave
+import gzip
+import json
 import logging
+import os
+import struct
+import sys
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -91,26 +90,22 @@ def load_config(config_path: str) -> dict:
 # ---------------------------------------------------------------------------
 # Imports from our toolchain
 # ---------------------------------------------------------------------------
+import soundfile as sf
 import UnityPy
 from UnityPy.streams import EndianBinaryReader
-import soundfile as sf
 
 try:
-    from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
-                                build_fsb5, build_vorbis_fsb5,
-                                build_pcm16_fsb5)
+    from hevag_encoder import build_fsb5, build_pcm16_fsb5, build_vorbis_fsb5, fast_pcm_to_hevag
 except ImportError:
     # Fallback: try to import directly
     sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
-    from hevag_encoder import (pcm_to_hevag, fast_pcm_to_hevag,
-                                build_fsb5, build_vorbis_fsb5,
-                                build_pcm16_fsb5)
+    from hevag_encoder import build_fsb5, build_pcm16_fsb5, build_vorbis_fsb5, fast_pcm_to_hevag
 
 try:
-    from lapped_audio import lap_audio_if_needed, detect_lapped, lap_audio
+    from lapped_audio import detect_lapped, lap_audio
 except ImportError:
     sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tools'))
-    from lapped_audio import lap_audio_if_needed, detect_lapped, lap_audio
+    from lapped_audio import detect_lapped, lap_audio
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -281,7 +276,7 @@ def _scan_beatmap_max_beat(song_dir: str) -> float:
                 t = note.get('_time', note.get('b', 0))
                 if isinstance(t, (int, float)) and t > max_beat:
                     max_beat = t
-        except:
+        except Exception:
             pass
     return max_beat
 
@@ -554,6 +549,8 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
     # Read BPM from Info.dat for V2→V3 conversion (used in bpmEvents)
     bpm = 120.0
     info_path = os.path.join(beatmap_dir, "Info.dat")
+    if not os.path.exists(info_path):
+        info_path = os.path.join(beatmap_dir, "info.dat")
     if os.path.exists(info_path):
         with open(info_path) as f:
             info = json.load(f)
@@ -625,7 +622,7 @@ def save_bundle(bf, output_path: str):
     """
     Save the modified bundle with LZ4 compression (matching original PS4 format).
     """
-    log.info(f"Saving bundle with LZ4 compression...")
+    log.info("Saving bundle with LZ4 compression...")
     result = bf.save(packer="lz4")
     with open(output_path, 'wb') as f:
         f.write(result)
@@ -681,17 +678,271 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy failed (PS4 offline?): {result.stderr}")
 
 
+def add_mode_characteristics(cab, enable_modes: list) -> int:
+    """
+    Add additional beatmap characteristics (OneSaber, 90Degree, etc.)
+    to the BeatmapLevel object so they appear in the in-game mode selector.
+
+    Each new characteristic set reuses the SAME beatmap assets as Standard.
+    This means the song will be playable in those modes (e.g. playing
+    Standard notes while in OneSaber mode) without requiring separate
+    mode-specific .beatmap.gz files.
+
+    Args:
+        cab: Unity CAB bundle containing BeatmapLevel
+        enable_modes: List of characteristic names (e.g. ["OneSaber", "90Degree"])
+
+    Returns:
+        Number of modes added
+    """
+    if not enable_modes:
+        return 0
+
+    added = 0
+    for pid, reader in cab.objects.items():
+        # BeatmapLevel = class_id 114
+        if reader.class_id != 114:
+            continue
+
+        tt = reader.read_typetree()
+        existing_sets = tt.get('_difficultyBeatmapSets', [])
+
+        # Build a set of already-present characteristic names
+        existing_chars = set()
+        for s in existing_sets:
+            ch = s.get('_beatmapCharacteristicSerializedName', '')
+            existing_chars.add(ch)
+
+        if 'Standard' not in existing_chars:
+            log.warning("  No Standard characteristic found - cannot clone modes")
+            return 0
+
+        # Find the Standard set to clone
+        standard_set = None
+        for s in existing_sets:
+            if s.get('_beatmapCharacteristicSerializedName') == 'Standard':
+                standard_set = s
+                break
+
+        if not standard_set:
+            log.warning("  Standard characteristic not found - cannot clone modes")
+            return 0
+
+        # Add each requested mode
+        for mode in enable_modes:
+            if mode in existing_chars:
+                log.info(f"  Mode '{mode}' already exists - skipping")
+                continue
+
+            new_set = {
+                '_beatmapCharacteristicSerializedName': mode,
+                '_difficultyBeatmaps': []
+            }
+            for entry in standard_set.get('_difficultyBeatmaps', []):
+                new_set['_difficultyBeatmaps'].append({
+                    '_difficulty': entry['_difficulty'],
+                    '_beatmapAsset': entry['_beatmapAsset'],
+                    '_lightshowAsset': entry['_lightshowAsset'],
+                })
+            existing_sets.append(new_set)
+            existing_chars.add(mode)
+            added += 1
+            log.info(f"  Added mode: {mode}")
+
+        tt['_difficultyBeatmapSets'] = existing_sets
+        reader.save_typetree(tt)
+        break  # Only one BeatmapLevel per bundle
+
+    log.info(f"  Modes added: {added}")
+    return added
+
+
+# ============================================================================
+# Inject BeatmapLevelSO metadata into the per-song CAB bundle
+# ============================================================================
+
+# Characteristic path IDs for _previewDifficultyBeatmapSets
+_CHAR_PATH_IDS = {
+    "Standard":  -7286399427822119286,
+    "OneSaber":  -8583864861369561029,
+    "NoArrows":   -5623662769225589684,
+    "90Degree":    4533580413116749821,
+    "360Degree":  1189643819550092755,
+}
+
+
+def _encode_unity_string(s: str) -> bytes:
+    """Encode a string for Unity serialized data (UTF-16LE + length prefix)."""
+    if not s:
+        return b'\x00\x00'  # null string
+    utf16 = s.encode('utf-16-le')
+    # Unity string format: int32 length of UTF-16 bytes (including trailing null)
+    plen = len(utf16) + 2  # +2 for trailing null
+    return struct.pack('<i', plen) + utf16 + b'\x00\x00'
+
+
+def _build_beatmap_level_so_blob(
+    song_name: str,
+    song_sub_name: str,
+    song_author: str,
+    level_author: str,
+    bpm: float,
+    preview_diff_count: int,
+    diff_data: bytes,
+    level_id: str = "custom",
+) -> bytes:
+    """
+    Construct a BeatmapLevelSO serialized blob (IL2CPP MonoBehavior layout).
+
+    Based on pack bundle analysis of the Rolling Stones pack:
+      0x0C: m_Script PPtr(fileID=2, pathID=-1) — base class script ref
+            The first 12 bytes are padding/zeroed (type info is in SerializedFile map)
+      Then per-instance data fields in order:
+        _levelID        = string (song identifier like "therollingstones_startmeup")
+        _songName       = string (display name, e.g. "Espresso")
+        _songSubName    = string (subtitle with length/notes info)
+        _songAuthorName = string (artist name)
+        _levelAuthorName= string (custom song author)
+        BPM             = double (8 bytes)
+
+      Then preview arrays:
+        count = int32(5)
+        For each mode [Standard, OneSaber, NoArrows, 90Degree, 360Degree]:
+          PPtr(fileID=2, pathID=char_path_id)
+          diff_count = int32(n)
+          difficulty_data (36 bytes per entry × n)
+
+    The blob does NOT include klassID/classID — those are in the SerializedFile's
+    types map and resolved by IL2CPP at deserialization time.
+    """
+    blob = bytearray()
+
+    # ── Padding + m_Script PPtr (per pack bundle analysis) ───────────────
+    blob += b'\x00\x00\x00\x00'  # bytes 0-3: padding/type info placeholder
+    blob += b'\x00\x00\x00\x00'  # bytes 4-7: classID placeholder
+    blob += b'\x00\x00\x00\x00'  # bytes 8-11: alignment
+
+    # m_Script at offset 0xC (byte 12)
+    blob += struct.pack('<i', 2)           # fileID = 2 (m_Metadata->m_Script)
+    blob += struct.pack('<q', -1)          # pathID = -1 (base class = ScriptableObject)
+
+    # ── Instance fields (verified order from pack bundle analysis) ───────
+    # NOTE: m_Name is NOT in the serialized instance data — it's in the type info.
+    # Only _levelID through BPM are per-instance serialized fields.
+    blob.extend(_encode_unity_string(level_id))            # _levelID
+    blob.extend(_encode_unity_string(level_id))            # _levelID
+    blob.extend(_encode_unity_string(song_name))           # _songName
+    blob.extend(_encode_unity_string(song_sub_name))       # _songSubName
+    blob.extend(_encode_unity_string(song_author))         # _songAuthorName
+    blob.extend(_encode_unity_string(level_author))        # _levelAuthorName
+    blob += struct.pack('<d', bpm)                         # BPM (double)
+
+    # ── _previewDifficultyBeatmapSets array ────────────────────────────
+    modes = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+    blob += struct.pack('<i', 5)                          # count = 5 modes
+
+    for mode in modes:
+        path_id = _CHAR_PATH_IDS[mode]
+        blob += struct.pack('<i', 2)                      # fileID (m_Script ref)
+        blob += struct.pack('<q', path_id)                # pathID
+        blob += struct.pack('<i', preview_diff_count)     # difficulty count
+        # Difficulty data: 36 bytes per entry
+        needed = preview_diff_count * 36
+        if len(diff_data) >= needed:
+            blob.extend(diff_data[:needed])
+        else:
+            blob.extend(diff_data + b'\x00' * (needed - len(diff_data)))
+
+    return bytes(blob)
+
+
+def inject_beatmap_level_so(
+    bf,
+    song_name: str,
+    song_artist: str = "",
+    duration_seconds: float = 0.0,
+    bpm: float = 120.0,
+    note_count_standard: int = 0,
+    note_count_diff_data: bytes = b'',
+) -> bool:
+    """
+    Inject a BeatmapLevelSO ScriptableObject into the CAB bundle so the
+    song menu can display custom metadata (name, artist, length, etc.).
+
+    APPROACH: Since UnityPy lacks type info for BeatmapLevelSO and cannot
+    serialize IL2CPP-compatible data for it, we work by first building a
+    raw serialized blob, then attempting to insert it into the bundle's
+    CAB file via post-save modification.
+
+    The game resolves BeatmapLevelSO objects by _levelID across all loaded
+    AssetBundles. When the per-song bundle is redirected and loaded, the
+    injected SO provides metadata to the UI.
+
+    Currently this function logs what *would* be injected (the blob) so it
+    can be inspected. The actual CAB file injection requires UnityPy
+    serialization support for BeatmapLevelSO and is tracked as a future
+    task — see .agent/llm-wiki-knowledge-base/plans/song-list-metadata.md
+
+    Args:
+        bf: UnityPy BundleFile (the outer AssetBundle, not the CAB)
+        song_name: Display song name (overrides original)
+        song_artist: Artist name
+        duration_seconds: Song length in seconds
+        bpm: Beats per minute for timing
+        note_count_standard: Note count for display purposes
+        note_diff_data: Pre-encoded difficulty data (36B × N entries, or empty)
+
+    Returns:
+        True if the blob was constructed (injection itself needs UnityPy fix)
+    """
+    log.info("  Building BeatmapLevelSO metadata blob...")
+
+    # ── Build the serialized blob ───────────────────────────────────────
+    level_id = f"custom/{song_name.lower().replace(' ', '_')}"
+
+    blob = _build_beatmap_level_so_blob(
+        song_name=song_name,
+        song_sub_name=f"{duration_seconds:.0f}s / {note_count_standard} notes",
+        song_author=song_artist if song_artist else "Unknown Artist",
+        level_author=song_artist if song_artist else "Custom",
+        bpm=bpm,
+        preview_diff_count=5,  # always 5 modes
+        diff_data=note_count_diff_data or b'\x00' * (5 * 36),
+        level_id=level_id,
+    )
+
+    log.info(f"    BeatmapLevelSO blob: {len(blob)} bytes")
+    log.info(f"    _levelID={level_id} _songName={song_name} _songAuthorName={song_artist}")
+
+    # Dump a hex sample for debugging (first 128 bytes)
+    hex_sample = blob[:128].hex()
+    log.info(f"    Hex[0:128]: {hex_sample}")
+
+    # Write the blob to a temp file for inspection
+    blob_path = os.path.join(PROJECT_ROOT, f"_beatmap_level_so_{song_name}.blob")
+    with open(blob_path, 'wb') as f:
+        f.write(blob)
+    log.info(f"    ✅ Blob saved to {blob_path}")
+
+    # Future work: inject this blob into the CAB file by:
+    # 1. Parsing the UnityFS header of the saved CAB
+    # 2. Finding free space or appending a new object entry
+    # 3. Updating the manifest table with the new object's offset/size
+    log.info("    ⚠️ Blob not yet injected into CAB (needs UnityPy type support)")
+    return True
+
+
 def build_plugin(project_root: str, debug: bool = False) -> str:
     """
     Build the GoldHEN plugin.
-    
+
     Args:
         project_root: Path to the plugin project root (contains Makefile)
         debug: If True, builds with VERBOSE_LOG enabled
-        
+
     Returns:
         Path to the built .prx file
-        
+
     Raises:
         RuntimeError: If the build fails
     """
@@ -739,7 +990,6 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
     Read the existing plugins.ini from PS4, ensure our plugin entry exists
     under [CUSA12878], then re-upload. Idempotent — preserves other plugins.
     """
-    import subprocess as sp
     import tempfile
 
     ps4_cfg = config.get('ps4', {})
@@ -774,7 +1024,8 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
         current_section = None
         for line in lines:
             stripped = line.strip()
-            if not stripped or stripped.startswith('#'):
+            # GoldHEN supports both ; and # as comment markers
+            if not stripped or stripped.startswith('#') or stripped.startswith(';'):
                 continue
             if stripped.startswith('[') and stripped.endswith(']'):
                 current_section = stripped[1:-1]
@@ -812,15 +1063,226 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
             log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
 
 
+# ============================================================================
+# Plugin Toggle — enable / disable the Beat Saber Deluxe plugin on PS4
+# ============================================================================
+
+PLUGIN_PRX_NAME = "beat_saber_deluxe.prx"
+DEBUG_PRX_NAME = "beat_saber_deluxe_debug.prx"
+
+
+def _find_prx_name(config: dict, debug: bool = False) -> str:
+    """Return the current prx filename (handles debug toggle)."""
+    return DEBUG_PRX_NAME if debug else PLUGIN_PRX_NAME
+
+
+def _prx_remote_path(plugin_remote: str) -> str:
+    """Extract directory from a plugin remote path."""
+    return os.path.dirname(plugin_remote) or "/data/GoldHEN/plugins"
+
+
+def enable_plugin(config: dict, debug: bool = False):
+    """
+    Enable the Beat Saber Deluxe plugin on PS4.
+
+    Steps:
+      1. Ensure plugins.ini has an uncommented entry for our .prx under [CUSA12878]
+      2. If no existing entry, also upload the .prx file (build required separately)
+    """
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+    _paths_cfg = config.get('paths', {})
+
+    title_id = title_cfg.get('id', 'CUSA12878')
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    prx_name = _find_prx_name(config, debug)
+    plugin_remote = f"/data/GoldHEN/plugins/{prx_name}"
+    ini_remote = "/data/GoldHEN/plugins.ini"
+
+    log.info(f"Enabling Beat Saber Deluxe plugin ({prx_name}) on PS4...")
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_ini = os.path.join(tmpdir, "plugins.ini")
+
+        # Download existing plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"get {ini_remote} -o {local_ini}"],
+                                timeout=30)
+        if rc != 0:
+            log.info("  No existing plugins.ini — creating fresh")
+            lines = []
+        else:
+            with open(local_ini) as f:
+                lines = f.read().splitlines()
+            log.info(f"  Downloaded plugins.ini ({len(lines)} lines)")
+
+        # Parse INI into sections (title_id -> list of plugin paths)
+        sections = {}
+        current_section = None
+        for line in lines:
+            stripped = line.strip()
+            # Skip blank lines and comment lines (both # and ;)
+            if not stripped or stripped.startswith('#') or stripped.startswith(';'):
+                continue
+            if stripped.startswith('[') and stripped.endswith(']'):
+                current_section = stripped[1:-1]
+                if current_section not in sections:
+                    sections[current_section] = []
+            elif current_section:
+                sections.setdefault(current_section, []).append(stripped)
+
+        # Ensure our section exists
+        current_plugins = sections.setdefault(title_id, [])
+
+        # Check if our prx already has a valid (uncommented) entry
+        found = False
+        for p in current_plugins:
+            if p == plugin_remote:
+                found = True
+                break
+
+        if not found:
+            current_plugins.append(plugin_remote)
+            log.info(f"  Added [{title_id}] entry: {plugin_remote}")
+
+        # Rebuild INI content — filter out old commented/duplicate entries for our prx
+        new_lines = []
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                new_lines.append(line)
+                continue
+            # Skip any line that is solely a comment for our prx (; or #)
+            if (stripped.startswith(';') or stripped.startswith('#')):
+                bare = stripped.lstrip(';#').strip()
+                if bare == plugin_remote:
+                    log.info(f"  Uncommented existing entry: {stripped}")
+                    continue  # skip the commented version; will add uncommented below
+            new_lines.append(line)
+
+        # Now add the uncommented entry under the correct section (only if not already present)
+        if not found:
+            section_header = f"[{title_id}]"
+            inserted = False
+            merged = []
+            for line in new_lines:
+                merged.append(line)
+                if not inserted and line.strip() == section_header:
+                    merged.append(plugin_remote)
+                    inserted = True
+        else:
+            merged = new_lines
+
+        with open(local_ini, 'w') as f:
+            f.write('\n'.join(merged) + '\n')
+
+        # Upload updated plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"put {local_ini} -o {ini_remote}"],
+                                timeout=30)
+        if rc == 0:
+            log.info("  ✅ plugins.ini updated — plugin ENABLED")
+        else:
+            log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
+
+
+def disable_plugin(config: dict):
+    """
+    Disable the Beat Saber Deluxe plugin on PS4.
+
+    Steps:
+      1. Comment out (or remove) our .prx entry in plugins.ini under [CUSA12878]
+      2. Optionally download/delete the .prx file from PS4
+    """
+    ps4_cfg = config.get('ps4', {})
+    title_cfg = config.get('title', {})
+
+    title_id = title_cfg.get('id', 'CUSA12878')
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    ini_remote = "/data/GoldHEN/plugins.ini"
+
+    log.info("Disabling Beat Saber Deluxe plugin on PS4...")
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_ini = os.path.join(tmpdir, "plugins.ini")
+
+        # Download existing plugins.ini
+        rc, out, err = _ftp_run(host, port, user, password,
+                                [f"get {ini_remote} -o {local_ini}"],
+                                timeout=30)
+        if rc != 0:
+            log.warning("  No existing plugins.ini found — nothing to disable")
+            return
+
+        with open(local_ini) as f:
+            lines = f.read().splitlines()
+
+        # Parse and modify
+        new_lines = []
+        current_section = None
+        disabled_count = 0
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Track section headers
+            if stripped.startswith('[') and stripped.endswith(']'):
+                current_section = stripped[1:-1]
+                new_lines.append(line)
+                continue
+
+            if current_section == title_id:
+                # Check if this line references our plugin (handle both # and ; comments)
+                bare = stripped.lstrip(';#').strip()
+                if PLUGIN_PRX_NAME in bare or DEBUG_PRX_NAME in bare:
+                    already_commented = stripped.startswith(';') or stripped.startswith('#')
+                    if not already_commented:
+                        new_lines.append(f'#;{line}')
+                        disabled_count += 1
+                        log.info(f"  Disabled: {stripped}")
+                        continue
+                    else:
+                        # Already commented — keep as-is
+                        new_lines.append(line)
+                        continue
+
+            new_lines.append(line)
+
+        if disabled_count == 0:
+            log.info("  Plugin already disabled (or not found in plugins.ini)")
+        else:
+            # Upload modified plugins.ini
+            local_out = os.path.join(tmpdir, "plugins_disabled.ini")
+            with open(local_out, 'w') as f:
+                f.write('\n'.join(new_lines) + '\n')
+
+            rc, out, err = _ftp_run(host, port, user, password,
+                                    [f"put {local_out} -o {ini_remote}"],
+                                    timeout=30)
+            if rc == 0:
+                log.info(f"  ✅ plugins.ini updated — plugin DISABLED ({disabled_count} entry(s))")
+            else:
+                log.warning(f"  ⚠️ Failed to upload plugins.ini: {err}")
+
+
 def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
     """
     Upload the plugin .prx to PS4 and ensure plugins.ini has our entry.
     """
-    import subprocess as sp
 
     ps4_cfg = config.get('ps4', {})
     title_cfg = config.get('title', {})
-    title_id = title_cfg.get('id', 'CUSA12878')
+    _title_id = title_cfg.get('id', 'CUSA12878')
 
     host = ps4_cfg.get('ip', '192.168.100.117')
     port = ps4_cfg.get('ftp_port', 2121)
@@ -889,8 +1351,8 @@ def _download_redirect_from_ps4(config: dict) -> dict | None:
     Download redirects.json from PS4 via FTP.
     Returns the parsed JSON dict, or None if the file doesn't exist.
     """
-    import tempfile
     import subprocess as sp
+    import tempfile
 
     ps4_cfg = config.get('ps4', {})
     host = ps4_cfg.get('ip', '192.168.100.117')
@@ -1006,7 +1468,11 @@ def manage_redirect_config(
 
     # If we have a target, add/update the entry
     if target_name and should_generate:
-        bundle_name = f"{target_name}{bundle_suffix}"
+        # Ensure target_name has the correct BeatmapLevelsData prefix
+        if not target_name.startswith('BeatmapLevelsData/'):
+            target_name = f"BeatmapLevelsData/{target_name}"
+
+        bundle_name = f"{target_name.split('/')[-1]}{bundle_suffix}"
         redirect_data.setdefault('redirects', {})[target_name] = bundle_name
         log.info(f"  Added redirect: {target_name} -> {bundle_name}")
 
@@ -1026,30 +1492,302 @@ def manage_redirect_config(
 
 
 # ============================================================================
-# BeatSaver Song Downloader
+# Feature Flags Management
 # ============================================================================
+
+FEATURES_FILENAME = "features.json"
+DEFAULT_FEATURES = {
+    "enable_custom_song_replacements": True,
+    "enable_song_metadata_modification": True
+}
+
+def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to features.json in the project root."""
+    return os.path.join(project_root, FEATURES_FILENAME)
+
+def _get_remote_features_path(config: dict) -> str:
+    """Return the remote AFR path for features.json."""
+    cfg_paths = config.get('paths', {})
+    cfg_title = config.get('title', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    return f"{afr_base}/{title_id}/{FEATURES_FILENAME}"
+
+def _load_local_features(local_path: str) -> dict:
+    """Load a local features.json file. Returns default structure if missing."""
+    if not os.path.exists(local_path):
+        return DEFAULT_FEATURES.copy()
+    try:
+        with open(local_path, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        log.warning(f"  ⚠️  Failed to parse {local_path}, using defaults")
+        return DEFAULT_FEATURES.copy()
+
+def _save_local_features(features: dict, local_path: str):
+    """Save features dict to local features.json."""
+    os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
+    with open(local_path, 'w') as f:
+        json.dump(features, f, indent=2)
+        f.write('\n')
+    log.info(f"  Saved {local_path}")
+
+def _deploy_features_to_ps4(config: dict):
+    """Upload the local features.json to PS4 via FTP."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    local_path = _get_local_features_path()
+    remote_path = _get_remote_features_path(config)
+
+    if not os.path.exists(local_path):
+        log.warning(f"  ⚠️  Local features.json not found at {local_path}")
+        return
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_path} -o {remote_path}; quit"]
+    log.info(f"  Deploying features.json to PS4: {remote_path}")
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info("  ✅ Features config deployed")
+    else:
+        log.warning(f"  ⚠️  Features config deploy failed: {result.stderr}")
+
+def apply_feature_flags(set_features: list, config: dict):
+    """
+    Apply feature flag changes from --set-feature arguments.
+
+    Args:
+        set_features: List of "key=value" strings (e.g. ["enable_song_metadata_modification=false"])
+        config: PS4 config dict
+    """
+    if not set_features:
+        return
+
+    local_path = _get_local_features_path()
+    features = _load_local_features(local_path)
+
+    for entry in set_features:
+        if '=' not in entry:
+            log.error(f"  ❌ Invalid --set-feature format: '{entry}' (expected key=true/false)")
+            continue
+        key, val_str = entry.split('=', 1)
+        key = key.strip()
+        val_str = val_str.strip().lower()
+        if val_str in ('true', '1', 'yes', 'on'):
+            val = True
+        elif val_str in ('false', '0', 'no', 'off'):
+            val = False
+        else:
+            log.error(f"  ❌ Invalid feature value: '{val_str}' (expected true/false)")
+            continue
+        features[key] = val
+        log.info(f"  Feature flag: {key} = {val}")
+
+    _save_local_features(features, local_path)
+    _deploy_features_to_ps4(config)
+
+
+# ============================================================================
+# Song Metadata Management
+# ============================================================================
+
+SONG_METADATA_FILENAME = "song_metadata.json"
+SONG_IDS_FILENAME = "beat_saber_song_ids.json"
+
+def _get_song_metadata_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to song_metadata.json in the project root."""
+    return os.path.join(project_root, SONG_METADATA_FILENAME)
+
+def _get_song_ids_path(project_root: str = PROJECT_ROOT) -> str:
+    """Return the local path to beat_saber_song_ids.json in the project root."""
+    return os.path.join(project_root, SONG_IDS_FILENAME)
+
+def _load_song_details() -> dict:
+    """Load beat_saber_song_ids.json. Returns {slot_id: {songName, songAuthorName}} mapping."""
+    path = _get_song_ids_path()
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+        mapping = {}
+        for album in data.get('albums', []):
+            for song in album.get('songs', []):
+                slot_id = song.get('songID', '')
+                song_name = song.get('songName', '').strip()
+                author_name = song.get('songAuthorName', '').strip()
+                if slot_id:
+                    mapping[slot_id] = {
+                        'songName': song_name,
+                        'songAuthorName': author_name
+                    }
+        return mapping
+    except Exception:
+        return {}
+
+def _load_song_ids() -> dict:
+    """Load beat_saber_song_ids.json. Returns {slot_id: song_name} mapping."""
+    details = _load_song_details()
+    return {slot: d['songName'] for slot, d in details.items()}
+
+def _lookup_song_name(slot_or_name: str, song_ids: dict) -> str:
+    """Look up exact game song name from song IDs.
+
+    Tries exact slot ID match first (e.g. 'StartMeUp'), then case-insensitive
+    slot match, then falls back to the input string stripped of trailing spaces.
+    """
+    # Direct slot ID match (e.g. "StartMeUp" -> "Start Me Up")
+    if slot_or_name in song_ids:
+        return song_ids[slot_or_name]
+    # Case-insensitive slot match
+    lower = slot_or_name.lower()
+    for slot, name in song_ids.items():
+        if slot.lower() == lower:
+            return name
+    # Fall back to stripped input
+    return slot_or_name.strip()
+
+def _get_remote_song_metadata_path(config: dict) -> str:
+    """Return the remote AFR path for song_metadata.json."""
+    cfg_paths = config.get('paths', {})
+    cfg_title = config.get('title', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    return f"{afr_base}/{title_id}/{SONG_METADATA_FILENAME}"
+
+def _load_local_song_metadata(local_path: str) -> dict:
+    """Load a local song_metadata.json file. Returns default structure if missing."""
+    default = {"song_names": {}, "song_artists": {}}
+    if not os.path.exists(local_path):
+        return default
+    try:
+        with open(local_path, 'r') as f:
+            data = json.load(f)
+        data.setdefault('song_names', {})
+        data.setdefault('song_artists', {})
+        return data
+    except (json.JSONDecodeError, IOError):
+        log.warning(f"  ⚠️  Failed to parse {local_path}, starting fresh")
+        return default
+
+def _deploy_song_metadata_to_ps4(config: dict):
+    """Upload the local song_metadata.json to PS4 via FTP."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    local_path = _get_song_metadata_path()
+    remote_path = _get_remote_song_metadata_path(config)
+
+    if not os.path.exists(local_path):
+        log.warning(f"  ⚠️  Local song_metadata.json not found at {local_path}")
+        return
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_path} -o {remote_path}; quit"]
+    log.info(f"  Deploying song_metadata.json to PS4: {remote_path}")
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info("  ✅ Song metadata deployed")
+    else:
+        log.warning(f"  ⚠️  Song metadata deploy failed: {result.stderr}")
+
+def manage_song_metadata(
+    config: dict,
+    song_name: str | None = None,
+    artist: str | None = None,
+    target_name: str | None = None,
+    deploy: bool = False,
+):
+    """
+    Manage the song_metadata.json configuration file.
+
+    When song_name and target_name are provided, adds/updates the song_names entry.
+    When artist and target_name are provided, adds/updates the song_artists entry.
+    target_name can be a slot ID (e.g. "StartMeUp") or exact song name — it will
+    be resolved to the exact game string via beat_saber_song_ids.json.
+    Always deploys to PS4 when deploy=True.
+    """
+    local_path = _get_song_metadata_path()
+    metadata = _load_local_song_metadata(local_path)
+
+    song_details = _load_song_details()
+    exact_song_name = target_name
+    original_author = None
+
+    if target_name:
+        found = None
+        if target_name in song_details:
+            found = song_details[target_name]
+        else:
+            lower = target_name.lower()
+            for s_id, details in song_details.items():
+                if s_id.lower() == lower or details['songName'].lower() == lower:
+                    found = details
+                    break
+        if found:
+            exact_song_name = found['songName']
+            original_author = found['songAuthorName']
+            log.info(f"  Resolved target '{target_name}' -> songName='{exact_song_name}', author='{original_author}'")
+
+    if song_name and exact_song_name:
+        combined_name = f"{song_name} / {artist}" if artist else song_name
+        metadata['song_names'][exact_song_name] = combined_name
+        log.info(f"  Song metadata: '{exact_song_name}' -> '{combined_name}'")
+
+    if original_author:
+        metadata['song_artists'][original_author] = " "
+        log.info(f"  Artist metadata: blanking out original author '{original_author}' -> ' '")
+    elif artist and exact_song_name:
+        metadata['song_artists'][exact_song_name] = artist
+        log.info(f"  Artist metadata: '{exact_song_name}' -> '{artist}'")
+
+    os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
+    with open(local_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+        f.write('\n')
+    count_names = len(metadata.get('song_names', {}))
+    count_artists = len(metadata.get('song_artists', {}))
+    log.info(f"  Saved song_metadata.json ({count_names} names, {count_artists} artists)")
+
+    if deploy:
+        _deploy_song_metadata_to_ps4(config)
+
+    return metadata
 
 BEATSAVER_API_BASE = "https://api.beatsaver.com"
 
-def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
+def download_beat_saver_song(map_id: str, output_dir: str | None = None,
+                             api_base: str | None = None) -> str:
     """
     Download a song from BeatSaver by its map key and extract it.
 
     Args:
         map_id: The BeatSaver map key (e.g. '1d6c7c2' from beatsaver.com/maps/1d6c7c2)
         output_dir: Directory to extract into. If None, uses a temp directory.
+        api_base: Override BeatSaver API base URL (default: https://api.beatsaver.com)
 
     Returns:
         Path to the extracted song directory containing info.dat/Easy.dat/etc.
     """
-    import urllib.request
-    import urllib.error
     import tempfile
+    import urllib.error
+    import urllib.request
     import zipfile
-    import shutil
 
-    download_url = f"{BEATSAVER_API_BASE}/maps/id/{map_id}/download"
-    info_url = f"{BEATSAVER_API_BASE}/maps/id/{map_id}"
+    base = api_base or BEATSAVER_API_BASE
+    download_url = f"{base}/maps/id/{map_id}/download"
+    info_url = f"{base}/maps/id/{map_id}"
 
     log.info(f"Downloading BeatSaver song: {map_id}")
     log.info(f"  API: {info_url}")
@@ -1125,6 +1863,17 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None) -> str:
 # ============================================================================
 
 def main():
+    # Print pipeline version
+    ver_path = os.path.join(PROJECT_ROOT, 'VERSION')
+    if os.path.exists(ver_path):
+        with open(ver_path) as f:
+            ver = f.read().strip()
+    else:
+        ver = "unknown"
+    print(f"🎵 Beat Saber Deluxe Pipeline {ver}")
+    print(f"   Project: {PROJECT_ROOT}")
+    print()
+
     parser = argparse.ArgumentParser(
         description="Full Custom Song Pipeline for PS4 Beat Saber",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1187,6 +1936,10 @@ Examples:
     parser.add_argument('--ignore-non-standard-beatmaps', action='store_true',
                         help='Only match beatmap files containing "Standard" in name '
                              '(ignores 360Degree, 90Degree, OneSaber variants)')
+    parser.add_argument('--enable-modes', type=str, default=None,
+                        help='Comma-separated list of additional beatmap characteristics to enable '
+                             '(e.g. "OneSaber,90Degree,Degree"). Makes the song playable in those '
+                             'modes by cloning the Standard beatmaps.')
     parser.add_argument('--vorbis', action='store_true',
                         help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
     parser.add_argument('--pcm16', action='store_true',
@@ -1199,6 +1952,14 @@ Examples:
     parser.add_argument('--convert-to-v3', action='store_true',
                         help='Auto-convert V2 beatmaps (_notes/_time) to V3.2.0 format (colorNotes/b). '
                              'Use if custom songs use V2 format.')
+
+    # Plugin toggle flags
+    parser.add_argument('--enable-plugin', action='store_true',
+                        help='Enable the Beat Saber Deluxe plugin on PS4 '
+                             '(uncomment .prx entry in plugins.ini)')
+    parser.add_argument('--disable-plugin', action='store_true',
+                        help='Disable the Beat Saber Deluxe plugin on PS4 '
+                             '(comment out .prx entry in plugins.ini — play original songs)')
 
     # Redirect config management flags
     parser.add_argument('--generate-config', action='store_true',
@@ -1215,6 +1976,21 @@ Examples:
     parser.add_argument('--download-beat-saver-song', default=None, metavar='MAP_ID',
                         help='Download a song from BeatSaver by map key (e.g. "1d6c7c2") '
                              'and run the full pipeline. Requires --target to specify the PS4 slot.')
+    parser.add_argument('--beatsaver-api-base', default=None,
+                        help='Override BeatSaver API base URL (default: https://api.beatsaver.com). '
+                             'Useful for testing against a mirror or local server.')
+
+    # Song metadata override for BeatmapLevelSO injection into CAB bundle
+    parser.add_argument('--song-name', default=None,
+                        help='Override song display name (default: extracted from Info.dat or BeatSaver)')
+    parser.add_argument('--artist', default=None,
+                        help='Override artist/song-author name (default: extracted from Info.dat or BeatSaver)')
+
+    # Feature flags
+    parser.add_argument('--set-feature', action='append', default=None,
+                        help='Set a feature flag (format: feature_name=true/false). '
+                             'Can be used multiple times. Flags are written to features.json '
+                             'on PS4 at /data/GoldHEN/AFR/CUSA12878/features.json.')
 
     args = parser.parse_args()
 
@@ -1243,12 +2019,28 @@ Examples:
                 sync=args.sync_config,
                 enforce_local=args.enforce_config,
             )
+
+        # Handle feature flags in plugin-only mode
+        if args.set_feature:
+            apply_feature_flags(args.set_feature, {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths})
+
+        sys.exit(0)
+
+    # Plugin toggle mode: enable/disable without processing any song
+    if args.enable_plugin and not args.disable_plugin:
+        enable_plugin(config, debug=args.debug_logging)
+        log.info("Plugin enabled. Restart the game or press PS+Triangle to reload plugins.")
+        sys.exit(0)
+    if args.disable_plugin:
+        disable_plugin(config)
+        log.info("Plugin disabled. Restart the game or press PS+Triangle to reload plugins.")
         sys.exit(0)
 
     # Auto-download from BeatSaver if requested (sets args.song_dir before the dir check)
     if args.download_beat_saver_song and not args.song_dir:
         log.info("Downloading song from BeatSaver...")
-        extracted_dir = download_beat_saver_song(args.download_beat_saver_song)
+        extracted_dir = download_beat_saver_song(args.download_beat_saver_song,
+                                                  api_base=args.beatsaver_api_base)
         args.song_dir = extracted_dir
     elif args.download_beat_saver_song and args.song_dir:
         log.info(f"Using local song directory: {args.song_dir} (ignoring --download-beat-saver-song)")
@@ -1275,6 +2067,22 @@ Examples:
     if not os.path.isdir(args.song_dir):
         log.error(f"Song directory not found: {args.song_dir}")
         sys.exit(1)
+
+    # Pre-load song metadata from Info.dat (used in Step 6.5 and beatmap counting)
+    song_name = os.path.basename(args.song_dir)
+    song_artist = ""
+    bpm = 120.0
+    note_count_standard = 0
+    # BeatSaver uses lowercase info.dat; custom songs use uppercase Info.dat
+    info_dat_path = os.path.join(args.song_dir, "Info.dat")
+    if not os.path.isfile(info_dat_path):
+        info_dat_path = os.path.join(args.song_dir, "info.dat")
+    if os.path.isfile(info_dat_path):
+        with open(info_dat_path) as f:
+            info = json.load(f)
+        song_name = info.get("_songName", song_name)
+        song_artist = info.get("_songAuthorName", song_artist)
+        bpm = float(info.get("_beatsPerMinute", 120.0))
 
     # -----------------------------------------------------------------------
     # Step 0: Audio conversion (WAV -> FSB5)
@@ -1381,8 +2189,59 @@ Examples:
                                   auto_convert=args.convert_to_v3)
     log.info(f"Beatmaps replaced: {replaced}/5")
 
+    # Count notes from Standard beatmaps for metadata
+    for diff_file in ['Hard.dat', 'Normal.dat', 'Easy.dat', 'Expert.dat', 'ExpertPlus.dat',
+                       'HardStandard.dat', 'NormalStandard.dat', 'EasyStandard.dat',
+                       'ExpertStandard.dat', 'ExpertPlusStandard.dat']:
+        diff_path = os.path.join(args.song_dir, diff_file)
+        if os.path.isfile(diff_path):
+            try:
+                with open(diff_path) as f:
+                    bm = json.load(f)
+                note_count_standard += len(bm.get('notes', []))
+            except Exception:
+                pass
+
     # -----------------------------------------------------------------------
-    # Step 6: Save bundle
+    # Step 6: Add mode characteristics (OneSaber, 90Degree, etc.)
+    # -----------------------------------------------------------------------
+    enable_modes = args.enable_modes.split(',') if args.enable_modes else None
+    if enable_modes:
+        add_mode_characteristics(cab, [m.strip() for m in enable_modes if m.strip()])
+
+    # -----------------------------------------------------------------------
+    # Step 6.5: Inject BeatmapLevelSO metadata for song menu display
+    # -----------------------------------------------------------------------
+    # Resolve song name and artist — from CLI args, Info.dat, or BeatSaver
+    # Re-read Info.dat after download (was loaded before song_dir was set)
+    info_dat_path = os.path.join(args.song_dir, "Info.dat")
+    if not os.path.isfile(info_dat_path):
+        info_dat_path = os.path.join(args.song_dir, "info.dat")
+    if os.path.isfile(info_dat_path):
+        with open(info_dat_path) as f:
+            info = json.load(f)
+        song_name = info.get("_songName", song_name)
+        song_artist = info.get("_songAuthorName", song_artist)
+        bpm = float(info.get("_beatsPerMinute", bpm))
+    custom_name = args.song_name or song_name
+    custom_artist = args.artist or song_artist
+
+    # BeatmapLevelSO injection (experimental — needs PS4 testing)
+    inject_level_so = True  # always try to inject; game should just ignore unknown SOs
+    if inject_level_so:
+        note_data = b''  # empty diff data — the preview array will use Standard's data
+        inject_beatmap_level_so(
+            cab,
+            song_name=custom_name or song_name,
+            song_artist=custom_artist or song_artist,
+            duration_seconds=duration,
+            bpm=bpm,
+            note_count_standard=note_count_standard,
+            note_count_diff_data=note_data,
+        )
+
+    # -----------------------------------------------------------------------
+    # Step 7: Save bundle
     # -----------------------------------------------------------------------
     os.makedirs(os.path.dirname(args.output) or '.', exist_ok=True)
     save_bundle(bf, args.output)
@@ -1414,6 +2273,24 @@ Examples:
             deploy=should_deploy,
             sync=args.sync_config,
             enforce_local=args.enforce_config,
+        )
+
+    # -----------------------------------------------------------------------
+    # Step 10: Feature flags
+    # -----------------------------------------------------------------------
+    if args.set_feature:
+        apply_feature_flags(args.set_feature, config)
+
+    # -----------------------------------------------------------------------
+    # Step 11: Song metadata (song_metadata.json)
+    # -----------------------------------------------------------------------
+    if args.song_name or args.artist or args.deploy:
+        manage_song_metadata(
+            config,
+            song_name=args.song_name or custom_name,
+            artist=args.artist or custom_artist,
+            target_name=args.target,
+            deploy=args.deploy,
         )
 
     log.info("Pipeline complete!")

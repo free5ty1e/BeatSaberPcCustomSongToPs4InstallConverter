@@ -1,0 +1,126 @@
+# Agent Context — Beat Saber PS4 Custom Songs
+
+# Quick Summary
+project: Beat Saber PS4 Custom Song Replacement
+description: >
+  Replace Beat Saber PS4 DLC songs with custom community songs via a Python pipeline
+  (builds PS4-compatible AssetBundles) and a GoldHEN PRX plugin (hooks open() for file
+  redirection, hooks MoveNext() for song name/artist replacement in the UI).
+
+# Current Versions
+plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
+pipeline_version: "0.5306" # in beat_saber_deluxe/VERSION
+
+# Platform Constraints
+target_platform: PS4
+target_firmware: "9.00"
+target_game: "Beat Saber CUSA12878 v2.04"
+goldhen_version: "2.3 or 2.4b"
+toolchain: OpenOrbis PS4 Toolchain (devcontainer pre-installed)
+
+# Audio Format (IMPORTANT — non-negotiable)
+required_audio_format: PCM16 FSB5 (codec=2)
+required_flags: "--pcm16 --no-pad --convert-to-v3"
+why_pcm16: >
+  HEVAG is Sony proprietary (blocked), Vorbis has FMOD/libvorbis codebook mismatch (blocked).
+  PCM16 is lossless and works. --no-pad because PCM16 output is often larger than original
+  resource. --convert-to-v3 because Beat Saber PS4 requires V3.2.0 beatmaps.
+
+# Key Architecture
+pipeline_script: beat_saber_deluxe/tools/full_custom_song_pipeline.py
+plugin_source: beat_saber_deluxe/src/main.cpp
+plugin_prx: beat_saber_deluxe.prx (built via make)
+song_metadata: beat_saber_deluxe/song_metadata.json
+song_ids_lookup: beat_saber_deluxe/beat_saber_song_ids.json
+redirect_config: redirects.json (deployed to PS4 at /data/GoldHEN/AFR/CUSA12878/)
+
+# PS4 File Paths
+afr_base: /data/GoldHEN/AFR/CUSA12878
+afr_plugin_dir: /data/GoldHEN/plugins
+deploy_path_bundles: /data/GoldHEN/AFR/CUSA12878/{target}_v3
+deploy_path_config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+deploy_path_metadata: /data/GoldHEN/AFR/CUSA12878/song_metadata.json
+deploy_path_plugin: /data/GoldHEN/plugins/beat_saber_deluxe.prx
+ps4_log: /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+ftp_port: 2121
+
+# Song Slot Naming
+slot_note: >
+  Slots are the filename stem from BeatmapLevelsData/ (e.g. "startmeup", "Crystallized").
+  The --target flag takes this value. Redirect key must be prefixed with BeatmapLevelsData/.
+  Pipeline auto-prepends this prefix if missing in manage_redirect_config().
+
+# Plugin Features
+plugin_features:
+  - open() hook: redirects file reads to AFR custom bundles
+  - MoveNext() hook (RVA 0x1D377C0): modifies BeatmapLevel fields for song name/artist
+  - Features gated via features.json at AFR path
+feature_flags:
+  enable_custom_song_replacements: false  # gates bundle redirects
+  enable_song_metadata_modification: false # gates MoveNext() hook
+
+# Camellia Pack Replacement (Most Recent Work — v0.5305)
+camellia_slots:
+  Crystallized: { beatSaverId: "12a", replacement: "Bloom", artist: "ODESZA" }
+  CycleHit: { beatSaverId: "133", replacement: "Powerful", artist: "Major Lazer" }
+  ExitThisEarthsAtomosphere: { beatSaverId: "156", replacement: "Red Lips", artist: "GTA / Mendus" }
+  Ghost: { beatSaverId: "1bf", replacement: "Lone Digger", artist: "Caravan Palace" }
+  LightItUp: { beatSaverId: "7e", replacement: "Batshit", artist: "Sofi Tukker" }
+  WhatTheCat: { beatSaverId: "7f", replacement: "G.O.M.D", artist: "Sickick" }
+
+# Standard Pipeline Command (BeatSaver download + deploy)
+example_command: |
+  python3 tools/full_custom_song_pipeline.py \
+      --download-beat-saver-song <MAP_ID> \
+      --target <slot_name> \
+      --song-name "Song Name" \
+      --artist "Artist Name" \
+      --pcm16 --no-pad --convert-to-v3 \
+      --deploy --generate-config --deploy-config
+
+# Testing
+test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
+test_count: "335 tests across 10 files (as of v0.5306)"
+test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
+integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
+ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
+release_workflow: .github/workflows/plugin-build.yml (build + tag release)
+
+# Versioning Scheme
+version_scheme: >
+  Both plugin and pipeline increment by 0.0001 per experiment.
+  Plugin: v0.80 -> v0.8001 -> v0.8040
+  Pipeline: v0.53 -> v0.5301 -> v0.5305
+  Never use 0.01 increments — too coarse for per-experiment iteration.
+
+# Key Files for Documentation
+docs_files:
+  - README.md (root, comprehensive)
+  - beat_saber_deluxe/README.md (pipeline-specific, has duplication issue)
+  - beat_saber_deluxe/docs/how-to-replace-pack.md
+  - beat_saber_deluxe/docs/camellia-pack-example.md
+  - beat_saber_deluxe/docs/features/custom-song-replacement.md
+  - beat_saber_deluxe/docs/features/song-metadata-modification.md
+  - docs/developer-info.md
+
+# Knowledge Base
+knowledge_base: .agent/llm-wiki-knowledge-base/
+knowledge_base_index: .agent/llm-wiki-knowledge-base/index.md
+kb_note: >
+  Contains 39+ pages covering audio formats, beatmap conversion, plugin architecture,
+  PS4 environment, Unity/AssetBundle internals, and pipeline tooling. Read index.md first.
+
+# Git Guardrails (IMPORTANT)
+git_commit_forbidden: true  # Do not commit — user commits manually
+git_push_forbidden: true
+allowed_git: git add, git status, git diff, git log, git stash, git show
+
+# Common Pitfalls
+pitfalls:
+  - info.dat vs Info.dat: BeatSaver uses lowercase; pipeline has fallback
+  - Song IDs case sensitivity: game uses different casing than BeatSaver; use beat_saber_song_ids.json
+  - Redirect keys MUST have BeatmapLevelsData/ prefix (plugin uses strstr())
+  - PCM16 output is lossless but larger — always use --no-pad
+  - V3 beatmap field: "c" for note color (not "a" which is V2)
+  - Song metadata: artist is intentionally blanked for single-artist packs; name+artist combined on name line
+  - Bundle naming: deployed as {target}_v3 (not just {target})

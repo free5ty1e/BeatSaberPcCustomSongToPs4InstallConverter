@@ -1,0 +1,80 @@
+=== BS Deluxe v0.8013 started ===
+v0.8013 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+features: custom_song_replacements=1 metadata_modification=1
+FEATURE FLAGS: custom_song_replacements=ON  metadata_modification=ON
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (no guard timer, fires on any redirect)
+[MEMINJ] Scanning...
+[MEMINJ:VERBOSE] Il2CppUserAssemblies: 3 segments
+[MEMINJ:VERBOSE] Seg[0]: base=0x806C0000 size=0x3F54000 prot=r1w0x1
+[MEMINJ:VERBOSE] Seg[0]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[1]: base=0x84AC0000 size=0x558000 prot=r0w1x1
+[MEMINJ:VERBOSE] Seg[1]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[2]: base=0x846C0000 size=0x400000 prot=r0w0x1
+[MEMINJ:VERBOSE] Seg[2]: try_read_mem(first 16) = OK
+[MEMINJ] String not in module — searching for global-metadata.dat magic...
+[MEMINJ] Found metadata at 0x293280000, class string at 0x2934BCB6E
+[MEMINJ] KLASS_STRUCT addr=0x2012007E0 [0x00]=0x0 (klass) [0x08]=0x29334E400 (image) [0x10]=0x2934BCB6E (name) [0x18]=0x294029B40 (ns/td)
+[MEMINJ] Scanning (klass=0x2012007E0)...
+[MEMINJ] Klass diag: 0 raw matches, 0 validated
+[MEMINJ] Found 0 candidates with klass 0x2012007E0
+[MEMINJ] Trying direct string content search...
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] Patched 0/13 objects (str=0)
+[MEMINJ] No objects yet — retry scheduled on close()
+[MEMINJ] Scanning...
+[MEMINJ] Using cached klass (retry)...
+[MEMINJ] Scanning (klass=0x2012007E0)...
+[MEMINJ] Klass diag: 0 raw matches, 0 validated
+[MEMINJ] Found 0 candidates with klass 0x2012007E0
+[MEMINJ] Trying direct string content search...
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] Patched 0/13 objects (str=0)
+=== BS Deluxe v0.8014 started ===
+v0.8014 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 32 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+features: custom_song_replacements=1 metadata_modification=1
+FEATURE FLAGS: custom_song_replacements=ON  metadata_modification=ON
+hooks installed
+Registered 13 song metadata entries for memory injection
+[MEMINJ] Initialized (no guard timer, fires on any redirect)
+[MEMINJ] Scanning...
+[MEMINJ:VERBOSE] Il2CppUserAssemblies: 3 segments
+[MEMINJ:VERBOSE] Seg[0]: base=0x806C0000 size=0x3F54000 prot=r1w0x1
+[MEMINJ:VERBOSE] Seg[0]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[1]: base=0x84AC0000 size=0x558000 prot=r0w1x1
+[MEMINJ:VERBOSE] Seg[1]: try_read_mem(first 16) = OK
+[MEMINJ:VERBOSE] Seg[2]: base=0x846C0000 size=0x400000 prot=r0w0x1
+[MEMINJ:VERBOSE] Seg[2]: try_read_mem(first 16) = OK
+[MEMINJ] String not in module — searching for global-metadata.dat magic...
+[MEMINJ] Found metadata at 0x293280000, class string at 0x2934BCB6E
+[MEMINJ] KLASS_STRUCT addr=0x2012007E0 [0x00]=0x0 (klass) [0x08]=0x29334E400 (image) [0x10]=0x2934BCB6E (name) [0x18]=0x294029B40 (ns/td)
+[MEMINJ] Scanning (klass=0x2012007E0)...
+[MEMINJ] Range 0: 0x200000000 - 0x210000000 (2 ranges)
+[MEMINJ] PAGE 0x200000000: [0]=0x0 [8]=0x3C3 (want 0x2012007E0)
+[MEMINJ] PAGE 0x20FFF0000: [0]=0x0 [8]=0x0 (want 0x2012007E0)
+[MEMINJ] Range 1: 0x293080000 - 0x294280000 (2 ranges)
+[MEMINJ] Klass diag: 0 raw matches, 0 validated (4380 pages read, 4 failed)
+[MEMINJ] Found 0 candidates with klass 0x2012007E0
+[MEMINJ] Trying direct string content search...
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] Patched 0/13 objects (str=0)
+[MEMINJ] No objects yet — retry scheduled on close()
+[MEMINJ] Scanning...
+[MEMINJ] Using cached klass (retry)...
+[MEMINJ] Scanning (klass=0x2012007E0)...
+[MEMINJ] Range 0: 0x200000000 - 0x210000000 (2 ranges)
+[MEMINJ] PAGE 0x200000000: [0]=0x0 [8]=0x3C3 (want 0x2012007E0)
+[MEMINJ] PAGE 0x20FFF0000: [0]=0x0 [8]=0x0 (want 0x2012007E0)
+[MEMINJ] Range 1: 0x293080000 - 0x294280000 (2 ranges)
+[MEMINJ] Klass diag: 0 raw matches, 0 validated (4380 pages read, 4 failed)
+[MEMINJ] Found 0 candidates with klass 0x2012007E0
+[MEMINJ] Trying direct string content search...
+[MEMINJ] String scan (opt): 13 patterns
+[MEMINJ] Patched 0/13 objects (str=0)

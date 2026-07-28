@@ -9,7 +9,11 @@ HEVAG is a form of adaptive ADPCM used by Sony's PlayStation platforms.
 Each frame encodes 28 PCM16 samples into 16 bytes (3.5:1 compression).
 """
 
-import struct, math, io, json, sys, os, argparse
+import argparse
+import io
+import math
+import os
+import struct
 
 # ==============================================================================
 # FSB5 Template
@@ -147,7 +151,7 @@ def fast_encode_frame(samples, h1=0, h2=0):
             frame[bi] = (frame[bi] & 0xF0) | nib
         else:
             frame[bi] = (frame[bi] & 0x0F) | (nib << 4)
-        dequant = ((nib | 0xF0) << shift) if (nib & 0x8) else (nib << shift)
+        _dequant = ((nib | 0xF0) << shift) if (nib & 0x8) else (nib << shift)
         reconstructed = max(-32768, min(32767, s))
         h2, h1 = h1, reconstructed
     return bytes(frame), h1, h2
@@ -485,16 +489,15 @@ def build_fsb5(hevag_data, sample_rate=44100, channels=2,
 # Vorbis FSB5 Builder (replaces the original FSB5's OGG data with custom audio)
 # ==============================================================================
 
-import zlib
-import soundfile as sf
 import numpy as np
+import soundfile as sf
 
 
 def read_audio_normalized(path: str) -> tuple:
     """
     Read audio file, normalize to prevent clipping from over-range samples,
     and return as int16 numpy array with sample rate.
-    
+
     Some audio files (especially OGG Vorbis) can have samples slightly outside
     [-1.0, 1.0] due to encoder overshoot, which causes crackling when converted
     directly to int16. This function normalizes such files.
@@ -617,7 +620,7 @@ def build_vorbis_fsb5(audio_path, sample_rate=None,
     max_frames = clip_seconds * sr
     if len(data) > max_frames:
         data = data[:max_frames]
-    total_frames = len(data)
+    _total_frames = len(data)
 
     # Encode to OGG Vorbis
     ogg_buf = io.BytesIO()

@@ -7,7 +7,32 @@ metadata:
 
 ## Rule: Update Documentation Before Reporting
 
+**Note:** All project READMEs have been consolidated into a single project-level README at the repo root. No per-module READMEs.
+
+### README update rule: After any experiment that produces a new finding, also update:
+- The **"Current Experiment"** section in the project-level README
+- Any **ASCII art diagrams** or **usage examples** that are now incorrect
+- The **features table** or **status indicators**
+
 **Enforcement:** After every task completion, deployment, experiment result, or significant discovery — and **before** reporting back to the user — update project documentation FIRST.
+
+### VERSION BUMP RULE — ALWAYS bump BEFORE deploying
+
+**Plugin version** (`PLUGIN_VERSION` in `src/main.cpp`):
+- ANY change to plugin code → ALWAYS increment by 0.01 (e.g. v0.62 → v0.63)
+- Even if the change is "minor" or "just a bugfix" — every deploy gets a new version
+- The version string IS the deployment identifier. Without a bump, old vs new build cannot be distinguished in the notification/log.
+
+**Pipeline version** (tracked in `project_summary.md`):
+- ANY change to pipeline scripts (`tools/` directory) → ALWAYS increment
+- Currently v0.50 — bump per major feature or bugfix batch
+
+**When bumping:**
+1. Bump in source code / config FIRST (before build)
+2. Add changelog entry (immediately after bump)
+3. Build + deploy
+4. Stage the changed files
+5. Update experiment_log.md and project_summary.md
 
 ### Documents to update:
 
@@ -36,6 +61,15 @@ metadata:
   | Env loaded | Y/N | Environment rendered correctly |
   | PlayerData saved | Y/N | Clean exit vs crash |
   | Error lines | N | No unexpected issues |
+
+- **Store the log file permanently** — ALWAYS save a copy to `/workspace/screenshots/bs_log_<experiment>.txt`:
+  ```bash
+  cp /tmp/bs_log_<experiment>.txt /workspace/screenshots/bs_log_<experiment>.txt
+  # (if lftp-get /tmp/bs_log_<experiment>.txt was done first)
+  ```
+  The historical log archive at `/workspace/screenshots/` is a permanent reference. 
+  Every experiment that produces a log MUST have a copy stored there.
+  Use a descriptive experiment-specific name (e.g., `bs_log_exp112_crash.txt`).
 
 **2. `/workspace/.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`** (EVERY test cycle)
 
@@ -143,6 +177,70 @@ Before reporting to the user:
 
 **See also:** [[research-index-update]] for keeping RESEARCH_INDEX.md in sync.
 
+
+## Tool Persistence Rule
+**Any installed tool, SDK, runtime, or prerequisite MUST be persisted in the devcontainer definition** so the toolset survives a container rebuild.
+
+### Required approach:
+1. **For tools installable via script**: Add installation commands to `/workspace/.devcontainer/setup_devcontainer.sh`. This runs on every container creation.
+2. **For pre-compiled binaries**: Store the download and extraction in the setup script. Cache the zip/tarball at `/workspace/.tools/<tool-name>/` if size permits.
+3. **For experimental scripts**: NEVER put utility scripts in `/tmp/`. All utility scripts must be:
+   - Created at `/workspace/scripts/development/<script-name>`
+   - Documented in `/workspace/scripts/development/index.md`
+   - Staged and committed with the related experiment
+4. **For large analysis output** (IL2CPP dumps >10MB): Store key findings in the knowledge base instead of committing raw output. Keep the raw output in a non-committed directory (e.g., `/workspace/il2cpp_output/`).
+
+### Currently persisted tools:
+| Tool | Location in Workspace | Installed By |
+|------|----------------------|--------------|
+| .NET SDK 6.0 | `/workspace/dotnet/` | `setup_devcontainer.sh` |
+| Il2CppDumper v6.7.46 | `/workspace/Il2CppDumper/` | `setup_devcontainer.sh` |
+| Il2CPP dump output | `/workspace/il2cpp_output/` (gitignored) | run `scripts/development/regen_il2cpp_dump.sh` |
+
+### When a new tool is installed:
+- Update this table
+- Add installation to `setup_devcontainer.sh`
+- Add `.gitignore` entries for any large binary outputs
+
+## Plugin Version Increment Rule
+**ANY change to `main.cpp` or the plugin's hook logic REQUIRES a version increment.**
+
+The plugin version is defined at the top of `/workspace/beat_saber_deluxe/src/main.cpp`:
+```cpp
+#define PLUGIN_VERSION "v0.57"
+```
+
+### Versioning convention:
+- **Plugin version** (`main.cpp`): Increment MINOR version (v0.N → v0.N+1) for ANY change to plugin behavior. The plugin and pipeline share the same version counter but track independently — plugin increments when its code changes, pipeline increments when the toolset in `tools/` or `development/` changes.
+- **Pipeline version** (`beat_saber_deluxe/VERSION`): Increment when pipeline/toolset scripts change.
+- **Plugin != pipeline**: These are separate and can diverge (e.g., plugin v0.58 + pipeline v0.50).
+
+### Required Documents to Maintain
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| CHANGELOG-PLUGIN.md | `beat_saber_deluxe/CHANGELOG-PLUGIN.md` | Plugin version history |
+| CHANGELOG-PIPELINE.md | `beat_saber_deluxe/CHANGELOG-PIPELINE.md` | Pipeline version history |
+| CI_RELEASE.md | `beat_saber_deluxe/CI_RELEASE.md` | Release instructions referenced by CI workflow |
+| experiment_log.md | `.ai_memory/.../experiment_log.md` | Experiment tracking |
+| project_summary.md | `.agent/project_summary.md` | Project status overview |
+| roadmap.md | `.agent/roadmap.md` | Task tracking |
+
+Each changelog/document entry should include:
+- Version number and date
+- Type: added/fixed/changed
+- Relevant experiment numbers
+
+**Changelogs + CI_RELEASE.md are part of every release** — update them BEFORE creating a tag.
+
+### Checklist before staging main.cpp:
+1. [ ] Was `main.cpp` modified? → increment `PLUGIN_VERSION`
+2. [ ] Was plugin behavior changed? → increment `PLUGIN_VERSION` (if not already done)
+3. [ ] Is the version consistent with the experiment log and summary? → update them too
+4. [ ] Were changelogs + CI_RELEASE.md updated? (CHANGELOG-PLUGIN.md + CHANGELOG-PIPELINE.md + CI_RELEASE.md)
+5. [ ] Was the plugin deployed? → version in the notification must match `PLUGIN_VERSION`
+
+This prevents the misleading situation where "v0.57" is deployed but has completely different code than what was tested as v0.57.
 
 ## Git Etiquette
 - The agent NEVER runs `git commit`. Stage only, present message for user review.

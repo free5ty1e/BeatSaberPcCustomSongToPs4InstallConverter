@@ -12,6 +12,9 @@
 - [x] Lapped audio detection and generation
 - [x] 12-song redirect table in plugin (all Rolling Stones slots)
 - [x] Beatmap filename fallback — handles all BeatSaver naming conventions (5-tier priority)
+- [x] Song metadata management (`--song-name`/`--artist` flags, combined "Name / Artist" format)
+- [x] BeatSaver slot ID resolution via `beat_saber_song_ids.json`
+- [x] Integration test suite (34 tests covering FSB5, V2→V3, redirect config, metadata, song IDs)
 
 ## M1.5 — Dynamic Configuration & Pipeline Audit
 
@@ -36,11 +39,15 @@
 - [x] BPMInfo.dat eb too small — beatmap scan now cross-checks BPMInfo.dat (v0.52c)
 
 ## M2 — Song Metadata & Database (In Progress)
-- [x] `beat_saber_song_ids.json` — 306 official songs cataloged
+- [x] `beat_saber_song_ids.json` — official songs cataloged (reference file)
 - [x] Song name/artist/mapper extraction from `resources.assets` (22 base songs)
 - [x] Song testing log document (`song_testing_log.md`)
 - [ ] Difficulty metadata extraction from all 306 bundles
-- [ ] DLC song name extraction from addressables packs
+- [x] DLC song name extraction from addressables packs — BeatmapLevelSO objects found in `aa/PS4/therollingstones_pack_assets_all_*.bundle` (Exp 111)
+- [ ] DLC song `BeatmapCharacteristicSO` references — need to locate OneSaber/90Degree PIDs in external CAB `CAB-cb38b3e2985c65d4cf8a63437da74a89` (Exp 111)
+- [x] ~~Memory injection metadata patching~~ → **DEAD END** (v0.66–v0.8024, 14+ versions, 0 strings found)
+- [x] **TextMeshPro UI hooking** — v0.8035 proven working, replaces text in pause menu, song details, song artist
+- [x] **v0.8036** External `song_metadata.json` — replaces hardcoded replacement table
 
 ## M3 — Note Color Customization (Planned)
 - [ ] Research how BeatmapLevel defines left/right note box colors
@@ -49,11 +56,68 @@
 - [ ] Inject custom color scheme into the song's data structures
 - [ ] Test color injection on PS4
 
-## M4 — Advanced Song Manipulation (Planned)
-- [ ] Modify existing song entries in the in-game song list
-- [ ] Add new songs to existing album packs
-- [ ] Create custom album pack definition
-- [ ] Modify beatmap characteristics (OneSaber, 90-degree, 360-degree, NoArrows)
+## M4 — Advanced Song Manipulation (In Progress / Partially Blocked)
+
+### Objective
+Add mode selector buttons (OneSaber, 90Degree) and change song display info for custom songs on PS4.
+
+### Completed
+- [x] Per-song `_difficultyBeatmapSets` modification — `add_mode_characteristics()` function added to pipeline (Exp 110) ✅
+- [x] **Root cause found — ALL pack bundle approaches blocked by CRC check (Exp 136):**
+  - Addressables catalog `m_ExtraDataString` contains per-bundle CRC32 + file size + MD5 hash
+  - `m_UseCrcForCachedBundles: true` enables validation at load time
+  - Any modified bundle fails CRC check → CE-34878-0 crash
+  - Catalog is plain JSON (not AssetBundle) → AFR plugin cannot redirect it
+- [x] All IL2CPP hook approaches conclusively dead (Exp 117-131):
+  - Constructor hook: never fires for Addressables-deserialized objects
+  - `get_DisplayName`/`get_songName`: inlined by IL2CPP — hook never fires
+  - `SetData`/`SetContent`: never reached or crashes
+  - ms_abi calling convention fix applied — no improvement
+- [x] UnityPy approaches all dead:
+  - `bf.save("original")` — produces incompatible CAB format (+4 bytes)
+  - `cab.save()` — same incompatibility
+  - `save_typetree()` — silently ignores BeatmapLevelSO modifications
+- [x] Manual bundle building code corrected (LZ4HC flag=3, separate writes, explicit alignment)
+- [x] Per-song bundle mode selector built and deployed (`startmeup_custom_v3_modes.bundle` with OneSaber,90Degree)
+- [x] **Modes bundle content verified:** 3 `_difficultyBeatmapSets` (Standard, OneSaber, 90Degree) each with 5 difficulties ✅
+- [x] **Modes redirect fixed:** `BeatmapLevelsData/startmeup` now points to modes bundle (was pointing to non-modes bundle)
+
+### Blocked — NOW UNBLOCKED by Memory Injection
+- [x] ~~Song name/artist display change~~ → **SOLVED** via memory injection (patches BeatmapLevelSO in RAM, bypasses catalog CRC entirely)
+- [x] ~~All pack bundle modification approaches~~ → **SOLVED** via memory injection (no pack bundle modification needed)
+- [x] ~~IL2CPP hooks for display string interception~~ → **SOLVED** via heap scanning + klass pointer matching (not hooks)
+- [x] ~~No known way to bypass or redirect the catalog~~ → **SOLVED** — lazy CRC validation gives window for RAM patching
+
+### In Progress — Memory Injection Testing
+- [ ] ~~**(v0.75)** Wide-range pattern scan (1GB–32GB) finds BeatmapLevelSO klass~~ → **DEAD END** (v0.8024)
+- [ ] ~~**(v0.75+)** Verify object patching~~ → **DEAD END** — strings not found in any memory region
+- [ ] ~~**(v0.75+)** Address timing~~ → **DEAD END** — strings not in memory at any scan time
+- [ ] ~~**(v0.75+)** Verify field offsets~~ → **DEAD END** — approach abandoned
+- [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
+- [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
+
+### TextMeshPro UI Hooking (PROVEN WORKING — v0.8040)
+- [x] **(v0.8026–v0.8031)** Hook infrastructure — module discovery, DetourMode_x64, retry logic
+- [x] **(v0.8031)** Hook fires correctly, no crash
+- [x] **(v0.8033)** Signal-protected string extraction — matches found!
+- [x] **(v0.8034)** Phase 3 string replacement — pause menu PERFECT, song list partially works
+- [x] **(v0.8035)** Fix song details "?" issue — removed free() on replacement strings (use-after-free fix)
+- [x] **(v0.8036)** External `song_metadata.json` — replaces hardcoded replacement table, loaded from PS4
+- [x] **(v0.8037)** SetText hook — second hook for `TMP_Text.SetText(string, bool)` at RVA `0x2D3E1D0`
+- [x] **(v0.8038)** SetDataFromLevelAsync hook — FAILED: async wrapper inlined, never fires
+- [x] **(v0.8039)** MoveNext() hook — WORKS! Modifies BeatmapLevel fields before state machine reads them. 21/32 songs correct, 11 had case mismatches.
+- [x] **(v0.8040)** Case fix + song IDs pipeline — **ALL 32 SONGS CONFIRMED WORKING** ✅
+- [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) ✅ (v0.5305)
+- [ ] **(Future)** Multi-artist pack metadata — Currently blanks original artist globally; need per-field tracking
+
+### Song Metadata Feature — COMPLETE (v0.8040)
+- [x] **Evaluate current implementation** — TMP_Text hooks work for details/pause menu, artist blanking works.
+- [x] **SetText hook attempt** (v0.8037) — Hook fires and replaces, but song list re-renders from BeatmapLevelSO, overwriting replacement.
+- [x] **SetDataFromLevelAsync hook** (v0.8038) — Hook target was async trampoline, never fired. Inlined by AsyncVoidMethodBuilder.Start<T>().
+- [x] **MoveNext() hook** (v0.8039) — Modifies BeatmapLevel fields before state machine reads them. 21/32 correct.
+- [x] **Case sensitivity fix** (v0.8040) — Pipeline reads exact game strings from `beat_saber_song_ids.json`. All 32 songs confirmed working.
+- [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) via pipeline (v0.5305) ✅
+- [ ] **(Future)** Multi-artist pack metadata — Need per-field tracking instead of global artist blanking
 
 ## M5 — Polishing (Future)
 - [ ] GUI for song management

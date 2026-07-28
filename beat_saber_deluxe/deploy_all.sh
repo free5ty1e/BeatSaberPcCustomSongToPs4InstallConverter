@@ -99,6 +99,18 @@ else
 fi
 
 echo ""
+echo "📝 Deploying song metadata config..."
+METADATA_FILE="$SCRIPT_DIR/song_metadata.json"
+REMOTE_METADATA="/data/GoldHEN/AFR/CUSA12878/song_metadata.json"
+if [ -f "$METADATA_FILE" ]; then
+    lftp -u anonymous, -p "$PS4_PORT" "$PS4_IP" \
+        -e "put '$METADATA_FILE' -o '$REMOTE_METADATA'; quit" 2>&1 | grep -v "^$"
+    echo "  ✅ song_metadata.json deployed"
+else
+    echo "  ⚠️  song_metadata.json not found at $METADATA_FILE"
+fi
+
+echo ""
 # ── Step 3: Clear PS4 log for next test session ────────────────────────
 echo ""
 echo "🗑️  Clearing PS4 log..."
