@@ -3611,3 +3611,36 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Result:** ✅ **335 tests passing, documentation current**
 - **Version:** v0.5306
 - **Status:** ✅ Documentation and testing complete
+
+### Experiment 160: v0.5307 + v0.8041 — Beatmap Mode Mapping Phase 1
+- **Date:** 2026-07-28
+- **What:** Implemented Phase 1 of beatmap mode mapping feature (auto-detect custom song beatmap modes, map to game characteristic slots). All changes staged but not committed.
+  - `detect_song_modes()`: scans song directory for `.dat`/`.json` beatmap files, classifies by mode suffix (e.g. `Expert360Degree.dat`→360Degree) and prefix (e.g. `OneSaberExpert.dat`→OneSaber)
+  - `build_mode_mapping()`: resolves 5 game slots (Standard, OneSaber, NoArrows, 90Degree, 360Degree) with configurable fallback chain (default: 360Degree→NoArrows→Standard, NoArrows→Standard, etc.)
+  - `apply_mode_mapping()`: injects mode characteristic sets into BeatmapLevel via `add_mode_characteristics()` (clones Standard beatmaps for all modes — Phase 1)
+  - CLI flags: `--enable-beatmap-mode-mapping`, `--fallback-mode-map SRC=DEST`
+  - Feature flag: `enable_beatmap_mode_mapping` in DEFAULT_FEATURES + `features.json` + `g_feature_beatmap_mode_mapping` in plugin `main.cpp`
+  - 22 unit tests (TestDetectSongModes:12, TestBuildModeMapping:10) + 4 integration tests (TestBeatmapModeMappingIntegration)
+  - All 361 tests passing (up from 335)
+  - Created `docs/features/beatmap-mode-mapping.md`
+  - Scanned all 306 official PS4 song bundles with UnityPy — 94 songs have non-Standard modes (OneSaber:68, 360Degree:36, 90Degree:36, Legacy:25, NoArrows:17)
+  - Added `characteristicModes` field to all 305 songs in `beat_saber_song_ids.json`
+  - Updated roadmap with M5: No Arrows, One Saber, 90 Degree mode generators
+- **Result:** ✅ **Phase 1 implementation COMPLETE — 361 tests passing, pipeline builds bundles with 5 mode sets**
+- **Version:** Pipeline v0.5307, Plugin v0.8041
+- **Status:** ✅ Code complete, staged for commit, awaiting user approval + PS4 deploy test
+
+### Experiment 161: v0.5307 — Build drop pop candy with --enable-beatmap-mode-mapping (PRE-DEPLOY)
+- **Date:** 2026-07-28
+- **What:** Built `drop pop candy` (Reol) as startmeup replacement with `--enable-beatmap-mode-mapping` to test Phase 1 mode injection. Song has actual 360DegreeExpert.dat + 90DegreeExpert.dat alongside Standard (Easy–ExpertPlus).
+  - Audio: PCM16 FSB5, 39,568,005 bytes, 224.3s
+  - Beatmaps: 5/5 replaced (V2→V3 converted all Standard)
+  - Detected modes: Standard (5 diffs), **360Degree** (Expert), **90Degree** (Expert)
+  - Enabled modes: Standard, OneSaber, NoArrows, **90Degree**, **360Degree** (5 mode sets injected)
+  - Bundle: `startmeup_custom.bundle` (39,570,295 bytes)
+  - `redirects.json` updated: `BeatmapLevelsData/startmeup → startmeup_v3`
+  - `song_metadata.json` updated: `'Start Me Up' → 'drop pop candy / Reol'`
+- **Result:** 🔲 **PENDING PS4 TEST — bundle built, PS4 not reachable for deploy**
+- **Key Takeaway:** Pipeline correctly detected non-Standard beatmap files (360DegreeExpert.dat, 90DegreeExpert.dat) and enabled them via `build_mode_mapping()`. Only Standard beatmap data is used (Phase 1 clones Standard); unique 360Degree/90Degree beatmap data is present in song_dir but not yet compiled into per-mode TextAssets (Phase 2).
+- **Version:** Pipeline v0.5307
+- **Status:** 🔲 **Bundle ready, awaiting PS4 deploy + test**

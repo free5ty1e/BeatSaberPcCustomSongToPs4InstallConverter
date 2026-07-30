@@ -1,8 +1,8 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-26
-**Status:** ✅ **Song metadata modification PROVEN WORKING (v0.8040).** All 32 songs replaced correctly — case sensitivity fix confirmed. MoveNext() hook modifies BeatmapLevel fields before UI renders. Next test: Camellia Music Pack replacement.
+**Last Updated:** 2026-07-28
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 1 COMPLETE (v0.5307/v0.8041).** All changes staged but awaiting user commit approval. `drop pop candy` bundle built with 5 mode sets — pending PS4 deploy + test.
 
-## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline (v0.8040)
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
 **Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found.
 

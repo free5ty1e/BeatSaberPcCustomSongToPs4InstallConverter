@@ -1,33 +1,29 @@
+## drop pop candy Replacement (PENDING PS4 TEST — 2026-07-28)
 
-## Espresso Replacement (PENDING TEST — 2026-07-17)
-
-**Status:** Bundle built and deployed, AWAITING USER TEST
+**Status:** Bundle built, **AWAITING DEPLOY + TEST**
 
 **Song Details:**
-- **Display Name:** EspressoCustomBeatmapLevel
-- **Artist:** Sabrina Carpenter
-- **BPM:** 126.5
-- **Level ID:** custom/espresso
-- **Modes:** Standard, OneSaber, NoArrows, 90Degree, 360Degree (5 modes)
+- **Display Name:** drop pop candy / Reol
+- **Artist:** Reol
+- **BPM:** 130
+- **Level ID:** custom/drop_pop_candy
+- **Modes:** Standard, OneSaber, NoArrows, **90Degree**, **360Degree** (5 modes — 90Degree + 360Degree detected from actual beatmap files)
 
-**Bundle File:** `rollingstones_pack_patched.bundle`
-- Size: 7,905,515 bytes (+2,712 from original)
-- CRC: `0xdc8b314f` ✅ (matches Addressables catalog)
+**Bundle File:** `custom_songs/startmeup_custom.bundle`
+- Size: 39,570,295 bytes
+- Audio: PCM16 FSB5, 224.3s
 
-**Redirect Config:**
-```json
-"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c": "rollingstones_pack_patched.bundle"
-```
+**Redirect:** `BeatmapLevelsData/startmeup → startmeup_v3`
 
 **Test Plan:**
-1. Launch Beat Saber Deluxe
-2. Navigate to Rolling Stones pack → Espresso song
-3. Verify: custom display name, artist, 5 modes visible in selector
-4. If crash: check ps4_bs_log.txt for CE-34878-0 or m_BundleSize validation error
+1. Deploy: `python3 full_custom_song_pipeline.py --song-dir songs_repo/50e4c2101cc079a98f88e80aa7091e60bb6d1d31 --target startmeup --pcm16 --no-pad --convert-to-v3 --enable-beatmap-mode-mapping --deploy --generate-config --deploy-config`
+2. Launch Beat Saber Deluxe
+3. Navigate to Rolling Stones pack → Start Me Up (now drop pop candy)
+4. Select song → **check if mode selector shows OneSaber, NoArrows, 90Degree, 360Degree buttons**
+5. Try playing in 90Degree and 360Degree modes (they have actual .dat files)
+6. If crash: check PS4 log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
 
 **Notes:**
-- This is the first attempt at modifying the Rolling Stones pack bundle to add display metadata and mode support
-- Previous attempts (Exp 136-142) all failed due to Addressables catalog CRC validation
-- Exp 142 achieved CRC matching but crashed — likely due to size validation or invalid pathIDs
-- If this test fails, next approach: uncompressed block injection (zero size impact) + GF(2) CRC correction
-
+- Phase 1 only clones Standard beatmap assets — all modes play Standard's difficulty patterns
+- 90Degree and 360Degree Expert beatmaps exist in song_dir but are NOT yet compiled into unique TextAssets (Phase 2 work)
+- This is the first test of `--enable-beatmap-mode-mapping` on PS4 hardware

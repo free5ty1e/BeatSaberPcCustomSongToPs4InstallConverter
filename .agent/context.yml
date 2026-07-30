@@ -123,6 +123,6 @@ pitfalls:
   - Song IDs case sensitivity: game uses different casing than BeatSaver; use beat_saber_song_ids.json
   - Redirect keys MUST have BeatmapLevelsData/ prefix (plugin uses strstr())
   - PCM16 output is lossless but larger — always use --no-pad
-  - V3 beatmap field: "c" for note color (not "a" which is V2)
+  - V3 beatmap uses field 'c' for note color (not 'a' which is V2)
   - Song metadata: artist is intentionally blanked for single-artist packs; name+artist combined on name line
   - Bundle naming: deployed as {target}_v3 (not just {target})
