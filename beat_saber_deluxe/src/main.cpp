@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8041"
+#define PLUGIN_VERSION "v0.8042"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -324,6 +324,339 @@ HOOK_INIT(hook_tmp_text_set_text);
 HOOK_INIT(hook_tmp_text_set_text2);
 HOOK_INIT(hook_move_next);
 static int g_tmp_text_set_text_count = 0;
+
+// ── Phase 2: Beatmap Mode Preview Data Memory Injection ──────────────────────
+// Patches BeatmapLevelSO._previewDifficultyBeatmapSets at runtime to add
+// OneSaber, NoArrows, 90Degree, 360Degree mode entries. Triggered once from
+// MoveNext hook when first custom song's song cell renders (pack bundle loaded).
+// Memory scanning with signal-safe probing -- won't crash on invalid addresses.
+// ---------------------------------------------------------------------------
+// BeatmapLevelSO field offsets (from il2cpp dump.cs TypeDefIndex 11680):
+//   0x18: _version (int32_t)
+//   0x20: _levelID (string*)
+//   0x98: _previewDifficultyBeatmapSets (PreviewDifficultyBeatmapSet[]*)
+// PreviewDifficultyBeatmapSet field offsets (TypeDefIndex 11677):
+//   0x10: _beatmapCharacteristic (BeatmapCharacteristicSO*)
+//   0x18: _previewDifficultyBeatmaps (PreviewDifficultyBeatmap[]*)
+// BeatmapCharacteristicSO field offsets (TypeDefIndex 11575):
+//   0x30: _serializedName (string*)
+// PreviewDifficultyBeatmap struct: 9 x int32 fields = 36 bytes
+// Il2CppSZArray header: 0x00 klass(8) 0x08 monitor(8) 0x10 bounds(8) 0x18 max_length(8) 0x20 data[]
+// ---------------------------------------------------------------------------
+#define MODE_SCAN_LOW_START  0x1000000ULL    // 16MB
+#define MODE_SCAN_LOW_END    0x100000000ULL  // 4GB
+#define MODE_SCAN_HIGH_START 0x200000000ULL  // 8GB
+#define MODE_SCAN_HIGH_END   0x210000000ULL  // 8.25GB
+#define MODE_SCAN_STEP       0x10000ULL      // 64KB pages
+#define MODE_SCAN_STRIDE     32              // 32-byte stride within page
+#define BLS_OFFSET_VERSION   0x18
+#define BLS_OFFSET_LEVEL_ID  0x20
+#define BLS_OFFSET_PREVIEW   0x98
+#define PDS_OFFSET_CHAR      0x10
+#define PDS_OFFSET_DIFFS     0x18
+#define BCS_OFFSET_SER_NAME  0x30
+#define ARR_OFFSET_LENGTH    0x18
+#define ARR_OFFSET_DATA      0x20
+#define PREVIEW_DIFF_SIZE    36
+
+static int g_mode_preview_done = 0;
+static sigjmp_buf g_mode_jmpbuf;
+
+static void mode_fault_handler(int sig, struct __siginfo* info, void* ucp) {
+    (void)sig; (void)info; (void)ucp;
+    siglongjmp(g_mode_jmpbuf, 1);
+}
+
+static int mode_try_read(uint64_t addr, void* buf, size_t size) {
+    struct sigaction old_segv, old_bus, sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.__sa_handler.__sa_sigaction = mode_fault_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGSEGV, &sa, &old_segv);
+    sigaction(SIGBUS, &sa, &old_bus);
+    int ok = 0;
+    if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
+        memcpy(buf, (void*)addr, size);
+        ok = 1;
+    }
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
+    return ok;
+}
+
+static int mode_extract_string(void* str_obj, char* out, int out_size) {
+    if (!str_obj || (uint64_t)str_obj < 0x1000000ULL) { out[0] = '\0'; return 0; }
+    struct sigaction old_segv, old_bus, sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.__sa_handler.__sa_sigaction = mode_fault_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGSEGV, &sa, &old_segv);
+    sigaction(SIGBUS, &sa, &old_bus);
+    int result = 0;
+    if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
+        int len_10 = *(int*)((char*)str_obj + 0x10);
+        int len_14 = *(int*)((char*)str_obj + 0x14);
+        int len = (len_10 > 0 && len_10 < 256 && len_14 == 0) ? len_10 : len_14;
+        if (len > 0 && len < out_size) {
+            uint16_t* chars = (uint16_t*)((char*)str_obj + (len == len_10 ? 0x14 : 0x18));
+            for (int i = 0; i < len; i++) out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
+            out[len] = '\0';
+            result = len;
+        }
+    } else { out[0] = '\0'; }
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
+    return result;
+}
+
+// Find the first BeatmapLevelSO klass by scanning for a known levelID string.
+// Returns the klass address (all BeatmapLevelSO share the same klass) or 0.
+static uint64_t mode_find_beatmap_level_so_klass(const char* anchor_level_id) {
+    uint64_t result_klass = 0;
+    for (int r = 0; r < 2 && result_klass == 0; r++) {
+        uint64_t start = (r == 0) ? MODE_SCAN_LOW_START : MODE_SCAN_HIGH_START;
+        uint64_t end   = (r == 0) ? MODE_SCAN_LOW_END   : MODE_SCAN_HIGH_END;
+        uint8_t page[MODE_SCAN_STEP];
+        for (uint64_t page_addr = start; page_addr < end; page_addr += MODE_SCAN_STEP) {
+            if (!mode_try_read(page_addr, page, MODE_SCAN_STEP)) continue;
+            for (uint64_t off = 0; off < MODE_SCAN_STEP - 64; off += MODE_SCAN_STRIDE) {
+                uint64_t k = *(uint64_t*)(page + off);
+                if ((k < 0x80000000ULL || k > 0x90000000ULL) &&
+                    (k < 0x200000000ULL || k > 0x210000000ULL)) continue;
+                int ver = *(int*)(page + off + BLS_OFFSET_VERSION);
+                if (ver < 1 || ver > 50) continue;
+                uint64_t lid = *(uint64_t*)(page + off + BLS_OFFSET_LEVEL_ID);
+                if (lid < 0x1000000ULL) continue;
+                uint64_t sn = *(uint64_t*)(page + off + 0x28);
+                if (sn < 0x1000000ULL) continue;
+                uint64_t an = *(uint64_t*)(page + off + 0x38);
+                if (an < 0x1000000ULL) continue;
+                char lid_buf[128];
+                if (!mode_extract_string((void*)lid, lid_buf, sizeof(lid_buf))) continue;
+                if (strcmp(lid_buf, anchor_level_id) == 0) {
+                    result_klass = k;
+                    return result_klass;
+                }
+            }
+        }
+    }
+    return result_klass;
+}
+
+// Collect all BeatmapLevelSO objects matching a known klass address.
+static int mode_collect_beatmap_level_sos(
+    uint64_t klass,
+    uint64_t* out_addrs, char out_ids[][128], int max_count)
+{
+    int count = 0;
+    uint8_t page[MODE_SCAN_STEP];
+    for (int r = 0; r < 2 && count < max_count; r++) {
+        uint64_t start = (r == 0) ? MODE_SCAN_LOW_START : MODE_SCAN_HIGH_START;
+        uint64_t end   = (r == 0) ? MODE_SCAN_LOW_END   : MODE_SCAN_HIGH_END;
+        for (uint64_t page_addr = start; page_addr < end && count < max_count; page_addr += MODE_SCAN_STEP) {
+            if (!mode_try_read(page_addr, page, MODE_SCAN_STEP)) continue;
+            for (uint64_t off = 0; off < MODE_SCAN_STEP - 64 && count < max_count; off += MODE_SCAN_STRIDE) {
+                uint64_t k = *(uint64_t*)(page + off);
+                if (k != klass) continue;
+                uint64_t lid = *(uint64_t*)(page + off + BLS_OFFSET_LEVEL_ID);
+                if (lid < 0x1000000ULL) continue;
+                int ver = *(int*)(page + off + BLS_OFFSET_VERSION);
+                if (ver < 1 || ver > 50) continue;
+                uint64_t sn = *(uint64_t*)(page + off + 0x28);
+                uint64_t an = *(uint64_t*)(page + off + 0x38);
+                if (sn < 0x1000000ULL || an < 0x1000000ULL) continue;
+                char lid_buf[128];
+                if (!mode_extract_string((void*)lid, lid_buf, sizeof(lid_buf))) continue;
+                out_addrs[count] = page_addr + off;
+                strncpy(out_ids[count], lid_buf, 127);
+                out_ids[count][127] = '\0';
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+// Find all 5 BeatmapCharacteristicSO by scanning near a known one for matching klass.
+static int mode_find_characteristic_sos(uint64_t standard_charso, uint64_t out[5]) {
+    memset(out, 0, 5 * sizeof(uint64_t));
+    uint64_t klass = 0;
+    if (!mode_try_read(standard_charso, &klass, 8)) return -1;
+    out[0] = standard_charso;
+    const char* names[4] = {"OneSaber", "NoArrows", "90Degree", "360Degree"};
+    uint64_t base = standard_charso;
+    uint64_t scan_start = (base > 0x200000) ? base - 0x200000 : MODE_SCAN_HIGH_START;
+    uint64_t scan_end = base + 0x200000;
+    uint8_t page[MODE_SCAN_STEP];
+    for (uint64_t addr = scan_start; addr < scan_end; addr += MODE_SCAN_STEP) {
+        if (!mode_try_read(addr, page, MODE_SCAN_STEP)) continue;
+        for (uint64_t off = 0; off < MODE_SCAN_STEP - 64; off += 8) {
+            if (addr + off == base) continue;
+            uint64_t k = *(uint64_t*)(page + off);
+            if (k != klass) continue;
+            uint64_t sn_ptr = 0;
+            if (off + BCS_OFFSET_SER_NAME + 8 <= MODE_SCAN_STEP) {
+                sn_ptr = *(uint64_t*)(page + off + BCS_OFFSET_SER_NAME);
+            } else {
+                mode_try_read(addr + off + BCS_OFFSET_SER_NAME, &sn_ptr, 8);
+            }
+            if (sn_ptr < 0x1000000ULL) continue;
+            char name[64];
+            if (!mode_extract_string((void*)sn_ptr, name, sizeof(name))) continue;
+            for (int i = 0; i < 4; i++) {
+                if (out[i+1] == 0 && strcmp(name, names[i]) == 0) {
+                    out[i+1] = addr + off;
+                    break;
+                }
+            }
+            int all = 1;
+            for (int i = 0; i < 5; i++) if (out[i] == 0) { all = 0; break; }
+            if (all) return 5;
+        }
+    }
+    int found = 0;
+    for (int i = 0; i < 5; i++) if (out[i]) found++;
+    return found;
+}
+
+// Patch one BeatmapLevelSO to have 5 mode preview sets.
+static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t char_sos[5]) {
+    char logbuf[256];
+    uint64_t existing_arr = 0;
+    if (!mode_try_read(bsl_addr + BLS_OFFSET_PREVIEW, &existing_arr, 8)) return -1;
+    if (existing_arr < 0x1000000ULL) return -1;
+    uint64_t first_set_ptr = 0;
+    if (!mode_try_read(existing_arr + ARR_OFFSET_DATA, &first_set_ptr, 8)) return -1;
+    if (first_set_ptr < 0x1000000ULL) return -1;
+    uint64_t standard_diffs = 0;
+    mode_try_read(first_set_ptr + PDS_OFFSET_DIFFS, &standard_diffs, 8);
+    if (standard_diffs < 0x1000000ULL) return -1;
+    uint64_t diff_count = 0;
+    mode_try_read(standard_diffs + ARR_OFFSET_LENGTH, &diff_count, 8);
+    if (diff_count == 0 || diff_count > 10) return -1;
+    uint64_t set_klass = 0, arr_klass = 0;
+    mode_try_read(first_set_ptr, &set_klass, 8);
+    mode_try_read(existing_arr, &arr_klass, 8);
+    // Build 5 PreviewDifficultyBeatmapSet objects
+    size_t set_size = 0x20;
+    uint8_t* sets = (uint8_t*)malloc(5 * set_size);
+    if (!sets) return -1;
+    memset(sets, 0, 5 * set_size);
+    for (int i = 0; i < 5; i++) {
+        uint8_t* s = sets + i * set_size;
+        *(uint64_t*)(s + 0x00) = set_klass;
+        *(uint64_t*)(s + PDS_OFFSET_CHAR) = char_sos[i];
+        size_t diff_arr_size = ARR_OFFSET_DATA + diff_count * PREVIEW_DIFF_SIZE;
+        uint8_t* da = (uint8_t*)malloc(diff_arr_size);
+        if (!da) continue;
+        mode_try_read(standard_diffs, da, diff_arr_size);
+        *(uint64_t*)(s + PDS_OFFSET_DIFFS) = (uint64_t)da;
+    }
+    // Build new Il2CppSZArray (5 element pointers)
+    size_t arr_size = ARR_OFFSET_DATA + 5 * 8;
+    uint8_t* new_arr = (uint8_t*)malloc(arr_size);
+    if (!new_arr) { free(sets); return -1; }
+    memset(new_arr, 0, arr_size);
+    *(uint64_t*)(new_arr + 0x00) = arr_klass;
+    *(uint64_t*)(new_arr + ARR_OFFSET_LENGTH) = 5;
+    for (int i = 0; i < 5; i++)
+        *(uint64_t*)(new_arr + ARR_OFFSET_DATA + i * 8) = (uint64_t)(sets + i * set_size);
+    // Atomic replace
+    *(uint64_t*)(bsl_addr + BLS_OFFSET_PREVIEW) = (uint64_t)new_arr;
+    snprintf(logbuf, sizeof(logbuf), "[MODE] Patched '%s': added 5 preview sets", level_id);
+    log_write(logbuf);
+    return 5;
+}
+
+// Main orchestrator: find klass, collect BSL objects, find charSOs, patch matching.
+static void mode_patch_all(const char* first_custom_level_id) {
+    if (g_mode_preview_done) return;
+    char logbuf[256];
+    log_write("[MODE] Starting BeatmapLevelSO memory scan...");
+    uint64_t klass = mode_find_beatmap_level_so_klass(first_custom_level_id);
+    if (!klass) {
+        log_write("[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet");
+        g_mode_preview_done = -1;
+        return;
+    }
+    snprintf(logbuf, sizeof(logbuf), "[MODE] BeatmapLevelSO klass=0x%lX", klass);
+    log_write(logbuf);
+    // Collect all BeatmapLevelSO objects
+    enum { MAX_BSL = 64 };
+    uint64_t bsl_addrs[MAX_BSL];
+    char bsl_level_ids[MAX_BSL][128];
+    int bsl_count = mode_collect_beatmap_level_sos(klass, bsl_addrs, bsl_level_ids, MAX_BSL);
+    snprintf(logbuf, sizeof(logbuf), "[MODE] Found %d BeatmapLevelSO objects", bsl_count);
+    log_write(logbuf);
+    if (bsl_count == 0) { g_mode_preview_done = -1; return; }
+    // Find BeatmapCharacteristicSO objects from last BeatmapLevelSO's Standard entry
+    uint64_t char_sos[5] = {0};
+    for (int i = bsl_count - 1; i >= 0 && char_sos[4] == 0; i--) {
+        uint64_t existing_arr = 0;
+        if (!mode_try_read(bsl_addrs[i] + BLS_OFFSET_PREVIEW, &existing_arr, 8)) continue;
+        if (existing_arr < 0x1000000ULL) continue;
+        uint64_t first_set_ptr = 0;
+        if (!mode_try_read(existing_arr + ARR_OFFSET_DATA, &first_set_ptr, 8)) continue;
+        if (first_set_ptr < 0x1000000ULL) continue;
+        uint64_t standard_charso = 0;
+        if (!mode_try_read(first_set_ptr + PDS_OFFSET_CHAR, &standard_charso, 8)) continue;
+        if (standard_charso < 0x1000000ULL) continue;
+        if (mode_find_characteristic_sos(standard_charso, char_sos) >= 5) {
+            snprintf(logbuf, sizeof(logbuf), "[MODE] Found 5 BeatmapCharacteristicSO via '%s'", bsl_level_ids[i]);
+            log_write(logbuf);
+            break;
+        }
+    }
+    if (char_sos[0] == 0) {
+        log_write("[MODE] Failed to find BeatmapCharacteristicSO objects");
+        g_mode_preview_done = -1;
+        return;
+    }
+    // Patch custom songs (levelID starts with "custom/")
+    int patched = 0;
+    for (int i = 0; i < bsl_count; i++) {
+        if (strncmp(bsl_level_ids[i], "custom/", 7) != 0) continue;
+        if (mode_patch_one_bsl(bsl_addrs[i], bsl_level_ids[i], char_sos) > 0) patched++;
+    }
+    snprintf(logbuf, sizeof(logbuf), "[MODE] Patch complete: %d custom songs updated", patched);
+    log_write(logbuf);
+    g_mode_preview_done = 1;
+}
+
+// Called from MoveNext hook when first custom song BeatmapLevel is detected
+static void mode_try_patch_from_move_next(void* beatmapLevel) {
+    if (g_mode_preview_done) return;
+    if (!g_feature_beatmap_mode_mapping) return;
+    if (!beatmapLevel) return;
+    void* levelID = *(void**)((char*)beatmapLevel + 0x18);
+    if (!levelID) return;
+    char buf[128] = {0};
+    struct sigaction old_segv, old_bus, sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.__sa_handler.__sa_sigaction = mode_fault_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGSEGV, &sa, &old_segv);
+    sigaction(SIGBUS, &sa, &old_bus);
+    int ok = 0;
+    if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
+        int len_10 = *(int*)((char*)levelID + 0x10);
+        int len_14 = *(int*)((char*)levelID + 0x14);
+        int len = (len_10 > 0 && len_10 < 256 && len_14 == 0) ? len_10 : len_14;
+        if (len > 0 && len < 128) {
+            uint16_t* chars = (uint16_t*)((char*)levelID + (len == len_10 ? 0x14 : 0x18));
+            for (int i = 0; i < len; i++) buf[i] = (chars[i] < 128) ? (char)chars[i] : '?';
+            buf[len] = '\0';
+            ok = 1;
+        }
+    }
+    sigaction(SIGSEGV, &old_segv, NULL);
+    sigaction(SIGBUS, &old_bus, NULL);
+    if (!ok || strncmp(buf, "custom/", 7) != 0) return;
+    char logbuf[256];
+    snprintf(logbuf, sizeof(logbuf), "[MODE] Triggered by custom song levelID='%s'", buf);
+    log_write(logbuf);
+    mode_patch_all(buf);
+}
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)
 struct MethodInfo;
@@ -643,6 +976,9 @@ static void move_next_hook(void* state_machine) {
                     }
                 }
             }
+            // Phase 2 trigger: patch BeatmapLevelSO._previewDifficultyBeatmapSets
+            // Runs once when first custom song is detected (pack bundle is loaded)
+            mode_try_patch_from_move_next(beatmapLevel);
         }
     }
     HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);

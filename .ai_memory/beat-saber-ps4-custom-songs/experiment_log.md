@@ -3644,3 +3644,31 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Key Takeaway:** Pipeline correctly detected non-Standard beatmap files (360DegreeExpert.dat, 90DegreeExpert.dat) and enabled them via `build_mode_mapping()`. Only Standard beatmap data is used (Phase 1 clones Standard); unique 360Degree/90Degree beatmap data is present in song_dir but not yet compiled into per-mode TextAssets (Phase 2).
 - **Version:** Pipeline v0.5307
 - **Status:** 🔲 **Bundle ready, awaiting PS4 deploy + test**
+
+### Experiment 162: v0.8042 — Phase 2: BeatmapLevelSO Memory Injection for Mode Preview Data
+- **Date:** 2026-07-30
+- **What:** Implemented memory injection to patch BeatmapLevelSO._previewDifficultyBeatmapSets in RAM at runtime, bypassing Addressables catalog CRC validation.
+  - Added heap scanning (16MB-4GB + 8-8.25GB ranges) for BeatmapLevelSO objects via pattern matching (klass range + version 1-50 + valid string pointers)
+  - Added BeatmapCharacteristicSO finder: scans memory near Standard SO for objects with same klass, validates by extracting serializedName at offset 0x30
+  - Added preview set builder: constructs new Il2CppSZArray with 5 PreviewDifficultyBeatmapSet entries, each referencing the correct BeatmapCharacteristicSO, cloned from Standard's preview difficulties
+  - Trigger: fires once from MoveNext hook when first custom song levelID (starting with "custom/") is detected
+  - All memory reads are signal-protected (SIGSEGV/SIGBUS handlers) to prevent crashes on invalid addresses
+  - All heap allocations use malloc() — Boehm GC scans these conservatively
+  - Plugin built successfully at 105,632 bytes
+  - Gated behind g_feature_beatmap_mode_mapping (enable_beatmap_mode_mapping flag, already in features.json)
+- **Result:** 🔲 **PENDING PS4 TEST — plugin built, needs deploy + game test**
+- **Key Takeaway:** Phase 1 (per-song bundle _difficultyBeatmapSets) controls gameplay data. Phase 2 (pack bundle BeatmapLevelSO._previewDifficultyBeatmapSets via memory injection) controls the mode selector UI. Both are now implemented.
+- **Version:** Plugin v0.8042
+- **Status:** 🔲 **Plugin ready for PS4 deploy + test**
+
+### Experiment 163: Deploy drop pop candy + v0.8042 plugin
+- **Date:** 2026-07-30
+- **What:** Deployed drop pop candy bundle (startmeup_v3, 39.6MB) with all 5 _difficultyBeatmapSets from Phase 1, and v0.8042 plugin with Phase 2 memory injection for BeatmapLevelSO._previewDifficultyBeatmapSets.
+  - PS4 reached via FTP, bundle and plugin deployed successfully
+  - redirects.json, features.json, song_metadata.json deployed
+  - Plugin notification showed correct version number
+- **Result:** ✅ **DEPLOYED — awaiting user test of mode selector**
+  - User tested: startmeup showed drop pop candy as the custom song. Song plays fine. Mode selector still showed only Standard.
+  - Plugin notification showed v0.8040 (old plugin). Need to ensure v0.8042 is deployed.
+- **Version:** Pipeline v0.5307, Plugin v0.8042
+- **Status:** 🔲 **Re-deploy needed with v0.8042 plugin — then test if mode selector appears**

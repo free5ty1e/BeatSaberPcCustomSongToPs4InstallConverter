@@ -4,6 +4,15 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8042] — 2026-07-30
+### Added
+- Phase 2: BeatmapLevelSO memory injection for mode preview data
+- Scans IL2CPP heap for BeatmapLevelSO objects matching custom song levelID
+- Finds all 5 BeatmapCharacteristicSO by klass matching + serializedName validation
+- Builds new _previewDifficultyBeatmapSets array with 5 mode entries at runtime
+- Triggers once from MoveNext hook when first custom song cell renders
+- Gated behind g_feature_beatmap_mode_mapping (enable_beatmap_mode_mapping flag)
+
 ## [v0.8041] — 2026-07-28
 ### Added
 - **Feature flag `g_feature_beatmap_mode_mapping`** — parsed from `features.json` `enable_beatmap_mode_mapping` key. No runtime behavior in this release (pipeline-side only in v0.5307). Gating scaffold for Phase 2 (plugin runtime mode injection).
