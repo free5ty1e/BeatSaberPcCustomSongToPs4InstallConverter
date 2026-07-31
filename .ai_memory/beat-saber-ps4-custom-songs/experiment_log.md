@@ -3672,3 +3672,23 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Plugin notification showed v0.8040 (old plugin). Need to ensure v0.8042 is deployed.
 - **Version:** Pipeline v0.5307, Plugin v0.8042
 - **Status:** 🔲 **Re-deploy needed with v0.8042 plugin — then test if mode selector appears**
+
+### Experiment 164: v0.8043 — Fix Mode Scan Trigger + Worker Thread
+- **Date:** 2026-07-31
+- **What:** User tested v0.8042 (notification showed v0.8042, correct). Navigated to Start Me Up — mode selector still showed only Standard. Pulled `bs_log.txt`:
+  - Feature flag `beatmap_mode_mapping=ON` confirmed at startup.
+  - MoveNext hook fired 22+ times (metadata replacement working) but **ZERO `[MODE]` entries** — the scan never ran.
+- **Root cause (2 bugs):**
+  1. **Trigger never fired** — `mode_try_patch_from_move_next()` required runtime `BeatmapLevel.levelID` (offset 0x18) to start with `"custom/"`. But the runtime BeatmapLevel is created from the pack's BeatmapLevelSO, so its levelID is the ORIGINAL pack ID (e.g. "StartMeUp"), never `custom/...`.
+  2. **Patch filter would have skipped everything** — `mode_patch_all()` only patched BeatmapLevelSO whose `_levelID` starts with `"custom/"`. Pack BeatmapLevelSO objects carry the original levelIDs too.
+- **Fix (v0.8043):**
+  - Trigger fires on ANY song BeatmapLevel from MoveNext (custom check removed).
+  - `mode_find_beatmap_level_so_klass()` is now structural (no levelID anchor): klass-range + version 1-50 + valid 0x20/0x28/0x38 string pointers + new `mode_preview_arr_ok()` validation of the `_previewDifficultyBeatmapSets` array at 0x98 (array klass in range, length 1-10, first set with valid characteristic + diffs pointers). Same guard added to the collector to reject false positives.
+  - All found BeatmapLevelSO objects are patched (every pack on this PS4 is fully custom).
+  - Scan moved to a **detached pthread** (`mode_scan_worker`) so the UI thread never blocks (history: v0.73/v0.8013 full scans froze the game for minutes).
+  - Added `-lpthread` to Makefile; logs every found BSL levelID/address.
+  - Plugin built (105,696 bytes) and deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx`.
+  - 361 tests passing (plugin change only).
+- **Key Takeaway:** On this setup, pack `BeatmapLevelSO` objects and runtime `BeatmapLevel` objects both use ORIGINAL levelIDs — `custom/` levelIDs exist only inside our pipeline-built metadata blobs, which are NOT injected (UnityPy limitation). Historical v0.77 pattern scan found 17 candidates matching (klass-range + version + 3 string ptrs) in 16MB–4GB; our `mode_extract_string` handles both 0x10/0x14 length offsets so those candidates should now validate — the v0.8043 scan will confirm.
+- **Version:** Plugin v0.8043
+- **Status:** 🔲 **Awaiting user test: restart game, open Start Me Up, check mode selector for OneSaber/NoArrows/90Degree/360Degree. Then pull bs_log.txt for [MODE] entries.**

@@ -1,12 +1,16 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-07-28
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 1 COMPLETE (v0.5307/v0.8041).** All changes staged but awaiting user commit approval. `drop pop candy` bundle built with 5 mode sets — pending PS4 deploy + test.
+**Last Updated:** 2026-07-31
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8043).** Mode selector test: v0.8042 scan never ran (trigger + filter bugs fixed in v0.8043). Awaiting user test of Start Me Up mode selector with v0.8043.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
-**Memory injection is DEAD.** After 14+ versions scanning every memory region (16MB–17GB), 0 strings found.
+**The old string-content memory injection (v0.66–v0.8024) is DEAD** — 0 strings found across 16MB–17GB.
 
-**Working approach:** Hook `MoveNext()` of the `SetDataFromLevelAsync` state machine (RVA 0x1D377C0). Modifies `BeatmapLevel.songName`/`songAuthorName` in-place before the original code reads them. Pipeline reads exact game strings from `beat_saber_song_ids.json` to ensure correct casing.
+**Working approach (metadata):** Hook `MoveNext()` of the `SetDataFromLevelAsync` state machine (RVA 0x1D377C0). Modifies `BeatmapLevel.songName`/`songAuthorName` in-place before the original code reads them. Pipeline reads exact game strings from `beat_saber_song_ids.json` to ensure correct casing.
+
+**Mode mapping (Phase 1 + Phase 2):**
+- **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Controls gameplay data. ✅ Deployed and playing.
+- **Phase 2 (plugin v0.8043):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–4GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime, in a background pthread. NOTE: this is DIFFERENT from the dead string-scan injection — it does not need to find arbitrary strings, only structurally-valid BeatmapLevelSO objects.
 
 ### Known Limitation (v0.8040)
 - **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.
@@ -122,6 +126,11 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **156** | **v0.8040** | **Full validation: 32/32 songs replaced correctly** | **✅ SUCCESS — Camellia Music Pack replacement identified as next test target.** |
 | **157** | **v0.5304** | **CI/CD Infrastructure fix** | **✅ Fixed failing Ruff lint pipeline error.** |
 | **158** | **v0.5305** | **Camellia Pack Replacement** | **✅ SUCCESS — All 6 Camellia DLC songs replaced with custom songs and deployed.** |
+| 160 | v0.5307+v0.8041 | Beatmap Mode Mapping Phase 1 (pipeline) | ✅ 361 tests pass; detects modes, injects 5 _difficultyBeatmapSets per song |
+| 161 | v0.5307 | drop pop candy build (modes) | 🔲 Bundle built with 5 mode sets, awaiting deploy |
+| 162 | v0.8042 | Phase 2: BeatmapLevelSO memory injection | 🔲 Plugin built; mode selector UI patch via RAM |
+| 163 | v0.8042 | Deploy + user test | ❌ Song shows/metadata fine, mode selector still Standard-only; old plugin ran |
+| **164** | **v0.8043** | **Fix scan trigger + filter + worker thread** | **🔲 Scan never fired (levelID not "custom/"); now fires on any MoveNext, structural klass find, worker thread. Deployed — awaiting test** |
 
 ## Memory Injection Versions
 
@@ -161,10 +170,12 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Investigate "?" in song details** — `create_il2cpp_string()` works for pause menu but shows "?" for song details name. Possible encoding or klass mismatch.
-2. **Selective replacement** — Currently replaces in ALL TMP_Text calls. Need pointer tracking to identify song name vs artist fields specifically.
-3. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
-4. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
+1. **Test v0.8043 mode selector** — restart game, open Start Me Up, check for OneSaber/NoArrows/90Degree/360Degree in mode selector. Pull `bs_log.txt` for `[MODE]` entries (klass found, N BSL objects, levelIDs, patch complete).
+2. **If scan finds 0 BSL objects** — the structural klass find failed (stride 32 may miss object alignment, or objects not in 16MB–4GB/8–8.25GB). Adjust stride to 8 and/or add ranges.
+3. **If scan finds BSLs but no 5 BeatmapCharacteristicSO** — widen the ±2MB neighbor scan or find charSOs from a known pack.
+4. **If mode selector appears** — test 90Degree/360Degree gameplay (Phase 1 uses Standard patterns; unique .dat beatmap data still needs per-mode TextAsset compilation — roadmap M5).
+5. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
+6. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
 
 ## Active Knowledge Gaps
 
