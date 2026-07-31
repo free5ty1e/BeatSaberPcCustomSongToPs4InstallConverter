@@ -47,6 +47,7 @@ metadata:
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
 - [[song-metadata-addressables-structure|Song Metadata & Addressables Structure (incl. CRC Blocker)]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, **CRC validation discovery (Exp 136)**, IL2CPP hook targets (all dead)
 - [[il2cpp-dump-mode-selector-hook|IL2CPP Dump & Mode Selector Hook]] — BeatmapLevelSO class layout, get_previewDifficultyBeatmapSets at RVA 0x988E80, field offsets, hook implementation plan
+- [[structural-beatmaplevelso-scan|Structural BeatmapLevelSO Scan]] — 🔵 **CURRENT (v0.8044+)** — Find/patch BeatmapLevelSO in RAM via structural signature (klass range + version + string ptrs + preview array). Thread-safety rules (v0.8043 crash: worker thread + process-wide SIGSEGV handlers = instant crash).
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
 - [[supported-songs|Supported Songs]] — Catalog of official and custom songs
 - [[addressables-crc-validation-timing|Addressables CRC Validation Timing]] — When CRC validation happens (lazy vs eager)

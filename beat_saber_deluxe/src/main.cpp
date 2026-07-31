@@ -13,14 +13,13 @@
 #include <string.h>
 #include <setjmp.h>
 #include <signal.h>
-#include <pthread.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <dlfcn.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8043"
+#define PLUGIN_VERSION "v0.8044"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -361,40 +360,59 @@ static int g_tmp_text_set_text_count = 0;
 #define PREVIEW_DIFF_SIZE    36
 
 static int g_mode_preview_done = 0;
-static volatile int g_mode_worker_started = 0;
 static sigjmp_buf g_mode_jmpbuf;
+static struct sigaction g_old_segv, g_old_bus;
+static int g_mode_handlers_installed = 0;
 
 static void mode_fault_handler(int sig, struct __siginfo* info, void* ucp) {
     (void)sig; (void)info; (void)ucp;
     siglongjmp(g_mode_jmpbuf, 1);
 }
 
-static int mode_try_read(uint64_t addr, void* buf, size_t size) {
-    struct sigaction old_segv, old_bus, sa;
+// Install the SIGSEGV/SIGBUS handlers ONCE for the duration of the whole scan
+// (not per page read) — this is the proven-safe pattern from v0.74-v0.8008:
+// the scan runs synchronously on the game thread, so no other thread can be
+// hijacked by our process-wide handlers while they are installed.
+static void mode_install_handlers(void) {
+    if (g_mode_handlers_installed) return;
+    struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.__sa_handler.__sa_sigaction = mode_fault_handler;
     sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGSEGV, &sa, &old_segv);
-    sigaction(SIGBUS, &sa, &old_bus);
+    sigaction(SIGSEGV, &sa, &g_old_segv);
+    sigaction(SIGBUS, &sa, &g_old_bus);
+    g_mode_handlers_installed = 1;
+}
+
+static void mode_restore_handlers(void) {
+    if (!g_mode_handlers_installed) return;
+    sigaction(SIGSEGV, &g_old_segv, NULL);
+    sigaction(SIGBUS, &g_old_bus, NULL);
+    g_mode_handlers_installed = 0;
+}
+
+static int mode_try_read(uint64_t addr, void* buf, size_t size) {
     int ok = 0;
+    if (g_mode_handlers_installed) {
+        if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
+            memcpy(buf, (void*)addr, size);
+            ok = 1;
+        }
+        return ok;
+    }
+    mode_install_handlers();
     if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
         memcpy(buf, (void*)addr, size);
         ok = 1;
     }
-    sigaction(SIGSEGV, &old_segv, NULL);
-    sigaction(SIGBUS, &old_bus, NULL);
+    mode_restore_handlers();
     return ok;
 }
 
 static int mode_extract_string(void* str_obj, char* out, int out_size) {
     if (!str_obj || (uint64_t)str_obj < 0x1000000ULL) { out[0] = '\0'; return 0; }
-    struct sigaction old_segv, old_bus, sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.__sa_handler.__sa_sigaction = mode_fault_handler;
-    sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGSEGV, &sa, &old_segv);
-    sigaction(SIGBUS, &sa, &old_bus);
     int result = 0;
+    if (!g_mode_handlers_installed) mode_install_handlers();
     if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
         int len_10 = *(int*)((char*)str_obj + 0x10);
         int len_14 = *(int*)((char*)str_obj + 0x14);
@@ -406,8 +424,7 @@ static int mode_extract_string(void* str_obj, char* out, int out_size) {
             result = len;
         }
     } else { out[0] = '\0'; }
-    sigaction(SIGSEGV, &old_segv, NULL);
-    sigaction(SIGBUS, &old_bus, NULL);
+    if (!g_mode_handlers_installed) mode_restore_handlers();
     return result;
 }
 
@@ -523,8 +540,10 @@ static int mode_find_characteristic_sos(uint64_t standard_charso, uint64_t out[5
     out[0] = standard_charso;
     const char* names[4] = {"OneSaber", "NoArrows", "90Degree", "360Degree"};
     uint64_t base = standard_charso;
-    uint64_t scan_start = (base > 0x200000) ? base - 0x200000 : MODE_SCAN_HIGH_START;
-    uint64_t scan_end = base + 0x200000;
+    // Scan ±16MB around the Standard charSO — all characteristic SOs come from
+    // the same shared asset bundle, so they land near each other in the heap.
+    uint64_t scan_start = (base > 0x1000000) ? base - 0x1000000 : MODE_SCAN_HIGH_START;
+    uint64_t scan_end = base + 0x1000000;
     uint8_t page[MODE_SCAN_STEP];
     for (uint64_t addr = scan_start; addr < scan_end; addr += MODE_SCAN_STEP) {
         if (!mode_try_read(addr, page, MODE_SCAN_STEP)) continue;
@@ -607,12 +626,17 @@ static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t 
 }
 
 // Main orchestrator: find klass, collect BSL objects, find charSOs, patch all.
+// Runs synchronously on the game thread (v0.74-v0.8008-proven pattern). The
+// game thread is paused for ~1-2s while the scan runs; handlers are installed
+// once for the whole scan and restored before returning to the game.
 static void mode_patch_all(void) {
     char logbuf[256];
+    mode_install_handlers();
     log_write("[MODE] Starting BeatmapLevelSO memory scan...");
     uint64_t klass = mode_find_beatmap_level_so_klass();
     if (!klass) {
         log_write("[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet");
+        mode_restore_handlers();
         g_mode_preview_done = -1;
         return;
     }
@@ -625,7 +649,7 @@ static void mode_patch_all(void) {
     int bsl_count = mode_collect_beatmap_level_sos(klass, bsl_addrs, bsl_level_ids, MAX_BSL);
     snprintf(logbuf, sizeof(logbuf), "[MODE] Found %d BeatmapLevelSO objects", bsl_count);
     log_write(logbuf);
-    if (bsl_count == 0) { g_mode_preview_done = -1; return; }
+    if (bsl_count == 0) { mode_restore_handlers(); g_mode_preview_done = -1; return; }
     // Log every found levelID for diagnostics
     for (int i = 0; i < bsl_count; i++) {
         snprintf(logbuf, sizeof(logbuf), "[MODE]   BSL[%d] levelID='%s' @0x%lX", i, bsl_level_ids[i], bsl_addrs[i]);
@@ -651,6 +675,7 @@ static void mode_patch_all(void) {
     }
     if (char_sos[0] == 0) {
         log_write("[MODE] Failed to find BeatmapCharacteristicSO objects");
+        mode_restore_handlers();
         g_mode_preview_done = -1;
         return;
     }
@@ -661,38 +686,22 @@ static void mode_patch_all(void) {
     }
     snprintf(logbuf, sizeof(logbuf), "[MODE] Patch complete: %d BeatmapLevelSO objects updated", patched);
     log_write(logbuf);
+    mode_restore_handlers();
     g_mode_preview_done = 1;
 }
 
-// Worker thread body — runs the scan in the background so the game UI thread
-// never blocks. Signal handlers for SIGSEGV/SIGBUS are installed/restored
-// per protected read (mode_try_read), and siglongjmp only returns within the
-// calling thread, so the worker cannot corrupt the game thread's context.
-static void* mode_scan_worker(void* arg) {
-    (void)arg;
-    log_write("[MODE] Scan worker started");
-    mode_patch_all();
-    log_write("[MODE] Scan worker finished");
-    return NULL;
-}
-
 // Called from MoveNext hook when a song BeatmapLevel is first detected.
-// Triggers the one-time background scan that patches BeatmapLevelSO
-// _previewDifficultyBeatmapSets (pack bundle UI data).
+// Triggers the one-time synchronous scan that patches BeatmapLevelSO
+// _previewDifficultyBeatmapSets (pack bundle UI data). Runs on the game
+// thread; the game pauses briefly. Never run from a worker thread — the
+// process-wide SIGSEGV/SIGBUS handlers would hijack the game's own GC page
+// protection faults on the main thread and crash the process (v0.8043).
 static void mode_try_patch_from_move_next(void* beatmapLevel) {
     if (g_mode_preview_done) return;
-    if (g_mode_worker_started) return;
     if (!g_feature_beatmap_mode_mapping) return;
     if (!beatmapLevel) return;
-    g_mode_worker_started = 1;
-    log_write("[MODE] Triggered from MoveNext -- spawning scan worker");
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, mode_scan_worker, NULL) == 0) {
-        pthread_detach(tid);
-    } else {
-        g_mode_worker_started = 0;
-        log_write("[MODE] Failed to create scan worker thread");
-    }
+    log_write("[MODE] Triggered from MoveNext -- running synchronous scan");
+    mode_patch_all();
 }
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)

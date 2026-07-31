@@ -4,15 +4,22 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8044] — 2026-07-31
+### Fixed
+- **Instant crash when entering Solo song list (v0.8043 regression)** — the background scan worker thread installed process-wide SIGSEGV/SIGBUS handlers; while they were active, the game's own GC page-protection faults on the main thread were hijacked and `siglongjmp`'d into the worker's stack → instant crash. Reverted to the proven v0.74–v0.8008 pattern: **synchronous scan on the game thread** inside the MoveNext hook (game pauses ~1-2s once).
+- **Per-page sigaction overhead removed** — handlers are now installed once via `mode_install_handlers()` for the whole scan and restored once by `mode_restore_handlers()`; `mode_try_read()`/`mode_extract_string()` take the fast path when handlers are already installed.
+### Changed
+- Removed the pthread worker thread and `-lpthread` from the Makefile.
+- Widened BeatmapCharacteristicSO neighbor scan from ±2MB to ±16MB (characteristic SOs live in a shared bundle and may be farther apart).
+
 ## [v0.8043] — 2026-07-31
 ### Fixed
 - **Mode scan trigger never fired** — v0.8042 required the runtime `BeatmapLevel.levelID` to start with `"custom/"`, but it is the original pack ID (e.g. "StartMeUp"). Trigger now fires on ANY song `BeatmapLevel` from the MoveNext hook.
 - **Patch filter skipped everything** — v0.8042 only patched `BeatmapLevelSO` objects whose `_levelID` starts with `"custom/"`; pack `BeatmapLevelSO` objects carry original IDs. Now ALL found `BeatmapLevelSO` objects are patched (every pack on this PS4 is fully custom).
 ### Changed
 - **Klass discovery is structural, not anchored** — `mode_find_beatmap_level_so_klass()` no longer needs a known levelID; it finds the first object matching klass-range + version 1-50 + valid `_levelID`/`_songName`/`_songAuthorName` pointers + a structurally valid `_previewDifficultyBeatmapSets` array (new `mode_preview_arr_ok()` guard, also applied in the collector to reject false positives).
-- **Scan moved to a background worker thread** — `mode_try_patch_from_move_next()` spawns a detached pthread (`mode_scan_worker`) instead of scanning synchronously in the MoveNext hook, so the game UI thread never blocks (previous full scans caused multi-minute freezes).
-- Added `-lpthread` to Makefile LIBS.
 - Added diagnostic logging of every found BeatmapLevelSO levelID/address.
+- ⚠️ **NOT USER-TESTABLE — instant crash when entering Solo** (worker-thread signal hijack). Superseded by v0.8044.
 
 ## [v0.8042] — 2026-07-30
 ### Added

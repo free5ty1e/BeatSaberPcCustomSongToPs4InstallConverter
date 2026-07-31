@@ -8,7 +8,7 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8043"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
+plugin_version: "0.8044"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
 pipeline_version: "0.5307" # in beat_saber_deluxe/VERSION
 
 # Platform Constraints
@@ -54,10 +54,12 @@ slot_note: >
 plugin_features:
   - open() hook: redirects file reads to AFR custom bundles
   - MoveNext() hook (RVA 0x1D377C0): modifies BeatmapLevel fields for song name/artist
-  - Mode mapping Phase 2 (v0.8042+): background-thread memory scan (16MB-4GB + 8-8.25GB)
+  - Mode mapping Phase 2 (v0.8044+): synchronous in-hook memory scan (16MB-4GB + 8-8.25GB)
     finds BeatmapLevelSO objects and atomically replaces _previewDifficultyBeatmapSets (0x98)
     with 5 mode entries so the mode selector UI shows OneSaber/NoArrows/90Degree/360Degree.
     Fires once from MoveNext on any BeatmapLevel; klass found structurally (no levelID anchor).
+    MUST run synchronously on the game thread (v0.8043 crash: worker thread + process-wide
+    SIGSEGV handlers hijacked the game's GC page-protection faults -> instant crash).
   - Features gated via features.json at AFR path
 feature_flags:
   enable_custom_song_replacements: false  # gates bundle redirects

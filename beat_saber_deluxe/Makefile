@@ -20,7 +20,7 @@ else
   TARGET := beat_saber_deluxe.prx
 endif
 
-LIBS := -lGoldHEN_Hook -lSceLibcInternal -lkernel -lpthread
+LIBS := -lGoldHEN_Hook -lSceLibcInternal -lkernel
 LDFLAGS := -m elf_x86_64 -pie -e _init --script link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib $(LIBS)
 
 _unused := $(shell mkdir -p $(INTDIR))

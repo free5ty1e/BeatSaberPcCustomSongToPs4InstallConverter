@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-31
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8043).** Mode selector test: v0.8042 scan never ran (trigger + filter bugs fixed in v0.8043). Awaiting user test of Start Me Up mode selector with v0.8043.
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8044).** v0.8043 crashed instantly (worker-thread signal hijack); v0.8044 reverts to the proven synchronous in-hook scan. Awaiting user test of Start Me Up mode selector.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
@@ -10,7 +10,7 @@
 
 **Mode mapping (Phase 1 + Phase 2):**
 - **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Controls gameplay data. ✅ Deployed and playing.
-- **Phase 2 (plugin v0.8043):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–4GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime, in a background pthread. NOTE: this is DIFFERENT from the dead string-scan injection — it does not need to find arbitrary strings, only structurally-valid BeatmapLevelSO objects.
+- **Phase 2 (plugin v0.8044):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–4GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. Runs **synchronously** in the MoveNext hook (NOT a worker thread — v0.8043 crash lesson), with SIGSEGV/SIGBUS handlers installed once per scan. NOTE: this is DIFFERENT from the dead string-scan injection — it does not need to find arbitrary strings, only structurally-valid BeatmapLevelSO objects.
 
 ### Known Limitation (v0.8040)
 - **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.
@@ -130,7 +130,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 161 | v0.5307 | drop pop candy build (modes) | 🔲 Bundle built with 5 mode sets, awaiting deploy |
 | 162 | v0.8042 | Phase 2: BeatmapLevelSO memory injection | 🔲 Plugin built; mode selector UI patch via RAM |
 | 163 | v0.8042 | Deploy + user test | ❌ Song shows/metadata fine, mode selector still Standard-only; old plugin ran |
-| **164** | **v0.8043** | **Fix scan trigger + filter + worker thread** | **🔲 Scan never fired (levelID not "custom/"); now fires on any MoveNext, structural klass find, worker thread. Deployed — awaiting test** |
+| 164 | v0.8043 | Fix scan trigger + filter + worker thread | 🔲 Scan never fired (levelID not "custom/"); now fires on any MoveNext, structural klass find, worker thread. Deployed — awaiting test |
+| **165** | **v0.8043 test** | **User test — Solo entry** | **❌ INSTANT CRASH — worker thread's process-wide SIGSEGV handlers hijacked the game's GC page-protection faults on the main thread (siglongjmp to worker stack)** |
+| **166** | **v0.8044** | **Synchronous scan (revert worker)** | **🔲 Handlers installed once for whole scan, scan runs in MoveNext hook on game thread (v0.74-proven). Deployed — awaiting test** |
 
 ## Memory Injection Versions
 

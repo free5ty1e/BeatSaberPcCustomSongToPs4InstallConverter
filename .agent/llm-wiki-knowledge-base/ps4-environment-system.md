@@ -45,3 +45,31 @@ Custom environment names from BeatSaver (e.g., `FHMPlat`, `Kwangya_Portal`) do n
 
 - [[toolchain-and-build]] — For UABEA and asset patching tools
 - [[assetbundle-structure]] — For how AssetBundles are structured
+
+---
+
+## PS4 Process Signal Handling — CRITICAL (Exp 165, 2026-07-31)
+
+**Never install process-wide SIGSEGV/SIGBUS handlers (for memory probing) from a background/worker thread in a game hook. Doing so crashes the game instantly.**
+
+### Why
+
+- `sigaction()` signal dispositions are **per-process**, not per-thread.
+- Unity's garbage collector (and other subsystems) use page-protection signals (SIGSEGV/SIGBUS via mprotect) internally for write barriers / dirty tracking.
+- While our handlers are installed, a GC page-protection fault on the **main game thread** is delivered to *our* handler → it calls `siglongjmp()` to the **worker thread's** `sigjmp_buf` → the main thread resumes executing in the worker's stack frame → catastrophic corruption → instant crash back to the PS4 menu, no error.
+
+### Evidence
+
+| Version | Approach | Result |
+|---------|----------|--------|
+| v0.74–v0.8008 | Synchronous scan in hook, persistent handlers | ✅ Found 17 candidates, no crash |
+| v0.8043 | Scan in detached pthread, per-call sigaction | ❌ Instant crash on entering Solo song list (GC active) |
+| v0.8044 | Synchronous scan in hook, persistent handlers | 🔲 Reverted to proven pattern, awaiting test |
+
+### Rules
+
+1. **Probing must run on the game thread**, synchronously inside the hook (game is paused, so its own handlers can't be hijacked).
+2. Install the SIGSEGV/SIGBUS handlers **once** for the whole scan (`mode_install_handlers()`), restore **once** (`mode_restore_handlers()`) before returning to the game — per-call sigaction is slow and widens the window.
+3. `sigsetjmp`/`siglongjmp` must be set up and executed on the **same thread** (a `sigjmp_buf` is thread-stack-scoped).
+4. Accept a brief UI pause (~1-2s) while the scan runs; it beats a crash. (A 4GB scan at 64KB pages with signal-based fault probing ≈ 1-2s.)
+5. This complements the older lesson: **background threads created from hooks are unsafe** (v0.8016, `scePthreadCreate`).

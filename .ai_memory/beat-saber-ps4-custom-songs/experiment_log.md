@@ -3692,3 +3692,30 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Key Takeaway:** On this setup, pack `BeatmapLevelSO` objects and runtime `BeatmapLevel` objects both use ORIGINAL levelIDs — `custom/` levelIDs exist only inside our pipeline-built metadata blobs, which are NOT injected (UnityPy limitation). Historical v0.77 pattern scan found 17 candidates matching (klass-range + version + 3 string ptrs) in 16MB–4GB; our `mode_extract_string` handles both 0x10/0x14 length offsets so those candidates should now validate — the v0.8043 scan will confirm.
 - **Version:** Plugin v0.8043
 - **Status:** 🔲 **Awaiting user test: restart game, open Start Me Up, check mode selector for OneSaber/NoArrows/90Degree/360Degree. Then pull bs_log.txt for [MODE] entries.**
+
+### Experiment 165: v0.8043 — INSTANT CRASH on entering Solo song list
+- **Date:** 2026-07-31
+- **What:** User tested v0.8043 (notification showed v0.8043). Navigated to Solo to load the song list → **instant crash back to PS4 game menu**, no error notification.
+- **Diagnosis (bs_log.txt `v0.8043_crash_solo.txt`):** Last entries:
+  ```
+  [MODE] Triggered from MoveNext -- spawning scan worker
+  [MODE] Scan worker started
+  [MODE] Starting BeatmapLevelSO memory scan...
+  ```
+  Crash occurred at the FIRST page read of the scan.
+- **Root cause:** The background scan worker thread installed **process-wide** SIGSEGV/SIGBUS handlers (sigaction is per-process, not per-thread). While installed, the game's own GC page-protection faults on the **main thread** were delivered to `mode_fault_handler` → `siglongjmp` to the **worker thread's jmpbuf/stack** → catastrophic thread corruption → instant crash. The game was entering the song list = heavy allocation = GC actively using page-protection signals at that exact moment.
+- **Key Takeaway:** v0.8016's lesson ("scePthreadCreate in hook unsafe") applies to ANY background thread that installs process-wide signal handlers. Signal handlers + siglongjmp must run on the same thread that created the jmpbuf, with the game paused (synchronous in-hook scan), as v0.74–v0.8008 proved (17 candidates found, no crash).
+- **Version:** Plugin v0.8043
+- **Status:** ❌ Crash — superseded by v0.8044.
+
+### Experiment 166: v0.8044 — Synchronous scan (revert worker thread)
+- **Date:** 2026-07-31
+- **What:** Fixed v0.8043 crash:
+  - Removed the pthread worker thread + `-lpthread` from Makefile entirely.
+  - `mode_try_patch_from_move_next()` now runs `mode_patch_all()` **synchronously on the game thread** in the MoveNext hook (v0.74–v0.8008-proven pattern). Game pauses ~1-2s once while scanning.
+  - Added `mode_install_handlers()`/`mode_restore_handlers()` — SIGSEGV/SIGBUS handlers installed ONCE for the whole scan, restored once before returning. `mode_try_read()`/`mode_extract_string()` use the fast path (no per-call sigaction) when handlers are already installed.
+  - Widened BeatmapCharacteristicSO neighbor scan ±2MB → ±16MB.
+  - Build 105,568 bytes, deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx` (verified on server: 105568 bytes).
+- **Result:** 🔲 **AWAITING USER TEST — restart game, enter Solo, expect a brief ~1-2s pause while the scan runs, then check Start Me Up mode selector.**
+- **Version:** Plugin v0.8044
+- **Status:** 🔲 **Awaiting user test**

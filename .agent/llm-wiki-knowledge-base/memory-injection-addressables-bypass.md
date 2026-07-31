@@ -7,9 +7,9 @@ metadata:
 
 # Memory Injection — Addressables Catalog Bypass Approach
 
-## 🔴🔴🔴 STATUS: DEAD END — Do Not Pursue (2026-07-23)
+## 🔴🔴🔴 STATUS (2026-07-23): The OLD approach is DEAD — Do Not Pursue
 
-**After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, memory injection is conclusively abandoned.**
+**After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, the string-scan / klass-pointer-scan memory injection is conclusively abandoned.**
 
 ### Why It Failed
 
