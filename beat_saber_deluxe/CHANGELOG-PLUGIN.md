@@ -4,6 +4,16 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8047] — 2026-08-01
+### Changed
+- **Deeper mode-scan diagnostics (v0.8046 test result: all 25,443 candidates failed the preview-array check)** — v0.8046 found 12 candidates but every one was rejected by `mode_preview_arr_ok` (arrfail=25443, strfail=0). Candidate addresses (0x1C2–0x1D5xxxxx) + `lid=0x3BA3D70A...` (packed floats) identified them as **serialized pack-bundle data in RAM, not live managed objects**. v0.8047 changes the scan to prove this:
+  - **v0.77-proven pointer upper bound** — levelID/songName/authorName must be `[16MB, 512GB]` (was unbounded above) to kill float/plain-data false positives (e.g. `0x3BA3D70A3BA3D70A`).
+  - **Reordered checks** — the levelID **string extraction now runs BEFORE the preview-array check** (v0.8046 ran it after, so `strfail` was always 0 and nothing ever hit it).
+  - **Klass-hit bucketing** — counters split `klass(mod)` (0x80000000–0x90000000) vs `klass(8g)` (0x200000000–0x210000000) so the log shows which range produces the false positives.
+  - **`mode_preview_arr_ok` failure breakdown** — now returns a failure stage (1=arrptr, 2=arrklassRd, 3=arrklassRng, 4=len, 5=first, 6=elemKlass, 7=char, 8=diffs); the summary line reports counts per stage and the first 8 failures are logged with the levelID string.
+  - **Raw-object dumps** — `[MODE] raw64@0x...` logs the first 64 bytes of up to 4 candidates for manual field-offset verification against the DummyDll layout (BLS_OFFSET_* constants may be wrong for v2.04).
+- Version bump v0.8046 → v0.8047. Build 105,120 bytes. 361/361 pytest pass.
+
 ## [v0.8046] — 2026-07-31
 ### Fixed
 - **"BeatmapLevelSO klass not found" (v0.8045 test result)** — v0.8045 no longer crashed (syscall probing confirmed working, `prot=0x3`), but the scan found no valid objects. Two bugs fixed:

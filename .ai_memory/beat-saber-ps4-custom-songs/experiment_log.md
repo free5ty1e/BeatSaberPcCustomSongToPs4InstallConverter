@@ -3753,3 +3753,24 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Key Takeaway:** The signal-free `sceKernelQueryMemoryProtection` approach works (no crash, no stub). The remaining problem is scan coverage + the string-extraction bug, both now addressed with diagnostics to pinpoint rejection.
 - **Version:** Plugin v0.8046
 - **Status:** 🔲 **AWAITING USER TEST — restart game, enter Solo. Pull bs_log.txt; the `[MODE]` diagnostics will show klass/candidate hit counts, and if a klass is found, the collector + patch should run. Modes expected in Start Me Up selector if the klass+charSO+patch chain completes.**
+
+### Experiment 169: v0.8046 TEST — arrfail=25443, candidates are pack-bundle data (→ v0.8047 diagnostics)
+- **Date:** 2026-08-01
+- **Result:** ✅ **NO CRASH** (signal-free scan holds). ❌ No modes in Start Me Up. Entering Solo had a **~1 minute hang** during the scan — acceptable during dev when warned, NOT acceptable for final.
+- **Log:** `/workspace/.ai_memory/experiment_logs/v0.8046_scan_diag_all_arrfail.txt` (838 lines, single clean session — log cleared after pull per workflow rule).
+- **Diagnosis (log analysis):**
+  ```
+  [MODE] cand klass=0x200000000 @0x1C27B60 ver=3 lid=0x600000002
+  [MODE] cand klass=0x200000002 @0x1C27C60 ver=1 lid=0x3BA3D70A3BA3D70A
+  [MODE] cand klass=0x200000001 @0x1C40F40 ver=4 lid=0x400000001
+  ... (12 cand lines, addresses 0x1C2xxxxx–0x1D5xxxxx, lid values = packed floats/ints, NOT pointers)
+  [MODE] Scan diag: ok=7678 klass=979648 ver=43741 ptrs=25443 arrfail=25443 strfail=0
+  [MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet
+  ```
+  - **All 25,443 pointer-valid candidates rejected at `mode_preview_arr_ok`** (arrfail=25443, strfail=0 — string check never reached because v0.8046 ran it AFTER the arr check).
+  - Candidate addresses 0x1C4–0x1D5xxxxx with lid values like `0x3BA3D70A3BA3D70A` (packed IEEE floats, e.g. `0.005f`×`0.005f`) = **serialized pack-bundle data in RAM, not live managed objects**. The loose 3-check klass range + unbounded lid/sn/an upper limit let pure data pass the first three checks.
+  - Scan runs TWICE in the log (duplicate `klass not found` lines at end) — plugin loads twice per launch (multi-game-process/session). Pack bundle may load lazily after Solo render; scan at MoveNext may run before BSL objects exist.
+- **Fix (v0.8047, deployed):** v0.77-proven pointer window `[16MB, 512GB]` for lid/sn/an; string extraction moved BEFORE the arr check; klass hits bucketed `mod` vs `8g`; `mode_preview_arr_ok` returns a failure stage (1–8) with per-stage counts + first-8 detail lines; raw64 dumps of first 4 candidates; scan runs unchanged (16MB–64GB@1MB + 8–8.25GB@64KB). Build 105,120 bytes. 361/361 pytest pass. Deployed + verified (105120 bytes on PS4). Log cleared.
+- **Key Takeaway:** On v2.04, the BeatmapLevelSO heap objects are NOT found at 0x1C2–0x1D5xxxxx — that region is bundle data. v0.8047 will tell us whether tightening the pointer window surfaces real objects, or whether BSL objects live in the 8GB region / don't exist yet at scan time.
+- **Version:** Plugin v0.8047
+- **Status:** 🔲 **AWAITING USER TEST — restart game, enter Solo (~1 min hang during scan, warned). Pull bs_log.txt; expect `[MODE] Scan diag` to show whether `ptrs` (after v0.77 window) is now small, and whether `arrfail` still dominates or string extraction starts rejecting.**

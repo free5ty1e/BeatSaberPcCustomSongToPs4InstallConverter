@@ -41,10 +41,21 @@ BeatmapCharacteristicSO: 0x30 _serializedName (System_String*)
 A BeatmapLevelSO candidate passes ALL of:
 1. klass pointer in range `[0x80000000, 0x90000000]` (module range) or `[0x200000000, 0x210000000]` (8GB klass range)
 2. `_version` (0x18) in `[1, 50]`
-3. `_levelID` (0x20), `_songName` (0x28), `_songAuthorName` (0x38) are valid pointers (`>= 0x1000000`)
-4. `_previewDifficultyBeatmapSets` (0x98) is structurally valid (`mode_preview_arr_ok`): array klass in range, max_length 1-10, first set klass in range, `_beatmapCharacteristic` valid ptr, `_previewDifficultyBeatmaps` valid ptr
+3. `_levelID` (0x20), `_songName` (0x28), `_songAuthorName` (0x38) are valid pointers — **use the v0.77-proven window `[16MB, 512GB]` (`>= 0x1000000` AND `<= 0x8000000000`)**. v0.8046 had no upper bound and every candidate passed; v0.8047 adds it to kill float/plain-data false positives.
+4. `_levelID` extracts to a non-empty string (run string extraction BEFORE the array check — v0.8046 ran it after, so its `strfail` counter was always 0).
+5. `_previewDifficultyBeatmapSets` (0x98) is structurally valid (`mode_preview_arr_ok`): array klass in range, max_length 1-10, first set klass in range, `_beatmapCharacteristic` valid ptr, `_previewDifficultyBeatmaps` valid ptr
 
 The FIRST matching candidate's klass pointer is the BeatmapLevelSO klass (all instances share it). Then collect ALL objects with that exact klass passing the same validation.
+
+## v0.8046 finding: candidate region 0x1C2–0x1D5xxxxx is PACK-BUNDLE DATA, not heap objects (v0.8047)
+
+The v0.8046 scan (no upper pointer bound, string check after array check) logged 12 candidates then `arrfail=25443 strfail=0` — EVERY pointer-valid candidate failed `mode_preview_arr_ok`. The candidates lived at `0x1C2xxxxx–0x1D5xxxxx` with `lid` values like `0x3BA3D70A3BA3D70A` (two packed IEEE floats, e.g. 0.005×0.005) and `0x600000002`. That is **serialized AssetBundle pack data in RAM, not live managed BeatmapLevelSO objects**. The loose klass+version checks + unbounded lid/sn/an let arbitrary bundle bytes pass as "candidates".
+
+**Diagnostic lesson:** an `arrfail` count ≈ 100% with `strfail == 0` and float-valued "pointer" fields means the scan is matching serialized bundle bytes, not managed objects. Tighten the pointer window (v0.77's `[16MB, 512GB]`), run string extraction before the array check, and bucket klass hits by module vs 8GB range.
+
+`mode_preview_arr_ok` returns a failure stage for diagnosis: `1=arrptr, 2=arrklassRd, 3=arrklassRng, 4=len, 5=first, 6=elemKlass, 7=char, 8=diffs`.
+
+Also: the plugin loads **twice per launch** (two `[MODE] sceKernelQueryMemoryProtection verified` lines / duplicate `klass not found` at the end of the log) — multi-game-process/session. And the scan at MoveNext may run before the pack bundle's BSL objects exist in the GC heap.
 
 ## Scan Ranges & Cost
 

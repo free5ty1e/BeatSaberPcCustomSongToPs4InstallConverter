@@ -17,7 +17,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8046"
+#define PLUGIN_VERSION "v0.8047"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -438,31 +438,63 @@ static int mode_extract_string(void* str_obj, char* out, int out_size) {
 // _previewDifficultyBeatmapSets array structure at BLS_OFFSET_PREVIEW:
 // array klass in range, length 1-10, first element with valid
 // characteristic + difficulty-list pointers.
-static int mode_preview_arr_ok(uint64_t bsl_addr) {
+// fail_stage (optional): returns which sub-check failed for diagnostics.
+//   0=passed, 1=arr ptr invalid/unreadable, 2=arr klass unreadable,
+//   3=arr klass out of range, 4=max_length out of range, 5=first elem ptr invalid,
+//   6=elem klass out of range, 7=characteristic ptr invalid, 8=diffs ptr invalid
+static int mode_preview_arr_ok(uint64_t bsl_addr, int* fail_stage) {
+    if (fail_stage) *fail_stage = 0;
     uint64_t arr = 0;
-    if (!mode_try_read(bsl_addr + BLS_OFFSET_PREVIEW, &arr, 8)) return 0;
-    if (arr < 0x1000000ULL) return 0;
+    if (!mode_try_read(bsl_addr + BLS_OFFSET_PREVIEW, &arr, 8)) { if (fail_stage) *fail_stage = 1; return 0; }
+    if (arr < 0x1000000ULL) { if (fail_stage) *fail_stage = 1; return 0; }
     uint64_t arr_klass = 0;
-    if (!mode_try_read(arr, &arr_klass, 8)) return 0;
+    if (!mode_try_read(arr, &arr_klass, 8)) { if (fail_stage) *fail_stage = 2; return 0; }
     if ((arr_klass < 0x80000000ULL || arr_klass > 0x90000000ULL) &&
-        (arr_klass < 0x200000000ULL || arr_klass > 0x210000000ULL)) return 0;
+        (arr_klass < 0x200000000ULL || arr_klass > 0x210000000ULL)) { if (fail_stage) *fail_stage = 3; return 0; }
     uint64_t len = 0;
-    if (!mode_try_read(arr + ARR_OFFSET_LENGTH, &len, 8)) return 0;
-    if (len < 1 || len > 10) return 0;
+    if (!mode_try_read(arr + ARR_OFFSET_LENGTH, &len, 8)) { if (fail_stage) *fail_stage = 4; return 0; }
+    if (len < 1 || len > 10) { if (fail_stage) *fail_stage = 4; return 0; }
     uint64_t first = 0;
-    if (!mode_try_read(arr + ARR_OFFSET_DATA, &first, 8)) return 0;
-    if (first < 0x1000000ULL) return 0;
+    if (!mode_try_read(arr + ARR_OFFSET_DATA, &first, 8)) { if (fail_stage) *fail_stage = 5; return 0; }
+    if (first < 0x1000000ULL) { if (fail_stage) *fail_stage = 5; return 0; }
     uint64_t set_klass = 0;
-    if (!mode_try_read(first, &set_klass, 8)) return 0;
+    if (!mode_try_read(first, &set_klass, 8)) { if (fail_stage) *fail_stage = 6; return 0; }
     if ((set_klass < 0x80000000ULL || set_klass > 0x90000000ULL) &&
-        (set_klass < 0x200000000ULL || set_klass > 0x210000000ULL)) return 0;
+        (set_klass < 0x200000000ULL || set_klass > 0x210000000ULL)) { if (fail_stage) *fail_stage = 6; return 0; }
     uint64_t ch = 0;
-    if (!mode_try_read(first + PDS_OFFSET_CHAR, &ch, 8)) return 0;
-    if (ch < 0x1000000ULL) return 0;
+    if (!mode_try_read(first + PDS_OFFSET_CHAR, &ch, 8)) { if (fail_stage) *fail_stage = 7; return 0; }
+    if (ch < 0x1000000ULL) { if (fail_stage) *fail_stage = 7; return 0; }
     uint64_t diffs = 0;
-    if (!mode_try_read(first + PDS_OFFSET_DIFFS, &diffs, 8)) return 0;
-    if (diffs < 0x1000000ULL) return 0;
+    if (!mode_try_read(first + PDS_OFFSET_DIFFS, &diffs, 8)) { if (fail_stage) *fail_stage = 8; return 0; }
+    if (diffs < 0x1000000ULL) { if (fail_stage) *fail_stage = 8; return 0; }
     return 1;
+}
+
+// Log the first 64 raw bytes at addr as hex — for manual field-offset verification.
+static void mode_log_raw64(uint64_t addr) {
+    char logbuf[200];
+    uint8_t buf[64];
+    if (!mode_try_read(addr, buf, sizeof(buf))) { log_write("[MODE]   raw64: unreadable"); return; }
+    snprintf(logbuf, sizeof(logbuf),
+        "[MODE]   raw64@0x%lX: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X %02X %02X %02X %02X",
+        addr, buf[0],buf[1],buf[2],buf[3],buf[4],buf[5],buf[6],buf[7],
+        buf[8],buf[9],buf[10],buf[11],buf[12],buf[13],buf[14],buf[15]);
+    log_write(logbuf);
+    snprintf(logbuf, sizeof(logbuf),
+        "[MODE]   raw64@0x%lX: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X %02X %02X %02X %02X",
+        addr+16, buf[16],buf[17],buf[18],buf[19],buf[20],buf[21],buf[22],buf[23],
+        buf[24],buf[25],buf[26],buf[27],buf[28],buf[29],buf[30],buf[31]);
+    log_write(logbuf);
+    snprintf(logbuf, sizeof(logbuf),
+        "[MODE]   raw64@0x%lX: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X %02X %02X %02X %02X",
+        addr+32, buf[32],buf[33],buf[34],buf[35],buf[36],buf[37],buf[38],buf[39],
+        buf[40],buf[41],buf[42],buf[43],buf[44],buf[45],buf[46],buf[47]);
+    log_write(logbuf);
+    snprintf(logbuf, sizeof(logbuf),
+        "[MODE]   raw64@0x%lX: %02X %02X %02X %02X %02X %02X %02X %02X | %02X %02X %02X %02X %02X %02X %02X %02X",
+        addr+48, buf[48],buf[49],buf[50],buf[51],buf[52],buf[53],buf[54],buf[55],
+        buf[56],buf[57],buf[58],buf[59],buf[60],buf[61],buf[62],buf[63]);
+    log_write(logbuf);
 }
 
 // Find the BeatmapLevelSO klass by scanning for the first object matching
@@ -471,17 +503,24 @@ static int mode_preview_arr_ok(uint64_t bsl_addr) {
 // All BeatmapLevelSO objects share the same klass, so the first match suffices.
 // Returns the klass address or 0.
 //
-// Scan design (v0.8046):
-//   - Low range 16MB-64GB at 1MB page reads (v0.77-proven: found 17 candidates).
-//   - High range 8-8.25GB at 64KB page reads (dense GC-heap supplement).
-//   - When a page read fails (hole/partial mapping), jump to the next mapping
-//     boundary via sceKernelQueryMemoryProtection instead of stepping every page.
-//   - Diagnostic counters log exactly which structural check rejects candidates.
+// v0.8047 diagnostic build — findings from v0.8046 (all 25,443 ptr-valid
+// candidates failed the preview-array check; candidates were float data in the
+// serialized pack bundle buffer). This build:
+//   - Adds v0.77-proven upper bound on string pointers (<= 512GB) to kill
+//     float-data false positives.
+//   - Validates the levelID string (mode_extract_string) BEFORE the preview
+//     array check — v0.8046 ordered it after, so strfail was always 0.
+//   - Buckets klass hits by module range (0x80000000-0x90000000) vs 8GB range.
+//   - Logs the raw first 64 bytes of a few candidates for manual field-offset
+//     verification against the DummyDll layout (offsets may be wrong).
+//   - Breaks down mode_preview_arr_ok failures by sub-check stage.
 static uint64_t mode_find_beatmap_level_so_klass(void) {
     uint64_t result_klass = 0;
     char logbuf[256];
-    int diag_ok = 0, diag_klass = 0, diag_ver = 0, diag_ptrs = 0, diag_arrfail = 0, diag_strfail = 0;
-    int cand_logged = 0;
+    int diag_ok = 0, diag_klass_mod = 0, diag_klass_8g = 0;
+    int diag_ver = 0, diag_ptrs = 0, diag_strfail = 0, diag_arrfail = 0;
+    int arr_stage[9] = {0};
+    int cand_logged = 0, raw_logged = 0;
     for (int r = 0; r < 2 && result_klass == 0; r++) {
         uint64_t start = (r == 0) ? MODE_SCAN_LOW_START : MODE_SCAN_HIGH_START;
         uint64_t end   = (r == 0) ? MODE_SCAN_LOW_END   : MODE_SCAN_HIGH_END;
@@ -502,25 +541,44 @@ static uint64_t mode_find_beatmap_level_so_klass(void) {
             diag_ok++;
             for (uint64_t off = 0; off + 64 < page_step && result_klass == 0; off += MODE_SCAN_STRIDE) {
                 uint64_t k = *(uint64_t*)(g_mode_scan_page + off);
-                if ((k < 0x80000000ULL || k > 0x90000000ULL) &&
-                    (k < 0x200000000ULL || k > 0x210000000ULL)) continue;
-                diag_klass++;
+                int in_mod = (k >= 0x80000000ULL && k <= 0x90000000ULL);
+                int in_8g  = (k >= 0x200000000ULL && k <= 0x210000000ULL);
+                if (!in_mod && !in_8g) continue;
+                if (in_mod) diag_klass_mod++; else diag_klass_8g++;
                 int ver = *(int*)(g_mode_scan_page + off + BLS_OFFSET_VERSION);
                 if (ver < 1 || ver > 50) continue;
                 diag_ver++;
                 uint64_t lid = *(uint64_t*)(g_mode_scan_page + off + BLS_OFFSET_LEVEL_ID);
                 uint64_t sn  = *(uint64_t*)(g_mode_scan_page + off + 0x28);
                 uint64_t an  = *(uint64_t*)(g_mode_scan_page + off + 0x38);
-                if (lid < 0x1000000ULL || sn < 0x1000000ULL || an < 0x1000000ULL) continue;
+                // v0.77-proven pointer window [16MB, 512GB] kills float data
+                if (lid < 0x1000000ULL || lid > 0x8000000000ULL) continue;
+                if (sn  < 0x1000000ULL || sn  > 0x8000000000ULL) continue;
+                if (an  < 0x1000000ULL || an  > 0x8000000000ULL) continue;
                 diag_ptrs++;
                 if (cand_logged < 12) {
-                    snprintf(logbuf, sizeof(logbuf), "[MODE]   cand klass=0x%lX @0x%lX ver=%d lid=0x%lX", k, page_addr + off, ver, lid);
+                    snprintf(logbuf, sizeof(logbuf), "[MODE]   cand klass=0x%lX @0x%lX ver=%d lid=0x%lX sn=0x%lX an=0x%lX",
+                             k, page_addr + off, ver, lid, sn, an);
                     log_write(logbuf);
                     cand_logged++;
                 }
-                if (!mode_preview_arr_ok(page_addr + off)) { diag_arrfail++; continue; }
+                if (raw_logged < 4) {
+                    mode_log_raw64(page_addr + off);
+                    raw_logged++;
+                }
                 char lid_buf[128];
                 if (!mode_extract_string((void*)lid, lid_buf, sizeof(lid_buf)) || lid_buf[0] == '\0') { diag_strfail++; continue; }
+                if (lid_buf[0] == '\0' || lid_buf[0] == '?') { diag_strfail++; continue; }
+                int stage = 0;
+                if (!mode_preview_arr_ok(page_addr + off, &stage)) {
+                    diag_arrfail++;
+                    if (stage >= 0 && stage < 9) arr_stage[stage]++;
+                    if (diag_arrfail <= 8) {
+                        snprintf(logbuf, sizeof(logbuf), "[MODE]     arrfail stage=%d on '%s' @0x%lX", stage, lid_buf, page_addr + off);
+                        log_write(logbuf);
+                    }
+                    continue;
+                }
                 snprintf(logbuf, sizeof(logbuf), "[MODE] BeatmapLevelSO klass=0x%lX (first via '%s' @0x%lX)", k, lid_buf, page_addr + off);
                 log_write(logbuf);
                 result_klass = k;
@@ -529,8 +587,14 @@ static uint64_t mode_find_beatmap_level_so_klass(void) {
         }
     }
     if (!result_klass) {
-        snprintf(logbuf, sizeof(logbuf), "[MODE] Scan diag: ok=%d klass=%d ver=%d ptrs=%d arrfail=%d strfail=%d",
-                 diag_ok, diag_klass, diag_ver, diag_ptrs, diag_arrfail, diag_strfail);
+        snprintf(logbuf, sizeof(logbuf),
+                 "[MODE] Scan diag: ok=%d klass(mod)=%d klass(8g)=%d ver=%d ptrs=%d strfail=%d arrfail=%d",
+                 diag_ok, diag_klass_mod, diag_klass_8g, diag_ver, diag_ptrs, diag_strfail, diag_arrfail);
+        log_write(logbuf);
+        snprintf(logbuf, sizeof(logbuf),
+                 "[MODE] arr stages(1=arrptr 2=arrklassRd 3=arrklassRng 4=len 5=first 6=elemKlass 7=char 8=diffs): %d/%d/%d/%d/%d/%d/%d/%d",
+                 arr_stage[1], arr_stage[2], arr_stage[3], arr_stage[4],
+                 arr_stage[5], arr_stage[6], arr_stage[7], arr_stage[8]);
         log_write(logbuf);
         log_write("[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet");
     }
@@ -570,7 +634,7 @@ static int mode_collect_beatmap_level_sos(
                 uint64_t sn = *(uint64_t*)(g_mode_scan_page + off + 0x28);
                 uint64_t an = *(uint64_t*)(g_mode_scan_page + off + 0x38);
                 if (sn < 0x1000000ULL || an < 0x1000000ULL) continue;
-                if (!mode_preview_arr_ok(page_addr + off)) continue;
+                if (!mode_preview_arr_ok(page_addr + off, NULL)) continue;
                 char lid_buf[128];
                 if (!mode_extract_string((void*)lid, lid_buf, sizeof(lid_buf))) continue;
                 if (lid_buf[0] == '\0') continue;
