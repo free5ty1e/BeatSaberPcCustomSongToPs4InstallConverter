@@ -63,7 +63,7 @@ Also: the plugin loads **twice per launch** (two `[MODE] sceKernelQueryMemoryPro
 - `8GB (0x200000000) – 8.25GB (0x210000000)` — GC heap supplement; 64KB page reads.
 - When a page read fails (hole/partial mapping), jump to the next mapping boundary via `sceKernelQueryMemoryProtection` result instead of stepping page-by-page.
 - Page step 64KB/1MB, stride 32 bytes (candidates must be 32-aligned).
-- Cost dominated by probing pages (~1-2s for the full pass). **Accept the pause.**
+- **Cost (measured, Exp 169):** entering Solo blocks for **~1 minute** on the PS4 (v0.8046 test). This is NOT acceptable for a final solution — it's a dev-only diagnostic tradeoff while we learn where the objects live. The candidate-validation phase (string extraction + array check) dominates; a production scan must either target a smaller region, run after BSL objects exist, or be triggered at a quiescent moment (song-start redirect hook).
 
 ## System.String length pitfall (v0.8046 bugfix)
 

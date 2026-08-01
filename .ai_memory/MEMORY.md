@@ -15,7 +15,8 @@
 ## 🔬 Key Technical Findings
 
 ### Experiment Log
-- [📋 Experiment Log](beat-saber-ps4-custom-songs/experiment_log.md) — **Complete chronological log of ALL 19+ experiments and tests with results. Updated every test cycle.**
+- [📋 Experiment Log (Active — Current Feature)](beat-saber-ps4-custom-songs/experiment_log.md) — **Per-feature active log** (currently Beatmap Mode Mapping, Exp 160+). Holds ONLY the current feature's experiments.
+- [🗄️ Experiment Log Archive](beat-saber-ps4-custom-songs/experiment_log_archive/) — **Archived per-feature logs** (Exp 1-159 prior features; read-only). Rotate per rules §3.0.
 
 ### Memory Injection & Metadata
 - [BeatmapLevelSO in Patch Metadata](beatmap-levelso-in-patch-metadata.md) — The "BeatmapLevelSO" class name is stored only in the game patch's global-metadata.dat (version 31, offset 0x23cb6e). NOT in app metadata or module segments.

@@ -123,6 +123,16 @@ kb_note: >
   Contains 39+ pages covering audio formats, beatmap conversion, plugin architecture,
   PS4 environment, Unity/AssetBundle internals, and pipeline tooling. Read index.md first.
 
+# Experiment Log (PER-FEATURE — rotation rule §3.0)
+experiment_log_active: .ai_memory/beat-saber-ps4-custom-songs/experiment_log.md
+experiment_log_archive_dir: .ai_memory/beat-saber-ps4-custom-songs/experiment_log_archive/
+experiment_log_note: >
+  Active log holds ONLY the current feature (Beatmap Mode Mapping, Exp 160+).
+  Prior features (Exp 1-159) archived in experiment_log_archive/ as
+  experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md.
+  Experiment numbers are globally sequential — when rotating, archive the old
+  feature's log into experiment_log_archive/ and rewrite experiment_log.md fresh.
+
 # Git Guardrails (IMPORTANT)
 git_commit_forbidden: true  # Do not commit — user commits manually
 git_push_forbidden: true

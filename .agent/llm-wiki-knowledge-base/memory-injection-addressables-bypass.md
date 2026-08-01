@@ -11,6 +11,10 @@ metadata:
 
 **After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, the string-scan / klass-pointer-scan memory injection is conclusively abandoned.**
 
+> ## ⚠️ BUT: a REVISED structural scan was REVIVED for Mode Mapping Phase 2 (v0.8042+)
+>
+> The old exact-klass search (klass == `0x2012007E0` as first 8 bytes) and the UTF-16 string-content search are dead. However, a **different** memory-injection technique is now ACTIVE for the beatmap mode selector: a **structural scan** (klass-range + version 1-50 + valid string pointers + preview-array validation, using the safe `sceKernelQueryMemoryProtection` syscall instead of signal handlers) that finds `BeatmapLevelSO` objects and patches `_previewDifficultyBeatmapSets` (0x98) in RAM. See [[structural-beatmaplevelso-scan]] for the CURRENT technique. This page documents the historical dead-end below.
+
 ### Why It Failed
 
 | Scan Target | Versions | Result |

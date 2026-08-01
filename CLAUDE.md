@@ -14,7 +14,7 @@ enforced by the files they reference — read them if you haven't already.
 Before proceeding with work, upon receiving experiment results, you MUST update ALL of these with experiment results and findings:
 
 1. Download the PS4 log directly to `.ai_memory/experiment_logs/` with a version-specific descriptive filename (e.g., `v0.8001_candidate_debug.txt`). Analyze the log, then ensure it's archived there — the download IS the archival copy. Never use `/tmp/` or other temporary locations.
-2. Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with experiment results
+2. Update `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` with experiment results — **the experiment log is PER-FEATURE; it holds only the current feature's experiments. See the "Per-Feature Experiment Log" rule below before appending.**
 3. Update `.ai_memory/beat-saber-ps4-custom-songs/song_testing_log.md` if received new song testing results
 4. Update `.agent/project_summary.md` with current status
 5. Update llm-wiki style knowledge base files in `.agent/llm-wiki-knowledge-base/` if new findings affect durable knowledge
@@ -45,6 +45,22 @@ You MUST complete ALL of the following documentation updates BEFORE presenting r
 - [ ] Append a new sequential experiment entry to `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`
 - [ ] Include: Date, What was attempted, Key findings/results, Next steps/status
 - [ ] Use the format from previous entries for consistency
+- [ ] Experiment numbers are **globally sequential** across the whole project (unique IDs, even after archiving). Read the last experiment number from either the active log OR the newest archive file to find the next number.
+
+### 3.0 Per-Feature Experiment Log (MANDATORY rotation rule)
+
+`experiment_log.md` must stay small and focused. It is the **active log for the CURRENT feature ONLY**.
+
+- **Structure:** `.ai_memory/beat-saber-ps4-custom-songs/`
+  - `experiment_log.md` — active log (current feature, e.g. Beatmap Mode Mapping, Exp 160+)
+  - `experiment_log_archive/` — archived per-feature logs
+    - Naming: `experiment_log_<feature-slug>_exp<start>-<end>_<start-date>_to_<end-date>.md`
+    - Example: `experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md`
+- **When to rotate:** when starting work on a NEW feature (roadmap milestone / feature change), BEFORE the first experiment of the new feature:
+  1. Move the entire current `experiment_log.md` content into a new file in `experiment_log_archive/` using the naming above (feature-slug = the feature that just concluded).
+  2. Rewrite `experiment_log.md` with a fresh header naming the new feature and pointing at the archive.
+  3. Keep experiment numbers **globally sequential** (the next feature starts where the last one ended) so cross-references stay valid.
+- **Archived logs are read-only references** — never edit them; append new experiments only to the active log.
 
 **B. Project Summary Update**
 - [ ] Update `.agent/project_summary.md` with current status

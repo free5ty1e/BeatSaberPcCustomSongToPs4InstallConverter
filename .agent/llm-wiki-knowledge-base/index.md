@@ -14,7 +14,7 @@ metadata:
 - [[ps4-file-system-redirects|PS4 File System & Redirects]] — AFR directory vs plugins directory, open() hook, permissions model
 - [[ps4-memory-layout-for-module-scanning|PS4 Memory Layout for Module Scanning]] — Where modules (~2GB) and IL2CPP heap (~8-16GB) live, bounds check lessons
 - [[ps4-il2cpp-metadata-loading|PS4 IL2CPP Metadata Loading]] — Class name strings live in global-metadata.dat, NOT in compiled module PRX
-- [[feature-flags|Feature Flags]] — `features.json` configuration, `enable_custom_song_replacements`, `enable_song_metadata_modification`
+- [[feature-flags|Feature Flags]] — `features.json` configuration: `enable_custom_song_replacements`, `enable_song_metadata_modification`, `enable_beatmap_mode_mapping`
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset
@@ -47,7 +47,7 @@ metadata:
 - [[song-metadata-storage|Song Metadata Storage]] — How song names, artists, mappers, BPM, difficulties, and audio are stored in resources.assets, per-song bundles, and Addressables packs
 - [[song-metadata-addressables-structure|Song Metadata & Addressables Structure (incl. CRC Blocker)]] — Addressables catalog, BeatmapLevel vs BeatmapLevelSO hierarchy, characteristic modes, **CRC validation discovery (Exp 136)**, IL2CPP hook targets (all dead)
 - [[il2cpp-dump-mode-selector-hook|IL2CPP Dump & Mode Selector Hook]] — BeatmapLevelSO class layout, get_previewDifficultyBeatmapSets at RVA 0x988E80, field offsets, hook implementation plan
-- [[structural-beatmaplevelso-scan|Structural BeatmapLevelSO Scan]] — 🔵 **CURRENT (v0.8046+)** — Find/patch BeatmapLevelSO in RAM via structural signature (klass range + version + string ptrs + preview array). Signal-free reads via `sceKernelQueryMemoryProtection` (v0.8043/44 crash: process-wide SIGSEGV handlers hijacked Unity GC page-protection faults during song-list render). Scan 16MB-64GB@1MB; System.String len_14 pitfall documented.
+- [[structural-beatmaplevelso-scan|Structural BeatmapLevelSO Scan]] — 🔵 **CURRENT (v0.8047+)** — Find/patch BeatmapLevelSO in RAM via structural signature (klass range + version + string ptrs + preview array). Signal-free reads via `sceKernelQueryMemoryProtection` (v0.8043/44 crash: process-wide SIGSEGV handlers hijacked Unity GC page-protection faults during song-list render). Scan 16MB-64GB@1MB; System.String len_14 pitfall; v0.8046 finding: candidates at 0x1C2-0x1D5xxxxx are pack-bundle data (fixed v0.8047 with v0.77 pointer window [16MB,512GB] + arr-failure stage breakdown).
 - [[ps4-environment-system|PS4 Environment System]] — How the game maps songs to environments via the Addressable song database
 - [[supported-songs|Supported Songs]] — Catalog of official and custom songs
 - [[addressables-crc-validation-timing|Addressables CRC Validation Timing]] — When CRC validation happens (lazy vs eager)

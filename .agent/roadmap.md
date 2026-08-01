@@ -96,13 +96,15 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
 - [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
 
-### Mode Selector UI — Structural BeatmapLevelSO RAM Patching (IN PROGRESS — v0.8046)
+### Mode Selector UI — Structural BeatmapLevelSO RAM Patching (IN PROGRESS — v0.8047)
 - [x] **(v0.8042)** Structural klass find (no levelID anchor) + BSL collector + patch logic implemented
 - [x] **(v0.8043)** Trigger fixed to fire on any MoveNext; scan runs on worker thread → **❌ instant crash** (process-wide SIGSEGV handlers hijacked Unity GC page-protection faults)
 - [x] **(v0.8044)** Synchronous game-thread scan → **❌ crash again at same point** — signal handlers during song-list rendering are the hazard regardless of thread. Root cause CONFIRMED via crash log.
 - [x] **(v0.8045)** Signal-free scan via `sceKernelQueryMemoryProtection` → **✅ NO CRASH (syscall works, prot=0x3), but ❌ "klass not found"** — `mode_extract_string` length bug (picked garbage `len_14`) + scan range too narrow (16MB–4GB only)
-- [ ] **(v0.8046)** Fixed string-len selection, widened low range to 16MB–64GB @1MB pages (v0.77-proven), added `[MODE] Scan diag` counters + candidate logging. **Deployed — awaiting user test.**
+- [x] **(v0.8046)** Fixed string-len selection, widened low range to 16MB–64GB @1MB pages (v0.77-proven), added `[MODE] Scan diag` counters. **TESTED (Exp 169): ✅ NO CRASH but arrfail=25443 strfail=0 — all candidates at 0x1C2–0x1D5xxxxx are serialized pack-bundle data (lid=packed floats), not managed objects. ~1min hang during scan (dev-only, warned).**
+- [x] **(v0.8047)** Tightened diagnostics to pinpoint rejection: v0.77 pointer window [16MB,512GB], string-extract check moved before array check, `mode_preview_arr_ok` failure stages (1-8), raw64 dumps. **Deployed + verified (105120 B) — awaiting user test.**
 - [ ] **Mode selector shows 5 modes in UI** — when scan succeeds, `_previewDifficultyBeatmapSets` replaced with 5 entries
+- [ ] **(Final UX)** Remove/reduce the ~1 min scan hang (acceptable for dev diagnostics only)
 - [ ] **(M5)** Unique 360/90 `.dat` beatmap data per mode (Phase 1 currently clones Standard patterns)
 
 ### TextMeshPro UI Hooking (PROVEN WORKING — v0.8040)
