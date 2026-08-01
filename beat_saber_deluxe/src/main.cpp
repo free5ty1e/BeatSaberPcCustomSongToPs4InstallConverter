@@ -11,15 +11,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
-#include <signal.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <dlfcn.h>
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8044"
+#define PLUGIN_VERSION "v0.8045"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -329,7 +327,9 @@ static int g_tmp_text_set_text_count = 0;
 // Patches BeatmapLevelSO._previewDifficultyBeatmapSets at runtime to add
 // OneSaber, NoArrows, 90Degree, 360Degree mode entries. Triggered once from
 // MoveNext hook when first custom song's song cell renders (pack bundle loaded).
-// Memory scanning with signal-safe probing -- won't crash on invalid addresses.
+// Memory reads use sceKernelQueryMemoryProtection — NO signal handlers. The
+// v0.8043/44 crash was caused by process-wide SIGSEGV/SIGBUS handlers
+// hijacking Unity's own GC page-protection faults during song-list rendering.
 // ---------------------------------------------------------------------------
 // BeatmapLevelSO field offsets (from il2cpp dump.cs TypeDefIndex 11680):
 //   0x18: _version (int32_t)
@@ -360,71 +360,61 @@ static int g_tmp_text_set_text_count = 0;
 #define PREVIEW_DIFF_SIZE    36
 
 static int g_mode_preview_done = 0;
-static sigjmp_buf g_mode_jmpbuf;
-static struct sigaction g_old_segv, g_old_bus;
-static int g_mode_handlers_installed = 0;
+static int g_qmp_ok = 0;  // 1 once sceKernelQueryMemoryProtection is verified working
 
-static void mode_fault_handler(int sig, struct __siginfo* info, void* ucp) {
-    (void)sig; (void)info; (void)ucp;
-    siglongjmp(g_mode_jmpbuf, 1);
-}
-
-// Install the SIGSEGV/SIGBUS handlers ONCE for the duration of the whole scan
-// (not per page read) — this is the proven-safe pattern from v0.74-v0.8008:
-// the scan runs synchronously on the game thread, so no other thread can be
-// hijacked by our process-wide handlers while they are installed.
-static void mode_install_handlers(void) {
-    if (g_mode_handlers_installed) return;
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.__sa_handler.__sa_sigaction = mode_fault_handler;
-    sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGSEGV, &sa, &g_old_segv);
-    sigaction(SIGBUS, &sa, &g_old_bus);
-    g_mode_handlers_installed = 1;
-}
-
-static void mode_restore_handlers(void) {
-    if (!g_mode_handlers_installed) return;
-    sigaction(SIGSEGV, &g_old_segv, NULL);
-    sigaction(SIGBUS, &g_old_bus, NULL);
-    g_mode_handlers_installed = 0;
-}
-
+// Safe memory read using sceKernelQueryMemoryProtection — a real libkernel
+// syscall that reports the mapped range and protection of an address WITHOUT
+// triggering a fault. This eliminates the SIGSEGV/SIGBUS handler approach
+// entirely (which crashed the game because Unity's GC uses page-protection
+// faults on concurrent threads during song-list rendering).
 static int mode_try_read(uint64_t addr, void* buf, size_t size) {
-    int ok = 0;
-    if (g_mode_handlers_installed) {
-        if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
-            memcpy(buf, (void*)addr, size);
-            ok = 1;
+    if (size == 0) return 0;
+    if (addr < 0x1000000ULL) return 0;
+    // Verify the syscall works once — if it's a stub (like mincore/msync),
+    // skip the whole scan rather than risk a crash.
+    if (!g_qmp_ok) {
+        void *rs = NULL, *re = NULL;
+        int32_t prot = 0;
+        if (sceKernelQueryMemoryProtection((void*)&g_qmp_ok, &rs, &re, &prot) == 0 &&
+            (prot & 1) && rs && re && (uint64_t)rs <= (uint64_t)&g_qmp_ok &&
+            (uint64_t)re > (uint64_t)&g_qmp_ok) {
+            g_qmp_ok = 1;
+            char qmp_msg[128];
+            snprintf(qmp_msg, sizeof(qmp_msg), "[MODE] sceKernelQueryMemoryProtection verified (prot=0x%X)", prot);
+            log_write(qmp_msg);
+        } else {
+            log_write("[MODE] sceKernelQueryMemoryProtection is a stub — mode scan disabled");
+            return 0;
         }
-        return ok;
     }
-    mode_install_handlers();
-    if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
-        memcpy(buf, (void*)addr, size);
-        ok = 1;
-    }
-    mode_restore_handlers();
-    return ok;
+    void *r_start = NULL, *r_end = NULL;
+    int32_t prot = 0;
+    if (sceKernelQueryMemoryProtection((void*)addr, &r_start, &r_end, &prot) != 0) return 0;
+    if (!(prot & 1)) return 0;  // not CPU-readable
+    if (!r_start || !r_end) return 0;
+    if ((uint64_t)r_end - (uint64_t)r_start < size) return 0;
+    if (addr + size > (uint64_t)r_end) return 0;
+    memcpy(buf, (void*)addr, size);
+    return 1;
 }
 
 static int mode_extract_string(void* str_obj, char* out, int out_size) {
     if (!str_obj || (uint64_t)str_obj < 0x1000000ULL) { out[0] = '\0'; return 0; }
     int result = 0;
-    if (!g_mode_handlers_installed) mode_install_handlers();
-    if (sigsetjmp(g_mode_jmpbuf, 1) == 0) {
-        int len_10 = *(int*)((char*)str_obj + 0x10);
-        int len_14 = *(int*)((char*)str_obj + 0x14);
-        int len = (len_10 > 0 && len_10 < 256 && len_14 == 0) ? len_10 : len_14;
-        if (len > 0 && len < out_size) {
-            uint16_t* chars = (uint16_t*)((char*)str_obj + (len == len_10 ? 0x14 : 0x18));
+    int len_10 = 0, len_14 = 0;
+    if (!mode_try_read((uint64_t)str_obj + 0x10, &len_10, 4)) { out[0] = '\0'; return 0; }
+    if (!mode_try_read((uint64_t)str_obj + 0x14, &len_14, 4)) { out[0] = '\0'; return 0; }
+    int len = (len_10 > 0 && len_10 < 256 && len_14 == 0) ? len_10 : len_14;
+    if (len > 0 && len < out_size) {
+        uint16_t chars[256];
+        uint64_t chars_addr = (uint64_t)str_obj + (len == len_10 ? 0x14 : 0x18);
+        if (mode_try_read(chars_addr, chars, (size_t)len * 2)) {
             for (int i = 0; i < len; i++) out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
             out[len] = '\0';
             result = len;
         }
-    } else { out[0] = '\0'; }
-    if (!g_mode_handlers_installed) mode_restore_handlers();
+    }
+    if (result == 0) out[0] = '\0';
     return result;
 }
 
@@ -626,17 +616,16 @@ static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t 
 }
 
 // Main orchestrator: find klass, collect BSL objects, find charSOs, patch all.
-// Runs synchronously on the game thread (v0.74-v0.8008-proven pattern). The
-// game thread is paused for ~1-2s while the scan runs; handlers are installed
-// once for the whole scan and restored before returning to the game.
+// Runs synchronously on the game thread. All reads go through mode_try_read
+// (sceKernelQueryMemoryProtection) so NO signal handlers are installed — the
+// v0.8043/44 crash was caused by process-wide SIGSEGV/SIGBUS handlers hijacking
+// Unity's GC page-protection faults during song-list rendering.
 static void mode_patch_all(void) {
     char logbuf[256];
-    mode_install_handlers();
     log_write("[MODE] Starting BeatmapLevelSO memory scan...");
     uint64_t klass = mode_find_beatmap_level_so_klass();
     if (!klass) {
         log_write("[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet");
-        mode_restore_handlers();
         g_mode_preview_done = -1;
         return;
     }
@@ -649,7 +638,7 @@ static void mode_patch_all(void) {
     int bsl_count = mode_collect_beatmap_level_sos(klass, bsl_addrs, bsl_level_ids, MAX_BSL);
     snprintf(logbuf, sizeof(logbuf), "[MODE] Found %d BeatmapLevelSO objects", bsl_count);
     log_write(logbuf);
-    if (bsl_count == 0) { mode_restore_handlers(); g_mode_preview_done = -1; return; }
+    if (bsl_count == 0) { g_mode_preview_done = -1; return; }
     // Log every found levelID for diagnostics
     for (int i = 0; i < bsl_count; i++) {
         snprintf(logbuf, sizeof(logbuf), "[MODE]   BSL[%d] levelID='%s' @0x%lX", i, bsl_level_ids[i], bsl_addrs[i]);
@@ -675,7 +664,6 @@ static void mode_patch_all(void) {
     }
     if (char_sos[0] == 0) {
         log_write("[MODE] Failed to find BeatmapCharacteristicSO objects");
-        mode_restore_handlers();
         g_mode_preview_done = -1;
         return;
     }
@@ -686,16 +674,13 @@ static void mode_patch_all(void) {
     }
     snprintf(logbuf, sizeof(logbuf), "[MODE] Patch complete: %d BeatmapLevelSO objects updated", patched);
     log_write(logbuf);
-    mode_restore_handlers();
     g_mode_preview_done = 1;
 }
 
 // Called from MoveNext hook when a song BeatmapLevel is first detected.
 // Triggers the one-time synchronous scan that patches BeatmapLevelSO
 // _previewDifficultyBeatmapSets (pack bundle UI data). Runs on the game
-// thread; the game pauses briefly. Never run from a worker thread — the
-// process-wide SIGSEGV/SIGBUS handlers would hijack the game's own GC page
-// protection faults on the main thread and crash the process (v0.8043).
+// thread; the game pauses briefly. Uses signal-free reads (v0.8045+).
 static void mode_try_patch_from_move_next(void* beatmapLevel) {
     if (g_mode_preview_done) return;
     if (!g_feature_beatmap_mode_mapping) return;
@@ -813,8 +798,7 @@ static const char* find_metadata_replacement(const char* text) {
 // UTF-16LE string extraction from IL2CPP System.String
 // System.String layout: klass(8) + monitor(8) + _stringLength(4) + first_char(UTF-16LE)
 // _stringLength may be at offset 0x10 or 0x14 on PS4 — try both
-// Protected by signal handler — value may not always be a valid string
-static sigjmp_buf g_extract_jmp_buf;
+// Reads go through mode_try_read (sceKernelQueryMemoryProtection) — signal-free.
 
 static int extract_utf16_string(void* str_obj, char* out, int out_size) {
     if (!str_obj) { out[0] = '\0'; return 0; }
@@ -822,36 +806,28 @@ static int extract_utf16_string(void* str_obj, char* out, int out_size) {
     // Basic sanity check — reject clearly invalid pointers
     if ((uint64_t)str_obj < 0x1000000ULL) { out[0] = '\0'; return 0; }
 
-    // Use signal handler to catch SIGSEGV from invalid pointer dereference
-    struct sigaction old_sa, new_sa;
-    memset(&new_sa, 0, sizeof(new_sa));
-    new_sa.__sa_handler.__sa_sigaction = [](int, struct __siginfo*, void*) {
-        siglongjmp(g_extract_jmp_buf, 1);
-    };
-    new_sa.sa_flags = SA_SIGINFO;
-    sigaction(SIGSEGV, &new_sa, &old_sa);
-    sigaction(SIGBUS, &new_sa, &old_sa);
-
     int result = 0;
-    if (sigsetjmp(g_extract_jmp_buf, 1) == 0) {
-        uint32_t len_10 = *(uint32_t*)((char*)str_obj + 0x10);
-        uint32_t len_14 = *(uint32_t*)((char*)str_obj + 0x14);
+    uint32_t len_10 = 0, len_14 = 0;
+    if (!mode_try_read((uint64_t)str_obj + 0x10, &len_10, 4)) { out[0] = '\0'; return 0; }
+    if (!mode_try_read((uint64_t)str_obj + 0x14, &len_14, 4)) { out[0] = '\0'; return 0; }
 
-        uint32_t len = 0;
-        uint16_t* chars = NULL;
+    uint32_t len = 0;
+    uint64_t chars_addr = 0;
 
-        if (len_10 > 0 && len_10 < 256 && len_14 == 0) {
-            len = len_10;
-            chars = (uint16_t*)((char*)str_obj + 0x14);
-        } else if (len_14 > 0 && len_14 < 256) {
-            len = len_14;
-            chars = (uint16_t*)((char*)str_obj + 0x18);
-        } else {
-            len = len_10;
-            chars = (uint16_t*)((char*)str_obj + 0x14);
-        }
+    if (len_10 > 0 && len_10 < 256 && len_14 == 0) {
+        len = len_10;
+        chars_addr = (uint64_t)str_obj + 0x14;
+    } else if (len_14 > 0 && len_14 < 256) {
+        len = len_14;
+        chars_addr = (uint64_t)str_obj + 0x18;
+    } else {
+        len = len_10;
+        chars_addr = (uint64_t)str_obj + 0x14;
+    }
 
-        if (len > 0 && len < (uint32_t)out_size) {
+    if (len > 0 && len < (uint32_t)out_size) {
+        uint16_t chars[256];
+        if (mode_try_read(chars_addr, chars, (size_t)len * 2)) {
             int i;
             for (i = 0; i < (int)len && i < out_size - 1; i++) {
                 out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
@@ -859,12 +835,8 @@ static int extract_utf16_string(void* str_obj, char* out, int out_size) {
             out[i] = '\0';
             result = len;
         }
-    } else {
-        out[0] = '\0';
     }
-
-    sigaction(SIGSEGV, &old_sa, NULL);
-    sigaction(SIGBUS, &old_sa, NULL);
+    if (result == 0) out[0] = '\0';
     return result;
 }
 

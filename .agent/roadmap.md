@@ -96,6 +96,14 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
 - [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
 
+### Mode Selector UI — Structural BeatmapLevelSO RAM Patching (IN PROGRESS — v0.8045)
+- [x] **(v0.8042)** Structural klass find (no levelID anchor) + BSL collector + patch logic implemented
+- [x] **(v0.8043)** Trigger fixed to fire on any MoveNext; scan runs on worker thread → **❌ instant crash** (process-wide SIGSEGV handlers hijacked Unity GC page-protection faults)
+- [x] **(v0.8044)** Synchronous game-thread scan → **❌ crash again at same point** — signal handlers during song-list rendering are the hazard regardless of thread. Root cause CONFIRMED via crash log.
+- [ ] **(v0.8045)** Signal-free scan: all reads via `sceKernelQueryMemoryProtection` syscall (self-tested, fail-closed). **Deployed — awaiting user test of Start Me Up mode selector.**
+- [ ] **Mode selector shows 5 modes in UI** — when scan succeeds, `_previewDifficultyBeatmapSets` replaced with 5 entries
+- [ ] **(M5)** Unique 360/90 `.dat` beatmap data per mode (Phase 1 currently clones Standard patterns)
+
 ### TextMeshPro UI Hooking (PROVEN WORKING — v0.8040)
 - [x] **(v0.8026–v0.8031)** Hook infrastructure — module discovery, DetourMode_x64, retry logic
 - [x] **(v0.8031)** Hook fires correctly, no crash

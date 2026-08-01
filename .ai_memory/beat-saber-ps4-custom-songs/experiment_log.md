@@ -3716,6 +3716,24 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
   - Added `mode_install_handlers()`/`mode_restore_handlers()` — SIGSEGV/SIGBUS handlers installed ONCE for the whole scan, restored once before returning. `mode_try_read()`/`mode_extract_string()` use the fast path (no per-call sigaction) when handlers are already installed.
   - Widened BeatmapCharacteristicSO neighbor scan ±2MB → ±16MB.
   - Build 105,568 bytes, deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx` (verified on server: 105568 bytes).
-- **Result:** 🔲 **AWAITING USER TEST — restart game, enter Solo, expect a brief ~1-2s pause while the scan runs, then check Start Me Up mode selector.**
+- **Result:** ❌ **CRASH AGAIN (CE-34878-0) on entering Solo.** Crash log pulled: `/workspace/.ai_memory/experiment_logs/v0.8044_crash_sync.txt` (7697 lines). Last `[MODE]` entries:
+  ```
+  [MODE] Triggered from MoveNext -- running synchronous scan
+  [MODE] Starting BeatmapLevelSO memory scan...
+  ```
+  Log line 7694 shows `[OPEN #734] /data/GoldHEN/AFR/CUSA12878/bs_log.txt` — log flush works, then crash inside `mode_find_beatmap_level_so_klass()`.
+- **Root cause (CONFIRMED):** The proven-safe v0.74–v0.8008 scans fired from the **open()/redirect song-start hook** (GC quiescent — song loaded, UI static). The v0.8043/44 scans fire from **MoveNext during song-list rendering**, when the game's GC actively throws page-protection SIGSEGV/SIGBUS faults on its own threads. Our process-wide handlers hijacked those faults → `siglongjmp` to the scan stack → instant CE-34878-0. This is the same class of crash in BOTH the worker-thread (v0.8043) and synchronous (v0.8044) variants — the signal handlers themselves are the hazard, not the thread.
 - **Version:** Plugin v0.8044
-- **Status:** 🔲 **Awaiting user test**
+- **Status:** ❌ Crash — superseded by v0.8045.
+
+### Experiment 167: v0.8045 — Signal-free scan via sceKernelQueryMemoryProtection
+- **Date:** 2026-07-31
+- **What:** Eliminated ALL signal-handler memory probing from the plugin:
+  - `mode_try_read()`/`mode_extract_string()`/`extract_utf16_string()` rewritten to use **`sceKernelQueryMemoryProtection`** (real libkernel syscall; queries mapped range + protection of an address without faulting). Region must cover `[addr, addr+size)` AND have CPU_READ (prot & 1) before `memcpy`.
+  - **Safe self-test + fail-closed:** before scanning, the plugin queries a known-good address (its own global) and validates the returned range/protection. If the syscall is a stub (like mincore/msync), the mode scan is disabled cleanly (log message) — no crash risk.
+  - Removed `mode_install_handlers()`/`mode_restore_handlers()`/`mode_fault_handler()`, `g_mode_jmpbuf`, `g_old_segv`, `g_old_bus`, `g_mode_handlers_installed`, `g_extract_jmp_buf`, and `<setjmp.h>`/`<signal.h>` includes.
+  - Version bump v0.8044 → v0.8045. Build 105,632 bytes. CHANGELOG-PLUGIN updated. 361 pytest tests pass. Deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx` (verified on server: 105632 bytes).
+- **Rationale:** The v0.8044 log proved the crash happens during the scan regardless of thread. The cleanest fix removes the fault-handling dependency entirely — syscall-based probes cannot be hijacked. This also removes the per-call `sigaction` in `extract_utf16_string` (a latent risk during MoveNext rendering).
+- **Key Takeaway:** On PS4, **SIGSEGV/SIGBUS handlers are process-wide, and Unity's GC uses page-protection faults as a normal part of its write-barrier/compaction during UI rendering**. Any code that installs such handlers while the game is actively rendering (song list) will hijack GC faults and crash the process — thread choice is irrelevant. Prefer `sceKernelQueryMemoryProtection` for safe reads; reserve signal probing for quiescent moments (song-start redirect hook), as v0.74–v0.8008 proved.
+- **Version:** Plugin v0.8045
+- **Status:** 🔲 **AWAITING USER TEST — restart game, enter Solo. Expect either (a) modes appear in Start Me Up selector (query syscall works), or (b) NO crash + `[MODE] sceKernelQueryMemoryProtection is a stub — mode scan disabled` in bs_log.txt (safe fail-closed). Pull bs_log.txt for [MODE] entries either way.**

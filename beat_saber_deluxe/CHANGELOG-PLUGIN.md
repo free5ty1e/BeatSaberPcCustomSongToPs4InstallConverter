@@ -4,6 +4,16 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8045] — 2026-07-31
+### Fixed
+- **Instant crash when entering Solo song list (v0.8043/v0.8044 regression, root cause finally confirmed)** — both the worker-thread scan (v0.8043) and the synchronous in-hook scan (v0.8044) crashed with CE-34878-0 inside `mode_find_beatmap_level_so_klass()`. The crash log (`v0.8044_crash_sync.txt`) shows the scan started but the game died during it. Root cause: the proven-safe v0.74–v0.8008 scans ran from the **open()/redirect song-start hook** (GC quiescent), but the v0.8043/44 scans run during **song-list rendering**, when the game's GC actively throws page-protection SIGSEGV/SIGBUS faults on its own threads. Our process-wide handlers hijacked those faults → `siglongjmp` to the scan stack → instant crash, regardless of which thread ran the scan.
+- **Signal-handler memory probing eliminated entirely** — `mode_try_read()`/`mode_extract_string()`/`extract_utf16_string()` now use **`sceKernelQueryMemoryProtection`** (a real libkernel syscall that queries the mapped range + protection of an address without faulting). This removes the whole class of "process-wide handler hijacks game GC faults" crashes, including the per-call `sigaction` in `extract_utf16_string`.
+- **Safe self-test + fail-closed** — before scanning, the plugin verifies `sceKernelQueryMemoryProtection` returns sane results for a known-good address. If it's a stub (like mincore/msync), the mode scan is disabled cleanly (log message) instead of risking a crash.
+### Removed
+- `mode_install_handlers()`/`mode_restore_handlers()`/`mode_fault_handler()`, `g_mode_jmpbuf`, `g_old_segv`, `g_old_bus`, `g_mode_handlers_installed`, `g_extract_jmp_buf`, and the `<setjmp.h>`/`<signal.h>` includes.
+### Changed
+- Scan still triggers from the MoveNext hook during song-list rendering, but is now signal-free so it no longer depends on GC being quiescent.
+
 ## [v0.8044] — 2026-07-31
 ### Fixed
 - **Instant crash when entering Solo song list (v0.8043 regression)** — the background scan worker thread installed process-wide SIGSEGV/SIGBUS handlers; while they were active, the game's own GC page-protection faults on the main thread were hijacked and `siglongjmp`'d into the worker's stack → instant crash. Reverted to the proven v0.74–v0.8008 pattern: **synchronous scan on the game thread** inside the MoveNext hook (game pauses ~1-2s once).

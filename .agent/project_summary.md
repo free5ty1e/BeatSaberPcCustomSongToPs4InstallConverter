@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-31
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8044).** v0.8043 crashed instantly (worker-thread signal hijack); v0.8044 reverts to the proven synchronous in-hook scan. Awaiting user test of Start Me Up mode selector.
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8045).** v0.8043/44 crashed on Solo entry (signal handlers hijacked Unity GC page-protection faults during song-list render). v0.8045 eliminates ALL signal handlers — safe reads via `sceKernelQueryMemoryProtection` syscall (self-tested, fail-closed). Deployed, awaiting user test of Start Me Up mode selector.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
@@ -10,7 +10,7 @@
 
 **Mode mapping (Phase 1 + Phase 2):**
 - **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Controls gameplay data. ✅ Deployed and playing.
-- **Phase 2 (plugin v0.8044):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–4GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. Runs **synchronously** in the MoveNext hook (NOT a worker thread — v0.8043 crash lesson), with SIGSEGV/SIGBUS handlers installed once per scan. NOTE: this is DIFFERENT from the dead string-scan injection — it does not need to find arbitrary strings, only structurally-valid BeatmapLevelSO objects.
+- **Phase 2 (plugin v0.8045):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–4GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. Runs synchronously in the MoveNext hook. **v0.8045 = SIGNAL-FREE**: safe reads via `sceKernelQueryMemoryProtection` syscall (NOT SIGSEGV/SIGBUS handlers — those hijacked Unity GC page-protection faults and crashed v0.8043/44).
 
 ### Known Limitation (v0.8040)
 - **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.
@@ -19,7 +19,7 @@
 
 1. **Module discovery timing**: At `module_start()` only 3 modules visible. IL2CPP loads later. Defer to `open_hook()`, retry until found (open #10-11).
 2. **DetourMode**: Use `DetourMode_x64`, NOT x32. x32 splits IL2CPP instructions → crash.
-3. **Signal-protected extraction**: Hook fires 500+ times on ALL text, not just songs. Must catch SIGSEGV from non-string values.
+3. **Signal-protected extraction — REVISED (v0.8045)**: Signal handlers are process-wide and Unity's GC throws page-protection SIGSEGV/SIGBUS faults during UI rendering — installing handlers while rendering crashes the game (v0.8043/44). Safe reads now use **`sceKernelQueryMemoryProtection`** (no faults). Reserve signal probing for quiescent moments (song-start redirect hook, v0.74–v0.8008).
 4. **String replacement works**: `create_il2cpp_string()` with klass pointer copy creates valid replacement strings.
 5. **External metadata**: `song_metadata.json` replaces hardcoded C array. Same JSON pattern as `redirects.json`.
 
@@ -132,7 +132,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 163 | v0.8042 | Deploy + user test | ❌ Song shows/metadata fine, mode selector still Standard-only; old plugin ran |
 | 164 | v0.8043 | Fix scan trigger + filter + worker thread | 🔲 Scan never fired (levelID not "custom/"); now fires on any MoveNext, structural klass find, worker thread. Deployed — awaiting test |
 | **165** | **v0.8043 test** | **User test — Solo entry** | **❌ INSTANT CRASH — worker thread's process-wide SIGSEGV handlers hijacked the game's GC page-protection faults on the main thread (siglongjmp to worker stack)** |
-| **166** | **v0.8044** | **Synchronous scan (revert worker)** | **🔲 Handlers installed once for whole scan, scan runs in MoveNext hook on game thread (v0.74-proven). Deployed — awaiting test** |
+| **166** | **v0.8044** | **Synchronous scan (revert worker)** | **❌ CRASH AGAIN — same last-[MODE] log; proved handlers during song-list render crash regardless of thread. Root cause confirmed.** |
+| **167** | **v0.8045** | **Signal-free scan (sceKernelQueryMemoryProtection)** | **🔲 All handlers removed; syscall-based reads self-tested + fail-closed. Deployed — awaiting test** |
 
 ## Memory Injection Versions
 
@@ -172,7 +173,7 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Test v0.8043 mode selector** — restart game, open Start Me Up, check for OneSaber/NoArrows/90Degree/360Degree in mode selector. Pull `bs_log.txt` for `[MODE]` entries (klass found, N BSL objects, levelIDs, patch complete).
+1. **Test v0.8045 mode selector** — restart game, open Start Me Up, check for OneSaber/NoArrows/90Degree/360Degree in mode selector. Pull `bs_log.txt` for `[MODE]` entries (klass found, N BSL objects, levelIDs, patch complete). If the log shows `sceKernelQueryMemoryProtection is a stub — mode scan disabled`, the syscall is a stub → fall back to deferred scan at redirect/song-start timing (v0.77-proven signal pattern).
 2. **If scan finds 0 BSL objects** — the structural klass find failed (stride 32 may miss object alignment, or objects not in 16MB–4GB/8–8.25GB). Adjust stride to 8 and/or add ranges.
 3. **If scan finds BSLs but no 5 BeatmapCharacteristicSO** — widen the ±2MB neighbor scan or find charSOs from a known pack.
 4. **If mode selector appears** — test 90Degree/360Degree gameplay (Phase 1 uses Standard patterns; unique .dat beatmap data still needs per-mode TextAsset compilation — roadmap M5).

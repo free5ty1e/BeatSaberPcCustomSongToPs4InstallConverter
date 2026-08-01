@@ -1,6 +1,6 @@
 ---
 name: structural-beatmaplevelso-scan
-description: "How to find and patch BeatmapLevelSO objects in RAM via structural scanning (klass range + version + string pointers + preview array validation) — the revived mode-selector injection (v0.8042+) and its thread-safety rules"
+description: "How to find and patch BeatmapLevelSO objects in RAM via structural scanning (klass range + version + string pointers + preview array validation) — the revived mode-selector injection (v0.8045, signal-free via sceKernelQueryMemoryProtection)"
 metadata:
   type: reference
 ---
@@ -51,7 +51,37 @@ The FIRST matching candidate's klass pointer is the BeatmapLevelSO klass (all in
 - `16MB (0x1000000) – 4GB (0x100000000)` — primary; ~65,280 pages of 64KB. v0.77 found **17 candidates** here matching checks 1-3.
 - `8GB (0x200000000) – 8.25GB (0x210000000)` — GC heap supplement; ~4,096 pages.
 - Page step 64KB, stride 32 bytes (candidates must be 32-aligned).
-- Cost dominated by SIGSEGV probing of unmapped pages (~1-2s for the 4GB pass). **Accept the pause.**
+- Cost dominated by probing unmapped pages (~1-2s for the 4GB pass). **Accept the pause.**
+
+## Safe Reads — USE sceKernelQueryMemoryProtection, NOT SIGNAL HANDLERS (v0.8045)
+
+**Every memory read in the plugin now goes through `mode_try_read()`, backed by the `sceKernelQueryMemoryProtection` syscall** (declared in `libkernel.h`, linked via `-lkernel`). It reports the mapped region `[start, end)` and protection flags of an address WITHOUT triggering a fault:
+
+```c
+static int mode_try_read(uint64_t addr, void* buf, size_t size) {
+    if (size == 0 || addr < 0x1000000ULL) return 0;
+    // one-time self-test against a known-good address; if the syscall is a stub,
+    // disable the scan entirely (fail-closed, no crash)
+    if (!g_qmp_ok) { /* verify range/prot of &g_qmp_ok; set g_qmp_ok or return 0 */ }
+    void *r_start = NULL, *r_end = NULL; int32_t prot = 0;
+    if (sceKernelQueryMemoryProtection((void*)addr, &r_start, &r_end, &prot) != 0) return 0;
+    if (!(prot & 1)) return 0;                          // SCE_KERNEL_PROT_CPU_READ = 0x1
+    if (!r_start || !r_end) return 0;
+    if ((uint64_t)r_end - (uint64_t)r_start < size) return 0;
+    if (addr + size > (uint64_t)r_end) return 0;        // region must cover [addr, addr+size)
+    memcpy(buf, (void*)addr, size);
+    return 1;
+}
+```
+
+**Why (Exp 166 confirmed):** v0.8043 (worker thread) AND v0.8044 (synchronous game-thread scan) BOTH crashed with CE-34878-0 at the same point — the crash log ends at `[MODE] Starting BeatmapLevelSO memory scan...`. Signal handlers are **process-wide**, and Unity's GC throws page-protection SIGSEGV/SIGBUS faults as a **normal part of write-barrier/compaction during song-list rendering**. Any process-wide handler installed while the game is actively rendering hijacks those faults → `siglongjmp` to the scan stack → instant crash. The thread that runs the scan is irrelevant; the handlers themselves are the hazard.
+
+Rules:
+1. **Never install SIGSEGV/SIGBUS handlers while the game is actively rendering/allocating** (song list). This includes per-call `sigaction` wrappers like the old `extract_utf16_string`.
+2. **Use `sceKernelQueryMemoryProtection` for safe reads** — it cannot be hijacked. Verify once against a known-good address and fail-closed if it behaves like a stub (mincore/msync are stubs on PS4; query-memory-protection is a real, commonly-used syscall).
+3. If a fault-catching read is truly unavoidable, do it ONLY at quiescent moments (the open()/redirect song-start hook) — v0.74–v0.8008 proved that timing is safe (17 candidates, no crash).
+4. `sigsetjmp`/`siglongjmp` are thread-stack-scoped; never jump across threads.
+5. Background threads created from hooks are unsafe (v0.8016, `scePthreadCreate`).
 
 ## Patching
 
@@ -61,20 +91,6 @@ The FIRST matching candidate's klass pointer is the BeatmapLevelSO klass (all in
 4. Atomically write the new array pointer into `bsl_addr + 0x98`. 8-byte aligned store = atomic on ARM64/x64.
 
 Note: the pipeline's per-song bundles already contain all 5 mode `_difficultyBeatmapSets` (Phase 1), so once the UI shows the mode buttons, gameplay data for each mode already exists (cloned Standard patterns; unique 360/90 .dat files are not yet compiled into per-mode TextAssets — roadmap M5).
-
-## CRITICAL Thread-Safety Rules (Exp 165 crash)
-
-**Never run the scan from a background/worker thread.** v0.8043 did exactly that and crashed the game instantly on entering the Solo song list:
-
-- `sigaction()` dispositions are **process-wide**, not per-thread.
-- Unity's GC uses page-protection signals (SIGSEGV/SIGBUS via mprotect) for write barriers.
-- While the worker's handlers were installed, a GC fault on the **main thread** was delivered to our handler → `siglongjmp` to the **worker thread's** jmpbuf → main thread resumed in the worker's stack → instant crash (no error dialog).
-
-Rules:
-1. Run the scan **synchronously inside the hook on the game thread** (game paused → its own handlers can't fire).
-2. Install handlers ONCE for the whole scan (`mode_install_handlers()`), restore ONCE (`mode_restore_handlers()`) — not per page read.
-3. `sigsetjmp`/`siglongjmp` are thread-stack-scoped; never jump across threads.
-4. This is consistent with the older lesson: background threads created from hooks are unsafe (v0.8016, `scePthreadCreate`).
 
 ## Related
 
