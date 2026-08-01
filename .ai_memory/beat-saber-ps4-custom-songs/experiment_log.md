@@ -3737,3 +3737,19 @@ After 14+ versions of trying (v0.66–v0.8024), the string content search approa
 - **Key Takeaway:** On PS4, **SIGSEGV/SIGBUS handlers are process-wide, and Unity's GC uses page-protection faults as a normal part of its write-barrier/compaction during UI rendering**. Any code that installs such handlers while the game is actively rendering (song list) will hijack GC faults and crash the process — thread choice is irrelevant. Prefer `sceKernelQueryMemoryProtection` for safe reads; reserve signal probing for quiescent moments (song-start redirect hook), as v0.74–v0.8008 proved.
 - **Version:** Plugin v0.8045
 - **Status:** 🔲 **AWAITING USER TEST — restart game, enter Solo. Expect either (a) modes appear in Start Me Up selector (query syscall works), or (b) NO crash + `[MODE] sceKernelQueryMemoryProtection is a stub — mode scan disabled` in bs_log.txt (safe fail-closed). Pull bs_log.txt for [MODE] entries either way.**
+
+### Experiment 168: v0.8045 TEST — NO crash, but klass not found (→ v0.8046 fix)
+- **Date:** 2026-07-31
+- **Result:** ✅ **NO CRASH** (signal-handler fix confirmed working). Brief stutter during scan (as expected). ❌ **No modes in Start Me Up selector.**
+- **Log:** `/workspace/.ai_memory/experiment_logs/v0.8045_no_crash_no_modes.txt` (9,246 lines, 6 plugin sessions accumulated — archived; log cleared on PS4 afterward per new workflow rule).
+- **Diagnosis (log analysis):**
+  - `[MODE] sceKernelQueryMemoryProtection verified (prot=0x3)` — **the syscall WORKS** (CPU_READ|CPU_WRITE), NOT a stub. Fail-closed path not triggered.
+  - Scan ran synchronously: `[MODE] Triggered from MoveNext -- running synchronous scan` → `[MODE] Starting BeatmapLevelSO memory scan...` → `[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet`.
+  - The scan found **zero structurally-valid candidates**.
+- **Root cause (2 bugs in v0.8045):**
+  1. **`mode_extract_string` bug** — `len = (len_10 valid && len_14 == 0) ? len_10 : len_14`. For a real IL2CPP `System.String`, `len_14` = first two UTF-16 chars combined (e.g. `0x00740053`), never 0 → always picked garbage `len_14` → extraction always failed → klass find rejected every candidate at the string check. `extract_utf16_string` (metadata feature) had the correct fallback chain; `mode_extract_string` did not.
+  2. **Scan range too narrow** — v0.8045 covered 16MB–4GB + 8–8.25GB; v0.77's proven scan (16MB–64GB, 1MB page steps) found 17 candidates. Objects may live above 4GB or above 8.25GB.
+- **Fix (v0.8046):** `mode_extract_string` now mirrors `extract_utf16_string`'s proven length-selection logic; low scan range widened to 16MB–64GB at 1MB page reads (same ~64K syscall count → stutter stays brief), 8–8.25GB high range kept at 64KB; 1MB buffer moved to static global (v0.78 stack-crash lesson); **added diagnostic counters** (`[MODE] Scan diag: ok=... klass=... ver=... ptrs=... arrfail=... strfail=...`) and candidate logging so the next log shows exactly which check rejects candidates.
+- **Key Takeaway:** The signal-free `sceKernelQueryMemoryProtection` approach works (no crash, no stub). The remaining problem is scan coverage + the string-extraction bug, both now addressed with diagnostics to pinpoint rejection.
+- **Version:** Plugin v0.8046
+- **Status:** 🔲 **AWAITING USER TEST — restart game, enter Solo. Pull bs_log.txt; the `[MODE]` diagnostics will show klass/candidate hit counts, and if a klass is found, the collector + patch should run. Modes expected in Start Me Up selector if the klass+charSO+patch chain completes.**

@@ -17,7 +17,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8045"
+#define PLUGIN_VERSION "v0.8046"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -344,11 +344,13 @@ static int g_tmp_text_set_text_count = 0;
 // Il2CppSZArray header: 0x00 klass(8) 0x08 monitor(8) 0x10 bounds(8) 0x18 max_length(8) 0x20 data[]
 // ---------------------------------------------------------------------------
 #define MODE_SCAN_LOW_START  0x1000000ULL    // 16MB
-#define MODE_SCAN_LOW_END    0x100000000ULL  // 4GB
-#define MODE_SCAN_HIGH_START 0x200000000ULL  // 8GB
-#define MODE_SCAN_HIGH_END   0x210000000ULL  // 8.25GB
-#define MODE_SCAN_STEP       0x10000ULL      // 64KB pages
-#define MODE_SCAN_STRIDE     32              // 32-byte stride within page
+#define MODE_SCAN_LOW_END    0x1000000000ULL  // 64GB — v0.77-proven coverage
+#define MODE_SCAN_HIGH_START 0x200000000ULL   // 8GB
+#define MODE_SCAN_HIGH_END   0x210000000ULL   // 8.25GB
+#define MODE_SCAN_STEP       0x10000ULL       // 64KB pages (high range + hole stepping)
+#define MODE_SCAN_PAGE       0x100000ULL      // 1MB page reads (low range, v0.77 pattern)
+#define MODE_SCAN_STRIDE     32               // 32-byte stride within page
+static uint8_t g_mode_scan_page[MODE_SCAN_PAGE];  // static — 1MB stack buffer crashes (v0.78)
 #define BLS_OFFSET_VERSION   0x18
 #define BLS_OFFSET_LEVEL_ID  0x20
 #define BLS_OFFSET_PREVIEW   0x98
@@ -404,10 +406,24 @@ static int mode_extract_string(void* str_obj, char* out, int out_size) {
     int len_10 = 0, len_14 = 0;
     if (!mode_try_read((uint64_t)str_obj + 0x10, &len_10, 4)) { out[0] = '\0'; return 0; }
     if (!mode_try_read((uint64_t)str_obj + 0x14, &len_14, 4)) { out[0] = '\0'; return 0; }
-    int len = (len_10 > 0 && len_10 < 256 && len_14 == 0) ? len_10 : len_14;
+    // System.String layout on PS4: length at 0x10 OR 0x14, chars right after.
+    // len_14 is the first two UTF-16 chars combined — usually a huge number,
+    // so it must only be used when len_10 is implausible. (v0.8046 fix: the
+    // old `len_14 == 0 ? len_10 : len_14` always picked garbage len_14.)
+    int len = 0;
+    uint64_t chars_addr = 0;
+    if (len_10 > 0 && len_10 < 256 && (len_14 == 0 || len_14 >= 256)) {
+        len = len_10;
+        chars_addr = (uint64_t)str_obj + 0x14;
+    } else if (len_14 > 0 && len_14 < 256) {
+        len = len_14;
+        chars_addr = (uint64_t)str_obj + 0x18;
+    } else {
+        len = len_10;
+        chars_addr = (uint64_t)str_obj + 0x14;
+    }
     if (len > 0 && len < out_size) {
         uint16_t chars[256];
-        uint64_t chars_addr = (uint64_t)str_obj + (len == len_10 ? 0x14 : 0x18);
         if (mode_try_read(chars_addr, chars, (size_t)len * 2)) {
             for (int i = 0; i < len; i++) out[i] = (chars[i] < 128) ? (char)chars[i] : '?';
             out[len] = '\0';
@@ -454,34 +470,69 @@ static int mode_preview_arr_ok(uint64_t bsl_addr) {
 // _levelID/_songName/_songAuthorName string pointers + valid preview array).
 // All BeatmapLevelSO objects share the same klass, so the first match suffices.
 // Returns the klass address or 0.
+//
+// Scan design (v0.8046):
+//   - Low range 16MB-64GB at 1MB page reads (v0.77-proven: found 17 candidates).
+//   - High range 8-8.25GB at 64KB page reads (dense GC-heap supplement).
+//   - When a page read fails (hole/partial mapping), jump to the next mapping
+//     boundary via sceKernelQueryMemoryProtection instead of stepping every page.
+//   - Diagnostic counters log exactly which structural check rejects candidates.
 static uint64_t mode_find_beatmap_level_so_klass(void) {
     uint64_t result_klass = 0;
+    char logbuf[256];
+    int diag_ok = 0, diag_klass = 0, diag_ver = 0, diag_ptrs = 0, diag_arrfail = 0, diag_strfail = 0;
+    int cand_logged = 0;
     for (int r = 0; r < 2 && result_klass == 0; r++) {
         uint64_t start = (r == 0) ? MODE_SCAN_LOW_START : MODE_SCAN_HIGH_START;
         uint64_t end   = (r == 0) ? MODE_SCAN_LOW_END   : MODE_SCAN_HIGH_END;
-        uint8_t page[MODE_SCAN_STEP];
-        for (uint64_t page_addr = start; page_addr < end; page_addr += MODE_SCAN_STEP) {
-            if (!mode_try_read(page_addr, page, MODE_SCAN_STEP)) continue;
-            for (uint64_t off = 0; off < MODE_SCAN_STEP - 64; off += MODE_SCAN_STRIDE) {
-                uint64_t k = *(uint64_t*)(page + off);
+        uint64_t page_step = (r == 0) ? MODE_SCAN_PAGE : MODE_SCAN_STEP;
+        for (uint64_t page_addr = start; page_addr < end && result_klass == 0;) {
+            if (!mode_try_read(page_addr, g_mode_scan_page, page_step)) {
+                // Skip past whatever mapping made this read fail (hole/partial).
+                void *rs = NULL, *re = NULL;
+                int32_t prot = 0;
+                if (sceKernelQueryMemoryProtection((void*)page_addr, &rs, &re, &prot) == 0 && re) {
+                    uint64_t next = (uint64_t)re;
+                    page_addr = (next > page_addr) ? next : page_addr + page_step;
+                } else {
+                    page_addr += page_step;
+                }
+                continue;
+            }
+            diag_ok++;
+            for (uint64_t off = 0; off + 64 < page_step && result_klass == 0; off += MODE_SCAN_STRIDE) {
+                uint64_t k = *(uint64_t*)(g_mode_scan_page + off);
                 if ((k < 0x80000000ULL || k > 0x90000000ULL) &&
                     (k < 0x200000000ULL || k > 0x210000000ULL)) continue;
-                int ver = *(int*)(page + off + BLS_OFFSET_VERSION);
+                diag_klass++;
+                int ver = *(int*)(g_mode_scan_page + off + BLS_OFFSET_VERSION);
                 if (ver < 1 || ver > 50) continue;
-                uint64_t lid = *(uint64_t*)(page + off + BLS_OFFSET_LEVEL_ID);
-                if (lid < 0x1000000ULL) continue;
-                uint64_t sn = *(uint64_t*)(page + off + 0x28);
-                if (sn < 0x1000000ULL) continue;
-                uint64_t an = *(uint64_t*)(page + off + 0x38);
-                if (an < 0x1000000ULL) continue;
-                if (!mode_preview_arr_ok(page_addr + off)) continue;
+                diag_ver++;
+                uint64_t lid = *(uint64_t*)(g_mode_scan_page + off + BLS_OFFSET_LEVEL_ID);
+                uint64_t sn  = *(uint64_t*)(g_mode_scan_page + off + 0x28);
+                uint64_t an  = *(uint64_t*)(g_mode_scan_page + off + 0x38);
+                if (lid < 0x1000000ULL || sn < 0x1000000ULL || an < 0x1000000ULL) continue;
+                diag_ptrs++;
+                if (cand_logged < 12) {
+                    snprintf(logbuf, sizeof(logbuf), "[MODE]   cand klass=0x%lX @0x%lX ver=%d lid=0x%lX", k, page_addr + off, ver, lid);
+                    log_write(logbuf);
+                    cand_logged++;
+                }
+                if (!mode_preview_arr_ok(page_addr + off)) { diag_arrfail++; continue; }
                 char lid_buf[128];
-                if (!mode_extract_string((void*)lid, lid_buf, sizeof(lid_buf))) continue;
-                if (lid_buf[0] == '\0') continue;
+                if (!mode_extract_string((void*)lid, lid_buf, sizeof(lid_buf)) || lid_buf[0] == '\0') { diag_strfail++; continue; }
+                snprintf(logbuf, sizeof(logbuf), "[MODE] BeatmapLevelSO klass=0x%lX (first via '%s' @0x%lX)", k, lid_buf, page_addr + off);
+                log_write(logbuf);
                 result_klass = k;
-                return result_klass;
             }
+            page_addr += page_step;
         }
+    }
+    if (!result_klass) {
+        snprintf(logbuf, sizeof(logbuf), "[MODE] Scan diag: ok=%d klass=%d ver=%d ptrs=%d arrfail=%d strfail=%d",
+                 diag_ok, diag_klass, diag_ver, diag_ptrs, diag_arrfail, diag_strfail);
+        log_write(logbuf);
+        log_write("[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet");
     }
     return result_klass;
 }
@@ -492,21 +543,32 @@ static int mode_collect_beatmap_level_sos(
     uint64_t* out_addrs, char out_ids[][128], int max_count)
 {
     int count = 0;
-    uint8_t page[MODE_SCAN_STEP];
+    char logbuf[256];
     for (int r = 0; r < 2 && count < max_count; r++) {
         uint64_t start = (r == 0) ? MODE_SCAN_LOW_START : MODE_SCAN_HIGH_START;
         uint64_t end   = (r == 0) ? MODE_SCAN_LOW_END   : MODE_SCAN_HIGH_END;
-        for (uint64_t page_addr = start; page_addr < end && count < max_count; page_addr += MODE_SCAN_STEP) {
-            if (!mode_try_read(page_addr, page, MODE_SCAN_STEP)) continue;
-            for (uint64_t off = 0; off < MODE_SCAN_STEP - 64 && count < max_count; off += MODE_SCAN_STRIDE) {
-                uint64_t k = *(uint64_t*)(page + off);
+        uint64_t page_step = (r == 0) ? MODE_SCAN_PAGE : MODE_SCAN_STEP;
+        for (uint64_t page_addr = start; page_addr < end && count < max_count;) {
+            if (!mode_try_read(page_addr, g_mode_scan_page, page_step)) {
+                void *rs = NULL, *re = NULL;
+                int32_t prot = 0;
+                if (sceKernelQueryMemoryProtection((void*)page_addr, &rs, &re, &prot) == 0 && re) {
+                    uint64_t next = (uint64_t)re;
+                    page_addr = (next > page_addr) ? next : page_addr + page_step;
+                } else {
+                    page_addr += page_step;
+                }
+                continue;
+            }
+            for (uint64_t off = 0; off + 64 < page_step && count < max_count; off += MODE_SCAN_STRIDE) {
+                uint64_t k = *(uint64_t*)(g_mode_scan_page + off);
                 if (k != klass) continue;
-                uint64_t lid = *(uint64_t*)(page + off + BLS_OFFSET_LEVEL_ID);
+                uint64_t lid = *(uint64_t*)(g_mode_scan_page + off + BLS_OFFSET_LEVEL_ID);
                 if (lid < 0x1000000ULL) continue;
-                int ver = *(int*)(page + off + BLS_OFFSET_VERSION);
+                int ver = *(int*)(g_mode_scan_page + off + BLS_OFFSET_VERSION);
                 if (ver < 1 || ver > 50) continue;
-                uint64_t sn = *(uint64_t*)(page + off + 0x28);
-                uint64_t an = *(uint64_t*)(page + off + 0x38);
+                uint64_t sn = *(uint64_t*)(g_mode_scan_page + off + 0x28);
+                uint64_t an = *(uint64_t*)(g_mode_scan_page + off + 0x38);
                 if (sn < 0x1000000ULL || an < 0x1000000ULL) continue;
                 if (!mode_preview_arr_ok(page_addr + off)) continue;
                 char lid_buf[128];
@@ -517,6 +579,7 @@ static int mode_collect_beatmap_level_sos(
                 out_ids[count][127] = '\0';
                 count++;
             }
+            page_addr += page_step;
         }
     }
     return count;

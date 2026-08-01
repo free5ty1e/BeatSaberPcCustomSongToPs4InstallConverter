@@ -48,10 +48,23 @@ The FIRST matching candidate's klass pointer is the BeatmapLevelSO klass (all in
 
 ## Scan Ranges & Cost
 
-- `16MB (0x1000000) – 4GB (0x100000000)` — primary; ~65,280 pages of 64KB. v0.77 found **17 candidates** here matching checks 1-3.
-- `8GB (0x200000000) – 8.25GB (0x210000000)` — GC heap supplement; ~4,096 pages.
-- Page step 64KB, stride 32 bytes (candidates must be 32-aligned).
-- Cost dominated by probing unmapped pages (~1-2s for the 4GB pass). **Accept the pause.**
+- `16MB (0x1000000) – 64GB (0x1000000000)` — primary; **1MB page reads** (~65,536 total reads, same syscall count as the old 4GB@64KB pass → stutter stays brief). v0.77 found **17 candidates** here matching checks 1-3. **(v0.8045 scanned only 16MB–4GB + 8–8.25GB and found 0 — too narrow.)**
+- `8GB (0x200000000) – 8.25GB (0x210000000)` — GC heap supplement; 64KB page reads.
+- When a page read fails (hole/partial mapping), jump to the next mapping boundary via `sceKernelQueryMemoryProtection` result instead of stepping page-by-page.
+- Page step 64KB/1MB, stride 32 bytes (candidates must be 32-aligned).
+- Cost dominated by probing pages (~1-2s for the full pass). **Accept the pause.**
+
+## System.String length pitfall (v0.8046 bugfix)
+
+IL2CPP `System.String`: `_stringLength` at 0x10 (or 0x14 on PS4), chars UTF-16LE after. When probing both offsets, `len_14` is the **first two UTF-16 chars combined** (e.g. `"St"` → `0x00740053`), which is huge and NEVER 0 for a non-empty string. Length-selection logic must only use `len_14` when it's a plausible length `(0,256)`:
+
+```c
+if (len_10 > 0 && len_10 < 256 && (len_14 == 0 || len_14 >= 256)) { len = len_10; chars = str+0x14; }
+else if (len_14 > 0 && len_14 < 256)                             { len = len_14; chars = str+0x18; }
+else                                                              { len = len_10; chars = str+0x14; }
+```
+
+The v0.8045 one-liner `(len_14 == 0) ? len_10 : len_14` always picked the garbage `len_14`, so every string extraction failed and the klass find returned "not found".
 
 ## Safe Reads — USE sceKernelQueryMemoryProtection, NOT SIGNAL HANDLERS (v0.8045)
 

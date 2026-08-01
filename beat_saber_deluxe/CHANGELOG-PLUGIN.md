@@ -4,6 +4,16 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8046] — 2026-07-31
+### Fixed
+- **"BeatmapLevelSO klass not found" (v0.8045 test result)** — v0.8045 no longer crashed (syscall probing confirmed working, `prot=0x3`), but the scan found no valid objects. Two bugs fixed:
+  - **`mode_extract_string` length-selection bug** — `len = (len_10 valid && len_14 == 0) ? len_10 : len_14` always picked garbage `len_14`, because for a real IL2CPP string `len_14` is the first two UTF-16 chars combined (e.g. `0x00740053`), never 0. So every levelID extraction failed and the klass find returned nothing. Now mirrors `extract_utf16_string`'s proven fallback chain (use `len_10` unless `len_14` is a plausible length in `(0,256)`).
+  - **Scan range too narrow** — v0.8045 scanned 16MB–4GB + 8–8.25GB; v0.77's proven scan that found 17 candidates covered 16MB–64GB. Low range widened to 16MB–64GB at 1MB page reads (same ~64K syscall count as the old 4GB@64KB, so the stutter stays brief); high 8–8.25GB range kept at 64KB.
+- **1MB scan buffer moved off the stack** — `g_mode_scan_page` static global (v0.78 lesson: a 1MB stack buffer crashes the plugin).
+### Added
+- **Scan diagnostics** — `mode_find_beatmap_level_so_klass` now logs `[MODE]   cand klass=... @... ver=... lid=...` for the first 12 candidates passing the klass+version+pointer checks, plus a summary `[MODE] Scan diag: ok=N klass=N ver=N ptrs=N arrfail=N strfail=N` on failure — so the next test log shows exactly which structural check rejects candidates (and where they live).
+- **Region-jump optimization** — when a page read fails (hole/partial mapping), the scan jumps to the next mapping boundary via `sceKernelQueryMemoryProtection` instead of stepping page-by-page.
+
 ## [v0.8045] — 2026-07-31
 ### Fixed
 - **Instant crash when entering Solo song list (v0.8043/v0.8044 regression, root cause finally confirmed)** — both the worker-thread scan (v0.8043) and the synchronous in-hook scan (v0.8044) crashed with CE-34878-0 inside `mode_find_beatmap_level_so_klass()`. The crash log (`v0.8044_crash_sync.txt`) shows the scan started but the game died during it. Root cause: the proven-safe v0.74–v0.8008 scans ran from the **open()/redirect song-start hook** (GC quiescent), but the v0.8043/44 scans run during **song-list rendering**, when the game's GC actively throws page-protection SIGSEGV/SIGBUS faults on its own threads. Our process-wide handlers hijacked those faults → `siglongjmp` to the scan stack → instant crash, regardless of which thread ran the scan.

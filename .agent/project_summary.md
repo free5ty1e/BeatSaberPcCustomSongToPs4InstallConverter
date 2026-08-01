@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-07-31
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8045).** v0.8043/44 crashed on Solo entry (signal handlers hijacked Unity GC page-protection faults during song-list render). v0.8045 eliminates ALL signal handlers — safe reads via `sceKernelQueryMemoryProtection` syscall (self-tested, fail-closed). Deployed, awaiting user test of Start Me Up mode selector.
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8046).** v0.8045 test: NO crash (signal-free `sceKernelQueryMemoryProtection` works), but `klass not found` — a `mode_extract_string` length-selection bug + too-narrow scan range. v0.8046 fixes both + adds scan diagnostics. Deployed, awaiting user test.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
@@ -10,7 +10,7 @@
 
 **Mode mapping (Phase 1 + Phase 2):**
 - **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Controls gameplay data. ✅ Deployed and playing.
-- **Phase 2 (plugin v0.8045):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–4GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. Runs synchronously in the MoveNext hook. **v0.8045 = SIGNAL-FREE**: safe reads via `sceKernelQueryMemoryProtection` syscall (NOT SIGSEGV/SIGBUS handlers — those hijacked Unity GC page-protection faults and crashed v0.8043/44).
+- **Phase 2 (plugin v0.8046):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–64GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. Runs synchronously in the MoveNext hook. **v0.8046 = signal-free**: safe reads via `sceKernelQueryMemoryProtection` (v0.8045 test PROVED no crash + syscall works). v0.8046 widens the range to 16MB–64GB @1MB pages (v0.77-proven coverage), fixes a `mode_extract_string` length bug, and logs per-check scan diagnostics.
 
 ### Known Limitation (v0.8040)
 - **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.
@@ -133,7 +133,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 164 | v0.8043 | Fix scan trigger + filter + worker thread | 🔲 Scan never fired (levelID not "custom/"); now fires on any MoveNext, structural klass find, worker thread. Deployed — awaiting test |
 | **165** | **v0.8043 test** | **User test — Solo entry** | **❌ INSTANT CRASH — worker thread's process-wide SIGSEGV handlers hijacked the game's GC page-protection faults on the main thread (siglongjmp to worker stack)** |
 | **166** | **v0.8044** | **Synchronous scan (revert worker)** | **❌ CRASH AGAIN — same last-[MODE] log; proved handlers during song-list render crash regardless of thread. Root cause confirmed.** |
-| **167** | **v0.8045** | **Signal-free scan (sceKernelQueryMemoryProtection)** | **🔲 All handlers removed; syscall-based reads self-tested + fail-closed. Deployed — awaiting test** |
+| **167** | **v0.8045** | **Signal-free scan (sceKernelQueryMemoryProtection)** | **✅ NO CRASH — syscall works (prot=0x3), but ❌ klass not found: mode_extract_string bug + range too narrow** |
+| **168** | **v0.8046** | **Fix string bug + widen range + diagnostics** | **🔲 string-len fix, 16MB-64GB@1MB scan, Scan diag counters. Deployed — awaiting test** |
 
 ## Memory Injection Versions
 
@@ -173,9 +174,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Test v0.8045 mode selector** — restart game, open Start Me Up, check for OneSaber/NoArrows/90Degree/360Degree in mode selector. Pull `bs_log.txt` for `[MODE]` entries (klass found, N BSL objects, levelIDs, patch complete). If the log shows `sceKernelQueryMemoryProtection is a stub — mode scan disabled`, the syscall is a stub → fall back to deferred scan at redirect/song-start timing (v0.77-proven signal pattern).
-2. **If scan finds 0 BSL objects** — the structural klass find failed (stride 32 may miss object alignment, or objects not in 16MB–4GB/8–8.25GB). Adjust stride to 8 and/or add ranges.
-3. **If scan finds BSLs but no 5 BeatmapCharacteristicSO** — widen the ±2MB neighbor scan or find charSOs from a known pack.
+1. **Test v0.8046 mode selector** — restart game, open Start Me Up, check for OneSaber/NoArrows/90Degree/360Degree. Pull `bs_log.txt` (now cleared after each pull) for `[MODE]` entries: `cand klass=...` lines + `Scan diag: ok=... klass=... ver=... ptrs=... arrfail=... strfail=...` will pinpoint which check rejects candidates and where they live. If `klass=0` for all checks, adjust scan range/stride.
+2. **If klass found but 0 BSL collected** — collector same range as finder; check `mode_preview_arr_ok` strictness.
+3. **If BSLs found but no 5 BeatmapCharacteristicSO** — widen the ±16MB neighbor scan or find charSOs from a known pack.
 4. **If mode selector appears** — test 90Degree/360Degree gameplay (Phase 1 uses Standard patterns; unique .dat beatmap data still needs per-mode TextAsset compilation — roadmap M5).
 5. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
 6. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
