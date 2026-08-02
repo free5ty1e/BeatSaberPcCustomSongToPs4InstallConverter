@@ -17,7 +17,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8047"
+#define PLUGIN_VERSION "v0.8048"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -252,8 +252,33 @@ static FILE *fh(const char *p, const char *m) {
 static int g_redirect_count = 0;
 static int g_open_count = 0;
 
+// ── Mode scan trigger state (v0.8048 timing fix) ─────────────────────────────
+// The v0.8047 log proved the scan was firing too early: the first MoveNext call
+// (song-list cell populate) runs BEFORE the pack bundle's BeatmapLevelSO objects
+// are deserialized into the GC heap — the rollingstones pack bundle only opened
+// at [OPEN #792], AFTER all 22 song cells rendered. Scanning before that is a
+// guaranteed miss. So:
+//   g_mode_first_mn_open  = open-count at first MoveNext call (song list session)
+//   g_mode_pack_last_open = open-count of the LAST *_pack_assets_all_*.bundle
+//                           open that happened AFTER the first MoveNext. Catalog
+//                           opens at startup (before any MoveNext) are ignored —
+//                           they only CRC-check the bundle, they do NOT
+//                           deserialize BeatmapLevelSO objects.
+// The scan only fires from a MoveNext that occurs AFTER such a pack open, so the
+// BeatmapLevelSO objects are (about to be) present. On failure it stays retryable
+// (bounded by MODE_MAX_ATTEMPTS) so a subsequent real pack load re-triggers it.
+static int g_mode_first_mn_open = 0;
+static int g_mode_pack_last_open = 0;
+static int g_mode_scan_last_open = 0;
+static int g_mode_scan_attempts = 0;
+static int g_mode_scan_in_progress = 0;
+#define MODE_MAX_ATTEMPTS 4
+
 // Forward declaration — deferred TMP_Text hook (defined after open_hook)
 static void try_install_tmp_hook(void);
+// Fallback trigger: fires the scan from a custom-song start (BeatmapLevelsData
+// open in open_hook). v0.77 proved BeatmapLevelSO objects are loaded by then.
+static void mode_try_patch_song_start(void);
 
 static int open_hook(const char *path, int flags, ...) {
     if (in_hook) return HOOK_CONTINUE(hook_open, int (*)(const char*, int, int), path, flags, 0);
@@ -289,6 +314,27 @@ static int open_hook(const char *path, int flags, ...) {
                          g_open_count, path,
                          np ? " -> REDIRECTED" : "");
                 log_write(dbuf);
+            }
+
+            // ── Mode scan trigger: track pack bundle data loads (v0.8048) ────
+            // A *_pack_assets_all_*.bundle open that happens AFTER the first
+            // MoveNext (song-list session) is a REAL pack data load. The
+            // startup catalog opens (before any MoveNext) only CRC-check the
+            // bundle and do NOT deserialize BeatmapLevelSO objects — scanning
+            // then is a guaranteed miss (v0.8047 proved this).
+            if (g_mode_first_mn_open > 0 && strstr(lower_path, "_pack_assets_all_")) {
+                g_mode_pack_last_open = g_open_count;
+                char pbuf[256];
+                snprintf(pbuf, sizeof(pbuf), "[MODE] pack data open #%d: %s", g_open_count, lower_path);
+                log_write(pbuf);
+            }
+            // ── Mode scan fallback trigger: custom song start (v0.77-proven) ──
+            // When a custom song loads, Beat Saber opens a BeatmapLevelsData
+            // path; by the time it opens, the pack's BeatmapLevelSO objects are
+            // guaranteed deserialized into the GC heap. v0.77 found 17 BSL
+            // candidates at exactly this point.
+            if (g_feature_beatmap_mode_mapping && strstr(lower_path, "beatmaplevelsdata")) {
+                mode_try_patch_song_start();
             }
         }
     }
@@ -747,13 +793,19 @@ static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t 
 // (sceKernelQueryMemoryProtection) so NO signal handlers are installed — the
 // v0.8043/44 crash was caused by process-wide SIGSEGV/SIGBUS handlers hijacking
 // Unity's GC page-protection faults during song-list rendering.
+// v0.8048: failures do NOT permanently set g_mode_preview_done = -1 anymore —
+// the scan stays retryable (bounded by MODE_MAX_ATTEMPTS in the callers) so a
+// later MoveNext/song-start re-triggers it once the pack's BeatmapLevelSO
+// objects are actually deserialized (the v0.8047 one-shot early scan missed).
 static void mode_patch_all(void) {
+    if (g_mode_scan_in_progress) return;
+    g_mode_scan_in_progress = 1;
     char logbuf[256];
     log_write("[MODE] Starting BeatmapLevelSO memory scan...");
     uint64_t klass = mode_find_beatmap_level_so_klass();
     if (!klass) {
-        log_write("[MODE] BeatmapLevelSO klass not found -- game may not have loaded pack yet");
-        g_mode_preview_done = -1;
+        log_write("[MODE] BeatmapLevelSO klass not found -- pack BeatmapLevelSO not loaded yet");
+        g_mode_scan_in_progress = 0;
         return;
     }
     snprintf(logbuf, sizeof(logbuf), "[MODE] BeatmapLevelSO klass=0x%lX", klass);
@@ -765,7 +817,7 @@ static void mode_patch_all(void) {
     int bsl_count = mode_collect_beatmap_level_sos(klass, bsl_addrs, bsl_level_ids, MAX_BSL);
     snprintf(logbuf, sizeof(logbuf), "[MODE] Found %d BeatmapLevelSO objects", bsl_count);
     log_write(logbuf);
-    if (bsl_count == 0) { g_mode_preview_done = -1; return; }
+    if (bsl_count == 0) { g_mode_scan_in_progress = 0; return; }
     // Log every found levelID for diagnostics
     for (int i = 0; i < bsl_count; i++) {
         snprintf(logbuf, sizeof(logbuf), "[MODE]   BSL[%d] levelID='%s' @0x%lX", i, bsl_level_ids[i], bsl_addrs[i]);
@@ -790,8 +842,8 @@ static void mode_patch_all(void) {
         }
     }
     if (char_sos[0] == 0) {
-        log_write("[MODE] Failed to find BeatmapCharacteristicSO objects");
-        g_mode_preview_done = -1;
+        log_write("[MODE] Failed to find BeatmapCharacteristicSO objects -- retryable");
+        g_mode_scan_in_progress = 0;
         return;
     }
     // Patch ALL BeatmapLevelSO objects (every pack on this PS4 is fully custom)
@@ -802,17 +854,65 @@ static void mode_patch_all(void) {
     snprintf(logbuf, sizeof(logbuf), "[MODE] Patch complete: %d BeatmapLevelSO objects updated", patched);
     log_write(logbuf);
     g_mode_preview_done = 1;
+    g_mode_scan_in_progress = 0;
 }
 
 // Called from MoveNext hook when a song BeatmapLevel is first detected.
-// Triggers the one-time synchronous scan that patches BeatmapLevelSO
-// _previewDifficultyBeatmapSets (pack bundle UI data). Runs on the game
-// thread; the game pauses briefly. Uses signal-free reads (v0.8045+).
+// v0.8048: the scan only fires once a *_pack_assets_all_*.bundle has been
+// (re)opened AFTER the first MoveNext — i.e. a real pack data load whose
+// BeatmapLevelSO objects are being deserialized. Startup catalog opens are
+// ignored. Failures stay retryable (bounded by MODE_MAX_ATTEMPTS) so a
+// subsequent fresh pack load re-triggers the scan. Runs on the game thread;
+// the game pauses briefly. Uses signal-free reads (v0.8045+).
 static void mode_try_patch_from_move_next(void* beatmapLevel) {
     if (g_mode_preview_done) return;
     if (!g_feature_beatmap_mode_mapping) return;
     if (!beatmapLevel) return;
-    log_write("[MODE] Triggered from MoveNext -- running synchronous scan");
+
+    // Record the open-count of the first MoveNext (song-list session start)
+    if (g_mode_first_mn_open == 0) {
+        g_mode_first_mn_open = g_open_count;
+        char mb[192];
+        snprintf(mb, sizeof(mb), "[MODE] first MoveNext at open #%d", g_open_count);
+        log_write(mb);
+    }
+
+    // Permanent give-up once too many scan attempts were burned
+    if (g_mode_scan_attempts >= MODE_MAX_ATTEMPTS) {
+        g_mode_preview_done = -1;
+        log_write("[MODE] Gave up: MODE_MAX_ATTEMPTS scan attempts reached");
+        return;
+    }
+
+    // Only scan after a fresh pack data open that happened since the last scan.
+    // Startup catalog opens (before the first MoveNext) never set this.
+    if (g_mode_pack_last_open == 0) return;
+    if (g_mode_pack_last_open <= g_mode_scan_last_open) return;
+
+    // Fire the scan for this fresh pack load
+    g_mode_scan_last_open = g_mode_pack_last_open;
+    g_mode_scan_attempts++;
+    char sb[192];
+    snprintf(sb, sizeof(sb), "[MODE] Triggered from MoveNext (attempt %d) -- running synchronous scan",
+             g_mode_scan_attempts);
+    log_write(sb);
+    mode_patch_all();
+}
+
+// Fallback trigger: fires the scan from a custom-song start. v0.77 proved that
+// at BeatmapLevelsData load time the pack's BeatmapLevelSO objects are already
+// deserialized (17 candidates found), so this is the highest-confidence timing.
+// Bounded by the same MODE_MAX_ATTEMPTS as the MoveNext trigger.
+static void mode_try_patch_song_start(void) {
+    if (g_mode_preview_done) return;
+    if (!g_feature_beatmap_mode_mapping) return;
+    if (g_mode_scan_attempts >= MODE_MAX_ATTEMPTS) return;
+    if (g_mode_scan_in_progress) return;
+    g_mode_scan_attempts++;
+    char sb[192];
+    snprintf(sb, sizeof(sb), "[MODE] Triggered from song-start redirect (attempt %d) -- running synchronous scan",
+             g_mode_scan_attempts);
+    log_write(sb);
     mode_patch_all();
 }
 
@@ -1076,9 +1176,12 @@ static void tmp_text_set_text2_hook(void* this_ptr, void* value, int sync_input,
 // RVA: 0x1D377C0 (private void MoveNext())
 static int g_move_next_hook_count = 0;
 static void move_next_hook(void* state_machine) {
-    if (g_feature_song_metadata_modification && state_machine) {
-        void* beatmapLevel = *(void**)((char*)state_machine + 0x30);
-        if (beatmapLevel) {
+    if (!state_machine) {
+        HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);
+        return;
+    }
+    void* beatmapLevel = *(void**)((char*)state_machine + 0x30);
+    if (g_feature_song_metadata_modification && beatmapLevel) {
             // Modify songName at BeatmapLevel + 0x20
             void* songNamePtr = *(void**)((char*)beatmapLevel + 0x20);
             if (songNamePtr) {
@@ -1121,11 +1224,11 @@ static void move_next_hook(void* state_machine) {
                     }
                 }
             }
-            // Phase 2 trigger: patch BeatmapLevelSO._previewDifficultyBeatmapSets
-            // Runs once when first custom song is detected (pack bundle is loaded)
-            mode_try_patch_from_move_next(beatmapLevel);
-        }
+            // Phase 2 trigger: patch BeatmapLevelSO._previewDifficultyBeatmapSets.
+            // v0.8048: runs on every MoveNext but is internally gated — fires
+            // only after a fresh pack data load; retryable up to MODE_MAX_ATTEMPTS.
     }
+    mode_try_patch_from_move_next(beatmapLevel);
     HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);
 }
 
@@ -1178,7 +1281,7 @@ static int g_tmp_hook_installed = 0;
 
 static void try_install_tmp_hook(void) {
     if (g_tmp_hook_installed) return;
-    if (g_feature_song_metadata_modification == 0) return;
+    if (g_feature_song_metadata_modification == 0 && g_feature_beatmap_mode_mapping == 0) return;
 
     // Skip early opens — our own log file and system devices load before game modules
     if (g_tmp_hook_attempts > 0 && g_open_count < 10) return;

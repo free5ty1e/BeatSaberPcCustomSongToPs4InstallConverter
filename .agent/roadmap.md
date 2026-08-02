@@ -96,13 +96,14 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [ ] ~~**(Future)** Cover image patching~~ → **DEFERRED** — memory injection not viable
 - [ ] ~~**(Future)** Expand metadata table~~ → **DEFERRED** — memory injection not viable
 
-### Mode Selector UI — Structural BeatmapLevelSO RAM Patching (IN PROGRESS — v0.8047)
+### Mode Selector UI — Structural BeatmapLevelSO RAM Patching (IN PROGRESS — v0.8048)
 - [x] **(v0.8042)** Structural klass find (no levelID anchor) + BSL collector + patch logic implemented
 - [x] **(v0.8043)** Trigger fixed to fire on any MoveNext; scan runs on worker thread → **❌ instant crash** (process-wide SIGSEGV handlers hijacked Unity GC page-protection faults)
 - [x] **(v0.8044)** Synchronous game-thread scan → **❌ crash again at same point** — signal handlers during song-list rendering are the hazard regardless of thread. Root cause CONFIRMED via crash log.
 - [x] **(v0.8045)** Signal-free scan via `sceKernelQueryMemoryProtection` → **✅ NO CRASH (syscall works, prot=0x3), but ❌ "klass not found"** — `mode_extract_string` length bug (picked garbage `len_14`) + scan range too narrow (16MB–4GB only)
 - [x] **(v0.8046)** Fixed string-len selection, widened low range to 16MB–64GB @1MB pages (v0.77-proven), added `[MODE] Scan diag` counters. **TESTED (Exp 169): ✅ NO CRASH but arrfail=25443 strfail=0 — all candidates at 0x1C2–0x1D5xxxxx are serialized pack-bundle data (lid=packed floats), not managed objects. ~1min hang during scan (dev-only, warned).**
-- [x] **(v0.8047)** Tightened diagnostics to pinpoint rejection: v0.77 pointer window [16MB,512GB], string-extract check moved before array check, `mode_preview_arr_ok` failure stages (1-8), raw64 dumps. **Deployed + verified (105120 B) — awaiting user test.**
+- [x] **(v0.8047)** Tightened diagnostics: v0.77 pointer window [16MB,512GB], string check before array check, `mode_preview_arr_ok` failure stages (1-8), raw64 dumps. **TESTED (Exp 170): ✅ NO CRASH. Root cause CONFIRMED = TRIGGER TIMING — scan fired from first MoveNext (open #731) before any pack BeatmapLevelSO deserialized; the pack bundle re-opened at [OPEN #792] AFTER all 22 cells rendered. Offsets verified correct (dump.cs TypeDefIndex 11680); BeatmapLevel has no BSL back-reference for the MoveNext hook to anchor on.**
+- [x] **(v0.8048)** Trigger timing fix: `open_hook` records `*_pack_assets_all_*.bundle` opens after the first MoveNext (`g_mode_pack_last_open`); MoveNext scan fires only on fresh pack load since last scan; failures RETRYABLE (MODE_MAX_ATTEMPTS=4 — fixes the one-shot early-miss that permanently disabled the scan in v0.8047); song-start `BeatmapLevelsData` fallback trigger (v0.77-proven); `g_mode_scan_in_progress` re-entrancy guard; MoveNext hook installs when metadata OR mode-mapping feature on. **Built 105,120 B, 361/361 pytest. PS4 unreachable — deploy pending.**
 - [ ] **Mode selector shows 5 modes in UI** — when scan succeeds, `_previewDifficultyBeatmapSets` replaced with 5 entries
 - [ ] **(Final UX)** Remove/reduce the ~1 min scan hang (acceptable for dev diagnostics only)
 - [ ] **(M5)** Unique 360/90 `.dat` beatmap data per mode (Phase 1 currently clones Standard patterns)

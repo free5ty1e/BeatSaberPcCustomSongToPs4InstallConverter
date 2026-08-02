@@ -4,6 +4,17 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8048] — 2026-08-02
+### Changed
+- **Scan trigger timing fix (v0.8047 test result: scan fired before any pack BeatmapLevelSO was deserialized)** — the v0.8047 log (`v0.8047_scan_diag.txt`, 893 lines) proved the root cause was **timing, not scan logic or offsets**: the scan ran from the FIRST MoveNext call (open #731), but the selected pack's bundle only (re)opened at `[OPEN #792]`/`#794` — AFTER all 22 song cells had rendered. Every BeatmapLevelSO offset (0x18/0x20/0x98, verified against `dump.cs` TypeDefIndex 11680) was correct; the objects simply didn't exist in the GC heap yet. So v0.8048:
+  - **Tracked pack data loads** — `open_hook` now records the last `*_pack_assets_all_*.bundle` open that happens **after** the first MoveNext (`g_mode_pack_last_open`). Startup catalog opens (before any MoveNext) only CRC-check bundles and are ignored.
+  - **Gated MoveNext trigger** — `mode_try_patch_from_move_next` only fires the scan when a fresh pack data load occurred since the last scan (`g_mode_pack_last_open > g_mode_scan_last_open`).
+  - **Retryable failures** — `mode_patch_all` no longer permanently sets `g_mode_preview_done = -1` on the klass-not-found / no-BSL / no-charSO paths. Failures now stay retryable, bounded by `MODE_MAX_ATTEMPTS` (4). This fixes the v0.8047 one-shot bug where a single too-early scan permanently disabled the feature.
+  - **Song-start fallback trigger (v0.77-proven)** — `open_hook` also fires the scan when a `BeatmapLevelsData` path opens (custom song load), where v0.77 found 17 BSL candidates. Shares the same 4-attempt budget.
+  - **Re-entrancy guard** — `g_mode_scan_in_progress` prevents the scan from re-triggering itself through the nested `log_write` → `open_hook` calls.
+  - **MoveNext hook decoupled from metadata flag** — the hook (and mode trigger) now install and run when EITHER `song_metadata_modification` or `beatmap_mode_mapping` is on; the metadata replacement block stays gated on its own flag.
+- Version bump v0.8047 → v0.8048. Build 105,120 bytes. 361/361 pytest pass.
+
 ## [v0.8047] — 2026-08-01
 ### Changed
 - **Deeper mode-scan diagnostics (v0.8046 test result: all 25,443 candidates failed the preview-array check)** — v0.8046 found 12 candidates but every one was rejected by `mode_preview_arr_ok` (arrfail=25443, strfail=0). Candidate addresses (0x1C2–0x1D5xxxxx) + `lid=0x3BA3D70A...` (packed floats) identified them as **serialized pack-bundle data in RAM, not live managed objects**. v0.8047 changes the scan to prove this:

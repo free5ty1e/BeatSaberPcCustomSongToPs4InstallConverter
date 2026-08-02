@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-01
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8047).** v0.8045 test: NO crash (signal-free `sceKernelQueryMemoryProtection` works), but `klass not found` — string-len bug + narrow range. v0.8046 test: NO crash, but all 25,443 candidates failed the preview-array check (arrfail=25443) — candidates at 0x1C2–0x1D5xxxxx are pack-bundle data, not managed objects. v0.8047 deployed with tightened diagnostics: v0.77 pointer window [16MB,512GB], string check before array check, arr-failure stage breakdown, raw64 dumps. Awaiting user test.
+**Last Updated:** 2026-08-02
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8048).** v0.8045 test: NO crash (signal-free `sceKernelQueryMemoryProtection` works), but `klass not found`. v0.8046 test: NO crash, but all 25,443 candidates failed the preview-array check (pack-bundle data, not managed objects). v0.8047 test: NO crash, and **root cause CONFIRMED = scan TIMING** — scan fired from the first MoveNext (open #731) before any pack BeatmapLevelSO was deserialized; the pack bundle only re-opened at [OPEN #792] AFTER all 22 cells rendered. Offsets verified correct against dump.cs. **v0.8048 built (105,120 bytes, 361/361 pytest)**: trigger reworked — scan fires only after a real pack data load (pack bundle open post-first-MoveNext) or at song-start (BeatmapLevelsData, v0.77-proven), failures are retryable (MODE_MAX_ATTEMPTS=4), one-shot early-miss bug fixed. **PS4 unreachable at build time — deploy deferred.**
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
@@ -10,7 +10,7 @@
 
 **Mode mapping (Phase 1 + Phase 2):**
 - **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Controls gameplay data. ✅ Deployed and playing.
-- **Phase 2 (plugin v0.8047):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–64GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. Runs synchronously in the MoveNext hook. **v0.8045 = signal-free**: safe reads via `sceKernelQueryMemoryProtection` (v0.8045 test PROVED no crash + syscall works). v0.8046 fixed a `mode_extract_string` length bug and widened the scan. **v0.8047**: v0.77 pointer window [16MB,512GB], string-extraction check moved before array check, `mode_preview_arr_ok` failure-stage breakdown (1-8), raw64 dumps — to pinpoint why all candidates were rejected (pack-bundle data false positives).
+- **Phase 2 (plugin v0.8048):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–64GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. **Signal-free** reads via `sceKernelQueryMemoryProtection` (v0.8045 proved no crash). v0.8047 test CONFIRMED the root cause is **scan timing**: the scan must fire only when the pack's BeatmapLevelSO objects exist (fresh pack load post-first-MoveNext, or BeatmapLevelsData song-start — v0.77-proven). **v0.8048**: pack-data-open gate (`g_mode_pack_last_open`), retryable failures (MODE_MAX_ATTEMPTS=4, fixes the one-shot early-miss), song-start fallback trigger, re-entrancy guard, MoveNext hook decoupled from the metadata feature flag.
 
 ### Known Limitation (v0.8040)
 - **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.
@@ -136,6 +136,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **167** | **v0.8045** | **Signal-free scan (sceKernelQueryMemoryProtection)** | **✅ NO CRASH — syscall works (prot=0x3), but ❌ klass not found: mode_extract_string bug + range too narrow** |
 | **168** | **v0.8046 test** | **Wide scan + string fix + diagnostics** | **✅ NO CRASH — but arrfail=25443 strfail=0: all candidates (0x1C2–0x1D5xxxxx, lid=packed floats) are pack-bundle data, not managed objects** |
 | **169** | **v0.8047** | **Tighten pointer window + reorder checks + stage breakdown + raw64 dumps** | **🔲 Build 105,120 bytes, 361/361 pytest pass, deployed. Awaiting user test — expect diag to show whether ptrs drops (bundle data killed) or objects found** |
+| **170** | **v0.8047 test** | **Full log re-analysis — root cause CONFIRMED: scan TIMING** | **✅ NO CRASH. Scan fired from first MoveNext (open #731) before any pack BSL deserialized; pack bundle re-opened at [OPEN #792] after all 22 cells rendered. ptrs=1984 strfail=1980 arrfail=4 — objects simply didn't exist. Offsets verified correct (dump.cs TypeDefIndex 11680).** |
+| **171** | **v0.8048** | **Trigger timing fix: pack-data gate + retryable scans + song-start fallback** | **🔲 Built 105,120 bytes, 361/361 pytest pass. PS4 unreachable — deploy deferred. Awaiting deploy + user test.** |
 
 ## Memory Injection Versions
 
@@ -175,12 +177,14 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Test v0.8047 mode selector** — restart game, open Start Me Up (warned: ~1 min hang during scan, dev-only). Pull `bs_log.txt` (cleared after each pull) for `[MODE]` entries: `cand klass=...` lines, raw64 dumps, `Scan diag: ok=... klass(mod)=... klass(8g)=... ver=... ptrs=... strfail=... arrfail=...` and `arr stages: 1/2/3/4/5/6/7/8` — will show whether the v0.77 pointer window kills the bundle-data candidates and whether real objects surface. If still arrfail-dominant with reasonable ptrs, compare raw64 dumps to the DummyDll layout to fix `BLS_OFFSET_*`/preview offsets.
-2. **If klass found but 0 BSL collected** — collector same range as finder; check `mode_preview_arr_ok` strictness.
-3. **If BSLs found but no 5 BeatmapCharacteristicSO** — widen the ±16MB neighbor scan or find charSOs from a known pack.
-4. **If mode selector appears** — test 90Degree/360Degree gameplay (Phase 1 uses Standard patterns; unique .dat beatmap data still needs per-mode TextAsset compilation — roadmap M5).
-5. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
-6. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
+1. **Deploy + test v0.8048** — PS4 was unreachable at build time; deploy `beat_saber_deluxe.prx` (105,120 bytes) to `/data/GoldHEN/plugins/`. User flow: boot → Solo → scroll the **pack list** (loads fresh pack bundles) → enter a pack and scroll songs → select a song. Pull `bs_log.txt` (clear after each pull): expect `[MODE] pack data open #N` entries, then `Triggered from MoveNext (attempt N)` or `Triggered from song-start redirect` + `BSL[k] levelID=...` + `Patch complete: N BeatmapLevelSO objects updated`. Modes should appear in the Start Me Up selector once patched.
+2. **If still zero BSLs at the new trigger points** — re-examine high-region (0x200000000–0x210000000) heap probing; low-range sweeps only prove archive data (raw64 candidates 0x1C27B60/0x1C40F40/0x1C44D40/0x1D4D5E0 are serialized bundle headers, not managed objects). Consider firing the scan from a LevelDetailViewController populate instead of MoveNext.
+3. **If klass found but 0 BSL collected** — collector uses same range as finder; check `mode_preview_arr_ok` strictness.
+4. **If BSLs found but no 5 BeatmapCharacteristicSO** — widen the ±16MB neighbor scan or find charSOs from a known pack.
+5. **If mode selector appears** — test 90Degree/360Degree gameplay (Phase 1 uses Standard patterns; unique .dat beatmap data still needs per-mode TextAsset compilation — roadmap M5).
+6. **Reduce the ~1 min scan hang** — the scan cost is acceptable for dev tests only; a production scan must target a smaller region, run after BSLs exist (v0.8048 trigger), or reuse the already-loaded BSL addresses.
+7. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
+8. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
 
 ## Active Knowledge Gaps
 

@@ -12,7 +12,7 @@ metadata:
 **Started:** 2026-07-28 (Exp 160)
 **System:** PS4 FW 9.00, GoldHEN 2.3 / 2.4b16.2
 **Toolchain:** OpenOrbis PS4 Toolchain + GoldHEN Plugin SDK
-**Plugin file:** `beat_saber_deluxe.prx` (pipeline v0.5307 / plugin v0.8047)
+**Plugin file:** `beat_saber_deluxe.prx` (pipeline v0.5307 / plugin v0.8048)
 **Prior experiments (Exp 1-159, archived):** `experiment_log_archive/experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md`
 
 **How to append:** Add the next `### Experiment <N+1>:` entry at the end of THIS file (only current-feature experiments). When this feature concludes, move the whole file into `experiment_log_archive/` with a feature+date name and open a fresh `experiment_log.md`.
@@ -181,3 +181,23 @@ metadata:
 - **Key Takeaway:** On v2.04, the BeatmapLevelSO heap objects are NOT found at 0x1C2–0x1D5xxxxx — that region is bundle data. v0.8047 will tell us whether tightening the pointer window surfaces real objects, or whether BSL objects live in the 8GB region / don't exist yet at scan time.
 - **Version:** Plugin v0.8047
 - **Status:** 🔲 **AWAITING USER TEST — restart game, enter Solo (~1 min hang during scan, warned). Pull bs_log.txt; expect `[MODE] Scan diag` to show whether `ptrs` (after v0.77 window) is now small, and whether `arrfail` still dominates or string extraction starts rejecting.**
+
+### Experiment 170: v0.8047 TEST — root cause CONFIRMED as scan timing (→ v0.8048 trigger fix)
+- **Date:** 2026-08-01/02
+- **Result:** ✅ **NO CRASH**, ✅ **root cause confirmed**. ❌ No modes in Start Me Up.
+- **Log:** `/workspace/.ai_memory/experiment_logs/v0.8047_scan_diag.txt` (893 lines, single clean session — log cleared after pull per workflow rule).
+- **Diagnosis (log analysis):**
+  - Scan fired from the **first MoveNext call** (`[MODE] Triggered from MoveNext` right after `[OPEN #731]`) and completed with `klass not found` at lines 841-843 — **before** the 22 song-cell MoveNext calls (`[METADATA] MoveNext #1..#22` at opens #770–#891) populated the Rolling Stones list.
+  - The selected pack's bundle only **re-opened at `[OPEN #792]`/`#793` (rollingstones) and `#794`/`#795` (ostvol2)** — AFTER all 22 cells rendered. Pack bundles open repeatedly at startup (#198–#294, #353–#491, #497–#641, #644–#664 = catalog CRC checks; they do NOT deserialize BeatmapLevelSO objects).
+  - Summary line: `Scan diag: ok=7668 klass(mod)=703425 klass(8g)=273416 ver=43808 ptrs=1984 strfail=1980 arrfail=4`. After the v0.77 pointer window, the candidate pool collapsed to ~1,984 pointer-valid hits (vs 25,443 in v0.8046) and 4 arrfails at 0x2010B1180/0x201238700 — but **no valid klass**, i.e. no BeatmapLevelSO objects existed in the GC heap at scan time.
+  - **Root cause (CONFIRMED): TIMING, not scan logic.** BeatmapLevelSO field offsets are correct (verified field-by-field against `dump.cs` line 625599, TypeDefIndex 11680: `_version@0x18`, `_levelID@0x20`, `_previewDifficultyBeatmapSets@0x98`, etc.). `BeatmapLevel` (dump.cs line 624376, TypeDefIndex 11647) has NO BeatmapLevelSO back-reference, so the MoveNext hook's `beatmapLevel` cannot anchor the scan to its BSL. The BSL objects simply don't exist at the first MoveNext — they deserialize later (level-detail panel / pack data load). The v0.8047 scan set `g_mode_preview_done = -1` on that single early failure and **never retried**, even though 22 more MoveNexts followed.
+- **Fix (v0.8048, built — pending deploy):**
+  - `open_hook` records the LAST `*_pack_assets_all_*.bundle` open that happens AFTER the first MoveNext (`g_mode_pack_last_open`) — the real pack data load signal. Startup catalog opens are ignored.
+  - `mode_try_patch_from_move_next` only fires the scan when `g_mode_pack_last_open > g_mode_scan_last_open` (a fresh pack load since the last scan).
+  - `mode_patch_all` failures are now **retryable** — the `g_mode_preview_done = -1` permanent-disable on the klass/BSL/charSO failure paths is removed; retries bounded by `MODE_MAX_ATTEMPTS` (4). This directly fixes the one-shot early-miss bug.
+  - **Song-start fallback trigger (v0.77-proven):** `open_hook` also fires the scan when a `BeatmapLevelsData` path opens (custom song load) — at that point BSLs are guaranteed loaded (v0.77 found 17 candidates there). Shares the 4-attempt budget.
+  - Re-entrancy guard `g_mode_scan_in_progress` (log_write → open_hook recursion) + MoveNext hook now installs when EITHER metadata OR mode-mapping feature is on.
+  - Version bump v0.8047 → v0.8048. Build 105,120 bytes. 361/361 pytest pass. **PS4 unreachable at build time — deploy deferred.**
+- **Key Takeaway:** On v2.04 the scan must fire when the pack data is actually loaded. The two reliable signals are (1) a `_pack_assets_all_*.bundle` open that occurs during the song-list session (post-first-MoveNext), and (2) a `BeatmapLevelsData` open at custom-song start. First MoveNext ≠ BSLs loaded.
+- **Version:** Plugin v0.8048
+- **Status:** 🔲 **BUILT, AWAITING DEPLOY + TEST — deploy `beat_saber_deluxe.prx`, restart game. User flow: boot → Solo → scroll the PACK list (loads fresh pack bundles) → enter a pack and scroll songs → select a song. Pull bs_log.txt; expect `[MODE] pack data open #N` entries and `[MODE] Triggered from MoveNext (attempt N)` or `Triggered from song-start redirect` lines, then `BSL[k] levelID='...'` + `Patch complete: N BeatmapLevelSO objects updated`.**

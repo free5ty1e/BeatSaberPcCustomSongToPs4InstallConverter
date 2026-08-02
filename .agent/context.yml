@@ -8,7 +8,7 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8047"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
+plugin_version: "0.8048"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
 pipeline_version: "0.5307" # in beat_saber_deluxe/VERSION
 
 # Platform Constraints
@@ -54,17 +54,17 @@ slot_note: >
 plugin_features:
   - open() hook: redirects file reads to AFR custom bundles
   - MoveNext() hook (RVA 0x1D377C0): modifies BeatmapLevel fields for song name/artist
-  - Mode mapping Phase 2 (v0.8047+): synchronous in-hook memory scan (16MB-64GB @1MB pages +
+  - Mode mapping Phase 2 (v0.8048+): synchronous in-hook memory scan (16MB-64GB @1MB pages +
     8-8.25GB @64KB) finds BeatmapLevelSO objects and atomically replaces
     _previewDifficultyBeatmapSets (0x98) with 5 mode entries so the mode selector UI shows
-    OneSaber/NoArrows/90Degree/360Degree. Fires once from MoveNext on any BeatmapLevel;
-    signal-free reads via sceKernelQueryMemoryProtection (v0.8045+). v0.8046 finding: all
-    candidates at 0x1C2-0x1D5xxxxx are pack-bundle data (arrfail); v0.8047 adds v0.77 pointer
-    window [16MB,512GB], string check before arr check, arr-failure stage breakdown, raw64 dumps.
-    klass found structurally (no levelID anchor). v0.8045 test PROVED signal-free reads via
-    sceKernelQueryMemoryProtection syscall work (no crash, syscall real). v0.8046 fixed a
-    mode_extract_string length bug (len_14 = first 2 chars, never 0) + widened range +
-    added Scan diag counters. Log cleared on PS4 after each pull (rm bs_log.txt).
+    OneSaber/NoArrows/90Degree/360Degree. Signal-free reads via sceKernelQueryMemoryProtection
+    (v0.8045+). v0.8047 test CONFIRMED root cause = TRIGGER TIMING (scan fired from first
+    MoveNext before pack BSLs deserialized; pack bundle re-opened at [OPEN #792] after cells
+    rendered; offsets verified correct vs dump.cs TypeDefIndex 11680). v0.8048: scan fires only
+    after a *_pack_assets_all_*.bundle open post-first-MoveNext (g_mode_pack_last_open gate) OR
+    at BeatmapLevelsData song-start (v0.77-proven fallback); failures RETRYABLE (MODE_MAX_ATTEMPTS
+    =4, no permanent disable); g_mode_scan_in_progress re-entrancy guard; MoveNext hook installs
+    when metadata OR mode-mapping feature on. Log cleared on PS4 after each pull (rm bs_log.txt).
   - Features gated via features.json at AFR path
 feature_flags:
   enable_custom_song_replacements: false  # gates bundle redirects

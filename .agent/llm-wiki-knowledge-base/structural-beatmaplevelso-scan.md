@@ -57,6 +57,24 @@ The v0.8046 scan (no upper pointer bound, string check after array check) logged
 
 Also: the plugin loads **twice per launch** (two `[MODE] sceKernelQueryMemoryProtection verified` lines / duplicate `klass not found` at the end of the log) — multi-game-process/session. And the scan at MoveNext may run before the pack bundle's BSL objects exist in the GC heap.
 
+## v0.8047 finding: the scan fires BEFORE any pack BeatmapLevelSO is deserialized (→ v0.8048 timing fix)
+
+v0.8047 added the v0.77 pointer window and string-first ordering; the scan diag went from `ptrs=25443` to `ptrs=1984 strfail=1980 arrfail=4`, but still `klass not found`. The full 893-line log showed the real problem is **trigger timing, not scan logic**:
+
+- The scan fired from the **first MoveNext call** (song-list cell build), but the 22 cell-populating MoveNexts ran AFTER the scan — so the pack's BeatmapLevelSO objects were not yet deserialized.
+- The selected pack's bundle only **re-opened at `[OPEN #792]`** (rollingstones) — after all 22 cells rendered. Pack bundles open dozens of times at startup (#198–#664) but those are **Addressables catalog CRC checks** (they read the bundle header; they do NOT deserialize ScriptableObjects).
+- BeatmapLevelSO field offsets are all correct (verified field-by-field against `dump.cs` TypeDefIndex 11680, line 625599: `_version@0x18`, `_levelID@0x20`, `_songName@0x28`, ..., `_previewDifficultyBeatmapSets@0x98`). `BeatmapLevel` (TypeDefIndex 11647, line 624376) has **no BeatmapLevelSO back-reference**, so the MoveNext hook's `beatmapLevel` object cannot anchor the scan to its pack BSL.
+- The v0.8047 scan set `g_mode_preview_done = -1` on that single early failure and **never retried** — a one-shot-then-disable bug on top of the early trigger.
+
+**v0.8048 trigger design (in `main.cpp`):**
+1. `open_hook` records the LAST `*_pack_assets_all_*.bundle` open that happens **after the first MoveNext** (`g_mode_pack_last_open`) — that's a REAL pack data load whose BSLs are being deserialized. Startup catalog opens are ignored.
+2. `mode_try_patch_from_move_next` only fires the scan when `g_mode_pack_last_open > g_mode_scan_last_open` (fresh pack load since the last scan) and `g_mode_scan_attempts < MODE_MAX_ATTEMPTS` (4).
+3. `mode_patch_all` failures are **retryable** (no permanent `g_mode_preview_done = -1`); the attempt counter in the callers bounds the total.
+4. **Song-start fallback (v0.77-proven):** `open_hook` also fires the scan when a `beatmaplevelsdata` path opens — v0.77 found 17 BSL candidates at exactly that moment (BSLs guaranteed loaded at song start).
+5. `g_mode_scan_in_progress` guards re-entrancy (every `log_write` during the scan calls `open_hook` for `bs_log.txt`).
+
+**Key trigger timing lesson:** "first MoveNext" ≠ "pack loaded". On v2.04 the pack's BeatmapLevelSO objects exist only after the pack's Addressables data is actually deserialized — signals that prove it: a `_pack_assets_all_*.bundle` open during the song-list session, or a `BeatmapLevelsData` open at song start. Never run a one-shot scan that disables itself on the first (likely premature) failure.
+
 ## Scan Ranges & Cost
 
 - `16MB (0x1000000) – 64GB (0x1000000000)` — primary; **1MB page reads** (~65,536 total reads, same syscall count as the old 4GB@64KB pass → stutter stays brief). v0.77 found **17 candidates** here matching checks 1-3. **(v0.8045 scanned only 16MB–4GB + 8–8.25GB and found 0 — too narrow.)**
