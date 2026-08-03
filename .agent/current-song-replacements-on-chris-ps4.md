@@ -57,16 +57,16 @@
 > **Note:** The Tempo slot uses "Bruises" which was previously tested and had desync issues. May need lapped audio handling.
 
 
-## Camellia Music Pack Replacements (6 songs)
+## Camellia Music Pack Replacements (6 songs — Chromeo Expansion)
 
 | # | Slot ID | Custom Song | Artist | BPM | Beatmaps | First Note | Sync |
 |---|---------|-------------|--------|-----|----------|------------|------|
-| 1 | `Crystallized` | Bloom | ODESZA | 128 | 5/5 | 1.8s | ✅ |
-| 2 | `CycleHit` | Powerful | Major Lazer | 172 | 5/5 | 2.1s | ✅ |
-| 3 | `ExitThisEarthsAtomosphere` | Red Lips | GTA / Mendus | 200 | 5/5 | 2.2s | ✅ |
-| 4 | `Ghost` | Lone Digger | Caravan Palace | 121 | 5/5 | 1.9s | ✅ |
-| 5 | `LightItUp` | Batshit | Sofi Tukker | 115 | 5/5 | 1.9s | ✅ |
-| 6 | `WhatTheCat` | G.O.M.D | Sickick | 68 | 5/5 | 2.3s | ✅ |
+| 1 | `Crystallized` | Sexy Socialite | Chromeo | 142 | 5/5 | 1.8s | ✅ |
+| 2 | `CycleHit` | Jealous (I Ain't With It) | Chromeo | 129 | 5/5 | 2.1s | ✅ |
+| 3 | `ExitThisEarthsAtomosphere` | 'Roni Got Me Stressed Out | Chromeo | 117 | 5/5 | 2.2s | ✅ |
+| 4 | `Ghost` | Green Light (Chromeo Remix) | Lorde, Chromeo | 121 | 5/5 | 1.9s | ✅ |
+| 5 | `LightItUp` | 1999 | Charli XCX & Troye Sivan | 124 | 5/5 | 1.9s | ✅ |
+| 6 | `WhatTheCat` | FANCY | TWICE | 132 | 5/5 | 2.3s | ✅ |
 
 ## Total: 38 Custom Songs Deployed
 

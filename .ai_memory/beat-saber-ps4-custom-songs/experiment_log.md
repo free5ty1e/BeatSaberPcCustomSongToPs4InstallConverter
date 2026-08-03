@@ -201,3 +201,13 @@ metadata:
 - **Key Takeaway:** On v2.04 the scan must fire when the pack data is actually loaded. The two reliable signals are (1) a `_pack_assets_all_*.bundle` open that occurs during the song-list session (post-first-MoveNext), and (2) a `BeatmapLevelsData` open at custom-song start. First MoveNext ≠ BSLs loaded.
 - **Version:** Plugin v0.8048
 - **Status:** 🔲 **BUILT, AWAITING DEPLOY + TEST — deploy `beat_saber_deluxe.prx`, restart game. User flow: boot → Solo → scroll the PACK list (loads fresh pack bundles) → enter a pack and scroll songs → select a song. Pull bs_log.txt; expect `[MODE] pack data open #N` entries and `[MODE] Triggered from MoveNext (attempt N)` or `Triggered from song-start redirect` lines, then `BSL[k] levelID='...'` + `Patch complete: N BeatmapLevelSO objects updated`.**
+
+### Experiment 171: v0.8048 TEST 1 — instant-in-open-hook trigger (→ preview audio regression, revert & Chromeo pack deployment)
+- **Date:** 2026-08-02
+- **Result:** ❌ **Preview audio broken** across song lists / albums. Mode selector still showed only Standard.
+- **Log:** `/workspace/.ai_memory/experiment_logs/v0.8049_test_log.txt` (840 lines — log cleared afterward).
+- **Diagnosis (log analysis):** Instant triggering of `mode_try_patch_song_start()` inside `open_hook` when `*_pack_assets_all_*.bundle` opened caused heavy synchronous file/memory operations during asset bundle streaming, stalling Unity's audio preview asset loader threads.
+- **Fix / Pivot (v0.8048 cleaned):** Reverted the instant-in-open-hook trigger change to restore normal audio preview functionality (`git checkout src/main.cpp`). Deployed clean v0.8048 plugin — preview audio fully restored. Sourced and deployed **Chromeo Music Pack Expansion** (replacing all 6 Camellia slots with top Chromeo tracks and related remixes via BeatSaver, converted to V3, deployed via pipeline).
+- **Key Takeaway:** Never run synchronous 1-second heap scans inside file open hooks (`open_hook`) because it blocks asset bundle streaming threads and breaks audio previews. Triggering must remain decoupled.
+- **Version:** Plugin v0.8048 (clean)
+- **Status:** ✅ **Audio previews fixed, Chromeo songs deployed, pipeline verified.**

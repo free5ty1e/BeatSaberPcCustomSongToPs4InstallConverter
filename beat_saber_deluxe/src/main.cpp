@@ -327,6 +327,8 @@ static int open_hook(const char *path, int flags, ...) {
                 char pbuf[256];
                 snprintf(pbuf, sizeof(pbuf), "[MODE] pack data open #%d: %s", g_open_count, lower_path);
                 log_write(pbuf);
+                // Instant trigger: run scan immediately on pack bundle load post-first-MoveNext
+                mode_try_patch_song_start();
             }
             // ── Mode scan fallback trigger: custom song start (v0.77-proven) ──
             // When a custom song loads, Beat Saber opens a BeatmapLevelsData
