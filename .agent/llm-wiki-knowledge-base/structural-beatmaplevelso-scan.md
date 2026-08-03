@@ -57,7 +57,15 @@ The v0.8046 scan (no upper pointer bound, string check after array check) logged
 
 Also: the plugin loads **twice per launch** (two `[MODE] sceKernelQueryMemoryProtection verified` lines / duplicate `klass not found` at the end of the log) — multi-game-process/session. And the scan at MoveNext may run before the pack bundle's BSL objects exist in the GC heap.
 
-## v0.8047 finding: the scan fires BEFORE any pack BeatmapLevelSO is deserialized (→ v0.8048 timing fix)
+## 🔴🔴🔴 STATUS (2026-08-03): CONCLUDED DEAD END (v0.8049)
+
+> **FINAL CONCLUSION:** The structural scan approach (v0.8042–v0.8049) to find and patch `BeatmapLevelSO._previewDifficultyBeatmapSets` in RAM at runtime has been **conclusively abandoned as a dead end**. 
+
+### Why Runtime RAM Patching Failed (Lessons Learned)
+1. **Timing Barrier (Asynchronous Addressables Unloading):** Addressables pack bundles unhide and deserialize asynchronously. When the song selection UI (`MoveNext` cell population) renders, the `BeatmapLevelSO` managed objects for custom song packs are **simply not present in the GC heap yet**. 
+2. **Performance Penalty / Freezes:** Scanning 64GB of address space (even via safe `sceKernelQueryMemoryProtection` page probes) takes 15–30 seconds per attempt, causing severe multi-minute stalls and freezes when entering Solo mode.
+3. **Hardware Constraints:** Non-standard modes like 360Degree are physically impossible on PS4 due to single-camera 90-degree tracking constraints, making full mode parity unviable regardless.
+4. **Resolution:** Mode mapping is fully and robustly handled via **Phase 1 (Pipeline bundle patching)** — injecting `_difficultyBeatmapSets` directly into per-song bundles (`{target}_v3`), which works reliably without runtime memory scans or UI freezes.
 
 v0.8047 added the v0.77 pointer window and string-first ordering; the scan diag went from `ptrs=25443` to `ptrs=1984 strfail=1980 arrfail=4`, but still `klass not found`. The full 893-line log showed the real problem is **trigger timing, not scan logic**:
 

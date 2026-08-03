@@ -262,9 +262,13 @@ If pack bundle patching is too risky, the fallback is:
    - `beat_saber_deluxe/README.md` — Add summary of the new featureset (beatmap mode mapping + configurable fallback) in the mode control section, link to detailed feature doc
    - Create `beat_saber_deluxe/docs/features/beatmap-mode-mapping.md` — Detailed explanation: how auto-detection works, fallback chains, CLI flags, examples, relationship to `--enable-modes`, limitations (UI mode selector is separate concern)
 
-### Phase 2 (Future)
-9. Plugin runtime `BeatmapLevel._difficultyBeatmapSets` injection (Part 2)
-10. Pack bundle preview data patching + catalog modification (Part 3)
+## Phase 2 Conclusion: DEAD END (Confirmed 2026-08-03)
+- **Attempt:** Runtime heap scanning and patching of Addressables pack bundle `BeatmapLevelSO._previewDifficultyBeatmapSets` (v0.8045–v0.8049).
+- **Behavior & Findings:** 
+  1. **Timing Barrier:** Addressables pack bundles unhide/deserialize asynchronously; BeatmapLevelSO managed heap objects are simply *not present* in GC memory during song-list rendering (`MoveNext` song-list cell populate).
+  2. **Performance Freeze:** Searching 64GB of address space causes severe multi-minute stalls/freezes upon entering Solo mode.
+  3. **Hardware Constraint:** Non-standard modes like 360Degree are physically impossible on PS4 due to single-camera 90-degree tracking constraints.
+- **Resolution:** Phase 2 runtime RAM patching is officially abandoned as a dead end. Mode mapping is fully handled via **Phase 1 (Pipeline bundle patching)** — injecting `_difficultyBeatmapSets` directly into per-song bundles.
 
 ---
 
