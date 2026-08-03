@@ -1,6 +1,6 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-02
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 IN PROGRESS (pipeline v0.5307 / plugin v0.8048).** v0.8045 test: NO crash (signal-free `sceKernelQueryMemoryProtection` works), but `klass not found`. v0.8046 test: NO crash, but all 25,443 candidates failed the preview-array check (pack-bundle data, not managed objects). v0.8047 test: NO crash, and **root cause CONFIRMED = scan TIMING** — scan fired from the first MoveNext (open #731) before any pack BeatmapLevelSO was deserialized; the pack bundle only re-opened at [OPEN #792] AFTER all 22 cells rendered. Offsets verified correct against dump.cs. **v0.8048 built (105,120 bytes, 361/361 pytest)**: trigger reworked — scan fires only after a real pack data load (pack bundle open post-first-MoveNext) or at song-start (BeatmapLevelsData, v0.77-proven), failures are retryable (MODE_MAX_ATTEMPTS=4), one-shot early-miss bug fixed. **PS4 unreachable at build time — deploy deferred.**
+**Last Updated:** 2026-08-03
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 Concluded DEAD END; Phase 1 Pipeline-Side Mapping Validated.** Phase 2 runtime RAM scanning of `BeatmapLevelSO._previewDifficultyBeatmapSets` was thoroughly tested and confirmed a dead end due to asynchronous Addressables unloading, multi-minute UI freezing, and PS4 tracking limitations. Mode mapping is fully handled via **Phase 1 (Pipeline bundle patching via `--enable-beatmap-mode-mapping`)**. All 38 custom songs (Rolling Stones, Billie Eilish, Lizzo, and the new Chromeo Pack Expansion) active and verified on PS4.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
 
@@ -8,9 +8,9 @@
 
 **Working approach (metadata):** Hook `MoveNext()` of the `SetDataFromLevelAsync` state machine (RVA 0x1D377C0). Modifies `BeatmapLevel.songName`/`songAuthorName` in-place before the original code reads them. Pipeline reads exact game strings from `beat_saber_song_ids.json` to ensure correct casing.
 
-**Mode mapping (Phase 1 + Phase 2):**
-- **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree, 360Degree). Controls gameplay data. ✅ Deployed and playing.
-- **Phase 2 (plugin v0.8048):** Mode selector UI reads `BeatmapLevelSO._previewDifficultyBeatmapSets` (offset 0x98) from the pack bundle — blocked by Addressables CRC. Revived a **targeted** memory injection: scan 16MB–64GB + 8–8.25GB for BeatmapLevelSO objects (klass-range + version 1-50 + valid string ptrs + valid preview array), then atomically replace the preview array with 5 mode entries at runtime. **Signal-free** reads via `sceKernelQueryMemoryProtection` (v0.8045 proved no crash). v0.8047 test CONFIRMED the root cause is **scan timing**: the scan must fire only when the pack's BeatmapLevelSO objects exist (fresh pack load post-first-MoveNext, or BeatmapLevelsData song-start — v0.77-proven). **v0.8048**: pack-data-open gate (`g_mode_pack_last_open`), retryable failures (MODE_MAX_ATTEMPTS=4, fixes the one-shot early-miss), song-start fallback trigger, re-entrancy guard, MoveNext hook decoupled from the metadata feature flag.
+**Mode mapping (Phase 1):**
+- **Phase 1 (pipeline v0.5307):** Per-song bundle `_difficultyBeatmapSets` injected with 5 modes (Standard, OneSaber, NoArrows, 90Degree) via `--enable-beatmap-mode-mapping`. Controls gameplay data. ✅ Deployed and playing.
+- **Phase 2 (Plugin runtime RAM scanning):** Concluded DEAD END (Exp 170–173) due to asynchronous Addressables unloading, multi-minute UI freezing, and PS4 tracking constraints. Abandoned in favor of Phase 1 pipeline bundle patching.
 
 ### Known Limitation (v0.8040)
 - **Artist blanking is global** — "The Rolling Stones" → " " affects all songs with that artist string. Works for single-artist packs (Rolling Stones, Billie Eilish, Lizzo) but would be inaccurate for multi-artist packs. Currently only single-artist packs are targeted.

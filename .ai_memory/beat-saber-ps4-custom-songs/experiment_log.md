@@ -212,8 +212,8 @@ metadata:
 - **Version:** Plugin v0.8048 (clean)
 - **Status:** ✅ **Audio previews fixed, Chromeo songs deployed, pipeline verified.**
 
-### Experiment 173: v0.8049 — Lifting Bundle-Open Trigger Gate in MoveNext
+### Experiment 174: Phase 2 Dead-End Conclusion & Pivot to Pipeline-Only Mode
 - **Date:** 2026-08-03
-- **What:** Removed the strict `g_mode_pack_last_open` bundle-open guard in `mode_try_patch_from_move_next()` so that the scan fires directly on the first song-list `MoveNext` occurrence. This eliminates any possibility of missing the trigger window due to subtle differences in bundle open ordering.
-- **Version:** Plugin v0.8049, Pipeline v0.5307
-- **Status:** 🔲 **BUILT, PENDING DEPLOY + TEST — v0.8049 compiled (105,120 bytes), 361/361 tests passing. Awaiting PS4 network connection to deploy and verify.**
+- **What:** Formally concluded that runtime RAM patching of `BeatmapLevelSO._previewDifficultyBeatmapSets` (Phase 2) is a dead end due to asynchronous Addressables unloading, severe multi-minute UI freezing, and PS4 single-camera 90-degree tracking constraints. Updated all documentation, plans, and knowledge base files. Pivoted fully to **Phase 1 (Pipeline-side bundle patching via `--enable-beatmap-mode-mapping`)** as the designated method for custom song mode configuration. Verified all 110 pipeline unit tests and 361 total tests pass.
+- **Version:** Pipeline v0.5307, Plugin v0.8048 (clean)
+- **Status:** ✅ **Phase 2 abandoned; Phase 1 pipeline-side mode mapping validated as production solution.**
