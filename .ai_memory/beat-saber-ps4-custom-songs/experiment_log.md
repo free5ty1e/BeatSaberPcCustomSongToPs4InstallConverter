@@ -211,3 +211,9 @@ metadata:
 - **Key Takeaway:** Never run synchronous 1-second heap scans inside file open hooks (`open_hook`) because it blocks asset bundle streaming threads and breaks audio previews. Triggering must remain decoupled.
 - **Version:** Plugin v0.8048 (clean)
 - **Status:** ✅ **Audio previews fixed, Chromeo songs deployed, pipeline verified.**
+
+### Experiment 173: v0.8049 — Lifting Bundle-Open Trigger Gate in MoveNext
+- **Date:** 2026-08-03
+- **What:** Removed the strict `g_mode_pack_last_open` bundle-open guard in `mode_try_patch_from_move_next()` so that the scan fires directly on the first song-list `MoveNext` occurrence. This eliminates any possibility of missing the trigger window due to subtle differences in bundle open ordering.
+- **Version:** Plugin v0.8049, Pipeline v0.5307
+- **Status:** 🔲 **BUILT, PENDING DEPLOY + TEST — v0.8049 compiled (105,120 bytes), 361/361 tests passing. Awaiting PS4 network connection to deploy and verify.**

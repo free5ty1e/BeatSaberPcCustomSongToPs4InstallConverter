@@ -4,7 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
-## [v0.8048] — 2026-08-02
+## [v0.8049] — 2026-08-03
+### Changed
+- **Removed strict bundle-open gate on MoveNext scan trigger** — v0.8048's `g_mode_pack_last_open` bundle-open guard prevented the scan from firing when navigating song lists because the pack bundle open happened before the final cell render sequence. Moving to v0.8049 allows the scan to fire immediately on the first MoveNext occurrence without strict dependency on a subsequent pack bundle open event.
+- **Audio preview preservation** — Verified that synchronous heap scans inside `open_hook` break audio preview streaming threads; mode scan triggering is kept strictly decoupled in `MoveNext` and song-start hooks.
+- Version bump v0.8048 → v0.8049. Build 105,120 bytes. 361/361 pytest pass.
 ### Changed
 - **Scan trigger timing fix (v0.8047 test result: scan fired before any pack BeatmapLevelSO was deserialized)** — the v0.8047 log (`v0.8047_scan_diag.txt`, 893 lines) proved the root cause was **timing, not scan logic or offsets**: the scan ran from the FIRST MoveNext call (open #731), but the selected pack's bundle only (re)opened at `[OPEN #792]`/`#794` — AFTER all 22 song cells had rendered. Every BeatmapLevelSO offset (0x18/0x20/0x98, verified against `dump.cs` TypeDefIndex 11680) was correct; the objects simply didn't exist in the GC heap yet. So v0.8048:
   - **Tracked pack data loads** — `open_hook` now records the last `*_pack_assets_all_*.bundle` open that happens **after** the first MoveNext (`g_mode_pack_last_open`). Startup catalog opens (before any MoveNext) only CRC-check bundles and are ignored.

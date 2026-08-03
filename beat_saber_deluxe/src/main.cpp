@@ -17,7 +17,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8048"
+#define PLUGIN_VERSION "v0.8049"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -888,8 +888,8 @@ static void mode_try_patch_from_move_next(void* beatmapLevel) {
 
     // Only scan after a fresh pack data open that happened since the last scan.
     // Startup catalog opens (before the first MoveNext) never set this.
-    if (g_mode_pack_last_open == 0) return;
-    if (g_mode_pack_last_open <= g_mode_scan_last_open) return;
+    // if (g_mode_pack_last_open == 0) return;
+    // if (g_mode_pack_last_open <= g_mode_scan_last_open) return;
 
     // Fire the scan for this fresh pack load
     g_mode_scan_last_open = g_mode_pack_last_open;
