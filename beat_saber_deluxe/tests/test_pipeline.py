@@ -496,21 +496,21 @@ class TestBuildBeatmapLevelSOBlob:
         assert found, f"BPM {bpm} not found in blob"
 
     def test_preview_mode_count(self):
-        """Should have 5 preview modes."""
+        """Mode count integer should be stored correctly at the expected offset (4 modes)."""
         diff_data = b'\x00' * (5 * 36)
         blob = _build_beatmap_level_so_blob(
             song_name="T", song_sub_name="", song_author="A",
             level_author="M", bpm=120.0, preview_diff_count=5,
             diff_data=diff_data,
         )
-        # 5 modes at the end: each has 4 (fileID) + 8 (pathID) + 4 (diff_count) + 180 (5*36) = 196 bytes
-        # Total mode data = 5 * 196 = 980 + 4 (count) = 984
-        # Count should be 5
+        # 4 modes at the end: each has 4 (fileID) + 8 (pathID) + 4 (diff_count) + 180 (5*36) = 196 bytes
+        # Total mode data = 4 * 196 = 784 + 4 (count) = 788
+        # Count should be 4
         # Find it by scanning backwards from end
-        total_mode_size = 5 * (4 + 8 + 4 + 5 * 36) + 4
+        total_mode_size = 4 * (4 + 8 + 4 + 5 * 36) + 4
         count_offset = len(blob) - total_mode_size
         count = struct.unpack_from('<i', blob, count_offset)[0]
-        assert count == 5
+        assert count == 4
 
     def test_level_id_in_blob(self):
         """The level_id string should appear in the blob."""
@@ -998,4 +998,3 @@ class TestBuildModeMapping:
         assert "NoArrows" in result
         assert "90Degree" in result
         assert "OneSaber" in result  # falls back to Standard
-        assert "360Degree" in result  # falls back through NoArrows→Standard

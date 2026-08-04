@@ -373,7 +373,7 @@ static int g_tmp_text_set_text_count = 0;
 
 // ── Phase 2: Beatmap Mode Preview Data Memory Injection ──────────────────────
 // Patches BeatmapLevelSO._previewDifficultyBeatmapSets at runtime to add
-// OneSaber, NoArrows, 90Degree, 360Degree mode entries. Triggered once from
+// OneSaber, NoArrows, 90Degree mode entries. Triggered once from
 // MoveNext hook when first custom song's song cell renders (pack bundle loaded).
 // Memory reads use sceKernelQueryMemoryProtection — NO signal handlers. The
 // v0.8043/44 crash was caused by process-wide SIGSEGV/SIGBUS handlers
@@ -697,13 +697,13 @@ static int mode_collect_beatmap_level_sos(
     return count;
 }
 
-// Find all 5 BeatmapCharacteristicSO by scanning near a known one for matching klass.
-static int mode_find_characteristic_sos(uint64_t standard_charso, uint64_t out[5]) {
-    memset(out, 0, 5 * sizeof(uint64_t));
+// Find all 4 BeatmapCharacteristicSO by scanning near a known one for matching klass.
+static int mode_find_characteristic_sos(uint64_t standard_charso, uint64_t out[4]) {
+    memset(out, 0, 4 * sizeof(uint64_t));
     uint64_t klass = 0;
     if (!mode_try_read(standard_charso, &klass, 8)) return -1;
     out[0] = standard_charso;
-    const char* names[4] = {"OneSaber", "NoArrows", "90Degree", "360Degree"};
+    const char* names[3] = {"OneSaber", "NoArrows", "90Degree"};
     uint64_t base = standard_charso;
     // Scan ±16MB around the Standard charSO — all characteristic SOs come from
     // the same shared asset bundle, so they land near each other in the heap.
@@ -725,24 +725,24 @@ static int mode_find_characteristic_sos(uint64_t standard_charso, uint64_t out[5
             if (sn_ptr < 0x1000000ULL) continue;
             char name[64];
             if (!mode_extract_string((void*)sn_ptr, name, sizeof(name))) continue;
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 3; i++) {
                 if (out[i+1] == 0 && strcmp(name, names[i]) == 0) {
                     out[i+1] = addr + off;
                     break;
                 }
             }
             int all = 1;
-            for (int i = 0; i < 5; i++) if (out[i] == 0) { all = 0; break; }
-            if (all) return 5;
+            for (int i = 0; i < 4; i++) if (out[i] == 0) { all = 0; break; }
+            if (all) return 4;
         }
     }
     int found = 0;
-    for (int i = 0; i < 5; i++) if (out[i]) found++;
+    for (int i = 0; i < 4; i++) if (out[i]) found++;
     return found;
 }
 
-// Patch one BeatmapLevelSO to have 5 mode preview sets.
-static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t char_sos[5]) {
+// Patch one BeatmapLevelSO to have 4 mode preview sets.
+static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t char_sos[4]) {
     char logbuf[256];
     uint64_t existing_arr = 0;
     if (!mode_try_read(bsl_addr + BLS_OFFSET_PREVIEW, &existing_arr, 8)) return -1;
@@ -759,12 +759,12 @@ static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t 
     uint64_t set_klass = 0, arr_klass = 0;
     mode_try_read(first_set_ptr, &set_klass, 8);
     mode_try_read(existing_arr, &arr_klass, 8);
-    // Build 5 PreviewDifficultyBeatmapSet objects
+    // Build 4 PreviewDifficultyBeatmapSet objects
     size_t set_size = 0x20;
-    uint8_t* sets = (uint8_t*)malloc(5 * set_size);
+    uint8_t* sets = (uint8_t*)malloc(4 * set_size);
     if (!sets) return -1;
-    memset(sets, 0, 5 * set_size);
-    for (int i = 0; i < 5; i++) {
+    memset(sets, 0, 4 * set_size);
+    for (int i = 0; i < 4; i++) {
         uint8_t* s = sets + i * set_size;
         *(uint64_t*)(s + 0x00) = set_klass;
         *(uint64_t*)(s + PDS_OFFSET_CHAR) = char_sos[i];
@@ -774,20 +774,20 @@ static int mode_patch_one_bsl(uint64_t bsl_addr, const char* level_id, uint64_t 
         mode_try_read(standard_diffs, da, diff_arr_size);
         *(uint64_t*)(s + PDS_OFFSET_DIFFS) = (uint64_t)da;
     }
-    // Build new Il2CppSZArray (5 element pointers)
-    size_t arr_size = ARR_OFFSET_DATA + 5 * 8;
+    // Build new Il2CppSZArray (4 element pointers)
+    size_t arr_size = ARR_OFFSET_DATA + 4 * 8;
     uint8_t* new_arr = (uint8_t*)malloc(arr_size);
     if (!new_arr) { free(sets); return -1; }
     memset(new_arr, 0, arr_size);
     *(uint64_t*)(new_arr + 0x00) = arr_klass;
-    *(uint64_t*)(new_arr + ARR_OFFSET_LENGTH) = 5;
-    for (int i = 0; i < 5; i++)
+    *(uint64_t*)(new_arr + ARR_OFFSET_LENGTH) = 4;
+    for (int i = 0; i < 4; i++)
         *(uint64_t*)(new_arr + ARR_OFFSET_DATA + i * 8) = (uint64_t)(sets + i * set_size);
     // Atomic replace
     *(uint64_t*)(bsl_addr + BLS_OFFSET_PREVIEW) = (uint64_t)new_arr;
-    snprintf(logbuf, sizeof(logbuf), "[MODE] Patched '%s': added 5 preview sets", level_id);
+    snprintf(logbuf, sizeof(logbuf), "[MODE] Patched '%s': added 4 preview sets", level_id);
     log_write(logbuf);
-    return 5;
+    return 4;
 }
 
 // Main orchestrator: find klass, collect BSL objects, find charSOs, patch all.
@@ -826,8 +826,8 @@ static void mode_patch_all(void) {
         log_write(logbuf);
     }
     // Find BeatmapCharacteristicSO objects from last BeatmapLevelSO's Standard entry
-    uint64_t char_sos[5] = {0};
-    for (int i = bsl_count - 1; i >= 0 && char_sos[4] == 0; i--) {
+    uint64_t char_sos[4] = {0};
+    for (int i = bsl_count - 1; i >= 0 && char_sos[3] == 0; i--) {
         uint64_t existing_arr = 0;
         if (!mode_try_read(bsl_addrs[i] + BLS_OFFSET_PREVIEW, &existing_arr, 8)) continue;
         if (existing_arr < 0x1000000ULL) continue;
@@ -837,8 +837,8 @@ static void mode_patch_all(void) {
         uint64_t standard_charso = 0;
         if (!mode_try_read(first_set_ptr + PDS_OFFSET_CHAR, &standard_charso, 8)) continue;
         if (standard_charso < 0x1000000ULL) continue;
-        if (mode_find_characteristic_sos(standard_charso, char_sos) >= 5) {
-            snprintf(logbuf, sizeof(logbuf), "[MODE] Found 5 BeatmapCharacteristicSO via '%s'", bsl_level_ids[i]);
+        if (mode_find_characteristic_sos(standard_charso, char_sos) >= 4) {
+            snprintf(logbuf, sizeof(logbuf), "[MODE] Found 4 BeatmapCharacteristicSO via '%s'", bsl_level_ids[i]);
             log_write(logbuf);
             break;
         }
