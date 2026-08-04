@@ -469,7 +469,7 @@ class TestBeatmapModeMappingIntegration:
             with open(os.path.join(tmp_dir, f"{diff}OneSaber.dat"), 'w') as f:
                 json.dump(data, f)
 
-        # Create 360Degree files (1 difficulty)
+        # Create 360Degree files (1 difficulty) — must be ignored on PS4
         with open(os.path.join(tmp_dir, "Normal360Degree.dat"), 'w') as f:
             json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
                        "obstacles": [], "sliders": [], "burstSliders": [],
@@ -483,17 +483,16 @@ class TestBeatmapModeMappingIntegration:
         assert len(modes['Standard']) == 5
         assert 'OneSaber' in modes
         assert modes['OneSaber'] == ['Expert', 'ExpertPlus']
-        assert '360Degree' in modes
-        assert modes['360Degree'] == ['Normal']
+        assert '360Degree' not in modes
         assert 'NoArrows' not in modes
         assert '90Degree' not in modes
 
         # Step 2: Build mapping (default fallback)
         enabled = build_mode_mapping(modes)
-        assert enabled == list(GAME_CHARACTERISTIC_MODES)  # all 5 resolved
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)  # all 4 resolved
 
         # Step 3: Build mapping with custom fallback
-        enabled_custom = build_mode_mapping(modes, fallback_mode_map=["360Degree=Standard"])
+        enabled_custom = build_mode_mapping(modes, fallback_mode_map=["90Degree=Standard"])
         assert enabled_custom == list(GAME_CHARACTERISTIC_MODES)
 
     def test_no_standard_edge_case(self, tmp_dir):
@@ -505,7 +504,7 @@ class TestBeatmapModeMappingIntegration:
         assert 'OneSaber' in modes
         assert 'Standard' not in modes
 
-        # Even without Standard files, all 5 modes resolve via fallback
+        # Even without Standard files, all 4 modes resolve via fallback
         enabled = build_mode_mapping(modes)
         assert enabled == list(GAME_CHARACTERISTIC_MODES)
 
@@ -528,7 +527,7 @@ class TestBeatmapModeMappingIntegration:
         assert 'OneSaber' in enabled
 
     def test_all_modes_detected_integration(self, tmp_dir):
-        """Song with files for all 5 modes."""
+        """Song with files for all 4 supported modes (360Degree excluded)."""
         for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
             with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
                 json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
@@ -541,12 +540,13 @@ class TestBeatmapModeMappingIntegration:
             for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
                 with open(os.path.join(tmp_dir, f"{diff}{mode}.dat"), 'w') as f:
                     json.dump({}, f)
-        for mode in ['90Degree', '360Degree']:
-            with open(os.path.join(tmp_dir, f"Expert{mode}.dat"), 'w') as f:
-                json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Expert90Degree.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Expert360Degree.dat"), 'w') as f:
+            json.dump({}, f)
 
         modes = detect_song_modes(tmp_dir)
-        assert set(modes.keys()) == {'Standard', 'OneSaber', 'NoArrows', '90Degree', '360Degree'}
+        assert set(modes.keys()) == {'Standard', 'OneSaber', 'NoArrows', '90Degree'}
         assert modes['Standard'] == list(DIFFICULTIES)
         assert modes['OneSaber'] == list(DIFFICULTIES)
         assert modes['NoArrows'] == list(DIFFICULTIES)

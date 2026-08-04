@@ -481,14 +481,16 @@ def _select_beatmap_file(diff: str, beatmap_files: list, ignore_non_standard: bo
       3. Beatmap-dot:    <Diff>.beatmap.dat     (e.g. ExpertPlus.beatmap.dat)
       4. Other modes:    <Diff>90Degree.dat, <Diff>OneSaber.dat, <Diff>NoArrows.dat, etc.
                          (limited gameplay but functional on PS4)
-      5. 360Degree:      <Diff>360Degree.dat    (absolute last resort — notes behind
-                         the player are unplayable in PS4 VR, but better than nothing)
 
-    The ignore_non_standard flag suppresses tiers 4 and 5 (alternate modes).
+    360Degree files are always excluded — the PS4 camera cannot track the
+    single-camera 90-degree arc that 360Degree gameplay requires, so notes
+    behind the player are unplayable.
+
+    The ignore_non_standard flag suppresses tier 4 (alternate modes).
     Bare files (tier 2) are always included — they have no mode suffix.
     """
-    # Tiers: 1=Standard, 2=bare, 3=.beatmap.dat, 4=other modes, 5=360Degree
-    tier1, tier2, tier3, tier4, tier5 = [], [], [], [], []
+    # Tiers: 1=Standard, 2=bare, 3=.beatmap.dat, 4=other modes
+    tier1, tier2, tier3, tier4 = [], [], [], []
 
     for f in beatmap_files:
         base = f
@@ -512,15 +514,14 @@ def _select_beatmap_file(diff: str, beatmap_files: list, ignore_non_standard: bo
         elif f'{diff}.beatmap' in stem:
             tier3.append(f)
         elif '360Degree' in stem:
-            # Absolute last resort — only if ignore_non_standard not set
-            if not ignore_non_standard:
-                tier5.append(f)
+            # 360Degree is unsupported on PS4 (camera cannot track full rotation)
+            continue
         else:
             # 90Degree, OneSaber, NoArrows, Legacy, etc.
             if not ignore_non_standard:
                 tier4.append(f)
 
-    for tier in (tier1, tier2, tier3, tier4, tier5):
+    for tier in (tier1, tier2, tier3, tier4):
         if tier:
             return tier[0]
     return None
@@ -539,7 +540,7 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
       2. <Diff>.dat           (bare, no mode suffix)
       3. <Diff>.beatmap.dat   (BeatSaver .beatmap.dat format)
       4. <Diff>90Degree.dat / OneSaber.dat / etc. (if not --ignore-non-standard)
-      (360Degree files are always excluded — unplayable on PS4 VR)
+      (360Degree files are always excluded — the PS4 camera cannot track them)
 
     Args:
         cab: Unity CAB bundle
@@ -761,10 +762,10 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
 # Feature: Beatmap Mode Mapping (auto-detect characteristic modes)
 # ============================================================================
 
-GAME_CHARACTERISTIC_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+GAME_CHARACTERISTIC_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 KNOWN_MODE_SUFFIXES = [
-    "Standard", "OneSaber", "NoArrows", "360Degree", "90Degree",
+    "Standard", "OneSaber", "NoArrows", "90Degree",
     "Legacy", "Lawless", "SingleSaber"
 ]
 
@@ -872,18 +873,18 @@ def build_mode_mapping(
     Build the list of game characteristic modes to enable in the BeatmapLevel
     based on detected modes, with a configurable fallback chain.
 
-    The 5 game slots are: Standard, OneSaber, NoArrows, 90Degree, 360Degree.
-    Standard must always be present.
+    The 4 game slots are: Standard, OneSaber, NoArrows, 90Degree.
+    Standard must always be present. 360Degree is unsupported on PS4
+    (single-camera 90-degree arc tracking constraint) and is never enabled.
 
     Default fallback chain (used when a game slot has no detected files):
         OneSaber   ← Standard
         NoArrows   ← Standard
         90Degree   ← Standard
-        360Degree  ← NoArrows ← Standard
 
     Custom fallback via --fallback-mode-map uses SRC=DEST format, e.g.:
-        --fallback-mode-map NoArrows=Standard  (skip 360Degree→NoArrows fallback)
-        --fallback-mode-map 360Degree=90Degree (chain 360Degree→90Degree instead)
+        --fallback-mode-map NoArrows=Standard  (skip 90Degree→Standard fallback)
+        --fallback-mode-map 90Degree=Standard  (chain 90Degree→Standard directly)
 
     Args:
         detected_modes: Output of detect_song_modes()
@@ -905,7 +906,6 @@ def build_mode_mapping(
 
     # Default fallback chain (most specific to least specific)
     default_fallback: dict[str, str] = {
-        "360Degree": "NoArrows",
         "NoArrows": "Standard",
         "90Degree": "Standard",
         "OneSaber": "Standard",
@@ -974,7 +974,6 @@ _CHAR_PATH_IDS = {
     "OneSaber":  -8583864861369561029,
     "NoArrows":   -5623662769225589684,
     "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
 }
 
 
@@ -1013,8 +1012,8 @@ def _build_beatmap_level_so_blob(
         BPM             = double (8 bytes)
 
       Then preview arrays:
-        count = int32(5)
-        For each mode [Standard, OneSaber, NoArrows, 90Degree, 360Degree]:
+        count = int32(4)
+        For each mode [Standard, OneSaber, NoArrows, 90Degree]:
           PPtr(fileID=2, pathID=char_path_id)
           diff_count = int32(n)
           difficulty_data (36 bytes per entry × n)
@@ -1045,8 +1044,8 @@ def _build_beatmap_level_so_blob(
     blob += struct.pack('<d', bpm)                         # BPM (double)
 
     # ── _previewDifficultyBeatmapSets array ────────────────────────────
-    modes = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
-    blob += struct.pack('<i', 5)                          # count = 5 modes
+    modes = ["Standard", "OneSaber", "NoArrows", "90Degree"]
+    blob += struct.pack('<i', 4)                          # count = 4 modes
 
     for mode in modes:
         path_id = _CHAR_PATH_IDS[mode]
@@ -2143,19 +2142,20 @@ Examples:
                         help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
     parser.add_argument('--ignore-non-standard-beatmaps', action='store_true',
                         help='Only match beatmap files containing "Standard" in name '
-                             '(ignores 360Degree, 90Degree, OneSaber variants)')
+                             '(ignores 90Degree, OneSaber variants)')
     parser.add_argument('--enable-modes', type=str, default=None,
                         help='Comma-separated list of additional beatmap characteristics to enable '
-                             '(e.g. "OneSaber,90Degree,Degree"). Makes the song playable in those '
-                             'modes by cloning the Standard beatmaps.')
+                             '(e.g. "OneSaber,90Degree"). Makes the song playable in those '
+                             'modes by cloning the Standard beatmaps. 360Degree is not supported '
+                             'on PS4 and is ignored.')
     parser.add_argument('--enable-beatmap-mode-mapping', action='store_true',
                         help='Auto-detect custom song beatmap files and map them to game '
-                             'characteristic slots (OneSaber, NoArrows, 90Degree, 360Degree). '
+                             'characteristic slots (OneSaber, NoArrows, 90Degree). '
                              'Uses fallback chain for slots without detected files. '
                              'Overrides --enable-modes for detected modes.')
     parser.add_argument('--fallback-mode-map', action='append', default=None,
                         help='Override fallback chain for a mode slot. Format: SRC=DEST '
-                             '(e.g. "360Degree=90Degree" or "NoArrows=Standard"). '
+                             '(e.g. "90Degree=Standard" or "NoArrows=Standard"). '
                              'Can be used multiple times. Only meaningful with '
                              '--enable-beatmap-mode-mapping.')
     parser.add_argument('--vorbis', action='store_true',
@@ -2425,7 +2425,12 @@ Examples:
     # -----------------------------------------------------------------------
     enable_modes = args.enable_modes.split(',') if args.enable_modes else None
     if enable_modes:
-        add_mode_characteristics(cab, [m.strip() for m in enable_modes if m.strip()])
+        # Filter out unsupported 360Degree (PS4 camera cannot track full rotation)
+        valid_modes = [m.strip() for m in enable_modes if m.strip()]
+        filtered = [m for m in valid_modes if m not in ("360Degree", "360")]
+        if filtered != valid_modes:
+            log.info("  Removed 360Degree from --enable-modes (unsupported on PS4)")
+        add_mode_characteristics(cab, filtered)
 
     # -----------------------------------------------------------------------
     # Step 6a: Auto-detect and apply beatmap mode mapping

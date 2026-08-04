@@ -41,7 +41,6 @@ CHAR_PATH_IDS = {
     "OneSaber":  -8583864861369561029,
     "NoArrows":   -5623662769225589684,
     "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
 }
 
 # Characteristic serialized names (for BeatmapCharacteristicCollection)
@@ -50,7 +49,6 @@ CHAR_SERIALIZED_NAMES = {
     "OneSaber":  "BeatmapCharacteristicPack_OneSaber",
     "NoArrows":   "BeatmapCharacteristicPack_NoArrows",
     "90Degree":   "BeatmapCharacteristicPack_90Degree",
-    "360Degree":  "BeatmapCharacteristicPack_360Degree",
 }
 
 

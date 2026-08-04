@@ -34,14 +34,13 @@ SONG_OVERRIDES = {
     "wholewideworld":("EverybodysGay", "(G)I-DLE", ""),
 }
 
-NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
     "OneSaber":  -8583864861369561029,
     "NoArrows":   -5623662769225589684,
     "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
 }
 
 
@@ -108,7 +107,7 @@ def patch_pack_bundle():
         pos += 4
         first_diff_data = bytes(raw[pos:pos + diff_count * 36])
 
-        # Build 5-mode preview set data
+        # Build 4-mode preview set data
         new_sets = b''
         for mode in NEW_MODES:
             path_id = CHAR_PATH_IDS[mode]
@@ -121,13 +120,13 @@ def patch_pack_bundle():
 
         new_raw = bytearray(raw)
         # Replace preview array: count(4 bytes) + old data → count(4) + new data
-        new_data = struct.pack('<i', 5) + b''.join([
+        new_data = struct.pack('<i', 4) + b''.join([
             struct.pack('<iq', char_fileid, CHAR_PATH_IDS[m])
             for m in NEW_MODES
         ]) + b''.join([struct.pack('<i', diff_count) + first_diff_data for _ in NEW_MODES])
 
         # Pad to original size (fill remaining space with zeros)
-        new_raw[arr_offset:arr_offset + 4] = struct.pack('<i', 5)
+        new_raw[arr_offset:arr_offset + 4] = struct.pack('<i', 4)
         old_after_count = raw[arr_offset + 4:]
         new_after_count = new_sets[:len(old_after_count)]
         new_raw[arr_offset + 4:] = new_after_count

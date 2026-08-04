@@ -8,7 +8,7 @@ bundle back as a valid AssetBundle file WITHOUT calling save_bundle() — which 
 what corrupts external refs in Exp 113/115/116.
 
 Strategy: parse the bundle with UnityPy, patch each BeatmapLevelSO's serialized
-data in-place (adding OneSaber/90Degree/NoArrows/360Degree preview sets and custom
+data in-place (adding OneSaber/90Degree/NoArrows preview sets and custom
 metadata), then rebuild the AssetBundle binary by copying the original structure
 but updating only the file records for patched objects.
 
@@ -51,14 +51,13 @@ SONG_OVERRIDES = {
     "wholewideworld":("EverybodysGay", "(G)I-DLE", ""),
 }
 
-NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
     "OneSaber":  -8583864861369561029,
     "NoArrows":   -5623662769225589684,
     "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
 }
 
 
@@ -134,8 +133,8 @@ def main():
         pos += 4
         first_diff_data = bytes(raw[pos:pos + diff_count * 36])    # difficulty items
 
-        # Build new preview sets data (Standard + OneSaber + NoArrows + 90Degree + 360Degree)
-        new_sets = struct.pack('<i', 5)  # count = 5 modes
+        # Build new preview sets data (Standard + OneSaber + NoArrows + 90Degree)
+        new_sets = struct.pack('<i', 4)  # count = 4 modes
         for mode in NEW_MODES:
             path_id = CHAR_PATH_IDS[mode]
             # PPtr (fileID, pathID) for this mode's characteristic
@@ -146,26 +145,26 @@ def main():
 
         # Total new array size
         old_array_size = arr_offset + 4 + 12 + 4 + diff_count * 36  # count + charPtr(12) + diffs
-        new_array_size = 4 + (12 + 4 + diff_count * 36) * 5  # count + 5 × set
+        new_array_size = 4 + (12 + 4 + diff_count * 36) * 4  # count + 4 × set
 
         size_diff = new_array_size - (old_array_size - arr_offset)
         print(f"  {override[0] or level_id}: array at [0x{arr_offset:04x}], "
-              f"{arr_len}->{5} sets, growth +{size_diff}B")
+              f"{arr_len}->{4} sets, growth +{size_diff}B")
         total_growth += max(0, size_diff)
 
         # Build the new serialized bytes for this object
-        # Replace the old preview set data with 5 sets, padding to keep same size
+        # Replace the old preview set data with 4 sets, padding to keep same size
         new_raw = bytearray(raw)
 
         # The new array replaces from arr_offset onward in the blob
         remaining_bytes = raw[arr_offset + 4:]  # everything after count field
-        new_content = struct.pack('<i', 5)  # count = 5
+        new_content = struct.pack('<i', 4)  # count = 4
 
         # Add original first set data (charPtr + diffs)
         old_set_data = raw[arr_offset + 4:arr_offset + 4 + 12 + 4 + diff_count * 36]
         new_content += old_set_data
-        # Add remaining 4 sets
-        for mode in NEW_MODES[1:]:  # OneSaber, NoArrows, 90Degree, 360Degree
+        # Add remaining 3 sets
+        for mode in NEW_MODES[1:]:  # OneSaber, NoArrows, 90Degree
             path_id = CHAR_PATH_IDS[mode]
             new_content += struct.pack('<iq', char_ptr_fileid, path_id)
             new_content += struct.pack('<i', diff_count) + first_diff_data

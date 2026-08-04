@@ -27,14 +27,13 @@ SONG_OVERRIDES = {
     "wholewideworld":("EverybodysGay", "(G)I-DLE", ""),
 }
 
-NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
     "OneSaber":  -8583864861369561029,
     "NoArrows":   -5623662769225589684,
     "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
 }
 
 
@@ -50,8 +49,8 @@ def find_preview_array(raw):
     return -1
 
 
-def build_5_preview_sets(raw, arr_offset):
-    """Build 5-mode preview set data from the existing first preview set."""
+def build_4_preview_sets(raw, arr_offset):
+    """Build 4-mode preview set data from the existing first preview set."""
     pos = arr_offset + 4
     char_fileid = struct.unpack_from('<i', raw, pos)[0]
     char_pathid = struct.unpack_from('<q', raw, pos + 4)[0]
@@ -60,14 +59,14 @@ def build_5_preview_sets(raw, arr_offset):
     pos += 4
     first_diff_data = bytes(raw[pos:pos + diff_count * 36])
 
-    # Build new array: count(4) + charPtr(12) + diffs(diff_count*36) for each of 5 modes
+    # Build new array: count(4) + charPtr(12) + diffs(diff_count*36) for each of 4 modes
     result = b''
     for mode in NEW_MODES:
         path_id = CHAR_PATH_IDS[mode]
         result += struct.pack('<iq', char_fileid, path_id)
         result += struct.pack('<i', diff_count) + first_diff_data
 
-    return struct.pack('<i', 5) + result
+    return struct.pack('<i', 4) + result
 
 
 def main():
@@ -115,7 +114,7 @@ def main():
             patched_count += 1
             continue
 
-        new_sets = build_5_preview_sets(raw, arr_offset)
+        new_sets = build_4_preview_sets(raw, arr_offset)
         old_data_size = len(raw) - arr_offset - 4  # after count field
         new_data_size = len(new_sets)
         growth = new_data_size - old_data_size
@@ -124,10 +123,10 @@ def main():
             # Use padding to fit in original size
             padding_needed = -growth
             full_new = new_sets + b'\x00' * padding_needed
-            obj.set_raw_data(raw[:arr_offset] + struct.pack('<i', 5) + full_new)
+            obj.set_raw_data(raw[:arr_offset] + struct.pack('<i', 4) + full_new)
         else:
             # Growth — need to update file records later
-            obj.set_raw_data(raw[:arr_offset] + struct.pack('<i', 5) + new_sets)
+            obj.set_raw_data(raw[:arr_offset] + struct.pack('<i', 4) + new_sets)
 
         print(f"  ✓ {override[0]}: 1->{len(NEW_MODES)} sets, growth {growth:+d}B")
         patched_count += 1

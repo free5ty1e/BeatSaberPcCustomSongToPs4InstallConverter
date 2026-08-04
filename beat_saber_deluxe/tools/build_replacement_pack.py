@@ -12,10 +12,10 @@ Two strategies:
 2. Full expansion: add extra bytes to each object and update file records.
 
 For approach 1 (recommended), we replace Standard-only preview sets with
-OneSaber/NoArrows/90Degree/360Degree by swapping PPtr pathIDs within the
+OneSaber/NoArrows/90Degree by swapping PPtr pathIDs within the
 existing space — no size change needed because we modify in-place:
-- Change count from 1 → 5 (still int32 = same bytes)
-- Extend array to 5 items instead of 1 (this DOES grow the array)
+- Change count from 1 → 4 (still int32 = same bytes)
+- Extend array to 4 items instead of 1 (this DOES grow the array)
 
 Actually for a true in-place approach, we pad each preview set entry's difficulty
 array with no-op data. Or more practically: expand each object and fix up records.
@@ -53,10 +53,9 @@ CHAR_PATH_IDS = {
     "OneSaber":  -8583864861369561029,
     "NoArrows":   -5623662769225589684,
     "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
 }
 
-NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 
 def encode_utf16le(s):
@@ -184,8 +183,8 @@ def patch_beatmap_levelso(info, song_override=None):
     first_set_end = arr_offset + 4 + 12 + 4 + diff_count * 36  # where first set ends in raw data
     old_first_set_after_len = bytes(raw[arr_offset + 4:first_set_end])  # char PPtr + diff count + diffs
 
-    # The new array: length(4) + same first set data + 4 additional sets
-    new_array_len_bytes = struct.pack('<i', 5)  # 5 modes total
+    # The new array: length(4) + same first set data + 3 additional sets
+    new_array_len_bytes = struct.pack('<i', 4)  # 4 modes total
     new_full_data = new_array_len_bytes + old_first_set_after_len + new_sets_data
 
     size_diff = len(new_full_data) - len(old_first_set_after_len)

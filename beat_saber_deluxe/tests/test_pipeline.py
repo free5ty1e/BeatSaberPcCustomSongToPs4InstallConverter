@@ -251,10 +251,11 @@ class TestSelectBeatmapFile:
         result = _select_beatmap_file("Hard", files)
         assert result == "Hard90Degree.dat"
 
-    def test_360degree_last_resort(self):
+    def test_360degree_excluded(self):
+        """360Degree files are always excluded (unsupported on PS4 camera)."""
         files = ["Hard360Degree.dat"]
         result = _select_beatmap_file("Hard", files)
-        assert result == "Hard360Degree.dat"
+        assert result is None
 
     def test_ignore_non_standard_suppresses_tier4(self):
         files = ["Hard90Degree.dat", "Hard360Degree.dat"]
@@ -834,7 +835,8 @@ class TestDetectSongModes:
         assert 'Expert' in modes['OneSaber']
 
     def test_multiple_modes(self, tmp_dir):
-        """Song with Standard + OneSaber + 360Degree is detected completely."""
+        """Song with Standard + OneSaber + 360Degree is detected completely
+        (360Degree is excluded — unsupported on PS4)."""
         for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
             with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
                 json.dump({}, f)
@@ -847,9 +849,7 @@ class TestDetectSongModes:
         modes = detect_song_modes(tmp_dir)
         assert 'Standard' in modes and len(modes['Standard']) == 5
         assert 'OneSaber' in modes and modes['OneSaber'] == ['ExpertPlus']
-        assert '360Degree' in modes
-        assert 'Expert' in modes['360Degree']
-        assert 'Normal' in modes['360Degree']
+        assert '360Degree' not in modes
 
     def test_alias_single_saber(self, tmp_dir):
         """SingleSaber is aliased to OneSaber."""
@@ -931,14 +931,13 @@ class TestBuildModeMapping:
         assert "Standard" in result
         assert "OneSaber" in result
 
-    def test_all_five_modes_detected(self):
-        """All 5 modes detected — all enabled."""
+    def test_all_four_modes_detected(self):
+        """All 4 supported modes detected — all enabled (360Degree excluded)."""
         modes = {
             "Standard": list(DIFFICULTIES),
             "OneSaber": list(DIFFICULTIES),
             "NoArrows": list(DIFFICULTIES),
             "90Degree": list(DIFFICULTIES),
-            "360Degree": list(DIFFICULTIES),
         }
         result = build_mode_mapping(modes)
         assert result == list(GAME_CHARACTERISTIC_MODES)
@@ -947,29 +946,31 @@ class TestBuildModeMapping:
         """NoArrows not detected — falls back to Standard."""
         modes = {
             "Standard": list(DIFFICULTIES),
-            "360Degree": ["Expert"],
         }
         result = build_mode_mapping(modes)
         # NoArrows not detected, fallback chain: NoArrows←Standard
         assert "NoArrows" in result  # resolved via fallback
 
-    def test_360_falls_back_noarrows_standard(self):
-        """360Degree falls back through NoArrows→Standard."""
-        modes = {"Standard": list(DIFFICULTIES)}
+    def test_360degree_never_enabled(self):
+        """360Degree is never enabled even if files are detected."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "360Degree": ["Expert", "Hard"],
+        }
         result = build_mode_mapping(modes)
-        # 360Degree chain: 360Degree→NoArrows→Standard → resolved
-        assert "360Degree" in result
+        assert "360Degree" not in result
+        assert set(result) <= set(GAME_CHARACTERISTIC_MODES)
 
-    def test_custom_fallback_360_to_standard(self):
-        """Custom fallback 360Degree=Standard skips NoArrows."""
+    def test_custom_fallback_90_to_standard(self):
+        """Custom fallback 90Degree=Standard."""
         modes = {"Standard": list(DIFFICULTIES)}
-        result = build_mode_mapping(modes, fallback_mode_map=["360Degree=Standard"])
-        assert "360Degree" in result
+        result = build_mode_mapping(modes, fallback_mode_map=["90Degree=Standard"])
+        assert "90Degree" in result
 
     def test_custom_fallback_noarrows_skip(self):
-        """Custom fallback NoArrows=360Degree."""
-        modes = {"Standard": list(DIFFICULTIES), "360Degree": ["Expert"]}
-        result = build_mode_mapping(modes, fallback_mode_map=["NoArrows=360Degree"])
+        """Custom fallback NoArrows=Standard."""
+        modes = {"Standard": list(DIFFICULTIES)}
+        result = build_mode_mapping(modes, fallback_mode_map=["NoArrows=Standard"])
         assert "NoArrows" in result
 
     def test_empty_detected(self):
@@ -978,12 +979,12 @@ class TestBuildModeMapping:
         assert result == ["Standard"]
 
     def test_partial_detected(self):
-        """Only OneSaber and 360Degree detected without Standard.
-        Standard is always present, so all 4 other modes resolve via fallback."""
-        modes = {"OneSaber": ["Expert"], "360Degree": ["Hard"]}
+        """Only OneSaber detected without Standard.
+        Standard is always present, so all other modes resolve via fallback."""
+        modes = {"OneSaber": ["Expert"]}
         result = build_mode_mapping(modes)
         assert result == list(GAME_CHARACTERISTIC_MODES)
-        # OneSaber resolved from detected, 360Degree from detected
+        # OneSaber resolved from detected
         # NoArrows, 90Degree resolved via Standard fallback
 
     def test_noarrows_and_90degree_detected(self):

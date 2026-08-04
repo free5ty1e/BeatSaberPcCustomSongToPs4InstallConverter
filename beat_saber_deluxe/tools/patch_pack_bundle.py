@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Patch the Rolling Stones pack bundle to add OneSaber, NoArrows, 90Degree, and
-360Degree to _previewDifficultyBeatmapSets for every BeatmapLevelSO.
+Patch the Rolling Stones pack bundle to add OneSaber, NoArrows, and 90Degree
+to _previewDifficultyBeatmapSets for every BeatmapLevelSO.
+(360Degree is excluded — unsupported on PS4 camera tracking.)
 
 Uses binary patching on the Unity SerializedFile within the AssetBundle.
 """
@@ -16,7 +17,6 @@ CHARS = [
     ("OneSaber",  -8583864861369561029),
     ("NoArrows",  -5623662769225589684),
     ("90Degree",   4533580413116749821),
-    ("360Degree",  1189643819550092755),
 ]
 
 def get_raw_data(env):
@@ -184,7 +184,7 @@ def patch_bundle():
             first_diff_start = arr_offset + 4 + 12 + 4  # skip array_len + PPtr + diff_count
             new_sets_data += bytes(raw[first_diff_start:first_diff_start + 36])
 
-        new_array_length = 1 + NEW_SETS  # 5 total
+        new_array_length = 1 + NEW_SETS  # 4 total
         new_array_data_size = (first_set_end - arr_offset - 4) + len(new_sets_data)
 
         print(f"    Adding {NEW_SETS} new preview sets, "
