@@ -1,5 +1,11 @@
 # Pipeline Changelog
 
+## v0.5309 (2026-08-04)
+- **Beatmap Mode Generators (In Progress):**
+  - Added procedural beatmap generator logic for `NoArrows` mode (automatically strips direction arrows from Standard beatmaps).
+  - Placeholder implementations added for `OneSaber` and `90Degree` generators.
+  - Integration: Pipeline now generates missing mode-specific `.dat` files procedurally during bundle construction if they are enabled via flag.
+
 ## v0.5308 (2026-08-04)
 - **360Degree Mode Purge:**
   - Removed all `360Degree` mode support from pipeline (`full_custom_song_pipeline.py`), tools, and tests as 360° gameplay is physically unsupported on PS4 single-camera ~90° tracking.

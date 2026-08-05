@@ -131,11 +131,12 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) via pipeline (v0.5305) ✅
 - [ ] **(Future)** Multi-artist pack metadata — Need per-field tracking instead of global artist blanking
 
-## M5 — Beatmap Mode Generators (Pipeline, Planned)
-
-### Objective
-Generate mode-specific beatmaps from Standard source files by applying algorithmic transformations.
-These run as pipeline steps, producing dedicated `.dat` files that feed into the mode mapping feature.
+## M5 — Procedural Mode Generators (In Progress)
+- [x] Integrate generator framework into pipeline
+- [x] Implement `_generate_no_arrows`
+- [ ] Implement `_generate_one_saber`
+- [ ] Implement `_generate_90_degree`
+- [ ] Deploy and verify mode selector UI visibility for procedurally generated modes
 
 ### "No Arrows" Mode Generator
 Take a Standard beatmap and convert all arrow notes (`_cutDirection`/`d` > 0) to dot notes
