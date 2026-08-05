@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8051] — 2026-08-04
+### Changed
+- **Removed legacy memory injection scan** — Cleaned all memory-scanning logic and scan-worker threads from `src/main.cpp`, fixing the multi-minute startup freeze.
+- Version bump v0.8050 → v0.8051.
+
 ## [v0.8050] — 2026-08-04
 ### Changed
 - **Purged all 360Degree mode support** across plugin (`src/main.cpp`), pipeline, tools, and test suites, aligning with PS4 physical single-camera (~90°) tracking limitations.
