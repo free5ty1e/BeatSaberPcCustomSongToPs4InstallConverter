@@ -1,8 +1,8 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-03
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 Concluded DEAD END; Phase 1 Pipeline-Side Mapping Validated.** Phase 2 runtime RAM scanning of `BeatmapLevelSO._previewDifficultyBeatmapSets` was thoroughly tested and confirmed a dead end due to asynchronous Addressables unloading, multi-minute UI freezing, and PS4 tracking limitations. Mode mapping is fully handled via **Phase 1 (Pipeline bundle patching via `--enable-beatmap-mode-mapping`)**. All 38 custom songs (Rolling Stones, Billie Eilish, Lizzo, and the new Chromeo Pack Expansion) active and verified on PS4.
+**Last Updated:** 2026-08-04
+**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 Concluded DEAD END; Phase 1 Pipeline-Side 4-Mode Mapping Validated & Purged of 360Degree.** Phase 2 runtime RAM scanning of `BeatmapLevelSO._previewDifficultyBeatmapSets` was thoroughly tested and confirmed a dead end due to asynchronous Addressables unloading, multi-minute UI freezing, and PS4 tracking limitations. Mode mapping is fully handled via **Phase 1 (Pipeline bundle patching via `--enable-beatmap-mode-mapping`)**. All 360Degree mode references have been removed across pipeline, tools, tests, and plugin (`src/main.cpp`) to align with PS4 single-camera ~90° tracking physical constraints. Supported modes: `Standard`, `OneSaber`, `NoArrows`, `90Degree`.
 
-## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5307)
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5308 / v0.8050)
 
 **The old string-content memory injection (v0.66–v0.8024) is DEAD** — 0 strings found across 16MB–17GB.
 

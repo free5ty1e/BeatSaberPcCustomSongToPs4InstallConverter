@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8050] — 2026-08-04
+### Changed
+- **Purged all 360Degree mode support** across plugin (`src/main.cpp`), pipeline, tools, and test suites, aligning with PS4 physical single-camera (~90°) tracking limitations.
+- Retained 4 valid modes: `Standard`, `OneSaber`, `NoArrows`, `90Degree`, gated behind the existing `enable_beatmap_mode_mapping` / `g_feature_beatmap_mode_mapping` feature flag.
+- Version bump v0.8049 → v0.8050. All tests passing.
+
 ## [v0.8049] — 2026-08-03
 ### Changed
 - **Removed strict bundle-open gate on MoveNext scan trigger** — v0.8048's `g_mode_pack_last_open` bundle-open guard prevented the scan from firing when navigating song lists because the pack bundle open happened before the final cell render sequence. Moving to v0.8049 allows the scan to fire immediately on the first MoveNext occurrence without strict dependency on a subsequent pack bundle open event.

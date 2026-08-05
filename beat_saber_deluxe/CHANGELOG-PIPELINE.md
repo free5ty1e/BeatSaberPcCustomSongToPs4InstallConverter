@@ -1,5 +1,11 @@
 # Pipeline Changelog
 
+## v0.5308 (2026-08-04)
+- **360Degree Mode Purge:**
+  - Removed all `360Degree` mode support from pipeline (`full_custom_song_pipeline.py`), tools, and tests as 360° gameplay is physically unsupported on PS4 single-camera ~90° tracking.
+  - Restricted supported modes to 4: `Standard`, `OneSaber`, `NoArrows`, `90Degree`.
+  - Updated all test suites and pipeline defaults to 4 modes.
+
 ## v0.5307 (2026-07-28)
 - **Beatmap mode mapping (Phase 1):**
   - Added `detect_song_modes(song_dir)` — auto-detects characteristic modes from beatmap .dat/.json filename patterns. Handles suffix-style (`ExpertPlusOneSaber.dat`), prefix-style (`OneSaberExpert.dat`), bare (`Expert.dat` → Standard), and `.beatmap.dat` variants. Aliases: `SingleSaber`→`OneSaber`, `Lawless`→`NoArrows`, `Legacy`→`Standard`. Excludes `Info.dat`, `BPMInfo.dat`, `Lightshow`, `AudioData`. Returns canonically-ordered difficulty lists per mode.

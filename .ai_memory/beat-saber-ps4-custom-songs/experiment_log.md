@@ -217,3 +217,9 @@ metadata:
 - **What:** Formally concluded that runtime RAM patching of `BeatmapLevelSO._previewDifficultyBeatmapSets` (Phase 2) is a dead end due to asynchronous Addressables unloading, severe multi-minute UI freezing, and PS4 single-camera 90-degree tracking constraints. Updated all documentation, plans, and knowledge base files. Pivoted fully to **Phase 1 (Pipeline-side bundle patching via `--enable-beatmap-mode-mapping`)** as the designated method for custom song mode configuration. Verified all 110 pipeline unit tests and 361 total tests pass.
 - **Version:** Pipeline v0.5307, Plugin v0.8048 (clean)
 - **Status:** ✅ **Phase 2 abandoned; Phase 1 pipeline-side mode mapping validated as production solution.**
+
+### Experiment 175: v0.5308 + v0.8050 — 360Degree Purge and 4-Mode Stabilization
+- **Date:** 2026-08-04
+- **What:** Purged all `360Degree` mode support across pipeline (`full_custom_song_pipeline.py`), tools, unit/integration test suites, and plugin source (`src/main.cpp`), aligning with PS4 physical single-camera (~90°) tracking limitations. Standardized on 4 characteristic slots (`Standard`, `OneSaber`, `NoArrows`, `90Degree`) gated behind the existing `enable_beatmap_mode_mapping` / `g_feature_beatmap_mode_mapping` feature flag. Built plugin v0.8050 (FSELF format) and verified full test suite (229 targeted tests passing).
+- **Version:** Pipeline v0.5308, Plugin v0.8050
+- **Status:** ✅ **Code complete, built, tested, and ready for PS4 deployment experimentation.**

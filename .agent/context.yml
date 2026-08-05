@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8049"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
-pipeline_version: "0.5307" # in beat_saber_deluxe/VERSION
+plugin_version: "0.8050"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
+pipeline_version: "0.5308" # in beat_saber_deluxe/VERSION
 
 # Platform Constraints
 target_platform: PS4
