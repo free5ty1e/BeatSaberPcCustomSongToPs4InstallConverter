@@ -762,6 +762,27 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
 # Feature: Beatmap Mode Mapping (auto-detect characteristic modes)
 # ============================================================================
 
+# Mode Generators
+def _generate_no_arrows(beatmap_data: dict) -> dict:
+    """Strip direction arrows from notes, converting them to dots (type 3)."""
+    if not isinstance(beatmap_data, dict):
+        return beatmap_data
+    
+    # Simple implementation: just set cutDirection to 8 (dot)
+    for note in beatmap_data.get("_colorNotes", []):
+        note["_cutDirection"] = 8
+    return beatmap_data
+
+def _generate_one_saber(beatmap_data: dict) -> dict:
+    """Implement simple one-saber logic (placeholder: drop notes that conflict)."""
+    # Placeholder: currently just returns data as-is
+    return beatmap_data
+
+def _generate_90_degree(beatmap_data: dict) -> dict:
+    """Implement simple 90-degree logic (placeholder: drop rotation events)."""
+    # Placeholder: currently just returns data as-is
+    return beatmap_data
+
 GAME_CHARACTERISTIC_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 KNOWN_MODE_SUFFIXES = [
@@ -2441,6 +2462,29 @@ Examples:
         log.info(f"  Detected modes: {detected}")
         enabled = build_mode_mapping(detected, args.fallback_mode_map)
         log.info(f"  Modes to enable: {enabled}")
+        
+        # Apply Mode Generators: Generate .dat files for enabled modes if missing
+        # Standard .dat is needed as source
+        standard_beatmap = None
+        standard_path = os.path.join(args.song_dir, "Standard.dat")
+        if os.path.exists(standard_path):
+             with open(standard_path, 'r') as f:
+                 standard_beatmap = json.load(f)
+             
+             for mode in enabled:
+                 if mode == "NoArrows":
+                     gen_data = _generate_no_arrows(standard_beatmap.copy())
+                     with open(os.path.join(args.song_dir, "NoArrows.dat"), 'w') as f:
+                         json.dump(gen_data, f)
+                 elif mode == "OneSaber":
+                     gen_data = _generate_one_saber(standard_beatmap.copy())
+                     with open(os.path.join(args.song_dir, "OneSaber.dat"), 'w') as f:
+                         json.dump(gen_data, f)
+                 elif mode == "90Degree":
+                     gen_data = _generate_90_degree(standard_beatmap.copy())
+                     with open(os.path.join(args.song_dir, "90Degree.dat"), 'w') as f:
+                         json.dump(gen_data, f)
+        
         mode_count = apply_mode_mapping(cab, enabled)
         log.info(f"  Mode sets added: {mode_count}")
 
