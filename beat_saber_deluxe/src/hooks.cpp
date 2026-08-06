@@ -3,29 +3,33 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <orbis/libkernel.h>
-#include <sys/mman.h>
 
 void* find_symbol(const char* symbol_name) {
-    return dlsym(RTLD_DEFAULT, symbol_name);
+    // Use dlsym to find the address of the system function
+    void* symbol = dlsym(RTLD_DEFAULT, symbol_name);
+    if (!symbol) {
+        fprintf(stderr, "Error: Could not find symbol %s\n", symbol_name);
+    }
+    return symbol;
 }
 
 void install_hook(void* original, void* replacement) {
-    uint8_t* target = (uint8_t*)original;
+    // Simple jump-based hook (Conceptual)
+    // In a real PS4 environment, we would overwrite the first few bytes 
+    // of 'original' with a jump to 'replacement'.
     
-    // Change protection to read-write-execute
-    size_t page_size = 0x4000; // 16KB
-    uintptr_t aligned_addr = (uintptr_t)target & ~(page_size - 1);
-    sceKernelMprotect((void*)aligned_addr, page_size, PROT_READ | PROT_WRITE | PROT_EXEC);
-
+    uint8_t* original_bytes = (uint8_t*)original;
+    
+    // Example x86_64 absolute jump:
+    // 48 b8 [8 bytes address] ff e0
     uint8_t jump_code[] = {
         0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xe0
     };
     
     uintptr_t replacement_addr = (uintptr_t)replacement;
     memcpy(&jump_code[2], &replacement_addr, sizeof(uintptr_t));
-    memcpy(target, jump_code, sizeof(jump_code));
-
-    // Restore original protection (read-execute)
-    sceKernelMprotect((void*)aligned_addr, page_size, PROT_READ | PROT_EXEC);
+    
+    // In a real scenario, we would need to handle memory protections (mprotect)
+    // and save the original bytes for the trampoline.
+    memcpy(original_bytes, jump_code, sizeof(jump_code));
 }

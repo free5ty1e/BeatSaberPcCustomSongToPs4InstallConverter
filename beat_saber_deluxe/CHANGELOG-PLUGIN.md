@@ -4,10 +4,19 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8040 (RESTORED)] — 2026-08-06
+### Reverted
+- **Startup-crash fix:** v0.8050/v0.8051 caused an **instant crash at launch with no plugin notification** (Exp 176). Root cause: the v0.8050 "cleanup" rewrote `src/main.cpp` to use a **manual 12-byte `memcpy` absolute-jump hook** (`install_hook` on `sys_open`) and re-enabled `src/hooks.cpp` in the Makefile (it had been `filter-out`'d in every stable build). Writing over the live `open` prologue without a trampoline → CE-34878-0. The `cb2ed1a` `sceKernelMprotect` attempt did not help.
+- **Restored plugin source to the exact v0.8051-parent baseline `a8a06f0` (v0.8040):** `src/main.cpp` (795 lines, GoldHEN `Detour_Construct`/`Detour_DetourFunction` API for fopen/open/close + TMP_Text/MoveNext metadata hooks), `src/hooks.cpp` (excluded from build again), `Makefile` (`filter-out src/crt_patch.cpp src/hooks.cpp src/main_printf_backup.cpp`).
+- Build: 88,752 bytes. All 365 tests pass. Deployed to PS4.
+### Removed
+- Legacy memory-scan machinery was NOT reintroduced — v0.8040 already predates the Phase 2 scan experiments (Exp 160+). The mode-mapping feature flag (`enable_beatmap_mode_mapping`) is simply ignored by v0.8040 (no scan, no freeze, no crash).
+
 ## [v0.8051] — 2026-08-04
 ### Changed
 - **Removed legacy memory injection scan** — Cleaned all memory-scanning logic and scan-worker threads from `src/main.cpp`, fixing the multi-minute startup freeze.
 - Version bump v0.8050 → v0.8051.
+- ⚠️ **REVERTED 2026-08-06** — this build crashed Beat Saber instantly at startup (manual `memcpy` hook architecture). See v0.8040 (RESTORED) above.
 
 ## [v0.8050] — 2026-08-04
 ### Changed

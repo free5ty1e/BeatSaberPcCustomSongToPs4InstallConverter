@@ -1,8 +1,8 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-04
-**Status:** 🏗️ **Beatmap Mode Mapping Phase 2 Concluded DEAD END; Phase 1 Pipeline-Side 4-Mode Mapping Validated & Purged of 360Degree.** Phase 2 runtime RAM scanning of `BeatmapLevelSO._previewDifficultyBeatmapSets` was thoroughly tested and confirmed a dead end due to asynchronous Addressables unloading, multi-minute UI freezing, and PS4 tracking limitations. Mode mapping is fully handled via **Phase 1 (Pipeline bundle patching via `--enable-beatmap-mode-mapping`)**. All 360Degree mode references have been removed across pipeline, tools, tests, and plugin (`src/main.cpp`) to align with PS4 single-camera ~90° tracking physical constraints. Supported modes: `Standard`, `OneSaber`, `NoArrows`, `90Degree`.
+**Last Updated:** 2026-08-06
+**Status:** ✅ **STABLE — Plugin restored to v0.8040 after v0.8050/v0.8051 startup-crash regression.** The v0.8050 "cleanup" rewrote `src/main.cpp` to use a manual `memcpy` jump hook + re-enabled `hooks.cpp` in the Makefile → instant CE-34878-0 at launch (Exp 176). Root cause found by stepping through git history; plugin source reverted to the exact verified-good v0.8040 baseline (`a8a06f0`, GoldHEN Detour API). Documentation/KB updates from the intervening commits were kept. Pipeline remains v0.5309 with the procedural NoArrows generator (M5, in progress). Beatmap Mode Mapping Phase 2 (runtime RAM scanning) remains a documented DEAD END; mode mapping is pipeline-side via `--enable-beatmap-mode-mapping`.
 
-## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (v0.5308 / v0.8050)
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5309 / plugin v0.8040 restored)
 
 **The old string-content memory injection (v0.66–v0.8024) is DEAD** — 0 strings found across 16MB–17GB.
 

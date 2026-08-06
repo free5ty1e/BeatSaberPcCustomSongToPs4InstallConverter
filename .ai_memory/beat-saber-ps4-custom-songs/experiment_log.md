@@ -223,3 +223,15 @@ metadata:
 - **What:** Purged all `360Degree` mode support across pipeline (`full_custom_song_pipeline.py`), tools, unit/integration test suites, and plugin source (`src/main.cpp`), aligning with PS4 physical single-camera (~90°) tracking limitations. Standardized on 4 characteristic slots (`Standard`, `OneSaber`, `NoArrows`, `90Degree`) gated behind the existing `enable_beatmap_mode_mapping` / `g_feature_beatmap_mode_mapping` feature flag. Built plugin v0.8050 (FSELF format) and verified full test suite (229 targeted tests passing).
 - **Version:** Pipeline v0.5308, Plugin v0.8050
 - **Status:** ✅ **Code complete, built, tested, and ready for PS4 deployment experimentation.**
+
+### Experiment 176: v0.8050/v0.8051 STARTUP CRASH — Root Cause Found via Git History; Plugin Restored to Stable v0.8040
+- **Date:** 2026-08-06
+- **What:** Beat Saber started crashing **immediately at launch with no plugin notification** after the v0.8050 "cleanup" builds. Stepped backwards through git commits to isolate the crash-introducing change.
+- **Root Cause (commit `e18921b`, the "codebase cleanup"):**
+  - The cleanup **rewrote `src/main.cpp`** (795-line stable source → 119 lines) to call `install_hook((void*)sys_open, (void*)open_hook)` — a **manual 12-byte `memcpy` absolute-jump hook** (`48 b8 <8-byte addr> ff e0`) that overwrites the prologue of the live `open` function with **no trampoline**.
+  - It also **re-enabled `src/hooks.cpp` in the Makefile** — removed from the `filter-out` list. Every stable build (v0.8040 → v0.8050) had `hooks.cpp` **excluded** and used the **GoldHEN `Detour_Construct`/`Detour_DetourFunction` API** instead (safe, supported).
+  - The `cb2ed1a` fix attempt added `sceKernelMprotect` to `install_hook` — **still crashed** (already documented as a dead end in `hook-failures.md`). Reverting only the version string did not help (crash is in the code architecture, not the version).
+- **Fix:** Restored the plugin source to the exact verified-good **v0.8040 baseline** (commit `a8a06f0`): `src/main.cpp`, `src/hooks.cpp`, `Makefile`. Hooks are back on the GoldHEN Detour API; `hooks.cpp` re-excluded. Kept ALL documentation/knowledge-base updates from the intervening commits (Phase 2 dead-end docs, 360Degree purge docs, hook-failures.md, roadmap) — only the plugin source was reverted.
+- **Verification:** Built clean → 88,752 bytes, v0.8040 string embedded, FSELF SCE magic. Full test suite **365 passed** (149 pipeline + 45 mode-generators/patched + 171 integration/encoder/lapped/download). Deployed to PS4: `beat_saber_deluxe.prx` (88,752 B), fresh `startmeup_v3` bundle (12,407,712 B), `redirects.json`, `song_metadata.json`; `plugins.ini` entry confirmed; PS4 log cleared for a clean test session.
+- **Version:** Pipeline v0.5309 (unchanged), Plugin **v0.8040 (restored)**
+- **Status:** ✅ **Deployed on PS4 — awaiting user test.** Expect: startup notification `v0.8040`, Start Me Up → "drop pop candy" (Reol) with redirects + metadata working again. Note: `features.json` still has `enable_beatmap_mode_mapping: true`, which v0.8040 ignores (no scan, no freeze, no crash).

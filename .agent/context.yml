@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8050"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
-pipeline_version: "0.5308" # in beat_saber_deluxe/VERSION
+plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
+pipeline_version: "0.5309" # in beat_saber_deluxe/VERSION
 
 # Platform Constraints
 target_platform: PS4
@@ -52,24 +52,20 @@ slot_note: >
 
 # Plugin Features
 plugin_features:
-  - open() hook: redirects file reads to AFR custom bundles
+  - open() hook: redirects file reads to AFR custom bundles (GoldHEN Detour API)
   - MoveNext() hook (RVA 0x1D377C0): modifies BeatmapLevel fields for song name/artist
-  - Mode mapping Phase 2 (v0.8048+): synchronous in-hook memory scan (16MB-64GB @1MB pages +
-    8-8.25GB @64KB) finds BeatmapLevelSO objects and atomically replaces
-    _previewDifficultyBeatmapSets (0x98) with 5 mode entries so the mode selector UI shows
-    OneSaber/NoArrows/90Degree/360Degree. Signal-free reads via sceKernelQueryMemoryProtection
-    (v0.8045+). v0.8047 test CONFIRMED root cause = TRIGGER TIMING (scan fired from first
-    MoveNext before pack BSLs deserialized; pack bundle re-opened at [OPEN #792] after cells
-    rendered; offsets verified correct vs dump.cs TypeDefIndex 11680). v0.8048: scan fires only
-    after a *_pack_assets_all_*.bundle open post-first-MoveNext (g_mode_pack_last_open gate) OR
-    at BeatmapLevelsData song-start (v0.77-proven fallback); failures RETRYABLE (MODE_MAX_ATTEMPTS
-    =4, no permanent disable); g_mode_scan_in_progress re-entrancy guard; MoveNext hook installs
-    when metadata OR mode-mapping feature on. Log cleared on PS4 after each pull (rm bs_log.txt).
+  - ⚠️ v0.8040 RESTORED 2026-08-06: v0.8050/v0.8051 rewrote main.cpp to use a manual 12-byte
+    memcpy absolute-jump hook (install_hook on sys_open) + re-enabled src/hooks.cpp in the
+    Makefile → INSTANT STARTUP CRASH (CE-34878-0, no notification). GoldHEN Detour API hooks
+    restored; hooks.cpp re-excluded via Makefile filter-out. NEVER re-enable hooks.cpp / never
+    call install_hook (see hook-failures.md).
+  - Mode mapping Phase 2 (RAM scan of _previewDifficultyBeatmapSets) = DEAD END (Exp 160-174).
+    v0.8040 ignores enable_beatmap_mode_mapping entirely (no scan, no freeze, no crash).
   - Features gated via features.json at AFR path
 feature_flags:
-  enable_custom_song_replacements: false  # gates bundle redirects
-  enable_song_metadata_modification: false # gates MoveNext() hook
-  enable_beatmap_mode_mapping: true       # gates mode mapping (pipeline v0.5307+)
+  enable_custom_song_replacements: true  # gates bundle redirects
+  enable_song_metadata_modification: true # gates MoveNext() hook
+  enable_beatmap_mode_mapping: true       # pipeline-side only (v0.5307+); ignored by v0.8040 plugin
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:
