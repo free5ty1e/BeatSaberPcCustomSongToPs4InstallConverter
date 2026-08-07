@@ -1,8 +1,8 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-06
-**Status:** ✅ **STABLE — Plugin restored to v0.8040 after v0.8050/v0.8051 startup-crash regression.** The v0.8050 "cleanup" rewrote `src/main.cpp` to use a manual `memcpy` jump hook + re-enabled `hooks.cpp` in the Makefile → instant CE-34878-0 at launch (Exp 176). Root cause found by stepping through git history; plugin source reverted to the exact verified-good v0.8040 baseline (`a8a06f0`, GoldHEN Detour API). Documentation/KB updates from the intervening commits were kept. Pipeline remains v0.5309 with the procedural NoArrows generator (M5, in progress). Beatmap Mode Mapping Phase 2 (runtime RAM scanning) remains a documented DEAD END; mode mapping is pipeline-side via `--enable-beatmap-mode-mapping`.
+**Last Updated:** 2026-08-07
+**Status:** ✅ **STABLE — plugin v0.8040 user-confirmed; pipeline v0.5310 deployed with real mode generators.** Plugin remains the verified-good v0.8040 baseline (GoldHEN Detour API; `hooks.cpp` excluded from build — see [[hook-failures]]). Pipeline advanced to v0.5310: the OneSaber/NoArrows/90Degree placeholders became real, non-mutating generators, and mode generation is now the DEFAULT gap-filling behavior under `--enable-beatmap-mode-mapping` (runs in Step 5a BEFORE beatmap replacement; opt-out via `--skip-mode-generation`). Fresh `drop pop candy` → `startmeup_v3` bundle (12,405,290 B) built + deployed on PS4 (Exp 177): 14 generated mode beatmaps + 3 mode sets injected. **Remaining gap:** mode selector still shows only Standard because it reads pack-level `BeatmapLevelSO._previewDifficultyBeatmapSets`, which the pipeline cannot yet inject (UnityPy ObjectReader/CAB-write blocker). Beatmap Mode Mapping Phase 2 (runtime RAM scanning) remains a documented DEAD END.
 
-## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5309 / plugin v0.8040 restored)
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5310 / plugin v0.8040)
 
 **The old string-content memory injection (v0.66–v0.8024) is DEAD** — 0 strings found across 16MB–17GB.
 
@@ -138,6 +138,10 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **169** | **v0.8047** | **Tighten pointer window + reorder checks + stage breakdown + raw64 dumps** | **🔲 Build 105,120 bytes, 361/361 pytest pass, deployed. Awaiting user test — expect diag to show whether ptrs drops (bundle data killed) or objects found** |
 | **170** | **v0.8047 test** | **Full log re-analysis — root cause CONFIRMED: scan TIMING** | **✅ NO CRASH. Scan fired from first MoveNext (open #731) before any pack BSL deserialized; pack bundle re-opened at [OPEN #792] after all 22 cells rendered. ptrs=1984 strfail=1980 arrfail=4 — objects simply didn't exist. Offsets verified correct (dump.cs TypeDefIndex 11680).** |
 | **171** | **v0.8048** | **Trigger timing fix: pack-data gate + retryable scans + song-start fallback** | **🔲 Built 105,120 bytes, 361/361 pytest pass. PS4 unreachable — deploy deferred. Awaiting deploy + user test.** |
+| 172–174 | v0.8049–v0.8050 | Phase 2 scan refinement (dead end continued) | ❌ Scan timing/structural issues; PS4 tracking constraints → Phase 2 ABANDONED |
+| 175 | v0.5308+v0.8050 | 360Degree purge → 4 modes | ✅ 360Degree removed pipeline-wide (PS4 ~90° camera can't do 360); 4 modes (Standard/OneSaber/NoArrows/90Degree), 229 tests pass |
+| **176** | **v0.8050/51** | **STARTUP CRASH — root cause + restore** | **✅ ROOT CAUSED (`e18921b` manual memcpy hook + `hooks.cpp` re-enabled) → plugin restored to stable v0.8040 baseline (`a8a06f0`); 365 tests pass; redeployed; user-confirmed stable** |
+| **177** | **v0.5310** | **Real mode generators + default fill-in** | **✅ Generators implemented (no-arrows/one-saber/90-degree, non-mutating, V2+V3); mode generation now Step 5a default fill-in; 17 generator tests (365 total pass); fresh `startmeup_v3` bundle (12,405,290 B) deployed. ⚠️ Mode selector still Standard-only (pack-level preview sets unpatched — UnityPy inject blocker).** |
 
 ## Memory Injection Versions
 
@@ -177,14 +181,11 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Deploy + test v0.8048** — PS4 was unreachable at build time; deploy `beat_saber_deluxe.prx` (105,120 bytes) to `/data/GoldHEN/plugins/`. User flow: boot → Solo → scroll the **pack list** (loads fresh pack bundles) → enter a pack and scroll songs → select a song. Pull `bs_log.txt` (clear after each pull): expect `[MODE] pack data open #N` entries, then `Triggered from MoveNext (attempt N)` or `Triggered from song-start redirect` + `BSL[k] levelID=...` + `Patch complete: N BeatmapLevelSO objects updated`. Modes should appear in the Start Me Up selector once patched.
-2. **If still zero BSLs at the new trigger points** — re-examine high-region (0x200000000–0x210000000) heap probing; low-range sweeps only prove archive data (raw64 candidates 0x1C27B60/0x1C40F40/0x1C44D40/0x1D4D5E0 are serialized bundle headers, not managed objects). Consider firing the scan from a LevelDetailViewController populate instead of MoveNext.
-3. **If klass found but 0 BSL collected** — collector uses same range as finder; check `mode_preview_arr_ok` strictness.
-4. **If BSLs found but no 5 BeatmapCharacteristicSO** — widen the ±16MB neighbor scan or find charSOs from a known pack.
-5. **If mode selector appears** — test 90Degree/360Degree gameplay (Phase 1 uses Standard patterns; unique .dat beatmap data still needs per-mode TextAsset compilation — roadmap M5).
-6. **Reduce the ~1 min scan hang** — the scan cost is acceptable for dev tests only; a production scan must target a smaller region, run after BSLs exist (v0.8048 trigger), or reuse the already-loaded BSL addresses.
-7. **Expand replacement table** — Register metadata for additional DLC packs beyond the current 38 slots.
-8. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
+1. **User test the v0.5310 deploy (Exp 177)** — boot PS4 → song list → Start Me Up (drop pop candy). Expect stable startup (v0.8040 notification), and mode selector STILL Standard-only (pack-level `_previewDifficultyBeatmapSets` not yet injected). Pull `bs_log.txt` (clear after) to confirm no new errors.
+2. **Close the selector gap: BeatmapLevelSO preview-set injection** — currently blocked on UnityPy (`env.create_object` doesn't exist in 1.25.0; `ObjectReader` over `EndianBinaryReader` fails with read_str out of bounds). Next candidate: byte-level SerializedFile surgery to append a TextAsset/BeatmapLevelSO object into the pack CAB, or extend UnityPy with a custom writer. If infeasible, document and keep the gap visible.
+3. **Verify mode beatmaps actually load in-game once the selector gap is closed** — confirm OneSaber/NoArrows/90Degree generated `.dat` files (V2+V3) parse and play.
+4. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
+5. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
 
 ## Active Knowledge Gaps
 

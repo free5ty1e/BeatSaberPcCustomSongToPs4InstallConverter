@@ -1,19 +1,20 @@
 # Feature: Beatmap Mode Mapping
 
-Auto-detect custom song beatmap files and map them to the game's 5 characteristic
-mode slots (Standard, OneSaber, NoArrows, 90Degree, 360Degree) with configurable
-fallback logic for slots without dedicated files.
+Auto-detect custom song beatmap files and map them to the game's 4 characteristic
+mode slots (**Standard, OneSaber, NoArrows, 90Degree** — 360Degree was purged in
+v0.5308 as 360° gameplay is physically unsupported on PS4 single-camera ~90° tracking)
+with configurable fallback logic for slots without dedicated files.
 
 ## Requirements
 
 1. **Feature flag enabled** — `enable_beatmap_mode_mapping` must be `true` in `/data/GoldHEN/AFR/CUSA12878/features.json` (default: `true`)
-2. **Pipeline v0.5307+** — CLI flags `--enable-beatmap-mode-mapping` and `--fallback-mode-map`
+2. **Pipeline v0.5310+** — CLI flag `--enable-beatmap-mode-mapping` (plus optional `--fallback-mode-map`, `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats`)
 
 ## How It Works
 
-### Phase 1 (Pipeline-side, v0.5307)
+### Phase 1 (Pipeline-side, v0.5307+)
 
-The pipeline performs three steps when `--enable-beatmap-mode-mapping` is passed:
+The pipeline performs the following steps when `--enable-beatmap-mode-mapping` is passed:
 
 1. **`detect_song_modes(song_dir)`**
    Scans all `.dat` and `.json` files in the song directory, classifies them by
@@ -30,59 +31,81 @@ The pipeline performs three steps when `--enable-beatmap-mode-mapping` is passed
    | SingleSaber | `ExpertSingleSaber.dat` | OneSaber (alias) |
    | Lawless | `ExpertLawless.dat` | NoArrows (alias) |
 
-2. **`build_mode_mapping(detected_modes, fallback_map)`**
-   Resolves the 5 game characteristic slots against the detected modes.
+2. **Mode generation (v0.5310, Step 5a — BEFORE beatmap replacement)**
+   `generate_missing_mode_beatmaps(song_dir, detected_modes, enabled_modes, ...)`
+   fills gaps: for every difficulty that has a Standard source, it writes
+   `<Diff><Mode>.dat` for each enabled mode the song does NOT already provide.
+   Generation is the **default** under `--enable-beatmap-mode-mapping`; opt out
+   with `--skip-mode-generation`. Songs' own mode files are **never overwritten**,
+   and difficulties without a Standard source are skipped.
+   - **NoArrows** — `_generate_no_arrows`: every color note becomes a dot
+     (V2 `_cutDirection`/V3 `d` = 8); bombs keep direction. Non-mutating.
+   - **OneSaber** — `_generate_one_saber`: recolors all notes to a single saber
+     (color 0), removes simultaneous notes and same-cell arrowed notes closer
+     than `min_gap` beats (default 0.25, `--one-saber-min-gap`); dots after
+     arrows are kept. Non-mutating.
+   - **90Degree** — `_generate_90_degree`: V2 sources are converted to V3 first,
+     then `rotationEvents` alternating `+90/-90` are added every `cycle_beats`
+     (default 8.0 = 2 measures, `--rotation-cycle-beats`). Non-mutating.
+
+3. **`build_mode_mapping(detected_modes, fallback_map)`**
+   Resolves the game characteristic slots against the detected modes.
    Default fallback chain (each mode falls back to the next if not detected):
 
    ```
-   360Degree → NoArrows → Standard
    90Degree → Standard
    NoArrows → Standard
    OneSaber → Standard
    Standard (always present)
    ```
 
-   Custom fallbacks override defaults: `--fallback-mode-map 360Degree=Standard`
-   skips the `NoArrows` fallback for 360Degree.
+   Custom fallbacks override defaults: `--fallback-mode-map 90Degree=Standard`.
 
-3. **`apply_mode_mapping(cab, enabled_modes)`**
+4. **`apply_mode_mapping(cab, enabled_modes)`**
    Injects new `_difficultyBeatmapSets` entries into the per-song bundle's
    `BeatmapLevel` object by cloning Standard's beatmap asset references.
    Each enabled mode gets its own entry in the array.
 
 ### Mode Slot Ordering
 
-The 5 game characteristic slots are always processed in this order:
+The 4 game characteristic slots are always processed in this order:
 
 ```python
 GAME_CHARACTERISTIC_MODES = [
-    "Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"
+    "Standard", "OneSaber", "NoArrows", "90Degree"
 ]
 ```
 
 ### CLI Examples
 
 ```bash
-# Auto-detect modes with default fallback chain:
+# Auto-detect modes + generate missing mode beatmaps (default):
 python3 full_custom_song_pipeline.py \
   --song-dir ./my_song \
   --target startmeup \
   --enable-beatmap-mode-mapping
 
-# Custom fallback: 360Degree falls to Standard directly (skip NoArrows):
+# Generate modes but keep tuning knobs at defaults:
 python3 full_custom_song_pipeline.py \
   --song-dir ./my_song \
   --target startmeup \
   --enable-beatmap-mode-mapping \
-  --fallback-mode-map 360Degree=Standard
+  --one-saber-min-gap 0.5 \
+  --rotation-cycle-beats 4.0
 
-# Multiple custom fallbacks:
+# Map modes but DON'T generate beatmaps (use song's own mode files only):
 python3 full_custom_song_pipeline.py \
   --song-dir ./my_song \
   --target startmeup \
   --enable-beatmap-mode-mapping \
-  --fallback-mode-map NoArrows=Standard \
-  --fallback-mode-map 360Degree=90Degree
+  --skip-mode-generation
+
+# Custom fallback: 90Degree falls to Standard directly:
+python3 full_custom_song_pipeline.py \
+  --song-dir ./my_song \
+  --target startmeup \
+  --enable-beatmap-mode-mapping \
+  --fallback-mode-map 90Degree=Standard
 ```
 
 ## Relationship to `--enable-modes`
@@ -90,28 +113,33 @@ python3 full_custom_song_pipeline.py \
 | Flag | Behavior |
 |------|----------|
 | `--enable-modes` | Manually specify which modes to add (e.g. `OneSaber,90Degree`). All use cloned Standard beatmaps. |
-| `--enable-beatmap-mode-mapping` | Auto-detect modes from files. Falls back through chain for undetected modes. May be combined with `--enable-modes` for explicit additions. |
+| `--enable-beatmap-mode-mapping` | Auto-detect modes from files + generate missing mode beatmaps. Falls back through chain for undetected modes. May be combined with `--enable-modes` for explicit additions. |
 
 When both are present, `--enable-beatmap-mode-mapping` runs after `--enable-modes`
 and adds any modes it detects that weren't manually enabled.
 
 ## Known Limitations
 
-- **Phase 1 only injects mode sets in the per-song bundle** (`_difficultyBeatmapSets`).
-  The pack bundle's `_previewDifficultyBeatmapSets` (in BeatmapLevelSO) is not
-  modified — that requires Phase 2 (plugin runtime injection).
-- **All modes use Standard's beatmap assets** in Phase 1. Per-mode unique beatmaps
-  (e.g. actual OneSaber `.dat` content mapped to OneSaber mode) requires Phase 2.
-- **The 360Degree→NoArrows fallback** is the default because NoArrows gameplay is
-  closer to 360Degree than Standard is (both use modified note mechanics).
+- **Mode selector in-game still shows only Standard** (as of v0.5310, Exp 177).
+  The selector reads the pack bundle's `BeatmapLevelSO._previewDifficultyBeatmapSets`,
+  which the pipeline cannot inject yet. UnityPy 1.25.0 has no `env.create_object`,
+  and `ObjectReader` over a bare `EndianBinaryReader` fails with `read_str out of
+  bounds` (ObjectReader is bound to the SerializedFile stream). Next candidate:
+  byte-level SerializedFile surgery to append the preview blob.
+- **Per-song mode sets ARE injected** (Standard/OneSaber/NoArrows/90Degree each with
+  5 difficulties) with real generated beatmap data compiled via the mode mapping path.
+- **The 90Degree→Standard fallback** is the default; 360Degree was removed (v0.5308).
 
 ## Testing
 
 ```bash
-# Unit tests for detect/build/map functions:
+# Unit tests for detect/build/map/generate functions:
 python3 -m pytest tests/test_pipeline.py -v -k "TestDetectSongModes or TestBuildModeMapping"
 
-# Integration tests (detect→build chain):
+# Mode generator unit tests (V2+V3, mutation-safety, gap-filling):
+python3 -m pytest tests/test_mode_generators.py -v
+
+# Integration tests (detect→build→generate chain):
 python3 -m pytest tests/test_integration.py -v -k "TestBeatmapModeMappingIntegration"
 
 # Full suite:

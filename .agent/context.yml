@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5309" # in beat_saber_deluxe/VERSION
+pipeline_version: "0.5310" # in beat_saber_deluxe/VERSION — real mode generators + default fill-in (Exp 177)
 
 # Platform Constraints
 target_platform: PS4
@@ -65,7 +65,22 @@ plugin_features:
 feature_flags:
   enable_custom_song_replacements: true  # gates bundle redirects
   enable_song_metadata_modification: true # gates MoveNext() hook
-  enable_beatmap_mode_mapping: true       # pipeline-side only (v0.5307+); ignored by v0.8040 plugin
+  enable_beatmap_mode_mapping: true       # pipeline-side (v0.5307+); generates missing mode beatmaps by default (v0.5310, Step 5a); ignored by v0.8040 plugin
+
+# Mode Generation (v0.5310)
+mode_generation:
+  default: >
+    When --enable-beatmap-mode-mapping is passed, pipeline AUTO-GENERATES missing
+    <Diff><Mode>.dat files (OneSaber/NoArrows/90Degree) from the Standard beatmap
+    in Step 5a, BEFORE beatmap replacement. Songs' own mode files are never overwritten.
+  flags:
+    --skip-mode-generation: opt out of generation (mapping still applies)
+    --one-saber-min-gap: "0.25"  # min beats between same-cell arrowed notes (OneSaber)
+    --rotation-cycle-beats: "8.0" # beats per 90-degree rotation flip (90Degree)
+  known_gap: >
+    Mode selector in-game still shows only Standard because it reads pack-level
+    BeatmapLevelSO._previewDifficultyBeatmapSets, which the pipeline cannot inject yet
+    (UnityPy 1.25.0 ObjectReader/CAB-write blocker, Exp 177).
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:
@@ -88,7 +103,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "361 tests across 10 files (as of v0.5307)"
+test_count: "365 tests across 12 files (as of v0.5310); mode generators: 17 tests"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)

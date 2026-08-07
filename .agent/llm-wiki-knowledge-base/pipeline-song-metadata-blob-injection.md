@@ -95,6 +95,15 @@ When these flags are not provided, values are auto-derived from Info.dat (local 
 - **PPtr serialization**: 4-byte fileID + 8-byte pathID matches pack bundle layout
 - **BPM double precision**: IEEE 754 double matches pack bundle output
 - **Preview array layout**: count(4) + [16 bytes per mode x 5] correctly structured
+- **Mode-aware blob (v0.5310, Exp 177)**: `_build_beatmap_level_so_blob()` now emits the preview array with ONLY the enabled modes (Standard, OneSaber, NoArrows, 90Degree — 360Degree purged). `drop pop candy` blob = 1,010 B, saved to `_beatmap_level_so_drop pop candy.blob` (not injected).
+
+### UnityPy 1.25.0 Injection Blocker (Exp 177 — CONFIRMED)
+Two read paths to inject the preview blob or construct a new TextAsset into the CAB are both blocked:
+
+1. **`env.create_object` does not exist** in UnityPy 1.25.0 (the add-object API from newer versions is absent).
+2. **`ObjectReader` constructed over a bare `EndianBinaryReader`** fails with `ValueError: read_str out of bounds` — `ObjectReader` is bound to the parent `SerializedFile`'s stream (bytePosition/byteSize offsets) and cannot read an independent blob.
+
+Remaining candidate (next): byte-level SerializedFile surgery — append the object entry + update the object/type tables and m_Data offsets, then re-save the UnityFS with correct block layout. See Options A/B below.
 
 ### What's Needed Before PS4 Testing ⚠️
 The blob can be constructed and written to disk (saved as `_beatmap_level_so_<song>.blob` for inspection), but **injection into the actual CAB file** requires:

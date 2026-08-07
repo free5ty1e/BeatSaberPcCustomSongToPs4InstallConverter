@@ -66,6 +66,7 @@ metadata:
 ## Pipeline Tooling
 - [[pipeline-plugin-toggle-cli-flags|Pipeline Plugin Toggle CLI Flags]] — `--enable-plugin`/`--disable-plugin` flags for toggling the Beat Saber Deluxe plugin on PS4 without rebuilding files. Tested and verified live on console.
 - [[pipeline-song-metadata-blob-injection|BeatmapLevelSO Metadata Blob Injection & CAB Binary Patching]] — Blob builder + raw binary CAB replacement at verified offset 79924. Patched CABs generated for Espresso(1257B), Duvet(1222B), Time Lapse(1251B). Size delta handled by extending CAB file. deploy path: AFR redirect or direct bundle patching (NOT UnityPy save_bundle — crashes with CE-34878-0 per Exp 116).
+- [[procedural-mode-generators|Procedural Mode Generators]] — v0.5310 non-mutating generators for OneSaber/NoArrows/90Degree; default gap-filling in Step 5a under `--enable-beatmap-mode-mapping`; never overwrites songs' own mode files.
 
 ## Plans
 - [[plans/song-list-modes|Song List & Mode Control Plan]] — Implementation plan for showing custom names/artists in song list and enabling OneSaber/90Degree modes in custom bundles. Updated with Exp 129 findings: typetree approach dead-end, blob format verified via hex dump against StartMeUp.

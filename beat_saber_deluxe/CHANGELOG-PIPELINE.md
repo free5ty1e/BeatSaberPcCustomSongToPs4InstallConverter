@@ -1,5 +1,15 @@
 # Pipeline Changelog
 
+## v0.5310 (2026-08-07)
+- **Beatmap Mode Generators — Fully Implemented (default when `--enable-beatmap-mode-mapping`):**
+  - `_generate_no_arrows()` — real implementation, V2/V3-aware: converts every color note to a dot (`_cutDirection`/`d` = 8); bombs untouched.
+  - `_generate_one_saber()` — real implementation (replaces placeholder): recolors all notes to a single saber (color 0), removes simultaneous notes (one saber can cut only one note per instant) and same-cell arrowed notes closer than `min_gap` (default 0.25 beats). Never mutates its input.
+  - `_generate_90_degree()` — real implementation (replaces placeholder): converts V2 sources to V3, then adds `_rotationEvents` alternating +90/-90 every `cycle_beats` (default 8.0 beats = 2 measures) starting at the first note, swinging the lane back and forth. Never mutates its input.
+  - Added `generate_missing_mode_beatmaps(song_dir, detected_modes, enabled_modes, ...)` — gap-filling: for each difficulty with a Standard source, generates `<Diff><Mode>.dat` for every enabled mode the song does NOT already provide (songs' own mode beatmaps are never overwritten).
+  - **Integration fix:** mode generation now runs in Step 5a, BEFORE beatmap replacement (previously it ran after `replace_beatmaps` and wrote files too late to be consumed). Generation is the default behavior whenever `--enable-beatmap-mode-mapping` is passed.
+  - New CLI flags: `--skip-mode-generation` (opt out), `--one-saber-min-gap` (default 0.25), `--rotation-cycle-beats` (default 8.0).
+  - Expanded `tests/test_mode_generators.py` from 3 placeholder assertions to 17 tests (V2+V3, mutation-safety, gap-filling behavior). Full suite: 365 tests pass.
+
 ## v0.5309 (2026-08-04)
 - **Beatmap Mode Generators (In Progress):**
   - Added procedural beatmap generator logic for `NoArrows` mode (automatically strips direction arrows from Standard beatmaps).

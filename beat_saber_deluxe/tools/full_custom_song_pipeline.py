@@ -29,6 +29,7 @@ Pipeline Steps:
 """
 
 import argparse
+import copy
 import gzip
 import json
 import logging
@@ -763,25 +764,244 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
 # ============================================================================
 
 # Mode Generators
+# Generated mode beatmaps are derived from Standard beatmaps when a custom
+# song does not provide its own mode-specific files. Every generator is
+# format-aware (V2: _notes/_time/_cutDirection, V3: colorNotes/b/d) and
+# never mutates its input.
+
+_ONE_SABER_COLOR = 0          # OneSaber uses a single saber color (left/0)
+_ONE_SABER_MIN_GAP = 0.25     # beats — closer same-cell arrowed notes are un-hittable
+_ROTATION_CYCLE_BEATS = 8.0   # 90Degree — rotate every N beats (2 measures at 4/4)
+_ROTATION_DEGREES = 90        # 90Degree — rotation magnitude per event
+
+
+def _get_color_notes(beatmap_data: dict) -> list | None:
+    """Return the color-note list (V3 colorNotes / V2 _notes), or None."""
+    if "colorNotes" in beatmap_data:
+        return beatmap_data["colorNotes"]
+    if "_notes" in beatmap_data:
+        return beatmap_data["_notes"]
+    return None
+
+
+def _is_v3_beatmap(beatmap_data: dict) -> bool:
+    """True if the beatmap uses V3 field names (colorNotes/b/d/c)."""
+    return "colorNotes" in beatmap_data
+
+
 def _generate_no_arrows(beatmap_data: dict) -> dict:
-    """Strip direction arrows from notes, converting them to dots (type 3)."""
-    if not isinstance(beatmap_data, dict):
+    """Convert every color note into a dot (no cut direction).
+
+    Both V2 (``_cutDirection``) and V3 (``d``) beatmaps are supported.
+    Bombs are left untouched — only color notes become dots.
+    """
+    notes = _get_color_notes(beatmap_data)
+    if notes is None:
         return beatmap_data
-    
-    # Simple implementation: just set cutDirection to 8 (dot)
-    for note in beatmap_data.get("_colorNotes", []):
-        note["_cutDirection"] = 8
-    return beatmap_data
+    out = copy.deepcopy(beatmap_data)
+    out_notes = _get_color_notes(out)
+    v3 = _is_v3_beatmap(out)
+    for note in out_notes:
+        if v3:
+            note["d"] = 8
+        elif int(note.get("_type", 0)) in (0, 1):
+            note["_cutDirection"] = 8
+    return out
 
-def _generate_one_saber(beatmap_data: dict) -> dict:
-    """Implement simple one-saber logic (placeholder: drop notes that conflict)."""
-    # Placeholder: currently just returns data as-is
-    return beatmap_data
 
-def _generate_90_degree(beatmap_data: dict) -> dict:
-    """Implement simple 90-degree logic (placeholder: drop rotation events)."""
-    # Placeholder: currently just returns data as-is
-    return beatmap_data
+def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP) -> dict:
+    """Convert a Standard beatmap into a playable OneSaber variant.
+
+    - Recolors every color note to a single saber color (0 / left).
+    - Removes notes that are impossible to hit with one saber:
+      * simultaneous notes (one saber can only cut one note per instant), and
+      * arrowed notes closer than ``min_gap`` beats to an earlier note in the
+        same (line, layer) cell (one directional swing cannot clean two
+        arrows in the same cell that quickly).
+
+    The input dict is not modified (a deep copy is returned).
+    """
+    notes = _get_color_notes(beatmap_data)
+    if notes is None:
+        return beatmap_data
+    out = copy.deepcopy(beatmap_data)
+    out_notes = _get_color_notes(out)
+    v3 = _is_v3_beatmap(out)
+
+    def _time(n): return float(n["b"] if v3 else n["_time"])
+    def _line(n): return int(n["x"] if v3 else n.get("_lineIndex", 0))
+    def _layer(n): return int(n["y"] if v3 else n.get("_lineLayer", 0))
+    def _dir(n): return int(n["d"] if v3 else n.get("_cutDirection", 0))
+    def _is_bomb(n):
+        return (int(n.get("c", 0)) if v3 else int(n.get("_type", 0))) == 3
+
+    occupied_times = set()                    # beats already claimed by a kept note
+    last_keep: dict[tuple, tuple] = {}        # (line, layer) -> (time, note)
+
+    kept = []
+    for note in sorted(out_notes, key=lambda n: (_time(n), _line(n), _layer(n))):
+        if _is_bomb(note):
+            kept.append(note)
+            continue
+        t = _time(note)
+        line = _line(note)
+        layer = _layer(note)
+        # One saber can only hit one note at a given instant.
+        if t in occupied_times:
+            continue
+        # Same-cell arrowed notes too close together for a single rebound swing.
+        prev = last_keep.get((line, layer))
+        if prev is not None and t - prev[0] < min_gap:
+            if _dir(prev[1]) != 8 and _dir(note) != 8:
+                continue
+        # Recolor to the single saber color.
+        if v3:
+            note["c"] = _ONE_SABER_COLOR
+            note["a"] = _ONE_SABER_COLOR
+        else:
+            note["_type"] = _ONE_SABER_COLOR
+        kept.append(note)
+        occupied_times.add(t)
+        last_keep[(line, layer)] = (t, note)
+
+    if v3:
+        out["colorNotes"] = kept
+    else:
+        out["_notes"] = kept
+    return out
+
+
+def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE_BEATS,
+                        bpm: float = 120.0, rotation_deg: float = _ROTATION_DEGREES) -> dict:
+    """Generate a 90Degree variant of a Standard beatmap.
+
+    90Degree gameplay works by rotating the playfield left/right via
+    ``_rotationEvents`` (a V3-only construct). This generator:
+      - Converts V2 source data to V3 (V2 has no rotation events).
+      - Adds rotation events alternating +90/-90 every ``cycle_beats`` beats
+        starting at the first note, swinging the lane back and forth.
+
+    The input dict is not modified (a deep copy is returned).
+    """
+    if not _is_v3_beatmap(beatmap_data):
+        out = convert_v2_to_v3(beatmap_data, default_bpm=bpm)
+    else:
+        out = copy.deepcopy(beatmap_data)
+
+    notes = out.get("colorNotes", []) or []
+    first_beat = 0.0
+    last_beat = first_beat
+    if notes:
+        first_beat = float(min(n["b"] for n in notes))
+        last_beat = float(max(n["b"] for n in notes))
+    for obs in out.get("obstacles", []) or []:
+        last_beat = max(last_beat, float(obs["b"]))
+    for ev in out.get("basicBeatmapEvents", []) or []:
+        last_beat = max(last_beat, float(ev["b"]))
+
+    existing = list(out.get("rotationEvents", []) or [])
+    events = []
+    rot = rotation_deg
+    t = first_beat
+    while t < last_beat + cycle_beats:
+        events.append({"b": round(t, 4), "e": 0, "r": rot})
+        rot = -rot
+        t += cycle_beats
+    out["rotationEvents"] = existing + events
+    return out
+
+
+_MODE_GENERATORS = {
+    "NoArrows": _generate_no_arrows,
+    "OneSaber": _generate_one_saber,
+    "90Degree": _generate_90_degree,
+}
+
+
+def generate_missing_mode_beatmaps(
+    song_dir: str,
+    detected_modes: dict[str, list[str]],
+    enabled_modes: list[str],
+    bpm: float = 120.0,
+    min_gap: float = _ONE_SABER_MIN_GAP,
+    cycle_beats: float = _ROTATION_CYCLE_BEATS,
+) -> list[str]:
+    """
+    Fill gaps in a custom song's mode-specific beatmaps by generating them
+    from Standard beatmaps.
+
+    For every difficulty that has a Standard source beatmap, and for every
+    enabled mode (OneSaber, NoArrows, 90Degree) that the song does NOT
+    provide its own beatmaps for, this writes ``<Diff><Mode>.dat`` into the
+    song directory. Difficulties where the song already defines its own
+    mode beatmap are never overwritten.
+
+    This is the DEFAULT behavior whenever ``--enable-beatmap-mode-mapping``
+    is enabled.
+
+    Args:
+        song_dir: Directory containing the song's beatmap .dat/.json files.
+        detected_modes: Output of detect_song_modes(song_dir) BEFORE generation.
+        enabled_modes: Modes to enable (from build_mode_mapping). Standard is
+                       the generator source and is skipped.
+        bpm: BPM used when converting V2 source data for 90Degree.
+        min_gap: OneSaber minimum beat gap between same-cell arrowed notes.
+        cycle_beats: 90Degree rotation cycle length in beats.
+
+    Returns:
+        List of generated file names.
+    """
+    beatmap_files = []
+    for f in sorted(os.listdir(song_dir)):
+        if not f.endswith(('.dat', '.json')):
+            continue
+        base = f.lower()
+        if base in ('info.dat', 'info.json', 'bpminfo.dat'):
+            continue
+        if 'lightshow' in base or 'audiodata' in base or 'audio' in base:
+            continue
+        beatmap_files.append(f)
+
+    generated: list[str] = []
+    for diff in DIFFICULTIES:
+        src = _select_beatmap_file(diff, beatmap_files, ignore_non_standard=True)
+        if not src:
+            log.debug(f"  No Standard source beatmap for {diff} — skipping")
+            continue
+        src_path = os.path.join(song_dir, src)
+        try:
+            with open(src_path, 'r', encoding='utf-8') as fh:
+                source = json.load(fh)
+        except Exception as e:
+            log.warning(f"  Could not read {src_path}: {e}")
+            continue
+
+        for mode in enabled_modes:
+            if mode == "Standard" or mode not in _MODE_GENERATORS:
+                continue
+            # Song already provides its own beatmap for this mode+difficulty.
+            if mode in detected_modes and diff in detected_modes.get(mode, []):
+                log.debug(f"  {diff}{mode} already present — keeping original")
+                continue
+
+            gen = _MODE_GENERATORS[mode]
+            if mode == "OneSaber":
+                gen_data = gen(copy.deepcopy(source), min_gap=min_gap)
+            elif mode == "90Degree":
+                gen_data = gen(copy.deepcopy(source), cycle_beats=cycle_beats, bpm=bpm)
+            else:
+                gen_data = gen(copy.deepcopy(source))
+
+            out_name = f"{diff}{mode}.dat"
+            out_path = os.path.join(song_dir, out_name)
+            with open(out_path, 'w', encoding='utf-8') as fh:
+                json.dump(gen_data, fh)
+            generated.append(out_name)
+            log.info(f"  Generated {out_name} <- {src}")
+
+    if generated:
+        log.info(f"  Generated {len(generated)} missing mode beatmaps")
+    return generated
 
 GAME_CHARACTERISTIC_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
@@ -2173,7 +2393,19 @@ Examples:
                         help='Auto-detect custom song beatmap files and map them to game '
                              'characteristic slots (OneSaber, NoArrows, 90Degree). '
                              'Uses fallback chain for slots without detected files. '
-                             'Overrides --enable-modes for detected modes.')
+                             'Overrides --enable-modes for detected modes. Missing '
+                             'mode-specific beatmaps are generated from Standard by '
+                             'default (see --skip-mode-generation).')
+    parser.add_argument('--skip-mode-generation', action='store_true',
+                        help='Do not generate missing mode-specific beatmaps when '
+                             '--enable-beatmap-mode-mapping is on (only enable the mode '
+                             'sets in the bundle; modes keep Standard data)')
+    parser.add_argument('--one-saber-min-gap', type=float, default=_ONE_SABER_MIN_GAP,
+                        help='OneSaber generator: minimum beat gap between same-cell '
+                             'arrowed notes (default: 0.25)')
+    parser.add_argument('--rotation-cycle-beats', type=float, default=_ROTATION_CYCLE_BEATS,
+                        help='90Degree generator: rotation cycle length in beats '
+                             '(default: 8.0, i.e. 2 measures at 4/4)')
     parser.add_argument('--fallback-mode-map', action='append', default=None,
                         help='Override fallback chain for a mode slot. Format: SRC=DEST '
                              '(e.g. "90Degree=Standard" or "NoArrows=Standard"). '
@@ -2421,6 +2653,37 @@ Examples:
         update_audio_gz(cab, duration, actual_sample_rate, bpm_regions)
 
     # -----------------------------------------------------------------------
+    # Step 5a: Beatmap mode mapping — detect modes and generate missing
+    # mode-specific beatmaps BEFORE beatmap replacement, so the generated
+    # files are available to the bundle build (Step 5) and the mode sets
+    # added in Step 6a. Generation is the default behavior whenever
+    # --enable-beatmap-mode-mapping is enabled.
+    # -----------------------------------------------------------------------
+    mode_map_enabled = False
+    mode_map_detected = {}
+    mode_map_enabled_modes = ["Standard"]
+    if args.enable_beatmap_mode_mapping:
+        log.info("  Beatmap mode mapping enabled — auto-detecting modes...")
+        mode_map_detected = detect_song_modes(args.song_dir)
+        log.info(f"  Detected modes: {mode_map_detected}")
+        mode_map_enabled_modes = build_mode_mapping(mode_map_detected, args.fallback_mode_map)
+        log.info(f"  Modes to enable: {mode_map_enabled_modes}")
+        mode_map_enabled = True
+
+        if args.skip_mode_generation:
+            log.info("  --skip-mode-generation: not generating missing mode beatmaps")
+        else:
+            generated = generate_missing_mode_beatmaps(
+                args.song_dir,
+                mode_map_detected,
+                mode_map_enabled_modes,
+                bpm=bpm,
+                min_gap=args.one_saber_min_gap,
+                cycle_beats=args.rotation_cycle_beats,
+            )
+            log.info(f"  Generated missing mode beatmaps: {generated}")
+
+    # -----------------------------------------------------------------------
     # Step 5: Replace beatmaps
     # -----------------------------------------------------------------------
     replaced = replace_beatmaps(cab, args.song_dir,
@@ -2454,38 +2717,10 @@ Examples:
         add_mode_characteristics(cab, filtered)
 
     # -----------------------------------------------------------------------
-    # Step 6a: Auto-detect and apply beatmap mode mapping
+    # Step 6a: Apply beatmap mode mapping to the BeatmapLevel
     # -----------------------------------------------------------------------
-    if args.enable_beatmap_mode_mapping:
-        log.info("  Beatmap mode mapping enabled — auto-detecting modes...")
-        detected = detect_song_modes(args.song_dir)
-        log.info(f"  Detected modes: {detected}")
-        enabled = build_mode_mapping(detected, args.fallback_mode_map)
-        log.info(f"  Modes to enable: {enabled}")
-        
-        # Apply Mode Generators: Generate .dat files for enabled modes if missing
-        # Standard .dat is needed as source
-        standard_beatmap = None
-        standard_path = os.path.join(args.song_dir, "Standard.dat")
-        if os.path.exists(standard_path):
-             with open(standard_path, 'r') as f:
-                 standard_beatmap = json.load(f)
-             
-             for mode in enabled:
-                 if mode == "NoArrows":
-                     gen_data = _generate_no_arrows(standard_beatmap.copy())
-                     with open(os.path.join(args.song_dir, "NoArrows.dat"), 'w') as f:
-                         json.dump(gen_data, f)
-                 elif mode == "OneSaber":
-                     gen_data = _generate_one_saber(standard_beatmap.copy())
-                     with open(os.path.join(args.song_dir, "OneSaber.dat"), 'w') as f:
-                         json.dump(gen_data, f)
-                 elif mode == "90Degree":
-                     gen_data = _generate_90_degree(standard_beatmap.copy())
-                     with open(os.path.join(args.song_dir, "90Degree.dat"), 'w') as f:
-                         json.dump(gen_data, f)
-        
-        mode_count = apply_mode_mapping(cab, enabled)
+    if mode_map_enabled:
+        mode_count = apply_mode_mapping(cab, mode_map_enabled_modes)
         log.info(f"  Mode sets added: {mode_count}")
 
     # -----------------------------------------------------------------------

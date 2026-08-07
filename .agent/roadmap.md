@@ -133,54 +133,44 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] **Camellia Music Pack replacement** — First full pack replacement (6 songs) via pipeline (v0.5305) ✅
 - [ ] **(Future)** Multi-artist pack metadata — Need per-field tracking instead of global artist blanking
 
-## M5 — Procedural Mode Generators (In Progress)
+## M5 — Procedural Mode Generators (In Progress — v0.5310)
 - [x] Integrate generator framework into pipeline
-- [x] Implement `_generate_no_arrows`
-- [ ] Implement `_generate_one_saber`
-- [ ] Implement `_generate_90_degree`
-- [ ] Deploy and verify mode selector UI visibility for procedurally generated modes
+- [x] Implement `_generate_no_arrows` (V2+V3, non-mutating, all notes → dots)
+- [x] Implement `_generate_one_saber` (single-saber recolor, drops simultaneous + same-cell close arrowed notes)
+- [x] Implement `_generate_90_degree` (V2→V3 conversion + alternating ±90° rotationEvents every cycle)
+- [x] `generate_missing_mode_beatmaps()` — default gap-filling under `--enable-beatmap-mode-mapping`, runs Step 5a (before beatmap replacement), never overwrites songs' own mode files
+- [x] CLI flags: `--skip-mode-generation`, `--one-saber-min-gap` (0.25), `--rotation-cycle-beats` (8.0)
+- [x] Expanded generator test suite to 17 tests; full suite 365 pass (v0.5310, Exp 177)
+- [x] Deployed fresh `startmeup_v3` bundle (12,405,290 B) with 14 generated mode beatmaps + 3 mode sets (Exp 177)
+- [ ] Mode selector UI visibility for procedurally generated modes — **blocked: selector reads pack-level `BeatmapLevelSO._previewDifficultyBeatmapSets`, which the pipeline cannot yet inject (UnityPy 1.25.0 `env.create_object` absent; `ObjectReader` over `EndianBinaryReader` fails read_str out of bounds). Next: byte-level SerializedFile surgery or UnityPy writer extension.**
 
-### "No Arrows" Mode Generator
+### "No Arrows" Mode Generator — ✅ DONE (v0.5310)
 Take a Standard beatmap and convert all arrow notes (`_cutDirection`/`d` > 0) to dot notes
 (`d` = 8, any direction). Walls, bombs, chains, sliders pass through unchanged.
 
-- [ ] Pipeline function: `convert_to_no_arrows(beatmap_data) -> beatmap_data`
-- [ ] CLI flag: `--generate-no-arrows` (outputs e.g. `ExpertNoArrows.dat`)
-- [ ] Must run AFTER Standard beatmaps are created, BEFORE mode mapping
+- [x] Pipeline function: `_generate_no_arrows(beatmap_data)` — V2+V3 aware, non-mutating (deep-copies)
+- [x] Integrated via `--enable-beatmap-mode-mapping` (default; no separate flag needed)
+- [x] Runs in Step 5a (AFTER Standard beatmaps selected, BEFORE mode mapping replacement)
 
-### "One Saber" Mode Generator
+### "One Saber" Mode Generator — ✅ DONE (v0.5310)
 Take a Standard beatmap and convert all notes to single-saber (left color only, `a`=0/`c`=0).
-Detect note pairs with overlapping timing windows that are impossible to hit with a single
-saber and remove one note of each conflicting pair.
+Remove notes that are impossible to hit with a single saber.
 
-Detection heuristic:
-- Notes within < 1 beat of each other on different columns → conflict
-- If notes have opposing cut directions in close succession → conflict
-- When conflict detected: remove the later note (preserves flow)
+- [x] Pipeline function: `_generate_one_saber(beatmap_data, min_gap)` — recolors all notes to color 0
+- [x] Drops simultaneous notes (one saber = one note at a time)
+- [x] Drops same-cell arrowed notes closer than `min_gap` beats (default 0.25, `--one-saber-min-gap`); dots after arrows kept
+- [x] V2+V3 aware, non-mutating
 
-- [ ] Pipeline function: `convert_to_one_saber(beatmap_data) -> beatmap_data`
-- [ ] Conflict detection algorithm: spatial + temporal window analysis per note pair
-- [ ] CLI flag: `--generate-one-saber` (outputs e.g. `ExpertPlusOneSaber.dat`)
-- [ ] Optional: `--one-saber-remove-threshold <beats>` (default: 1.0)
+### "90 Degree" Mode Generator — ✅ DONE (v0.5310)
+Take a Standard beatmap and insert rotation events (`rotationEvents`) that cycle the lane
+angle back and forth every N beats.
 
-### "90 Degree" Mode Generator
-Take a Standard beatmap and insert rotation events (`rotationEvents`) that cycle through
-lane angles every N measures. Provides configurable cycle rate and randomization.
-
-Rotation scheme:
-- Cycle sequence: 0° → 90° → 180° → 270° or any subset
-- Insert `{"b": start_beat, "e": rotation_degrees}` at interval boundaries
-- Wrap around after each full cycle
-
-- [ ] Pipeline function: `generate_90_degree_rotations(beatmap_data, ...) -> beatmap_data`
-- [ ] CLI flag: `--generate-90-degree` (outputs e.g. `ExpertPlus90Degree.dat`)
-- [ ] `--90-degree-cycle <beats>` — fixed cycle length (default: 8 beats = 2 measures)
-- [ ] `--90-degree-random` — randomize interval length between min/max
-- [ ] `--90-degree-min-cycle <beats>` (default: 4)
-- [ ] `--90-degree-max-cycle <beats>` (default: 16)
-- [ ] `--90-degree-angles 0,90,180,270` — custom rotation angle sequence
+- [x] Pipeline function: `_generate_90_degree(beatmap_data, cycle_beats)` — V2 sources converted to V3 first
+- [x] Alternating ±90° rotation events every `cycle_beats` (default 8.0 = 2 measures, `--rotation-cycle-beats`)
+- [x] V3 passthrough preserved; non-mutating
 
 ### Implementation Order
-1. No Arrows (simplest — pure note filter, no timing analysis)
-2. One Saber (requires conflict detection algorithm)
-3. 90 Degree (requires UI testing for rotation event compatibility)
+1. ✅ No Arrows (v0.5309)
+2. ✅ One Saber (v0.5310)
+3. ✅ 90 Degree (v0.5310)
+4. 🔲 Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game
