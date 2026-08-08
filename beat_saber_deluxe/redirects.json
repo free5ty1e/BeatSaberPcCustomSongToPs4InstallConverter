@@ -39,6 +39,8 @@
     "BeatmapLevelsData/ExitThisEarthsAtomosphere": "ExitThisEarthsAtomosphere_v3",
     "BeatmapLevelsData/Ghost": "Ghost_v3",
     "BeatmapLevelsData/LightItUp": "LightItUp_v3",
-    "BeatmapLevelsData/WhatTheCat": "WhatTheCat_v3"
+    "BeatmapLevelsData/WhatTheCat": "WhatTheCat_v3",
+    "aa/catalog.json": "catalog_startmeup_modes.json",
+    "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle": "startmeup_pack_modes.bundle"
   }
 }

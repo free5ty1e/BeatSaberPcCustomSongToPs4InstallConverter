@@ -142,7 +142,7 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] CLI flags: `--skip-mode-generation`, `--one-saber-min-gap` (0.25), `--rotation-cycle-beats` (8.0)
 - [x] Expanded generator test suite to 17 tests; full suite 365 pass (v0.5310, Exp 177)
 - [x] Deployed fresh `startmeup_v3` bundle (12,405,290 B) with 14 generated mode beatmaps + 3 mode sets (Exp 177)
-- [ ] Mode selector UI visibility for procedurally generated modes — **blocked: selector reads pack-level `BeatmapLevelSO._previewDifficultyBeatmapSets`, which the pipeline cannot yet inject (UnityPy 1.25.0 `env.create_object` absent; `ObjectReader` over `EndianBinaryReader` fails read_str out of bounds). Next: byte-level SerializedFile surgery or UnityPy writer extension.**
+- [ ] Mode selector UI visibility for procedurally generated modes — **UNBLOCKED via catalog-redirect avenue (Exp 178/179): v0.8040 `open()` hook can redirect `aa/catalog.json`, so the Addressables catalog CRC+size dual-validation is controllable. Exp 179 built `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) + `catalog_startmeup_modes.json` (only rolling-stones entry changed). KEY: catalog `m_Crc` = zlib.crc32 of the DECOMPRESSED stream (not file CRC) — GF(2) forcing obsolete. Exp 178 byte-identical catalog redirect deployed, awaiting boot confirmation, then deploy Exp 179.**
 
 ### "No Arrows" Mode Generator — ✅ DONE (v0.5310)
 Take a Standard beatmap and convert all arrow notes (`_cutDirection`/`d` > 0) to dot notes
@@ -173,4 +173,4 @@ angle back and forth every N beats.
 1. ✅ No Arrows (v0.5309)
 2. ✅ One Saber (v0.5310)
 3. ✅ 90 Degree (v0.5310)
-4. 🔲 Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game
+4. 🔲 Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game — **Exp 179 bundle + catalog BUILT/VERIFIED; deploy gated on Exp 178 catalog-redirect boot test**

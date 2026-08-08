@@ -81,6 +81,15 @@ mode_generation:
     Mode selector in-game still shows only Standard because it reads pack-level
     BeatmapLevelSO._previewDifficultyBeatmapSets, which the pipeline cannot inject yet
     (UnityPy 1.25.0 ObjectReader/CAB-write blocker, Exp 177).
+  closing_gap: >
+    EXP 178/179 (2026-08-07): v0.8040 open() hook CAN redirect aa/catalog.json (OPEN #58),
+    so we control the Addressables catalog CRC+size expectations. KEY: catalog m_Crc =
+    zlib.crc32 of the DECOMPRESSED stream, NOT the compressed file (original file CRC
+    0x63520032 vs catalog 0xdc8b314f = dec-stream CRC). Exp 179 built startmeup_pack_modes.bundle
+    (7,905,425 B, dec-stream CRC 0x8e1f8937, blob 440->1028 B with 4 preview sets) +
+    catalog_startmeup_modes.json (only rolling-stones entry changed). Build tool:
+    development/scripts/build_startmeup_pack_modes.py. Deploy gated on Exp 178 boot test
+    (catalog_test.json byte-identical redirect already on PS4).
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:

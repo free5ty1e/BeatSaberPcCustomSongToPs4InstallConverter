@@ -30,6 +30,48 @@ The game validates every loaded bundle's CRC32 against the catalog's `m_Crc` AND
 
 Both fields must match exactly. The catalog is loaded as plain JSON (not via `AssetBundle.LoadFromFile`), so the AFR plugin cannot redirect it.
 
+## ⚠️ CORRECTION (Exp 177, 2026-08-07): catalog.json CAN now be redirected
+
+The "cannot redirect catalog.json" conclusion above applied to the **OLD plugin hook model** (v0.66–v0.8024), which only hooked `AssetBundle::LoadFromFile`. The **current v0.8040 plugin hooks libc `open()`** (GoldHEN Detour) and substring-matches every path against `LOWER_REDIRECT_KEYS` (see `src/main.cpp` `open_hook`, ~line 256–301). The Exp 177 PS4 log proves catalog.json passes through the hook:
+
+```
+[OPEN #58] /app0/Media/StreamingAssets/aa/catalog.json
+```
+
+So adding a redirect key containing `aa/catalog.json` (e.g. `"aa/catalog.json": "catalog_patched.json"`) WOULD intercept the catalog load. This re-opens the pack-bundle patching avenue: because we can now control the expected `m_Crc` + `m_BundleSize` via a redirected catalog, the dual-validation blocker is removable — the patched pack bundle just needs its actual size + CRC written into the patched catalog.
+
+Caveats verified:
+- Bundle paths in the catalog are absolute (`{RuntimePath}/PS4/<name>.bundle`), NOT relative to the catalog's directory — so serving the catalog from AFR does not break bundle path resolution.
+- `redirects.json` is loaded before the game opens catalog.json (line 4 vs line 83 in the Exp 177 log), so the redirect is active at first use.
+- Addressables reads `aa/settings.json` (OPEN #57) then `aa/catalog.json` (OPEN #58) — no `.hash` file observed.
+
+**Exp 178 (in progress):** zero-risk proof — deploy a byte-identical copy of the original catalog as `catalog_test.json` on AFR + redirect key, boot, confirm `-> REDIRECTED` on the catalog open. If stable, proceed to deploy `catalog_patched.json` (already generated in Exp 136 with rolling-stones pack re-pointed to m_Crc=2690266029 / m_BundleSize=7905246) plus a pack bundle patched to exactly those values.
+
+## ✅ CORRECTION (Exp 179, 2026-08-07): catalog `m_Crc` = zlib.crc32 of the DECOMPRESSED stream
+
+**Root cause of all Exp 142–157 "CRC-corrected bundle still crashed" results:** the catalog `m_Crc` is NOT the zlib.crc32 of the compressed bundle file — it is the zlib.crc32 of the bundle's **DECOMPRESSED stream**.
+
+Verified against the original:
+- Original bundle file zlib.crc32 = `0x63520032`
+- Original catalog `m_Crc` = 3700109647 = `0xdc8b314f`
+- Decompressed stream (8,511,228 B) zlib.crc32 = `0xdc8b314f` ✓ = catalog value
+
+**Implication:** the GF(2) alignment-padding CRC forcing (Exp 142) fixed the WRONG metric (file CRC). The runtime validates the decompressed-stream CRC. When we control the catalog (via redirect), CRC forcing is unnecessary — we simply write the patched bundle's ACTUAL decompressed-stream CRC and file size into the fresh catalog.
+
+The decompressed-stream CRC computation:
+```python
+def crc_decompressed_stream(bundle_bytes):
+    # parse UnityFS header: blocks info size @38, uncompressed @42, flags @46
+    # decompress blocks info, iterate block list, decompress LZ4HC blocks (flag&2)
+    # return zlib.crc32(concatenated decompressed blocks)
+```
+
+**Exp 179 build (startmeup_pack_modes.bundle):**
+- StartMeUp BeatmapLevelSO blob 440 → 1,028 B: 4 preview sets (Standard/OneSaber/NoArrows/90Degree), difficulty data copied from Standard; identity preserved (`_levelID`="StartMeUp", env, `_contentRating`=1).
+- 7,905,425 B; dec-stream CRC `0x8e1f8937` = 2384431415.
+- `catalog_startmeup_modes.json`: ONLY the rolling-stones entry differs — `m_Crc` 3700109647→2384431415, `m_BundleSize` 7902803→7905425; `m_Hash`/`m_BundleName` unchanged; UTF-16LE extra-data preserved byte-identical.
+- Build tool: `development/scripts/build_startmeup_pack_modes.py`. Verified 81/81 objects parse; only object `2287600824654271910` changed size.
+
 ## Size Difference Analysis (Exp 155)
 
 When modifying the pack bundle's decompressed stream, file_size changes due to:
@@ -64,7 +106,7 @@ This confirms that ANY modification to the decompressed stream changes file_size
 | Byte-level text patch + LZ4 rebuild | Exp 134b | ❌ Compressed bytes different → CRC mismatch |
 | Byte-level text patch + LZ4HC rebuild | Exp 135 | ❌ Compressed bytes different → CRC mismatch |
 | Original bundle (diagnostic) | Exp 134a | ✅ WORKS — CRC unchanged |
-| **CRC correction via GF(2) linear algebra** | **Exp 142** | **✅ CRC matches! 0xdc8b314f** (size +2,712B) |
+| **CRC correction via GF(2) linear algebra** | **Exp 142** | **⚠️ CRC "matched" file CRC (0xdc8b314f) but crashed anyway — the game validates the DECOMPRESSED-stream CRC (Exp 179 root cause). Superseded by the catalog-redirect approach which writes actual dec-stream CRC into a fresh catalog.** |
 | **Uncompressed block injection (Option B)** | **Exp 157** | **❌ BLOCKED — blocks are part of shared decompressed stream; modifying content changes file_size by ~817-2,177 bytes due to cascading compression ratio effects** |
 
 ## CRC Correction Method (Alignment Padding Bytes)

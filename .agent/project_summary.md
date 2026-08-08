@@ -1,6 +1,9 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-08-07
-**Status:** ✅ **STABLE — plugin v0.8040 user-confirmed; pipeline v0.5310 deployed with real mode generators.** Plugin remains the verified-good v0.8040 baseline (GoldHEN Detour API; `hooks.cpp` excluded from build — see [[hook-failures]]). Pipeline advanced to v0.5310: the OneSaber/NoArrows/90Degree placeholders became real, non-mutating generators, and mode generation is now the DEFAULT gap-filling behavior under `--enable-beatmap-mode-mapping` (runs in Step 5a BEFORE beatmap replacement; opt-out via `--skip-mode-generation`). Fresh `drop pop candy` → `startmeup_v3` bundle (12,405,290 B) built + deployed on PS4 (Exp 177): 14 generated mode beatmaps + 3 mode sets injected. **Remaining gap:** mode selector still shows only Standard because it reads pack-level `BeatmapLevelSO._previewDifficultyBeatmapSets`, which the pipeline cannot yet inject (UnityPy ObjectReader/CAB-write blocker). Beatmap Mode Mapping Phase 2 (runtime RAM scanning) remains a documented DEAD END.
+**Status:** ✅ **STABLE — plugin v0.8040 user-confirmed; pipeline v0.5310 deployed with real mode generators; Exp 177 user test COMPLETE; Exp 178 catalog-redirect deployed awaiting boot test; Exp 179 pack-bundle patch BUILT + LOCALLY VERIFIED.** Key findings since last summary:
+1. **Catalog redirect avenue CONFIRMED deployable (Exp 178):** byte-identical `catalog_test.json` + `"aa/catalog.json": "catalog_test.json"` redirect uploaded/verified on-device — **awaiting user boot test** to confirm `[OPEN #58] ... -> REDIRECTED` and stable boot.
+2. **CRC root cause SOLVED (Exp 179):** catalog `m_Crc` = `zlib.crc32` of the bundle's **DECOMPRESSED stream**, not the compressed file (original file CRC `0x63520032` vs catalog `0xdc8b314f` = dec-stream CRC of the 8,511,228 B stream). This explains why Exp 142–157 "CRC-corrected" bundles still crashed (they fixed file CRC, not dec-stream CRC) — GF(2) padding forcing is obsolete; the patched bundle's actual dec-stream CRC + size just get written into the fresh catalog.
+3. **Exp 179 patched pack bundle BUILT + VERIFIED:** `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) — StartMeUp BeatmapLevelSO blob 440→1,028 B with 4 preview sets (Standard/OneSaber/NoArrows/90Degree, difficulty data copied from Standard); identity preserved; 81/81 objects parse; typetree OK. Fresh `catalog_startmeup_modes.json` differs from original ONLY in the rolling-stones entry (`m_Crc` 3700109647→2384431415, `m_BundleSize` 7902803→7905425); `m_Hash`/`m_BundleName` unchanged. Build tool: `development/scripts/build_startmeup_pack_modes.py`.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5310 / plugin v0.8040)
 
@@ -141,7 +144,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | 172–174 | v0.8049–v0.8050 | Phase 2 scan refinement (dead end continued) | ❌ Scan timing/structural issues; PS4 tracking constraints → Phase 2 ABANDONED |
 | 175 | v0.5308+v0.8050 | 360Degree purge → 4 modes | ✅ 360Degree removed pipeline-wide (PS4 ~90° camera can't do 360); 4 modes (Standard/OneSaber/NoArrows/90Degree), 229 tests pass |
 | **176** | **v0.8050/51** | **STARTUP CRASH — root cause + restore** | **✅ ROOT CAUSED (`e18921b` manual memcpy hook + `hooks.cpp` re-enabled) → plugin restored to stable v0.8040 baseline (`a8a06f0`); 365 tests pass; redeployed; user-confirmed stable** |
-| **177** | **v0.5310** | **Real mode generators + default fill-in** | **✅ Generators implemented (no-arrows/one-saber/90-degree, non-mutating, V2+V3); mode generation now Step 5a default fill-in; 17 generator tests (365 total pass); fresh `startmeup_v3` bundle (12,405,290 B) deployed. ⚠️ Mode selector still Standard-only (pack-level preview sets unpatched — UnityPy inject blocker).** |
+| **177** | **v0.5310** | **Real mode generators + default fill-in** | **✅ Generators implemented (no-arrows/one-saber/90-degree, non-mutating, V2+V3); mode generation now Step 5a default fill-in; 17 generator tests (365 total pass); fresh `startmeup_v3` bundle (12,405,290 B) deployed. User test: clean boot + song loads, selector still Standard-only (expected). ⚠️ NEW: log proves catalog.json passes through open_hook → catalog redirect avenue re-opened.** |
+| **178** | **v0.8040 (plugin) / 0.5310 (pipeline)** | **Catalog-redirect proof (byte-identical copy)** | **🔲 DEPLOYED + VERIFIED ON-DEVICE — awaiting user boot test. `catalog_test.json` (793,186 B, md5 `dc6e9303...`) + `"aa/catalog.json": "catalog_test.json"` redirect in place; confirm `[OPEN #58] ... -> REDIRECTED` + stable boot.** |
+| **179** | **v0.8040 (plugin) / 0.5310 (pipeline)** | **Pack preview-set injection (4 modes)** | **🔲 BUILT + LOCALLY VERIFIED — `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) + `catalog_startmeup_modes.json` (only rolling-stones entry changed). CRC root cause SOLVED: catalog `m_Crc` = zlib.crc32 of DECOMPRESSED stream. Deploy gated on Exp 178 boot confirmation.** |
 
 ## Memory Injection Versions
 
@@ -181,11 +186,12 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **User test the v0.5310 deploy (Exp 177)** — boot PS4 → song list → Start Me Up (drop pop candy). Expect stable startup (v0.8040 notification), and mode selector STILL Standard-only (pack-level `_previewDifficultyBeatmapSets` not yet injected). Pull `bs_log.txt` (clear after) to confirm no new errors.
-2. **Close the selector gap: BeatmapLevelSO preview-set injection** — currently blocked on UnityPy (`env.create_object` doesn't exist in 1.25.0; `ObjectReader` over `EndianBinaryReader` fails with read_str out of bounds). Next candidate: byte-level SerializedFile surgery to append a TextAsset/BeatmapLevelSO object into the pack CAB, or extend UnityPy with a custom writer. If infeasible, document and keep the gap visible.
-3. **Verify mode beatmaps actually load in-game once the selector gap is closed** — confirm OneSaber/NoArrows/90Degree generated `.dat` files (V2+V3) parse and play.
-4. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
-5. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
+1. **Exp 178 boot test (IMMEDIATE):** user boots PS4; pull `bs_log.txt`, confirm `[OPEN #58] /app0/Media/StreamingAssets/aa/catalog.json -> REDIRECTED` (line ~83) and stable boot. Archive log + clear file.
+2. **Exp 179 deploy (gated on #1):** upload `startmeup_pack_modes.bundle` to AFR; add redirect key `aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` → `startmeup_pack_modes.bundle`; swap catalog redirect target `catalog_test.json` → `catalog_startmeup_modes.json`; verify on-device; boot test — OneSaber/NoArrows/90Degree should appear in the selector.
+3. **Verify mode beatmaps actually load/play once the selector gap is closed** — confirm OneSaber/NoArrows/90Degree generated `.dat` files (V2+V3) parse and play.
+4. **Integrate the pack-patch build script into the production pipeline** (`tools/`) after proven on-device — currently a dev script per rules.
+5. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
+6. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
 
 ## Active Knowledge Gaps
 
