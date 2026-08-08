@@ -25,13 +25,13 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 |---------|--------|-------------|
 | [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md) | ✅ Working | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection |
 | [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working | Display custom song names and artists in-game via IL2CPP MoveNext hook |
-| Extra Game Modes | 🟡 Experimental | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
+| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md) | ✅ Working (v0.5310+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection) |
 | Note Colors | ⏳ Planned | Custom left/right saber colors per song |
 
 > **⚠️ Current limitations:**
 > - **Single-artist packs only** — Song metadata modification works perfectly for single-artist packs (Rolling Stones, Billie Eilish, Lizzo). Multi-artist packs would incorrectly blank all artist names. Currently only single-artist packs are targeted.
 > - **Artist line is blank** — For single-artist packs, the artist line in the song list is intentionally blanked. The custom song name and artist are combined on the song name line (e.g., "Espresso / Sabrina Carpenter").
-> - **Extra game modes** — Mode selector buttons may appear via IL2CPP hook, but labels show "Standard" for all modes. Actual mode selection during gameplay works for OneSaber and 90Degree if modes are set via `--add-mode-characteristics`.
+> - **NoArrows mode bug** — Start Me Up (Drop Pop Candy) shows NoArrows in selector but gameplay displays arrows instead of dots. OneSaber/90Degree not yet tested. Investigation in progress.
 
 ## Available Song Slots (Default Targets)
 

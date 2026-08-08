@@ -1,9 +1,17 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-07
-**Status:** ✅ **STABLE — plugin v0.8040 user-confirmed; pipeline v0.5310 deployed with real mode generators; Exp 177 user test COMPLETE; Exp 178 catalog-redirect deployed awaiting boot test; Exp 179 pack-bundle patch BUILT + LOCALLY VERIFIED.** Key findings since last summary:
-1. **Catalog redirect avenue CONFIRMED deployable (Exp 178):** byte-identical `catalog_test.json` + `"aa/catalog.json": "catalog_test.json"` redirect uploaded/verified on-device — **awaiting user boot test** to confirm `[OPEN #58] ... -> REDIRECTED` and stable boot.
-2. **CRC root cause SOLVED (Exp 179):** catalog `m_Crc` = `zlib.crc32` of the bundle's **DECOMPRESSED stream**, not the compressed file (original file CRC `0x63520032` vs catalog `0xdc8b314f` = dec-stream CRC of the 8,511,228 B stream). This explains why Exp 142–157 "CRC-corrected" bundles still crashed (they fixed file CRC, not dec-stream CRC) — GF(2) padding forcing is obsolete; the patched bundle's actual dec-stream CRC + size just get written into the fresh catalog.
-3. **Exp 179 patched pack bundle BUILT + VERIFIED:** `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) — StartMeUp BeatmapLevelSO blob 440→1,028 B with 4 preview sets (Standard/OneSaber/NoArrows/90Degree, difficulty data copied from Standard); identity preserved; 81/81 objects parse; typetree OK. Fresh `catalog_startmeup_modes.json` differs from original ONLY in the rolling-stones entry (`m_Crc` 3700109647→2384431415, `m_BundleSize` 7902803→7905425); `m_Hash`/`m_BundleName` unchanged. Build tool: `development/scripts/build_startmeup_pack_modes.py`.
+**Last Updated:** 2026-08-08
+**Status:** ✅ **MODE SELECTOR GAP CLOSED** — Exp 179 deployed and confirmed working on PS4. The catalog-redirect + pack-bundle patch approach is proven:
+- v0.8040 `open()` hook redirects `aa/catalog.json` (OPEN #58 confirmed in Exp 178)
+- Fresh `catalog_startmeup_modes.json` with correct dec-stream CRC (`0x8e1f8937`) + size (7,905,425)
+- Patched `startmeup_pack_modes.bundle` adds 3 preview sets (OneSaber/NoArrows/90Degree) to StartMeUp BeatmapLevelSO
+- In-game mode selector now shows **Standard / OneSaber / NoArrows / 90Degree** for Start Me Up
+
+**Key findings since last summary:**
+1. **Catalog redirect avenue CONFIRMED (Exp 178):** byte-identical `catalog_test.json` + `"aa/catalog.json": "catalog_test.json"` redirect → boot stable, `[OPEN #62] ... -> REDIRECTED` confirmed.
+2. **CRC root cause SOLVED (Exp 179):** catalog `m_Crc` = `zlib.crc32` of the bundle's **DECOMPRESSED stream**, not the compressed file (original file CRC `0x63520032` vs catalog `0xdc8b314f` = dec-stream CRC). GF(2) padding forcing obsolete — just write actual values into fresh catalog.
+3. **Exp 179 patched pack bundle BUILT + DEPLOYED + CONFIRMED:** `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) — StartMeUp BeatmapLevelSO blob 440→1,028 B with 4 preview sets; identity preserved; 81/81 objects parse. Fresh `catalog_startmeup_modes.json` differs from original ONLY in rolling-stones entry. Build tool: `development/scripts/build_startmeup_pack_modes.py`.
+
+**Known issue (2026-08-08):** NoArrows mode shows arrows instead of dots — generator or data-loading bug under investigation. OneSaber/90Degree not yet tested.
 
 ## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5310 / plugin v0.8040)
 

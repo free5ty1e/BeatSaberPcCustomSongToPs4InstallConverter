@@ -72,6 +72,22 @@ def crc_decompressed_stream(bundle_bytes):
 - `catalog_startmeup_modes.json`: ONLY the rolling-stones entry differs — `m_Crc` 3700109647→2384431415, `m_BundleSize` 7902803→7905425; `m_Hash`/`m_BundleName` unchanged; UTF-16LE extra-data preserved byte-identical.
 - Build tool: `development/scripts/build_startmeup_pack_modes.py`. Verified 81/81 objects parse; only object `2287600824654271910` changed size.
 
+## ✅ SUCCESS (Exp 179, 2026-08-08): Mode Selector Gap CLOSED — Catalog-Redirect + Pack-Bundle Patch Works!
+
+**Complete working approach:**
+1. **v0.8040 plugin** hooks libc `open()` (GoldHEN Detour) with substring matching on `LOWER_REDIRECT_KEYS` → can redirect `aa/catalog.json` (OPEN #58 confirmed).
+2. **Redirect catalog** to a fresh `catalog_startmeup_modes.json` with corrected `m_Crc` (dec-stream CRC) and `m_BundleSize` for the patched pack bundle.
+3. **Patch pack bundle** (`startmeup_pack_modes.bundle`): surgical blob injection adding 3 extra `_previewDifficultyBeatmapSets` (OneSaber/NoArrows/90Degree) to the StartMeUp BeatmapLevelSO, preserving identity (`_levelID`="StartMeUp", m_Script pathID, environment, cover, preview audio).
+4. **Redirect pack bundle** to the patched version via same `open()` hook.
+5. **Per-song bundle** (`startmeup_v3`) already carries generated mode beatmaps via pipeline `--enable-beatmap-mode-mapping` (v0.5310).
+
+**Result:** In-game mode selector for Start Me Up now shows **Standard / OneSaber / NoArrows / 90Degree** — the gap is closed.
+
+**Generator status (per-song bundle):**
+- Drop Pop Candy (replacement for Start Me Up) had: Standard (5 diffs) + 90Degree Expert (song's own)
+- Pipeline v0.5310 generated: OneSaber (5 diffs), NoArrows (5 diffs), 90Degree (Easy/Normal/Hard/ExpertPlus)
+- **Known issue (2026-08-08):** NoArrows mode in-game shows arrows instead of dots — generator or data-loading bug under investigation.
+
 ## Size Difference Analysis (Exp 155)
 
 When modifying the pack bundle's decompressed stream, file_size changes due to:

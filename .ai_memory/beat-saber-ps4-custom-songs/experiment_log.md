@@ -270,3 +270,21 @@ metadata:
 - **Verification:** patched bundle decompressed-stream CRC `0x8e1f8937` == catalog `m_Crc` 2384431415 ✓; patched file size 7,905,425 == catalog `m_BundleSize` ✓; only the rolling-stones entry differs from the original catalog ✓; only object 2287600824654271910 changed size ✓.
 - **Version:** Plugin v0.8040 / Pipeline v0.5310 (unchanged — dev script only, not production)
 - **Status:** 🔲 **BUILT + LOCALLY VERIFIED — AWAITING Exp 178 boot confirmation before deploy.** Deploy plan: upload `startmeup_pack_modes.bundle` to AFR, add redirect key for `aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` → `startmeup_pack_modes.bundle`, swap catalog redirect target from `catalog_test.json` → `catalog_startmeup_modes.json`, verify on-device, boot test (OneSaber/NoArrows/90Degree should appear in selector).
+
+### Experiment 180: Exp 179 DEPLOYED + USER TEST — Mode Selector Gap CLOSED (2026-08-08)
+- **Date:** 2026-08-08
+- **What:** After Exp 178 confirmed catalog redirect works (`[OPEN #62] ... -> REDIRECTED`), deployed Exp 179 artifacts:
+  - `startmeup_pack_modes.bundle` (7,905,425 B) → AFR
+  - `catalog_startmeup_modes.json` (801,445 B) → AFR
+  - Updated `redirects.json` with two new keys:
+    - `"aa/catalog.json": "catalog_startmeup_modes.json"` (replaces `catalog_test.json`)
+    - `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle": "startmeup_pack_modes.bundle"`
+- **Result:** ✅ **MODE SELECTOR GAP CLOSED.** User booted Beat Saber, entered Start Me Up song menu — **all 4 modes visible: Standard, OneSaber, NoArrows, 90Degree**.
+- **Issue found:** User tested **No Arrows** mode — it displayed **arrows/boxes identical to Standard**, not dots as expected from the NoArrows generator. OneSaber and 90Degree not yet tested.
+- **Generator context (from Exp 177):** Drop Pop Candy (replacement for Start Me Up) had Standard (5 diffs) + 90Degree Expert (song's own). Pipeline v0.5310 `--enable-beatmap-mode-mapping` generated: OneSaber (5 diffs), NoArrows (5 diffs), 90Degree (Easy/Normal/Hard/ExpertPlus). NoArrows generator spec: convert all color notes to dots (`d=8`); bombs/walls/sliders unchanged.
+- **Hypotheses for NoArrows bug:**
+  1. Generated NoArrows `.dat` files not written/injected correctly in per-song bundle
+  2. Game falling back to Standard beatmap data for NoArrows mode
+  3. Generator logic bug (direction conversion not applied)
+- **Version:** Plugin v0.8040 / Pipeline v0.5310 (no code changes)
+- **Status:** ✅ Selector gap closed. 🔴 NoArrows generator bug — investigate per-song bundle content and generator.

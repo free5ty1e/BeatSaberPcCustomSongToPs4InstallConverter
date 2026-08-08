@@ -120,15 +120,19 @@ and adds any modes it detects that weren't manually enabled.
 
 ## Known Limitations
 
-- **Mode selector in-game still shows only Standard** (as of v0.5310, Exp 177).
-  The selector reads the pack bundle's `BeatmapLevelSO._previewDifficultyBeatmapSets`,
-  which the pipeline cannot inject yet. UnityPy 1.25.0 has no `env.create_object`,
-  and `ObjectReader` over a bare `EndianBinaryReader` fails with `read_str out of
-  bounds` (ObjectReader is bound to the SerializedFile stream). Next candidate:
-  byte-level SerializedFile surgery to append the preview blob.
-- **Per-song mode sets ARE injected** (Standard/OneSaber/NoArrows/90Degree each with
-  5 difficulties) with real generated beatmap data compiled via the mode mapping path.
+- ~~**Mode selector in-game still shows only Standard** (as of v0.5310, Exp 177).~~
+  **✅ CLOSED (Exp 180, 2026-08-08):** The catalog-redirect + pack-bundle patch approach works. The selector now shows Standard/OneSaber/NoArrows/90Degree for songs with patched pack bundles. See [[pack-bundle-patching]] for the complete working method.
+- **Per-song mode sets ARE injected** (Standard/OneSaber/NoArrows/90Degree each with 5 difficulties) with real generated beatmap data compiled via the mode mapping path.
 - **The 90Degree→Standard fallback** is the default; 360Degree was removed (v0.5308).
+
+## 🔴 Active Bug (2026-08-08)
+
+**NoArrows mode shows arrows instead of dots** — Start Me Up (Drop Pop Candy replacement) selector shows NoArrows mode, but gameplay displays standard arrow notes. The `_generate_no_arrows` generator should convert all color notes to dots (`d=8`). Investigating whether:
+1. Generated NoArrows `.dat` files weren't properly written to `startmeup_v3` bundle
+2. Game is falling back to Standard beatmap data for NoArrows mode
+3. Generator logic has a bug (direction conversion not applied)
+
+OneSaber and 90Degree modes not yet tested in-game.
 
 ## Testing
 

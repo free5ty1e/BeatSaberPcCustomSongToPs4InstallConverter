@@ -173,4 +173,6 @@ angle back and forth every N beats.
 1. ✅ No Arrows (v0.5309)
 2. ✅ One Saber (v0.5310)
 3. ✅ 90 Degree (v0.5310)
-4. 🔲 Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game — **Exp 179 bundle + catalog BUILT/VERIFIED; deploy gated on Exp 178 catalog-redirect boot test**
+4. ✅ Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game — **Exp 179 DEPLOYED + CONFIRMED WORKING (2026-08-08). Catalog-redirect + pack-bundle patch approach proven. OneSaber/NoArrows/90Degree now appear in selector.**
+
+5. 🔴 **NoArrows generator bug** — NoArrows mode shows arrows instead of dots. Investigate: per-song bundle `startmeup_v3` content, `_generate_no_arrows()` logic, data loading path.
