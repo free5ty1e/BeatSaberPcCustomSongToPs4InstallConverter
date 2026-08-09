@@ -25,13 +25,13 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 |---------|--------|-------------|
 | [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md) | ✅ Working | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection |
 | [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working | Display custom song names and artists in-game via IL2CPP MoveNext hook |
-| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md) | ✅ Working (v0.5310+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection) |
+| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md) | ✅ Working (v0.5311+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection) |
 | Note Colors | ⏳ Planned | Custom left/right saber colors per song |
 
 > **⚠️ Current limitations:**
 > - **Single-artist packs only** — Song metadata modification works perfectly for single-artist packs (Rolling Stones, Billie Eilish, Lizzo). Multi-artist packs would incorrectly blank all artist names. Currently only single-artist packs are targeted.
 > - **Artist line is blank** — For single-artist packs, the artist line in the song list is intentionally blanked. The custom song name and artist are combined on the song name line (e.g., "Espresso / Sabrina Carpenter").
-> - **NoArrows mode bug** — Start Me Up (Drop Pop Candy) shows NoArrows in selector but gameplay displays arrows instead of dots. OneSaber/90Degree not yet tested. Investigation in progress.
+> - **NoArrows bug FIXED (Exp 181, 2026-08-09)** — root cause was in `_create_text_asset_object()`: `type_id=0` mapped TextAssets to MonoScript(115) instead of TextAsset(49), and `struct.pack` used wrong binary format. Fixed with `EndianBinaryWriter.write_aligned_string()` + correct `type_id`. Awaiting PS4 deploy verification.
 
 ## Available Song Slots (Default Targets)
 

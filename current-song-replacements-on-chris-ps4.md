@@ -1,31 +1,33 @@
-## drop pop candy Replacement (PENDING PS4 TEST — 2026-07-28)
+# drop pop candy Replacement (Start Me Up slot)
 
-**Status:** Bundle built, **AWAITING DEPLOY + TEST**
+## Current Status (2026-08-09)
 
-**Song Details:**
+**✅ MODE SELECTOR GAP CLOSED** (Exp 180, 2026-08-08) — all 4 modes visible in selector (Standard/OneSaber/NoArrows/90Degree).
+**✅ NoArrows BUG FIXED IN PIPELINE v0.5311** (Exp 181, 2026-08-09) — root cause was `_create_text_asset_object()` serialization (type_id + binary format). Rebuilt bundle verified locally (all NoArrows diffs = dots `d=8`).
+**🔲 AWAITING RE-DEPLOY** — PS4 unreachable during Exp 181; the rebuilt `startmeup_v3.bundle` still needs uploading + boot test to confirm dots on-device.
+
+## Song Details
 - **Display Name:** drop pop candy / Reol
 - **Artist:** Reol
 - **BPM:** 130
 - **Level ID:** custom/drop_pop_candy
-- **Modes:** Standard, OneSaber, NoArrows, **90Degree**, **360Degree** (5 modes — 90Degree + 360Degree detected from actual beatmap files)
+- **Modes:** Standard, OneSaber, NoArrows, 90Degree (4 modes; 360Degree purged in Exp 175 — PS4 single-camera ~90° tracking)
 
-**Bundle File:** `custom_songs/startmeup_custom.bundle`
-- Size: 39,570,295 bytes
-- Audio: PCM16 FSB5, 224.3s
+## Deployed Files on PS4 (AFR base `/data/GoldHEN/AFR/CUSA12878/`)
+| File | Content | Status |
+|------|---------|--------|
+| `BeatmapLevelsData/startmeup/startmeup_v3` | Per-song bundle (audio + 4 mode sets × 5 difficulties) | 🔄 Needs v0.5311 rebuild upload (12,534,145 B, Aug 9) |
+| `aa/PS4/startmeup_pack_modes.bundle` | Patched Rolling Stones pack bundle (StartMeUp BeatmapLevelSO with 4 preview sets) | ✅ Deployed (7,905,425 B) |
+| `aa/PS4/catalog_startmeup_modes.json` | Catalog (only rolling-stones entry changed, correct dec-stream CRC) | ✅ Deployed |
 
-**Redirect:** `BeatmapLevelsData/startmeup → startmeup_v3`
+## Redirects.json Keys
+- `"BeatmapLevelsData/startmeup"` → `"startmeup_v3"`
+- `"aa/catalog.json"` → `"catalog_startmeup_modes.json"`
+- `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle"` → `"startmeup_pack_modes.bundle"`
 
-**Test Plan:**
-1. Deploy bundle + plugin: `python3 full_custom_song_pipeline.py --song-dir songs_repo/50e4c2101cc079a98f88e80aa7091e60bb6d1d31 --target startmeup --pcm16 --no-pad --convert-to-v3 --enable-beatmap-mode-mapping --deploy --generate-config --deploy-config`
-2. Also deploy v0.8042 plugin: `lftp -u anonymous, -p 2121 192.168.100.117 -e "put beat_saber_deluxe.prx -o /data/GoldHEN/plugins/beat_saber_deluxe.prx; chmod 755 /data/GoldHEN/plugins/beat_saber_deluxe.prx; quit"`
-3. Launch Beat Saber Deluxe (restart game required for new plugin)
-4. Navigate to Rolling Stones pack → Start Me Up (now drop pop candy)
-5. Select song → **check if mode selector shows OneSaber, NoArrows, 90Degree, 360Degree buttons**
-6. Try playing in 90Degree and 360Degree modes (they have actual .dat files)
-7. If crash: check PS4 log at `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
-8. Verify plugin version in notification (should show v0.8042)
-
-**Notes:**
-- Phase 1 clones Standard beatmap assets — all modes play Standard's difficulty patterns. The mode selector buttons come from Phase 2 memory injection.
-- 90Degree and 360Degree Expert beatmaps exist in song_dir but are NOT yet compiled into unique TextAssets (future work)
-- **CRITICAL:** The v0.8042 plugin MUST be deployed. Phase 2 runs on the PS4 in the plugin, not in the pipeline.
+## Pending Test (when PS4 is back online)
+1. Rebuild per-song bundle with v0.5311 pipeline (already done — `/workspace/startmeup_v3.bundle`, 12,534,145 B).
+2. Deploy to `startmeup_v3`, clear `bs_log.txt`.
+3. Boot → Start Me Up → **NoArrows** → confirm notes are dots (no arrows).
+4. Confirm **OneSaber** (single saber, all notes color 0) and **90Degree** (rotation events) play correctly.
+5. On-device confirmation → integrate pack-patch build script into production pipeline (`tools/`).

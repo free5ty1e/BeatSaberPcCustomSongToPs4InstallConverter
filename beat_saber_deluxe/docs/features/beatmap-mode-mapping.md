@@ -125,14 +125,16 @@ and adds any modes it detects that weren't manually enabled.
 - **Per-song mode sets ARE injected** (Standard/OneSaber/NoArrows/90Degree each with 5 difficulties) with real generated beatmap data compiled via the mode mapping path.
 - **The 90Degree→Standard fallback** is the default; 360Degree was removed (v0.5308).
 
-## 🔴 Active Bug (2026-08-08)
+## ✅ RESOLVED: NoArrows Bug (Exp 181, 2026-08-09)
 
-**NoArrows mode shows arrows instead of dots** — Start Me Up (Drop Pop Candy replacement) selector shows NoArrows mode, but gameplay displays standard arrow notes. The `_generate_no_arrows` generator should convert all color notes to dots (`d=8`). Investigating whether:
-1. Generated NoArrows `.dat` files weren't properly written to `startmeup_v3` bundle
-2. Game is falling back to Standard beatmap data for NoArrows mode
-3. Generator logic has a bug (direction conversion not applied)
+**NoArrows mode showed arrows instead of dots.** Root cause was two bugs in `_create_text_asset_object()` (the function that creates new TextAsset objects for injected beatmap data):
 
-OneSaber and 90Degree modes not yet tested in-game.
+1. **`type_id=0` hardcoded:** This mapped new TextAssets to MonoScript (class_id 115) instead of TextAsset (class_id 49) in the CAB's type table. The game's Unity runtime interpreted these as MonoScript objects, couldn't find them as beatmap assets, and silently fell back to Standard beatmaps for all modes.
+2. **Binary serialization format mismatch:** Used manual `struct.pack` with null terminators and `len+1` length prefix. Unity's actual format uses `write_aligned_string` (int32 length + UTF-8 data + 4-byte alignment, no null in length). The mismatch caused `read_typree()` to fail with "read_str out of bounds" in the Unity runtime.
+
+**Fix:** Use `EndianBinaryWriter.write_aligned_string()` for `m_Name` and `write_int(len) + write(bytes) + align_stream(4)` for `m_Script`. Set `type_id` to the actual TextAsset type index from `cab.types` (not hardcoded 0).
+
+**Verification:** All 5 NoArrows difficulties confirmed to have dot notes (d=8) at Easy/Normal/Hard/Expert/ExpertPlus levels. 381 tests pass. Bundle saved with LZ4 compression and verified loadable.
 
 ## Testing
 

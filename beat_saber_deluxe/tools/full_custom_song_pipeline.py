@@ -680,25 +680,142 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy failed (PS4 offline?): {result.stderr}")
 
 
-def add_mode_characteristics(cab, enable_modes: list) -> int:
+def _create_text_asset_object(cab, name, gz_data, path_id):
     """
-    Add additional beatmap characteristics (OneSaber, 90Degree, etc.)
+    Create a new TextAsset ObjectReader in a CAB bundle.
+
+    Creates a new ObjectReader with the raw TextAsset binary data (m_Name +
+    m_Script string-as-array fields) and adds it to cab.objects under the
+    given path_id. The data attribute is set so that SerializedFile.write()
+    emits the raw bytes directly without requiring the typetree parser.
+
+    Args:
+        cab: SerializedFile (CAB) to add the object to.
+        name: m_Name for the TextAsset (e.g. "StartMeUpEasyNoArrows.beatmap.gz").
+        gz_data: Raw gzipped beatmap bytes for m_Script.
+        path_id: Unique positive path ID for the new object.
+
+    Returns:
+        The new ObjectReader instance.
+    """
+    from UnityPy.files.ObjectReader import ObjectReader
+    from UnityPy.helpers.TypeTreeNode import TypeTreeNode
+    from UnityPy.streams.EndianBinaryWriter import EndianBinaryWriter
+
+    # Build Unity TextAsset binary format using UnityPy's writer to ensure
+    # correct alignment and no null terminators:
+    #   m_Name:   int32 length + UTF-8 bytes + 4-byte alignment padding
+    #   m_Script: int32 length + raw bytes + 4-byte alignment padding
+    endian = '>' if cab.header.endian == '>' else '<'
+    writer = EndianBinaryWriter(endian=endian)
+    writer.write_aligned_string(name)
+    writer.write_int(len(gz_data))
+    writer.write(gz_data)
+    writer.align_stream(4)
+    raw_data = writer.bytes
+
+    # Build a reader positioned at byte 0 with our data
+    reader = EndianBinaryReader(raw_data, endian)
+
+    # Find the TextAsset serialized type (class_id 49) and its index
+    text_asset_type = None
+    text_asset_type_index = 0
+    for i, t in enumerate(cab.types):
+        if t.class_id == 49:
+            text_asset_type = t
+            text_asset_type_index = i
+            break
+    if text_asset_type is None:
+        log.warning("  Could not find TextAsset serialized type - cannot create new asset")
+        return None
+
+    # Create the new ObjectReader with data set (write uses data directly)
+    new_obj = ObjectReader(
+        assets_file=cab,
+        reader=reader,
+        path_id=path_id,
+        type_id=text_asset_type_index,
+        serialized_type=text_asset_type,
+        class_id=49,
+        type=49,
+        byte_start=0,
+        byte_size=len(raw_data),
+        is_destroyed=0,
+        is_stripped=0,
+        data=raw_data,
+    )
+
+    cab.objects[path_id] = new_obj
+    return new_obj
+
+
+def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
+                              generated_files: list = None, bpm: float = 120.0,
+                              target_name: str = None) -> int:
+    """
+    Add additional beatmap characteristics (OneSaber, NoArrows, 90Degree, etc.)
     to the BeatmapLevel object so they appear in the in-game mode selector.
 
-    Each new characteristic set reuses the SAME beatmap assets as Standard.
-    This means the song will be playable in those modes (e.g. playing
-    Standard notes while in OneSaber mode) without requiring separate
-    mode-specific .beatmap.gz files.
+    When ``song_dir`` and ``generated_files`` are provided, the pipeline looks
+    for generated ``<Diff><Mode>.dat`` files on disk, compresses them, and
+    injects them as **new TextAsset objects** in the CAB bundle. The new
+    mode sets in the BeatmapLevel are linked to these new TextAssets — NOT to
+    the Standard beatmaps.
+
+    When ``song_dir``/``generated_files`` are not provided (legacy fallback),
+    the function falls back to cloning Standard's beatmap asset references,
+    so the song is still playable (Standard notes play in non-Standard modes).
 
     Args:
         cab: Unity CAB bundle containing BeatmapLevel
-        enable_modes: List of characteristic names (e.g. ["OneSaber", "90Degree"])
+        enable_modes: List of characteristic names (e.g. ["OneSaber", "NoArrows", "90Degree"])
+        song_dir: Directory containing generated .dat files (optional)
+        generated_files: List of generated .dat filenames (e.g. ["EasyNoArrows.dat", ...])
 
     Returns:
         Number of modes added
     """
     if not enable_modes:
         return 0
+
+    # Build a lookup of generated beatmap files: {mode: {difficulty_index: filename}}
+    # Scan the song directory for ALL mode-specific beatmap files, not just
+    # newly-generated ones — files from a previous pipeline run or hand-authored
+    # songs also need to be injected.
+    gen_lookup: dict[str, dict[int, str]] = {}
+    # Also include explicitly-passed generated_files (for testing / explicit calls)
+    all_filenames = set()
+    if song_dir and os.path.isdir(song_dir):
+        all_filenames.update(os.listdir(song_dir))
+    if generated_files:
+        all_filenames.update(generated_files)
+    for fname in sorted(all_filenames):
+        if not fname.endswith(('.dat', '.json')):
+            continue
+        low = fname.lower()
+        if low in ('info.dat', 'info.json', 'bpminfo.dat'):
+            continue
+        if 'lightshow' in low or 'audiodata' in low or 'audio' in low:
+            continue
+        for mode in enable_modes:
+            if mode == "Standard":
+                continue
+            if mode not in fname:
+                continue
+            # Match longest difficulty name first (ExpertPlus before Expert)
+            for di in range(len(DIFFICULTIES) - 1, -1, -1):
+                diff = DIFFICULTIES[di]
+                if diff in fname:
+                    gen_lookup.setdefault(mode, {})[di] = fname
+                    break
+
+    has_generated = bool(gen_lookup)
+
+    # Determine the next available path_id for new TextAsset objects.
+    # Unity path_ids in this CAB are large negatives; use large positives
+    # to avoid collision.
+    max_existing = max((abs(int(pid)) for pid in cab.objects.keys()), default=0)
+    next_pid = max(max_existing + 1, 9000000000000000000)
 
     added = 0
     for pid, reader in cab.objects.items():
@@ -716,10 +833,10 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
             existing_chars.add(ch)
 
         if 'Standard' not in existing_chars:
-            log.warning("  No Standard characteristic found - cannot clone modes")
+            log.warning("  No Standard characteristic found - cannot add modes")
             return 0
 
-        # Find the Standard set to clone
+        # Find the Standard set to use for difficulty ordering / lightshow refs
         standard_set = None
         for s in existing_sets:
             if s.get('_beatmapCharacteristicSerializedName') == 'Standard':
@@ -727,25 +844,81 @@ def add_mode_characteristics(cab, enable_modes: list) -> int:
                 break
 
         if not standard_set:
-            log.warning("  Standard characteristic not found - cannot clone modes")
+            log.warning("  Standard characteristic not found - cannot add modes")
             return 0
+
+        std_diffs = standard_set.get('_difficultyBeatmaps', [])
+        std_lightshow_pid = std_diffs[0]['_lightshowAsset']['m_PathID'] if std_diffs else 0
 
         # Add each requested mode
         for mode in enable_modes:
             if mode in existing_chars:
-                log.info(f"  Mode '{mode}' already exists - skipping")
-                continue
+                if has_generated and any(di in gen_lookup.get(mode, {}) for di in range(len(std_diffs))):
+                    # Mode exists but we have generated beatmaps to inject — replace it
+                    log.info(f"  Mode '{mode}' exists — refreshing with generated beatmaps")
+                    existing_sets = [s for s in existing_sets
+                                     if s.get('_beatmapCharacteristicSerializedName') != mode]
+                    existing_chars.discard(mode)
+                else:
+                    log.info(f"  Mode '{mode}' already exists - skipping (no generated files)")
+                    continue
 
             new_set = {
                 '_beatmapCharacteristicSerializedName': mode,
                 '_difficultyBeatmaps': []
             }
-            for entry in standard_set.get('_difficultyBeatmaps', []):
+
+            # Use the Standard difficulty entries as the template for ordering/lightshows
+            for di, std_entry in enumerate(std_diffs):
+                diff = DIFFICULTIES[di] if di < len(DIFFICULTIES) else ''
+
+                # --- Try to inject a real generated beatmap asset ---
+                if has_generated and di in gen_lookup.get(mode, {}):
+                    fname = gen_lookup[mode][di]
+                    fpath = os.path.join(song_dir, fname)
+                    if os.path.isfile(fpath):
+                        try:
+                            with open(fpath, 'r', encoding='utf-8') as fh:
+                                bm_data = json.load(fh)
+                            # Convert V2 → V3 if needed (game requires V3.2.0)
+                            if is_v2_beatmap(bm_data):
+                                bm_data = convert_v2_to_v3(bm_data, default_bpm=bpm)
+                                log.info(f"  {mode}/{diff}: converted V2→V3 for injection")
+                            # Fix empty bpmEvents (same fallback as replace_beatmaps)
+                            if not bm_data.get('bpmEvents'):
+                                bm_data['bpmEvents'] = [{"b": 0, "m": bpm}]
+                            json_bytes = json.dumps(bm_data,
+                                                    separators=(',', ':')).encode('utf-8')
+                            gz_bytes = gzip.compress(json_bytes)
+
+                            # Name the TextAsset after the generated file (with .beatmap.gz suffix)
+                            ta_name = f"{target_name}{diff}{mode}.beatmap.gz" if target_name else f"Beatmap_{diff}{mode}.beatmap.gz"
+                            new_pid = next_pid
+                            next_pid += 1
+                            _create_text_asset_object(cab, ta_name, gz_bytes, new_pid)
+
+                            new_set['_difficultyBeatmaps'].append({
+                                '_difficulty': std_entry['_difficulty'],
+                                '_beatmapAsset': {
+                                    'm_FileID': 0,
+                                    'm_PathID': new_pid,
+                                },
+                                '_lightshowAsset': std_entry['_lightshowAsset'],
+                            })
+                            log.info(f"  {mode}/{diff}: injected {fname} as TextAsset pid={new_pid}")
+                            continue
+                        except Exception as e:
+                            log.warning(f"  {mode}/{diff}: failed to inject generated beatmap ({e})")
+                    else:
+                        log.warning(f"  {mode}/{diff}: generated file {fpath} not found")
+
+                # --- Fallback: clone Standard beatmap reference ---
                 new_set['_difficultyBeatmaps'].append({
-                    '_difficulty': entry['_difficulty'],
-                    '_beatmapAsset': entry['_beatmapAsset'],
-                    '_lightshowAsset': entry['_lightshowAsset'],
+                    '_difficulty': std_entry['_difficulty'],
+                    '_beatmapAsset': std_entry['_beatmapAsset'],
+                    '_lightshowAsset': std_entry['_lightshowAsset'],
                 })
+
             existing_sets.append(new_set)
             existing_chars.add(mode)
             added += 1
@@ -1187,22 +1360,35 @@ def build_mode_mapping(
     return modes_to_enable
 
 
-def apply_mode_mapping(cab, enabled_modes: list[str]) -> int:
+def apply_mode_mapping(cab, enabled_modes: list[str], song_dir: str = None,
+                        generated_files: list[str] = None, bpm: float = 120.0,
+                        target_name: str = None) -> int:
     """
     Apply mode mapping to a CAB bundle by enabling the given characteristic modes.
 
-    Internally uses add_mode_characteristics() which clones Standard beatmap
-    assets for each new mode set in the BeatmapLevel.
+    When ``song_dir`` and ``generated_files`` are provided, generated mode
+    beatmaps (``.dat`` files written by ``generate_missing_mode_beatmaps``) are
+    injected as new TextAsset objects in the CAB and linked to the corresponding
+    difficulty beatmap entries. Generated V2 beatmaps are converted to V3 before
+    injection. Otherwise falls back to cloning Standard references (legacy
+    behavior — playable but all modes use Standard data).
 
     Args:
         cab: Unity CAB bundle containing BeatmapLevel
         enabled_modes: List of mode names to enable (from build_mode_mapping)
+        song_dir: Directory containing the song's .dat files (optional)
+        generated_files: List of generated .dat filenames (optional)
+        bpm: BPM for V2→V3 conversion of generated beatmaps
 
     Returns:
         Number of modes added
     """
     modes_to_add = [m for m in enabled_modes if m != "Standard"]
-    return add_mode_characteristics(cab, modes_to_add)
+    if song_dir and generated_files:
+        return add_mode_characteristics(cab, modes_to_add, song_dir=song_dir,
+                                         generated_files=generated_files, bpm=bpm,
+                                         target_name=target_name)
+    return add_mode_characteristics(cab, modes_to_add, bpm=bpm, target_name=target_name)
 
 
 # ============================================================================
@@ -2662,6 +2848,7 @@ Examples:
     mode_map_enabled = False
     mode_map_detected = {}
     mode_map_enabled_modes = ["Standard"]
+    generated = []
     if args.enable_beatmap_mode_mapping:
         log.info("  Beatmap mode mapping enabled — auto-detecting modes...")
         mode_map_detected = detect_song_modes(args.song_dir)
@@ -2714,13 +2901,19 @@ Examples:
         filtered = [m for m in valid_modes if m not in ("360Degree", "360")]
         if filtered != valid_modes:
             log.info("  Removed 360Degree from --enable-modes (unsupported on PS4)")
-        add_mode_characteristics(cab, filtered)
+        add_mode_characteristics(cab, filtered, song_dir=args.song_dir,
+                                 generated_files=generated or None, bpm=bpm,
+                                 target_name=args.target)
 
     # -----------------------------------------------------------------------
     # Step 6a: Apply beatmap mode mapping to the BeatmapLevel
     # -----------------------------------------------------------------------
     if mode_map_enabled:
-        mode_count = apply_mode_mapping(cab, mode_map_enabled_modes)
+        mode_count = apply_mode_mapping(cab, mode_map_enabled_modes,
+                                         song_dir=args.song_dir,
+                                         generated_files=generated or None,
+                                         bpm=bpm,
+                                         target_name=args.target)
         log.info(f"  Mode sets added: {mode_count}")
 
     # -----------------------------------------------------------------------

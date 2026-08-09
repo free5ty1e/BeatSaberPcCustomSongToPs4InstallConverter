@@ -1,5 +1,5 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-08
+**Last Updated:** 2026-08-09
 **Status:** ✅ **MODE SELECTOR GAP CLOSED** — Exp 179 deployed and confirmed working on PS4. The catalog-redirect + pack-bundle patch approach is proven:
 - v0.8040 `open()` hook redirects `aa/catalog.json` (OPEN #58 confirmed in Exp 178)
 - Fresh `catalog_startmeup_modes.json` with correct dec-stream CRC (`0x8e1f8937`) + size (7,905,425)
@@ -11,9 +11,9 @@
 2. **CRC root cause SOLVED (Exp 179):** catalog `m_Crc` = `zlib.crc32` of the bundle's **DECOMPRESSED stream**, not the compressed file (original file CRC `0x63520032` vs catalog `0xdc8b314f` = dec-stream CRC). GF(2) padding forcing obsolete — just write actual values into fresh catalog.
 3. **Exp 179 patched pack bundle BUILT + DEPLOYED + CONFIRMED:** `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) — StartMeUp BeatmapLevelSO blob 440→1,028 B with 4 preview sets; identity preserved; 81/81 objects parse. Fresh `catalog_startmeup_modes.json` differs from original ONLY in rolling-stones entry. Build tool: `development/scripts/build_startmeup_pack_modes.py`.
 
-**Known issue (2026-08-08):** NoArrows mode shows arrows instead of dots — generator or data-loading bug under investigation. OneSaber/90Degree not yet tested.
+**Known issue (2026-08-08 → FIXED 2026-08-09):** NoArrows bug ROOT-CAUSED + FIXED (Exp 181): two bugs in `_create_text_asset_object()` — `type_id=0` mapped new TextAssets to MonoScript(115) instead of TextAsset(49), and manual `struct.pack` used null terminators + `len+1` instead of Unity's `write_aligned_string` format (int32 length + data + 4-byte alignment). Fix: use `EndianBinaryWriter.write_aligned_string()` for `m_Name` and `write_int(len) + write(bytes) + align_stream(4)` for `m_Script`; set `type_id` to actual index from `cab.types`. All 381 tests pass; NoArrows verified to have dots (d=8) at all 5 difficulty levels.
 
-## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5310 / plugin v0.8040)
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5311 / plugin v0.8040)
 
 **The old string-content memory injection (v0.66–v0.8024) is DEAD** — 0 strings found across 16MB–17GB.
 
@@ -155,6 +155,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **177** | **v0.5310** | **Real mode generators + default fill-in** | **✅ Generators implemented (no-arrows/one-saber/90-degree, non-mutating, V2+V3); mode generation now Step 5a default fill-in; 17 generator tests (365 total pass); fresh `startmeup_v3` bundle (12,405,290 B) deployed. User test: clean boot + song loads, selector still Standard-only (expected). ⚠️ NEW: log proves catalog.json passes through open_hook → catalog redirect avenue re-opened.** |
 | **178** | **v0.8040 (plugin) / 0.5310 (pipeline)** | **Catalog-redirect proof (byte-identical copy)** | **🔲 DEPLOYED + VERIFIED ON-DEVICE — awaiting user boot test. `catalog_test.json` (793,186 B, md5 `dc6e9303...`) + `"aa/catalog.json": "catalog_test.json"` redirect in place; confirm `[OPEN #58] ... -> REDIRECTED` + stable boot.** |
 | **179** | **v0.8040 (plugin) / 0.5310 (pipeline)** | **Pack preview-set injection (4 modes)** | **🔲 BUILT + LOCALLY VERIFIED — `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) + `catalog_startmeup_modes.json` (only rolling-stones entry changed). CRC root cause SOLVED: catalog `m_Crc` = zlib.crc32 of DECOMPRESSED stream. Deploy gated on Exp 178 boot confirmation.** |
+| **180** | **v0.8040 / v0.5310** | **Exp 179 DEPLOYED + USER TEST — Mode Selector Gap CLOSED** | **✅ MODE SELECTOR GAP CLOSED (2026-08-08). All 4 modes visible (Standard/OneSaber/NoArrows/90Degree). 🔴 ISSUE FOUND: NoArrows mode shows arrows instead of dots — generator/injection bug. OneSaber/90Degree untested.** |
+| **181** | **v0.8040 / v0.5311** | **NoArrows bug ROOT-CAUSED + FIXED** | **✅ FIXED (2026-08-09). Two bugs in `_create_text_asset_object()`: `type_id=0` → MonoScript(115) instead of TextAsset(49); manual `struct.pack` (null term + len+1) vs Unity's `write_aligned_string` (int32 len + data + 4-byte align). Fixed + verified: all 5 NoArrows diffs have dots (d=8). 381 tests pass. Awaiting PS4 deploy (PS4 unreachable this session).** |
 
 ## Memory Injection Versions
 
@@ -194,12 +196,11 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 ## Next Steps
 
-1. **Exp 178 boot test (IMMEDIATE):** user boots PS4; pull `bs_log.txt`, confirm `[OPEN #58] /app0/Media/StreamingAssets/aa/catalog.json -> REDIRECTED` (line ~83) and stable boot. Archive log + clear file.
-2. **Exp 179 deploy (gated on #1):** upload `startmeup_pack_modes.bundle` to AFR; add redirect key `aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` → `startmeup_pack_modes.bundle`; swap catalog redirect target `catalog_test.json` → `catalog_startmeup_modes.json`; verify on-device; boot test — OneSaber/NoArrows/90Degree should appear in the selector.
-3. **Verify mode beatmaps actually load/play once the selector gap is closed** — confirm OneSaber/NoArrows/90Degree generated `.dat` files (V2+V3) parse and play.
+1. **Exp 178 boot test (COMPLETED):** user boots PS4; pull `bs_log.txt`, confirm `[OPEN #58] ... -> REDIRECTED` and stable boot. Archive log + clear file. ✅ DONE.
+2. **Exp 179 deploy + test (COMPLETED):** ✅ DONE — mode selector gap closed (all 4 modes visible). NoArrows bug found.
+3. **Exp 181 fix deploy (PENDING):** Rebuild `startmeup_v3.bundle` with fixed pipeline (v0.5311) and deploy to PS4; verify NoArrows shows dots, OneSaber/90Degree play correctly. PS4 was unreachable during this session.
 4. **Integrate the pack-patch build script into the production pipeline** (`tools/`) after proven on-device — currently a dev script per rules.
 5. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
-6. **CI integration test wiring** — Wire `test_integration.py` mock dump structure into `.github/workflows/ci.yml` for automated integration testing.
 
 ## Active Knowledge Gaps
 

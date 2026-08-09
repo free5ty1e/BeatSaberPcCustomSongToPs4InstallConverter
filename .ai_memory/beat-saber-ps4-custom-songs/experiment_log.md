@@ -288,3 +288,29 @@ metadata:
   3. Generator logic bug (direction conversion not applied)
 - **Version:** Plugin v0.8040 / Pipeline v0.5310 (no code changes)
 - **Status:** ✅ Selector gap closed. 🔴 NoArrows generator bug — investigate per-song bundle content and generator.
+
+### Experiment 181: NoArrows Bug Root-Cause Analysis + Fix (2026-08-09)
+- **Date:** 2026-08-09
+- **Root Cause Found:** The NoArrows bug was in `add_mode_characteristics()` in `full_custom_song_pipeline.py`. The function created new TextAsset objects but with **two critical serialization bugs**:
+
+  1. **type_id bug:** `type_id=0` was hardcoded, which mapped to MonoScript (class_id 115) instead of TextAsset (class_id 49). The Unity runtime on PS4 interprets objects by their type table index, so new TextAssets were registered as MonoScript objects — the game couldn't find them as beatmap assets and fell back to Standard beatmaps for all modes.
+  2. **Binary format bug:** `_create_text_asset_object()` used `struct.pack` to manually write `m_Name` and `m_Script` with null terminators and `len+1` length prefix. Unity's actual TextAsset binary format uses `write_aligned_string` (int32 length + UTF-8 bytes + 4-byte alignment padding, NO null terminator in length). The mismatch caused `read_typree()` to fail with "read_str out of bounds" — the game's Unity runtime parser couldn't interpret the object data correctly, causing it to skip the beatmap and fall back to Standard.
+
+  Additionally, the `m_Script` field is stored as "string as array" (MetaFlag 0x04000001), meaning it's raw binary bytes with a length prefix (NOT a null-terminated string).
+
+- **Fix Applied:**
+  - Replaced manual `struct.pack` serialization with UnityPy's `EndianBinaryWriter.write_aligned_string()` for `m_Name` and `write_int(len) + write(bytes) + align_stream(4)` for `m_Script`.
+  - Changed `type_id=0` to `text_asset_type_index` (the actual index of the TextAsset type in `cab.types`).
+  - Fixed gen_lookup matching to handle both prefix (`90DegreeExpert.dat`) and suffix (`Expert90Degree.dat`) naming conventions.
+  - Included `generated_files` parameter in gen_lookup scanning (not just `song_dir`).
+  - Updated `TestModeBeatmapInjection` test to save/reload bundle before verifying.
+
+- **Verification (locally):**
+  - Rebuilt `startmeup_v3.bundle` with all fixes applied.
+  - All 4 mode sets now reference new TextAsset PIDs (Standard unchanged, OneSaber/NoArrows/90Degree all new).
+  - NoArrows beatmap data verified: Easy=306 notes (all d=8), Normal=470, Hard=641, Expert=863, ExpertPlus=1035. All dots as expected.
+  - Bundle loads correctly in UnityPy after LZ4 save.
+  - All 381 tests pass.
+
+- **Version:** Pipeline v0.5311
+- **Status:** ✅ Bug root-caused and fixed (local verification). Awaiting PS4 deploy + boot test (PS4 not reachable during this session — FTP port 2121 timed out).

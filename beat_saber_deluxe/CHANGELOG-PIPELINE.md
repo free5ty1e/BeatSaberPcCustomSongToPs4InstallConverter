@@ -1,5 +1,16 @@
 # Pipeline Changelog
 
+## v0.5311 (2026-08-09)
+### Changed
+- **Test template shrunk 12 MB → 2.9 KB (no audio):** Added `development/scripts/build_test_template.py` which regenerates `tests/test_data/template_standard.bundle` from any per-song bundle. The template now contains ONLY a Standard-only BeatmapLevel + its 5 beatmap TextAssets + lightshow TextAsset + m_Script target — all audio (AudioClip, audio TextAsset, external `.resource` file) is stripped and beatmap/lightshow payloads are replaced with minimal placeholder JSON. This keeps the repo lean and avoids shipping 12 MB of song audio as test fixture.
+
+### Fixed
+- **TextAsset binary serialization:** Fixed `_create_text_asset_object()` to use UnityPy's `EndianBinaryWriter.write_aligned_string()` instead of manual `struct.pack`. The previous format added null terminators and used `len+1` for string lengths, which caused `read_typetree()` to fail with "read_str out of bounds" on the PS4 Unity runtime. The correct Unity format is: `int32 length + UTF-8 bytes + 4-byte alignment padding` (no null terminator in length, no null after data).
+- **type_id for new TextAsset objects:** Fixed `_create_text_asset_object()` to use the correct type index from `cab.types` instead of hardcoded `type_id=0`. Previously, new objects were assigned `type_id=0` which mapped to MonoScript (class_id 115) instead of TextAsset (class_id 49), causing the game to misinterpret the object type.
+- **Mode file matching:** Fixed gen_lookup matching in `add_mode_characteristics()` to handle both prefix (`90DegreeExpert.dat`) and suffix (`Expert90Degree.dat`) naming conventions. Previously, 90Degree Expert and ExpertPlus files with prefix-style naming were not detected, leaving those difficulty slots pointing to Standard beatmaps.
+- **generated_files parameter usage:** Fixed `add_mode_characteristics()` to use the `generated_files` parameter in addition to scanning `song_dir`. Previously, generated files passed via the parameter were ignored if they weren't written to disk first.
+- **Test fix:** Fixed `TestModeBeatmapInjection.test_injected_beatmaps_reference_new_textassets` to properly handle BundleFile format and save/reload the bundle before verifying typetree changes. Added `test_data/template_standard.bundle` for test isolation.
+
 ## v0.5310 (2026-08-07)
 - **Beatmap Mode Generators — Fully Implemented (default when `--enable-beatmap-mode-mapping`):**
   - `_generate_no_arrows()` — real implementation, V2/V3-aware: converts every color note to a dot (`_cutDirection`/`d` = 8); bombs untouched.

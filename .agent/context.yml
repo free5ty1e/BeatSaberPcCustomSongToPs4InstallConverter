@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5310" # in beat_saber_deluxe/VERSION — real mode generators + default fill-in (Exp 177)
+pipeline_version: "0.5311" # in beat_saber_deluxe/VERSION — NoArrows bug fix (type_id + binary format)
 
 # Platform Constraints
 target_platform: PS4
@@ -90,9 +90,17 @@ mode_generation:
     catalog_startmeup_modes.json (only rolling-stones entry changed). Deployed + confirmed:
     selector shows Standard/OneSaber/NoArrows/90Degree for Start Me Up.
   noarrows_bug: >
-    NoArrows mode shows arrows instead of dots. Generator spec: all color notes -> dots (d=8).
-    Per-song bundle startmeup_v3 should have generated NoArrows beatmaps (5 diffs). Investigate
-    generator logic or data injection.
+    FIXED (Exp 181): NoArrows showed arrows instead of dots. Root cause was in `_create_text_asset_object()` 
+    — TWO bugs: (1) `type_id=0` mapped new TextAssets to MonoScript(115) instead of TextAsset(49), 
+    causing the game to skip them and fall back to Standard; (2) manual `struct.pack` used null terminators 
+    + `len+1` instead of Unity's `write_aligned_string` format (int32 length + data + 4-byte alignment), 
+    causing "read_str out of bounds" in Unity runtime. FIX: use `EndianBinaryWriter.write_aligned_string()` 
+    for m_Name, `write_int(len) + write(bytes) + align_stream(4)` for m_Script, and set `type_id` to the 
+    actual index from cab.types. Verified: all 5 NoArrows diffs have dots (d=8).
+  next_steps:
+    1. Deploy rebuilt startmeup_v3.bundle (v0.5311 fix) to PS4 AFR
+    2. Boot test: verify NoArrows shows dots, OneSaber/90Degree play correctly
+    3. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:
@@ -115,7 +123,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "365 tests across 12 files (as of v0.5310); mode generators: 17 tests"
+test_count: "381 tests across 12 files (as of v0.5311); mode generators: 19 tests (including TestModeBeatmapInjection)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
