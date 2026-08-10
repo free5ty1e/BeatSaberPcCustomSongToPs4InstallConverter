@@ -81,7 +81,17 @@ def crc_decompressed_stream(bundle_bytes):
 4. **Redirect pack bundle** to the patched version via same `open()` hook.
 5. **Per-song bundle** (`startmeup_v3`) already carries generated mode beatmaps via pipeline `--enable-beatmap-mode-mapping` (v0.5310).
 
-**Result:** In-game mode selector for Start Me Up now shows **Standard / OneSaber / NoArrows / 90Degree** — the gap is closed.
+**Result (corrected 2026-08-09):** In-game mode selector for Start Me Up shows **Standard / OneSaber / NoArrows**. 90Degree was NEVER visible — the 90Degree preview slot pointed at the 360Degree characteristic (`4533580413116749821`, `requires360=1`), so the game hid the button. The OneSaber/NoArrows labels appear "swapped" in the preview array but this is cosmetic: each characteristic PID drives BOTH its own selector button AND its gameplay difficulty-set lookup, so pointing each slot at the right characteristic is what matters.
+
+**Verified characteristic PIDs** (from `sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle`, CAB `cb38b3e2985c65d4cf8a63437da74a89`):
+
+| Mode | PID | notes |
+|---|---|---|
+| Standard | `-7286399427822119286` | sortingOrder=0 |
+| OneSaber (OneColor) | `-5623662769225589684` | containsRotation=0, sortingOrder=1 |
+| NoArrows | `-8583864861369561029` | containsRotation=0, sortingOrder=3 |
+| **90Degree** | **`-5995858427784384822`** | containsRotation=1, requires360=0, sortingOrder=5 |
+| 360Degree | `4533580413116749821` | requires360=1 → hidden without 360 gameplay |
 
 **Generator status (per-song bundle):**
 - Drop Pop Candy (replacement for Start Me Up) had: Standard (5 diffs) + 90Degree Expert (song's own)

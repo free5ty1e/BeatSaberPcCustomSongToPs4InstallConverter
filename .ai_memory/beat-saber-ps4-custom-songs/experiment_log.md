@@ -314,3 +314,30 @@ metadata:
 
 - **Version:** Pipeline v0.5311
 - **Status:** ✅ Bug root-caused and fixed (local verification). Awaiting PS4 deploy + boot test (PS4 not reachable during this session — FTP port 2121 timed out).
+
+### Experiment 182: 90Degree Mode Selector Root Cause + Pack Bundle Rebuild (2026-08-09)
+- **Date:** 2026-08-09
+- **On-device test (post v0.5311 deploy):** NoArrows + OneSaber confirmed working on-device (dots correct). User corrected earlier claim: **90Degree has NEVER been visible** — only Standard/OneSaber/NoArrows show.
+- **Root Cause Found:** Characteristic pathIDs were mislabeled throughout the codebase. Verified against the real BeatmapCharacteristicSO objects in `ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle` (CAB `cb38b3e2985c65d4cf8a63437da74a89`):
+
+  | Mode | Actual PID | (was mislabeled as) |
+  |---|---|---|
+  | Standard | `-7286399427822119286` | — |
+  | NoArrows | `-8583864861369561029` | OneSaber |
+  | OneSaber (OneColor) | `-5623662769225589684` | NoArrows |
+  | **90Degree** | **`-5995858427784384822`** | 360Degree (`4533580413116749821`) |
+  | 360Degree | `4533580413116749821` | 90Degree |
+
+  - The 90Degree preview slot pointed at the **360Degree** characteristic (`requires360=1`), so the game hid the button — 90Degree was never selectable.
+  - The OneSaber/NoArrows swap was **cosmetic** (each PID drives BOTH its selector button AND its gameplay difficulty-set lookup, so both worked) but is now corrected for clarity.
+- **Fix Applied:**
+  - Corrected `CHAR_PATH_IDS` / `_CHAR_PATH_IDS` in `tools/full_custom_song_pipeline.py`, `tools/build_patched_pack_bundle.py`, `tools/build_per_song_metadata.py`, `tools/build_replacement_pack*.py`, `tools/inject_pack_bundle.py`, `tools/patch_pack_bundle.py`, `development/scripts/build_espresso*.py`, `build_startmeup_pack_modes.py`, `memory_inject_test.py`. Verified ALL maps consistent via script.
+  - Updated KB docs (`pipeline-song-metadata-blob-injection.md`, `pack-bundle-patching.md`) with verified PID table + warning.
+  - Added regression test `test_verified_characteristic_pids` in `tests/test_inject_pack_bundle.py`.
+- **Rebuild + Deploy:**
+  - Rebuilt `startmeup_pack_modes.bundle` (7,905,425 B): preview sets now [0]=Standard `-7286399427822119286`, [1]=OneSaber `-5623662769225589684`, [2]=NoArrows `-8583864861369561029`, [3]=90Degree `-5995858427784384822`, 5 diffs each. Verified with UnityPy.
+  - Regenerated `catalog_startmeup_modes.json`: new dec-stream CRC `3924036563`, size `7905425`.
+  - Deployed both to PS4 AFR; `bs_log.txt` cleared.
+- **Version:** Pipeline v0.5312
+- **Status:** ✅ Root-caused, fixed, rebuilt, deployed. **AWAITING USER BOOT TEST:** confirm 90Degree button now appears; test source 90Degree Expert + generated 90Degree difficulties.
+- **Next steps:** user boot test → integrate pack-patch build into production pipeline (`tools/`) so it runs automatically (no manual steps).

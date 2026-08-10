@@ -14,9 +14,9 @@ OUT_BUNDLE = "/workspace/beat_saber_deluxe/rollingstones_pack_modified.bundle"
 
 # PPtr for characteristics (fileID=2 for sharedassets2.assets)
 CHARS = [
-    ("OneSaber",  -8583864861369561029),
-    ("NoArrows",  -5623662769225589684),
-    ("90Degree",   4533580413116749821),
+    ("OneSaber",  -5623662769225589684),
+    ("NoArrows",  -8583864861369561029),
+    ("90Degree",  -5995858427784384822),
 ]
 
 def get_raw_data(env):

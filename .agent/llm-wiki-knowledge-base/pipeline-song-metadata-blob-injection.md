@@ -57,10 +57,19 @@ var      36*N    difficulty data                    36 bytes per entry
 | Mode | pathID |
 |---|---|
 | Standard | -7286399427822119286 |
-| OneSaber | -8583864861369561029 |
-| NoArrows | -5623662769225589684 |
-| 90Degree | 4533580413116749821 |
-| 360Degree | 1189643819550092755 |
+| OneSaber | -5623662769225589684 |
+| NoArrows | -8583864861369561029 |
+| 90Degree | -5995858427784384822 |
+| 360Degree | 4533580413116749821 |
+
+> **Warning:** These pathIDs were historically swapped/mislabeled (OneSaber↔NoArrows,
+> 90Degree pointed at the 360Degree characteristic). The table above was verified
+> against the BeatmapCharacteristicSO objects in
+> `sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle`
+> (CAB `cb38b3e2985c65d4cf8a63437da74a89`). 90Degree (`containsRotation=1, requires360=0`,
+> sortingOrder=5) MUST point to `-5995858427784384822`; pointing it at the 360Degree
+> characteristic (`4533580413116749821`) hides the button because 360Degree requires
+> the 360-degree gameplay feature. See [[pack-bundle-patching]].
 
 ## Usage in Pipeline
 

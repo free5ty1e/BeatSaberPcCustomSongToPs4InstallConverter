@@ -1398,9 +1398,9 @@ def apply_mode_mapping(cab, enabled_modes: list[str], song_dir: str = None,
 # Characteristic path IDs for _previewDifficultyBeatmapSets
 _CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
-    "OneSaber":  -8583864861369561029,
-    "NoArrows":   -5623662769225589684,
-    "90Degree":    4533580413116749821,
+    "OneSaber":  -5623662769225589684,
+    "NoArrows":  -8583864861369561029,
+    "90Degree":  -5995858427784384822,
 }
 
 

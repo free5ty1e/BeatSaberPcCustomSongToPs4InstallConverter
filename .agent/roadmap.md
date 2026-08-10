@@ -142,7 +142,8 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] CLI flags: `--skip-mode-generation`, `--one-saber-min-gap` (0.25), `--rotation-cycle-beats` (8.0)
 - [x] Expanded generator test suite to 17 tests; full suite 365 pass (v0.5310, Exp 177)
 - [x] Deployed fresh `startmeup_v3` bundle (12,405,290 B) with 14 generated mode beatmaps + 3 mode sets (Exp 177)
-- [ ] Mode selector UI visibility for procedurally generated modes — **UNBLOCKED via catalog-redirect avenue (Exp 178/179): v0.8040 `open()` hook can redirect `aa/catalog.json`, so the Addressables catalog CRC+size dual-validation is controllable. Exp 179 built `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) + `catalog_startmeup_modes.json` (only rolling-stones entry changed). KEY: catalog `m_Crc` = zlib.crc32 of the DECOMPRESSED stream (not file CRC) — GF(2) forcing obsolete. Exp 178 byte-identical catalog redirect deployed, awaiting boot confirmation, then deploy Exp 179.**
+- [x] Mode selector UI visibility for procedurally generated modes — **✅ DONE (Exp 179/180 DEPLOYED + CONFIRMED): catalog-redirect + pack-bundle patch approach proven. Standard/OneSaber/NoArrows visible + working on-device.**
+- [x] **90Degree selector visibility FIXED (Exp 182, 2026-08-09):** 90Degree had NEVER been visible — characteristic pathIDs were mislabeled repo-wide; the pack bundle's 90Degree preview slot pointed at the 360Degree characteristic (`requires360=1`) which the game hides. All pid maps corrected to verified values (90Degree=`-5995858427784384822`), pack bundle rebuilt + catalog regenerated + deployed. Awaiting boot test.
 
 ### "No Arrows" Mode Generator — ✅ DONE (v0.5310)
 Take a Standard beatmap and convert all arrow notes (`_cutDirection`/`d` > 0) to dot notes
@@ -175,4 +176,6 @@ angle back and forth every N beats.
 3. ✅ 90 Degree (v0.5310)
 4. ✅ Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game — **Exp 179 DEPLOYED + CONFIRMED WORKING (2026-08-08). Catalog-redirect + pack-bundle patch approach proven. OneSaber/NoArrows/90Degree now appear in selector.**
 
-5. ✅ **NoArrows generator bug FIXED (Exp 181, 2026-08-09)** — root cause was in `_create_text_asset_object()` (wrong type_id → MonoScript instead of TextAsset + wrong binary serialization). Fixed in pipeline v0.5311, verified locally (all NoArrows difficulties have dot notes). Awaiting PS4 deploy for on-device confirmation.
+5. ✅ **NoArrows generator bug FIXED (Exp 181, 2026-08-09)** — root cause was in `_create_text_asset_object()` (wrong type_id → MonoScript instead of TextAsset + wrong binary serialization). Fixed in pipeline v0.5311, verified locally (all NoArrows difficulties have dot notes). Deployed + confirmed on-device: NoArrows dots + OneSaber work.
+6. ✅ **90Degree selector FIXED (Exp 182, 2026-08-09)** — characteristic pids were mislabeled repo-wide; 90Degree preview slot pointed at 360Degree characteristic (`requires360=1`, hidden). All maps corrected to verified pids (90Degree=`-5995858427784384822`), pack bundle rebuilt + redeployed. Awaiting boot test.
+7. 🔲 **Integrate pack-patch build into production pipeline (`tools/`)** after Exp 182 on-device confirmation (no manual steps — user requirement).

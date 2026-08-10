@@ -1,10 +1,10 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
 **Last Updated:** 2026-08-09
-**Status:** ✅ **MODE SELECTOR GAP CLOSED** — Exp 179 deployed and confirmed working on PS4. The catalog-redirect + pack-bundle patch approach is proven:
+**Status:** ✅ **MODE SELECTOR GAP CLOSED + 90DEGREE FIXED** — Standard/OneSaber/NoArrows confirmed working on-device (Exp 181 deploy). Exp 182 found 90Degree had NEVER been visible because characteristic pathIDs were mislabeled repo-wide: the pack bundle's 90Degree preview slot pointed at the **360Degree** characteristic (`requires360=1`), which the game hides. All pids corrected to verified values (90Degree=`-5995858427784384822`), pack bundle rebuilt + redeployed. Awaiting boot test.
 - v0.8040 `open()` hook redirects `aa/catalog.json` (OPEN #58 confirmed in Exp 178)
-- Fresh `catalog_startmeup_modes.json` with correct dec-stream CRC (`0x8e1f8937`) + size (7,905,425)
-- Patched `startmeup_pack_modes.bundle` adds 3 preview sets (OneSaber/NoArrows/90Degree) to StartMeUp BeatmapLevelSO
-- In-game mode selector now shows **Standard / OneSaber / NoArrows / 90Degree** for Start Me Up
+- Fresh `catalog_startmeup_modes.json` with correct dec-stream CRC (`0xe9e40bd3`) + size (7,905,425)
+- Patched `startmeup_pack_modes.bundle` adds 3 preview sets (OneSaber/NoArrows/90Degree) to StartMeUp BeatmapLevelSO — all 4 now point at correct characteristics
+- In-game mode selector for Start Me Up shows **Standard / OneSaber / NoArrows / 90Degree** (90Degree visible pending Exp 182 boot test)
 
 **Key findings since last summary:**
 1. **Catalog redirect avenue CONFIRMED (Exp 178):** byte-identical `catalog_test.json` + `"aa/catalog.json": "catalog_test.json"` redirect → boot stable, `[OPEN #62] ... -> REDIRECTED` confirmed.
@@ -13,7 +13,9 @@
 
 **Known issue (2026-08-08 → FIXED 2026-08-09):** NoArrows bug ROOT-CAUSED + FIXED (Exp 181): two bugs in `_create_text_asset_object()` — `type_id=0` mapped new TextAssets to MonoScript(115) instead of TextAsset(49), and manual `struct.pack` used null terminators + `len+1` instead of Unity's `write_aligned_string` format (int32 length + data + 4-byte alignment). Fix: use `EndianBinaryWriter.write_aligned_string()` for `m_Name` and `write_int(len) + write(bytes) + align_stream(4)` for `m_Script`; set `type_id` to actual index from `cab.types`. All 381 tests pass; NoArrows verified to have dots (d=8) at all 5 difficulty levels.
 
-## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5311 / plugin v0.8040)
+**New finding (Exp 182, 2026-08-09):** Characteristic pathIDs were mislabeled across the whole codebase. Verified real BeatmapCharacteristicSO PIDs from `sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle` (CAB `cb38b3e2985c65d4cf8a63437da74a89`): Standard=`-7286399427822119286`, OneSaber=`-5623662769225589684`, NoArrows=`-8583864861369561029`, 90Degree=`-5995858427784384822`, 360Degree=`4533580413116749821`. The 90Degree preview slot previously pointed at the 360Degree characteristic (`requires360=1`) → game hid the button. OneSaber/NoArrows swap was cosmetic (each pid drives its own button AND gameplay lookup). All maps fixed, pack bundle rebuilt + deployed.
+
+## Current Approach: MoveNext() Data Source Modification + Song ID Pipeline + Beatmap Mode Mapping (pipeline v0.5312 / plugin v0.8040)
 
 **The old string-content memory injection (v0.66–v0.8024) is DEAD** — 0 strings found across 16MB–17GB.
 
@@ -156,7 +158,8 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **178** | **v0.8040 (plugin) / 0.5310 (pipeline)** | **Catalog-redirect proof (byte-identical copy)** | **🔲 DEPLOYED + VERIFIED ON-DEVICE — awaiting user boot test. `catalog_test.json` (793,186 B, md5 `dc6e9303...`) + `"aa/catalog.json": "catalog_test.json"` redirect in place; confirm `[OPEN #58] ... -> REDIRECTED` + stable boot.** |
 | **179** | **v0.8040 (plugin) / 0.5310 (pipeline)** | **Pack preview-set injection (4 modes)** | **🔲 BUILT + LOCALLY VERIFIED — `startmeup_pack_modes.bundle` (7,905,425 B, dec-stream CRC `0x8e1f8937`) + `catalog_startmeup_modes.json` (only rolling-stones entry changed). CRC root cause SOLVED: catalog `m_Crc` = zlib.crc32 of DECOMPRESSED stream. Deploy gated on Exp 178 boot confirmation.** |
 | **180** | **v0.8040 / v0.5310** | **Exp 179 DEPLOYED + USER TEST — Mode Selector Gap CLOSED** | **✅ MODE SELECTOR GAP CLOSED (2026-08-08). All 4 modes visible (Standard/OneSaber/NoArrows/90Degree). 🔴 ISSUE FOUND: NoArrows mode shows arrows instead of dots — generator/injection bug. OneSaber/90Degree untested.** |
-| **181** | **v0.8040 / v0.5311** | **NoArrows bug ROOT-CAUSED + FIXED** | **✅ FIXED (2026-08-09). Two bugs in `_create_text_asset_object()`: `type_id=0` → MonoScript(115) instead of TextAsset(49); manual `struct.pack` (null term + len+1) vs Unity's `write_aligned_string` (int32 len + data + 4-byte align). Fixed + verified: all 5 NoArrows diffs have dots (d=8). 381 tests pass. Awaiting PS4 deploy (PS4 unreachable this session).** |
+| **181** | **v0.8040 / v0.5311** | **NoArrows bug ROOT-CAUSED + FIXED** | **✅ FIXED (2026-08-09). Two bugs in `_create_text_asset_object()`: `type_id=0` → MonoScript(115) instead of TextAsset(49); manual `struct.pack` (null term + len+1) vs Unity's `write_aligned_string` (int32 len + data + 4-byte align). Fixed + verified: all 5 NoArrows diffs have dots (d=8). 381 tests pass. Deployed; on-device confirmed NoArrows+OneSaber working.** |
+| **182** | **v0.8040 / v0.5312** | **90Degree root cause + pid correction + pack rebuild** | **✅ ROOT-CAUSED (2026-08-09): 90Degree had NEVER been visible — pack bundle's 90Degree preview slot pointed at the 360Degree characteristic (`requires360=1`, hidden by game). Characteristic pids mislabeled repo-wide; corrected all maps to verified values (Standard=`-7286399427822119286`, OneSaber=`-5623662769225589684`, NoArrows=`-8583864861369561029`, 90Degree=`-5995858427784384822`, 360Degree=`4533580413116749821`). Pack bundle rebuilt (7,905,425 B) + catalog regenerated (CRC 3924036563) + deployed. Regression test added. AWAITING BOOT TEST.** |
 
 ## Memory Injection Versions
 
@@ -197,10 +200,11 @@ See [[ps4-file-system-redirects]] for deploy path details.
 ## Next Steps
 
 1. **Exp 178 boot test (COMPLETED):** user boots PS4; pull `bs_log.txt`, confirm `[OPEN #58] ... -> REDIRECTED` and stable boot. Archive log + clear file. ✅ DONE.
-2. **Exp 179 deploy + test (COMPLETED):** ✅ DONE — mode selector gap closed (all 4 modes visible). NoArrows bug found.
-3. **Exp 181 fix deploy (PENDING):** Rebuild `startmeup_v3.bundle` with fixed pipeline (v0.5311) and deploy to PS4; verify NoArrows shows dots, OneSaber/90Degree play correctly. PS4 was unreachable during this session.
-4. **Integrate the pack-patch build script into the production pipeline** (`tools/`) after proven on-device — currently a dev script per rules.
-5. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
+2. **Exp 179 deploy + test (COMPLETED):** ✅ DONE — mode selector gap closed. NoArrows bug found.
+3. **Exp 181 fix deploy (COMPLETED):** ✅ DONE — NoArrows dots + OneSaber confirmed on-device (Aug 9).
+4. **Exp 182 boot test (AWAITING USER):** Pack bundle rebuilt with corrected 90Degree pid + catalog redeployed (Aug 9 16:49). Confirm 90Degree button appears; test source 90Degree Expert + generated 90Degree difficulties.
+5. **Integrate the pack-patch build script into the production pipeline** (`tools/`) after Exp 182 on-device confirmation — currently a dev script per rules.
+6. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
 
 ## Active Knowledge Gaps
 

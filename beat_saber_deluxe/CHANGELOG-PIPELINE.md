@@ -1,5 +1,16 @@
 # Pipeline Changelog
 
+## v0.5312 (2026-08-09)
+### Fixed
+- **Characteristic path IDs corrected repo-wide (90Degree mode selector now enabled):** The BeatmapCharacteristicSO pathIDs were mislabeled in `_CHAR_PATH_IDS` / `CHAR_PATH_IDS` across `tools/full_custom_song_pipeline.py`, `tools/build_patched_pack_bundle.py`, `tools/build_per_song_metadata.py`, `tools/build_replacement_pack*.py`, `tools/inject_pack_bundle.py`, `tools/patch_pack_bundle.py`, and the `development/scripts/build_espresso*` dev scripts. Verified against the real BeatmapCharacteristicSO objects in `sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle` (CAB `cb38b3e2985c65d4cf8a63437da74a89`):
+  - Standard `-7286399427822119286` (unchanged)
+  - OneSaber/OneColor `-5623662769225589684` (was NoArrows)
+  - NoArrows `-8583864861369561029` (was OneSaber)
+  - 90Degree `-5995858427784384822` (was 360Degree's `4533580413116749821`)
+  - 360Degree `4533580413116749821`
+  - **Why it matters:** the 90Degree slot previously pointed at the 360Degree characteristic (`requires360=1`), so the game hid the selector button — 90Degree was never visible. The OneSaber/NoArrows swap was cosmetic (each PID drives its own button AND gameplay lookup) but is now also corrected for clarity.
+- **Pack bundle rebuilt & redeployed:** `startmeup_pack_modes.bundle` now has all 4 preview sets pointing at the correct characteristics (Standard/OneSaber/NoArrows/90Degree); `catalog_startmeup_modes.json` regenerated with the new dec-stream CRC (0xe9e40bd3 → `3924036563`) and size (7,905,425 B). Deployed to PS4, `bs_log.txt` cleared.
+
 ## v0.5311 (2026-08-09)
 ### Changed
 - **Test template shrunk 12 MB → 2.9 KB (no audio):** Added `development/scripts/build_test_template.py` which regenerates `tests/test_data/template_standard.bundle` from any per-song bundle. The template now contains ONLY a Standard-only BeatmapLevel + its 5 beatmap TextAssets + lightshow TextAsset + m_Script target — all audio (AudioClip, audio TextAsset, external `.resource` file) is stripped and beatmap/lightshow payloads are replaced with minimal placeholder JSON. This keeps the repo lean and avoids shipping 12 MB of song audio as test fixture.

@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5311" # in beat_saber_deluxe/VERSION — NoArrows bug fix (type_id + binary format)
+pipeline_version: "0.5312" # in beat_saber_deluxe/VERSION — characteristic pid correction (90Degree selector)
 
 # Platform Constraints
 target_platform: PS4
@@ -86,9 +86,18 @@ mode_generation:
     so we control the Addressables catalog CRC+size expectations. KEY: catalog m_Crc =
     zlib.crc32 of the DECOMPRESSED stream, NOT the compressed file (original file CRC
     0x63520032 vs catalog 0xdc8b314f = dec-stream CRC). Exp 179 built startmeup_pack_modes.bundle
-    (7,905,425 B, dec-stream CRC 0x8e1f8937, blob 440->1028 B with 4 preview sets) +
+    (7,905,425 B, dec-stream CRC 0xe9e40bd3, blob 440->1028 B with 4 preview sets) +
     catalog_startmeup_modes.json (only rolling-stones entry changed). Deployed + confirmed:
-    selector shows Standard/OneSaber/NoArrows/90Degree for Start Me Up.
+    selector shows Standard/OneSaber/NoArrows for Start Me Up; 90Degree FIXED in Exp 182.
+  characteristic_pids: >
+    VERIFIED (Exp 182) from sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+    (CAB cb38b3e2985c65d4cf8a63437da74a89). Historical pid labels were SWAPPED repo-wide:
+    Standard=-7286399427822119286, OneSaber=-5623662769225589684,
+    NoArrows=-8583864861369561029, 90Degree=-5995858427784384822, 360Degree=4533580413116749821.
+    90Degree selector was hidden because its preview slot pointed at the 360Degree
+    characteristic (requires360=1). Each pid drives BOTH the selector button AND gameplay
+    difficulty-set lookup. ALL maps in tools/ + development/scripts corrected; regression
+    test added (test_verified_characteristic_pids). Pack bundle rebuilt + redeployed (Aug 9).
   noarrows_bug: >
     FIXED (Exp 181): NoArrows showed arrows instead of dots. Root cause was in `_create_text_asset_object()` 
     — TWO bugs: (1) `type_id=0` mapped new TextAssets to MonoScript(115) instead of TextAsset(49), 
@@ -98,9 +107,9 @@ mode_generation:
     for m_Name, `write_int(len) + write(bytes) + align_stream(4)` for m_Script, and set `type_id` to the 
     actual index from cab.types. Verified: all 5 NoArrows diffs have dots (d=8).
   next_steps:
-    1. Deploy rebuilt startmeup_v3.bundle (v0.5311 fix) to PS4 AFR
-    2. Boot test: verify NoArrows shows dots, OneSaber/90Degree play correctly
-    3. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
+    1. Boot test Exp 182: confirm 90Degree button appears; test source 90Degree Expert + generated 90Degree difficulties
+    2. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
+    3. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:
@@ -123,7 +132,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "381 tests across 12 files (as of v0.5311); mode generators: 19 tests (including TestModeBeatmapInjection)"
+test_count: "381 tests across 12 files (as of v0.5312); mode generators: 19 tests (including TestModeBeatmapInjection); characteristic pids pinned in test_verified_characteristic_pids"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)

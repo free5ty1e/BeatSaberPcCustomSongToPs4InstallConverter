@@ -79,6 +79,22 @@ class TestCharacteristicPathIDs:
         for mode, pid in _CHAR_PATH_IDS.items():
             assert isinstance(pid, int)
 
+    def test_verified_characteristic_pids(self):
+        """PIDs must match the real BeatmapCharacteristicSO objects (Exp 182, verified
+        from sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle, CAB
+        cb38b3e2985c65d4cf8a63437da74a89). 90Degree points at the 90Degree characteristic
+        (requires360=0) — NOT the 360Degree one, which the game hides from the selector."""
+        verified = {
+            "Standard": -7286399427822119286,
+            "OneSaber": -5623662769225589684,
+            "NoArrows": -8583864861369561029,
+            "90Degree": -5995858427784384822,
+        }
+        for mode, pid in verified.items():
+            assert _CHAR_PATH_IDS[mode] == pid, (
+                f"{mode} pid changed to {_CHAR_PATH_IDS[mode]} (expected {pid})"
+            )
+
 
 # ======================================================================
 # BeatmapLevelSO Blob Building
