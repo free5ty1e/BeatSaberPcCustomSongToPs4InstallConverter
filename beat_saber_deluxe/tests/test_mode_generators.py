@@ -98,7 +98,7 @@ class Test90DegreeGenerator(unittest.TestCase):
         self.assertEqual(gen["version"], "3.2.0")
         self.assertEqual(gen["bpmEvents"][0]["m"], 150.0)
 
-    def test_rotation_events_alternate_and_span_map(self):
+    def test_rotation_events_sweep_arc_and_span_map(self):
         data = {"_version": "2.0.0", "_notes": [
             {"_time": 2.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 0},
             {"_time": 100.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 0},
@@ -106,10 +106,39 @@ class Test90DegreeGenerator(unittest.TestCase):
         gen = _generate_90_degree(data, cycle_beats=8)
         events = gen["rotationEvents"]
         self.assertEqual(events[0]["b"], 2.0)
-        self.assertEqual(events[0]["r"], 90)
-        self.assertEqual(events[1]["r"], -90)
-        # Events span from first note through the end of the map.
+        # Single-lane 15° steps, always late (e=1), all within the 90° arc.
+        self.assertTrue(all(abs(e["r"]) == 15 for e in events))
+        self.assertTrue(all(e["e"] == 1 for e in events))
+        # Cumulative rotation never leaves the ±45° arc (3 lanes each side).
+        cum = 0.0
+        for e in events:
+            cum += e["r"]
+            self.assertLessEqual(cum, 45)
+            self.assertGreaterEqual(cum, -45)
+        # Events span from the first note through the end of the map.
         self.assertGreaterEqual(events[-1]["b"], 100.0)
+
+    def test_rotation_sweep_starts_center_and_bounces_at_extremes(self):
+        data = {"_version": "2.0.0", "_notes": [
+            {"_time": 1.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 0},
+            {"_time": 500.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 0},
+        ]}
+        gen = _generate_90_degree(data, cycle_beats=8)
+        events = gen["rotationEvents"]
+        # Sweep: right to +45, bounce, sweep left through center to -45, bounce...
+        expected_deltas = [15, 15, 15, -15, -15, -15, -15, -15, -15, 15, 15, 15, 15, 15, 15]
+        self.assertEqual([e["r"] for e in events[:len(expected_deltas)]], expected_deltas)
+        # Cumulative positions visited: center -> +45 -> -45 -> +45 ...
+        cum = 0.0
+        positions = [cum]
+        for e in events:
+            cum += e["r"]
+            positions.append(cum)
+        self.assertEqual(positions[0], 0.0)
+        self.assertEqual(positions[3], 45.0)   # first extreme reached
+        self.assertEqual(positions[9], -45.0)  # swept to the other extreme
+        self.assertEqual(max(positions), 45.0)
+        self.assertEqual(min(positions), -45.0)
 
     def test_v3_data_preserved(self):
         data = {"version": "3.2.0", "colorNotes": [
@@ -118,8 +147,16 @@ class Test90DegreeGenerator(unittest.TestCase):
         ]}
         gen = _generate_90_degree(data, cycle_beats=4)
         self.assertEqual(len(gen["colorNotes"]), 2)
-        self.assertEqual(gen["rotationEvents"][0], {"b": 1.0, "e": 0, "r": 90})
-        self.assertEqual(gen["rotationEvents"][1]["r"], -90)
+        self.assertEqual(gen["rotationEvents"][0], {"b": 1.0, "e": 1, "r": 15})
+
+    def test_keeps_existing_rotation_events(self):
+        data = {"version": "3.2.0", "colorNotes": [
+            {"b": 1.0, "x": 0, "y": 0, "c": 1, "d": 1},
+            {"b": 10.0, "x": 1, "y": 1, "c": 0, "d": 2},
+        ], "rotationEvents": [{"b": 0.5, "e": 0, "r": -15}]}
+        gen = _generate_90_degree(data, cycle_beats=8)
+        self.assertEqual(gen["rotationEvents"][0], {"b": 0.5, "e": 0, "r": -15})
+        self.assertEqual(gen["rotationEvents"][1]["b"], 1.0)
 
     def test_input_not_mutated(self):
         data = {"_version": "2.0.0", "_notes": [V2_NOTE]}

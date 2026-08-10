@@ -203,8 +203,47 @@ class TestConvertV2ToV3:
         }
         result = convert_v2_to_v3(v2)
         assert len(result['basicBeatmapEvents']) == 2
-        assert result['basicBeatmapEvents'][0]['t'] == 0
+        assert result['basicBeatmapEvents'][0]['et'] == 0
         assert result['basicBeatmapEvents'][0]['i'] == 1
+        assert result['basicBeatmapEvents'][1]['et'] == 4
+
+    def test_rotation_events_passed_through(self):
+        """V2 spawn-rotation events (types 14/15) become V3 rotationEvents."""
+        v2 = {
+            "_notes": [],
+            "_events": [
+                {"_time": 2.0, "_type": 14, "_value": 3},  # early, 15° CCW (left)
+                {"_time": 9.0, "_type": 12, "_value": 1},   # laser speed — stays basic
+                {"_time": 9.5, "_type": 15, "_value": 4},   # late, 15° CW (right)
+            ]
+        }
+        result = convert_v2_to_v3(v2)
+        assert result['rotationEvents'] == [
+            {"b": 2.0, "e": 0, "r": -15},
+            {"b": 9.5, "e": 1, "r": 15},
+        ]
+        assert [e['et'] for e in result['basicBeatmapEvents']] == [12]
+
+    def test_rotation_value_enumeration(self):
+        """Every V2 rotation value maps to its signed degree delta."""
+        v2 = {
+            "_notes": [],
+            "_events": [
+                {"_time": float(i), "_type": 15, "_value": v}
+                for i, v in enumerate((0, 1, 2, 3, 4, 5, 6, 7))
+            ]
+        }
+        result = convert_v2_to_v3(v2)
+        assert [e['r'] for e in result['rotationEvents']] == \
+            [-60, -45, -30, -15, 15, 30, 45, 60]
+        assert all(e['e'] == 1 for e in result['rotationEvents'])
+        assert result['basicBeatmapEvents'] == []
+
+    def test_no_events_produce_empty_rotation_list(self):
+        v2 = {"_notes": []}
+        result = convert_v2_to_v3(v2)
+        assert result['rotationEvents'] == []
+        assert result['basicBeatmapEvents'] == []
 
     def test_version_field(self):
         v2 = {"_notes": []}

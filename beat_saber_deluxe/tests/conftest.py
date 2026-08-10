@@ -165,8 +165,8 @@ def v3_beatmap(tmp_dir):
         "sliders": [],
         "burstSliders": [],
         "basicBeatmapEvents": [
-            {"b": 0.0, "t": 0, "i": 1},
-            {"b": 1.0, "t": 4, "i": 3},
+            {"b": 0.0, "et": 0, "i": 1},
+            {"b": 1.0, "et": 4, "i": 3},
         ],
         "colorBoostBeatmapEvents": [],
         "bpmEvents": [{"b": 0, "m": 120.0}],

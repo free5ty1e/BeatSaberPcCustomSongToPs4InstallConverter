@@ -143,7 +143,7 @@ class TestV2ToV3Conversion:
         assert len(v3['basicBeatmapEvents']) == 2
         evt = v3['basicBeatmapEvents'][0]
         assert 'b' in evt  # beat time
-        assert 't' in evt  # type
+        assert 'et' in evt  # type
         assert 'i' in evt  # value
 
     def test_is_v2_detection(self, v2_beatmap, v3_beatmap):

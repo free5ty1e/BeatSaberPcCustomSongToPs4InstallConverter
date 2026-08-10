@@ -388,6 +388,15 @@ def is_v2_beatmap(data: dict) -> bool:
     return False
 
 
+# V2 rotation event (types 14/15) _value enumeration -> signed degrees.
+# Negative = counter-clockwise (left), positive = clockwise (right). These are
+# RELATIVE deltas the game accumulates onto the current spawn rotation.
+_V2_ROTATION_VALUE_TO_DEGREES = {
+    0: -60, 1: -45, 2: -30, 3: -15,
+    4: 15, 5: 30, 6: 45, 7: 60,
+}
+
+
 def convert_v2_to_v3(v2_data: dict, default_bpm: float = 120.0) -> dict:
     """
     Convert a V2 beatmap dict to V3.2.0 format.
@@ -436,16 +445,34 @@ def convert_v2_to_v3(v2_data: dict, default_bpm: float = 120.0) -> dict:
             "h": 3 if ot == 0 else 1,
         })
 
-    # -- events (V2 $!$ basicBeatmapEvents) --------------------------------------
+    # -- events: basicBeatmapEvents + rotationEvents ----------------------------
+    # V2 event types 14 (early) / 15 (late) are spawn-rotation events (BSMG wiki,
+    # Extended Mapping). Their _value is an enumeration of RELATIVE rotation that
+    # the game accumulates:
+    #   0=-60, 1=-45, 2=-30, 3=-15, 4=+15, 5=+30, 6=+45, 7=+60 degrees
+    # (negative = counter-clockwise / left, positive = clockwise / right).
+    # Everything else — including laser-speed events 12/13 — stays a basic event.
+    # V3 basicBeatmapEvents use `et` (event type), `i`, `f` (game's
+    # BeatmapSaveDataVersion3.BasicEventData), so `_type` maps to `et`.
     basic_events = []
+    rotation_events = []
     for ev in v2_data.get("_events", []):
-        basic_events.append({
-            "b": float(ev["_time"]),
-            "t": int(ev.get("_type", 0)),
-            "i": int(ev.get("_value", 0)),
-        })
+        etype = int(ev.get("_type", 0))
+        b = float(ev["_time"])
+        if etype in (14, 15):
+            rotation_events.append({
+                "b": b,
+                "e": 0 if etype == 14 else 1,
+                "r": _V2_ROTATION_VALUE_TO_DEGREES.get(int(ev.get("_value", 0)), 0),
+            })
+        else:
+            basic_events.append({
+                "b": b,
+                "et": etype,
+                "i": int(ev.get("_value", 0)),
+            })
 
-    event_types = sorted(set(e["t"] for e in basic_events))
+    event_types = sorted(set(e["et"] for e in basic_events))
 
     # -- build V3 structure ----------------------------------------------------
     v3 = {
@@ -458,7 +485,7 @@ def convert_v2_to_v3(v2_data: dict, default_bpm: float = 120.0) -> dict:
         "basicBeatmapEvents": basic_events,
         "colorBoostBeatmapEvents": [],
         "bpmEvents": [{"b": 0, "m": default_bpm}],
-        "rotationEvents": [],
+        "rotationEvents": rotation_events,
         "basicEventTypesWithKeywords": {
             "d": [{"e": t, "n": f"EventType{t}"} for t in event_types]
         },
@@ -944,8 +971,9 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
 
 _ONE_SABER_COLOR = 0          # OneSaber uses a single saber color (left/0)
 _ONE_SABER_MIN_GAP = 0.25     # beats — closer same-cell arrowed notes are un-hittable
-_ROTATION_CYCLE_BEATS = 8.0   # 90Degree — rotate every N beats (2 measures at 4/4)
-_ROTATION_DEGREES = 90        # 90Degree — rotation magnitude per event
+_ROTATION_CYCLE_BEATS = 8.0   # 90Degree — one lane-rotation event every N beats (2 measures at 4/4)
+_ROTATION_STEP_DEGREES = 15   # 90Degree — single-lane step per rotation event (15° = 1 lane)
+_ROTATION_MAX_DEGREES = 45    # 90Degree — max swing from center (90° arc = ±45° = 3 lanes/side)
 
 
 def _get_color_notes(beatmap_data: dict) -> list | None:
@@ -1045,14 +1073,24 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
 
 
 def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE_BEATS,
-                        bpm: float = 120.0, rotation_deg: float = _ROTATION_DEGREES) -> dict:
+                        bpm: float = 120.0, step_deg: float = _ROTATION_STEP_DEGREES,
+                        max_deg: float = _ROTATION_MAX_DEGREES) -> dict:
     """Generate a 90Degree variant of a Standard beatmap.
 
-    90Degree gameplay works by rotating the playfield left/right via
-    ``_rotationEvents`` (a V3-only construct). This generator:
+    90Degree gameplay confines the playfield to a 90° arc centered on the
+    player's forward lane (BSMG wiki, Extended Mapping; verified against the
+    official/community 90° maps): the valid lanes are 0° (center), ±15°,
+    ±30°, ±45° — three lanes left and three lanes right of center.
+
+    This generator:
       - Converts V2 source data to V3 (V2 has no rotation events).
-      - Adds rotation events alternating +90/-90 every ``cycle_beats`` beats
-        starting at the first note, swinging the lane back and forth.
+      - Emits one ``rotationEvents`` entry every ``cycle_beats`` beats, each
+        moving the lane a SINGLE step (15°) in the current sweep direction.
+        The sweep starts at the center lane, reverses direction only after
+        reaching the ±``max_deg`` extremes, and never skips a lane or jumps
+        over the center in one event.
+      - Rotation values are RELATIVE deltas (negative = left/CCW, positive =
+        right/CW) that the game accumulates onto the current spawn rotation.
 
     The input dict is not modified (a deep copy is returned).
     """
@@ -1074,11 +1112,19 @@ def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE
 
     existing = list(out.get("rotationEvents", []) or [])
     events = []
-    rot = rotation_deg
+    pos = 0.0          # cumulative rotation — starts at the center lane
+    direction = 1.0    # sweep direction: +1 = right (CW), -1 = left (CCW)
     t = first_beat
     while t < last_beat + cycle_beats:
-        events.append({"b": round(t, 4), "e": 0, "r": rot})
-        rot = -rot
+        next_pos = pos + direction * step_deg
+        if next_pos > max_deg:
+            direction = -1.0
+            next_pos = pos - step_deg
+        elif next_pos < -max_deg:
+            direction = 1.0
+            next_pos = pos + step_deg
+        events.append({"b": round(t, 4), "e": 1, "r": next_pos - pos})
+        pos = next_pos
         t += cycle_beats
     out["rotationEvents"] = existing + events
     return out
@@ -2590,8 +2636,9 @@ Examples:
                         help='OneSaber generator: minimum beat gap between same-cell '
                              'arrowed notes (default: 0.25)')
     parser.add_argument('--rotation-cycle-beats', type=float, default=_ROTATION_CYCLE_BEATS,
-                        help='90Degree generator: rotation cycle length in beats '
-                             '(default: 8.0, i.e. 2 measures at 4/4)')
+                        help='90Degree generator: beats between single-lane rotation events '
+                             '(default: 8.0, i.e. 2 measures at 4/4; each event moves one '
+                             '15° lane within the ±45° arc)')
     parser.add_argument('--fallback-mode-map', action='append', default=None,
                         help='Override fallback chain for a mode slot. Format: SRC=DEST '
                              '(e.g. "90Degree=Standard" or "NoArrows=Standard"). '

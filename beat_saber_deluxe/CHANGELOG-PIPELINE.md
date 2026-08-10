@@ -1,5 +1,16 @@
 # Pipeline Changelog
 
+## v0.5313 (2026-08-10)
+### Fixed
+- **90° rotation events now survive V2→V3 conversion (source song's 90Degree Expert keeps its lane changes):** `convert_v2_to_v3()` no longer hardcodes `"rotationEvents": []`. V2 spawn-rotation events (types 14/early, 15/late) are converted to V3 `rotationEvents` (`e` 0/1) with the authoritative BSMG value table → signed degrees: `0=-60, 1=-45, 2=-30, 3=-15, 4=+15, 5=+30, 6=+45, 7=+60`. Values are relative deltas the game accumulates. Laser-speed events (types 12/13) correctly remain basic events.
+- **V3 basic event type field corrected `t` → `et`:** The game's `BeatmapSaveDataVersion3.BasicEventData` serializes the event type as `et` (confirmed from the PS4 il2cpp dump). The converter previously wrote `t`, so every lighting event deserialized as type 0 (BackLasers). Lighting now uses its real event types.
+- **`_generate_90_degree()` rewritten with correct 90° gameplay semantics** (previously swung the lane ±90° every cycle — perpendicular to the player and disorienting):
+  - 90° mode confines the playfield to a 90° arc centered on the player's forward lane: positions 0° (center), ±15°, ±30°, ±45° (3 lanes left + 3 right).
+  - One `rotationEvents` entry per `cycle_beats` (default 8.0), each moving a single 15° lane in the current sweep direction; the sweep starts at the center lane and reverses only after reaching a ±45° extreme — it never skips lanes or jumps the center.
+  - Uses `e: 1` (late rotation) per BSMG best practice (chevron guides the player after the block hit).
+  - Constants renamed: `_ROTATION_DEGREES` → `_ROTATION_STEP_DEGREES` (15) + `_ROTATION_MAX_DEGREES` (45).
+- **Spec verified against two ground truths:** (1) BSMG wiki Extended Mapping / Map Format pages; (2) the community 90° map `Drop Pop Candy 90DegreeExpert.dat`, whose 340 rotation events (values 3/4 = ±15°, a few 2/5 = ±30°) accumulate to exactly [-45°, +45°] — confirming relative-delta semantics and the 90°-mode arc limit. The user's observed behavior (old generator alternating +90/-90 produced "center ↔ perpendicular" switching) independently confirms V3 `r` accumulates.
+
 ## v0.5312 (2026-08-09)
 ### Fixed
 - **Characteristic path IDs corrected repo-wide (90Degree mode selector now enabled):** The BeatmapCharacteristicSO pathIDs were mislabeled in `_CHAR_PATH_IDS` / `CHAR_PATH_IDS` across `tools/full_custom_song_pipeline.py`, `tools/build_patched_pack_bundle.py`, `tools/build_per_song_metadata.py`, `tools/build_replacement_pack*.py`, `tools/inject_pack_bundle.py`, `tools/patch_pack_bundle.py`, and the `development/scripts/build_espresso*` dev scripts. Verified against the real BeatmapCharacteristicSO objects in `sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle` (CAB `cb38b3e2985c65d4cf8a63437da74a89`):
