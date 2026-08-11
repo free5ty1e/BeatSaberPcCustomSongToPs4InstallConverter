@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5312" # in beat_saber_deluxe/VERSION — characteristic pid correction (90Degree selector)
+pipeline_version: "0.5315" # in beat_saber_deluxe/VERSION — safe defaults + idempotency fix (Exp 183)
 
 # Platform Constraints
 target_platform: PS4
@@ -20,11 +20,15 @@ toolchain: OpenOrbis PS4 Toolchain (devcontainer pre-installed)
 
 # Audio Format (IMPORTANT — non-negotiable)
 required_audio_format: PCM16 FSB5 (codec=2)
-required_flags: "--pcm16 --no-pad --convert-to-v3"
+required_flags: "--pcm16 --no-pad --convert-to-v3"   # NOW THE DEFAULTS (v0.5314+); kept as no-op compat flags
 why_pcm16: >
   HEVAG is Sony proprietary (blocked), Vorbis has FMOD/libvorbis codebook mismatch (blocked).
   PCM16 is lossless and works. --no-pad because PCM16 output is often larger than original
   resource. --convert-to-v3 because Beat Saber PS4 requires V3.2.0 beatmaps.
+  v0.5314 BAKED THESE IN as defaults: a plain `--song-dir X --target Y` build now produces
+  full-length, lossless, all-modes bundles. Oppose flags if ever needed:
+  --hevag / --vorbis (codec), --pad-fsb5 (DANGER: truncates to 12MB → partial songs),
+  --no-convert-to-v3 (leave V2), --disable-beatmap-mode-mapping (Standard-only).
 
 # Key Architecture
 pipeline_script: beat_saber_deluxe/tools/full_custom_song_pipeline.py
@@ -63,20 +67,36 @@ plugin_features:
     v0.8040 ignores enable_beatmap_mode_mapping entirely (no scan, no freeze, no crash).
   - Features gated via features.json at AFR path
 feature_flags:
-  enable_custom_song_replacements: true  # gates bundle redirects
-  enable_song_metadata_modification: true # gates MoveNext() hook
-  enable_beatmap_mode_mapping: true       # pipeline-side (v0.5307+); generates missing mode beatmaps by default (v0.5310, Step 5a); ignored by v0.8040 plugin
+  enable_custom_song_replacements: true  # gates bundle redirects (runtime, v0.8040 reads from features.json)
+  enable_song_metadata_modification: true # gates MoveNext() hook (runtime, v0.8040 reads from features.json)
+  # NOTE (v0.5314): enable_beatmap_mode_mapping REMOVED from features.json — it was never a runtime
+  # flag; mode mapping is a BUILD-TIME pipeline feature baked into the bundle. features.json now
+  # holds exactly the 2 runtime flags the plugin reads. Deployable standalone via `--features-only`.
 
-# Mode Generation (v0.5310)
+# Safe Defaults (v0.5314+)
+safe_defaults:
+  audio_codec: pcm16            # oppose: --hevag / --vorbis
+  pad_to_size: 0                # oppose: --pad-fsb5 (DANGER, truncates)
+  mode_mapping: true            # oppose: --disable-beatmap-mode-mapping (--skip-mode-generation keeps mapping, skips generation)
+  convert_to_v3: true           # oppose: --no-convert-to-v3
+  features_only: >
+    Standalone mode: `--features-only --set-feature key=value` applies + deploys features.json
+    then exits — no song/plugin/redirect processing. Requires --set-feature (errors otherwise).
+  resolution_helpers: resolve_audio_codec, resolve_pad_to_size, resolve_mode_mapping, resolve_convert_to_v3
+
+# Mode Generation (v0.5310, default ON since v0.5314)
 mode_generation:
   default: >
-    When --enable-beatmap-mode-mapping is passed, pipeline AUTO-GENERATES missing
+    Mode mapping is DEFAULT ON (v0.5314+). Pipeline AUTO-GENERATES missing
     <Diff><Mode>.dat files (OneSaber/NoArrows/90Degree) from the Standard beatmap
     in Step 5a, BEFORE beatmap replacement. Songs' own mode files are never overwritten.
+    Idempotent (v0.5315): re-running on a source dir with pre-existing mode files still
+    injects them as TextAssets (no Standard-clone fallback).
   flags:
     --skip-mode-generation: opt out of generation (mapping still applies)
     --one-saber-min-gap: "0.25"  # min beats between same-cell arrowed notes (OneSaber)
     --rotation-cycle-beats: "8.0" # beats per 90-degree rotation flip (90Degree)
+    --disable-beatmap-mode-mapping: Standard-only bundle (opposes the default)
   known_gap: >
     Mode selector in-game still shows only Standard because it reads pack-level
     BeatmapLevelSO._previewDifficultyBeatmapSets, which the pipeline cannot inject yet
@@ -107,9 +127,10 @@ mode_generation:
     for m_Name, `write_int(len) + write(bytes) + align_stream(4)` for m_Script, and set `type_id` to the 
     actual index from cab.types. Verified: all 5 NoArrows diffs have dots (d=8).
   next_steps:
-    1. Boot test Exp 182: confirm 90Degree button appears; test source 90Degree Expert + generated 90Degree difficulties
-    2. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
-    3. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
+    1. Exp 183 deploy (BLOCKED - FTP down): full-audio startmeup_v3.bundle (39,697,727 B) + cleaned features.json (2 runtime flags) to PS4 AFR; clear bs_log.txt
+    2. Boot test: full 224.31s audio, 4 mode selectors, source 90Degree Expert + generated 90Degree difficulties, lighting events (et)
+    3. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
+    4. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
 
 # Camellia Pack Replacement (Most Recent Work — v0.5305)
 camellia_slots:
@@ -120,19 +141,19 @@ camellia_slots:
   LightItUp: { beatSaverId: "7e", replacement: "Batshit", artist: "Sofi Tukker" }
   WhatTheCat: { beatSaverId: "7f", replacement: "G.O.M.D", artist: "Sickick" }
 
-# Standard Pipeline Command (BeatSaver download + deploy)
+# Standard Pipeline Command (BeatSaver download + deploy) — NO flags needed since v0.5314
 example_command: |
   python3 tools/full_custom_song_pipeline.py \
       --download-beat-saver-song <MAP_ID> \
       --target <slot_name> \
       --song-name "Song Name" \
       --artist "Artist Name" \
-      --pcm16 --no-pad --convert-to-v3 \
       --deploy --generate-config --deploy-config
+  # (--pcm16 --no-pad --convert-to-v3 --enable-beatmap-mode-mapping are now DEFAULTS)
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "381 tests across 12 files (as of v0.5312); mode generators: 19 tests (including TestModeBeatmapInjection); characteristic pids pinned in test_verified_characteristic_pids"
+test_count: "405 tests (as of v0.5315); +17 default-resolution tests (v0.5314) + 1 idempotency regression (v0.5315)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)

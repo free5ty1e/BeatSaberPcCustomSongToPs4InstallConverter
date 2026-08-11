@@ -115,6 +115,41 @@ ORIGINAL_RESOURCE_SIZE = 12305632   # size of original startmeup .resource (12MB
 SAMPLE_RATE = 44100
 CHANNELS = 2
 
+# Default audio + beatmap behaviors (v0.5314+):
+#   - PCM16 FSB5 (lossless) is the DEFAULT codec. Oppose with --hevag / --vorbis.
+#   - NO padding (full song audio) is the DEFAULT. Oppose with --pad-fsb5.
+#   - Beatmap mode mapping + generation is ON by DEFAULT. Oppose with
+#     --disable-beatmap-mode-mapping / --skip-mode-generation.
+#   - V2 -> V3.2.0 conversion is ON by DEFAULT. Oppose with --no-convert-to-v3.
+DEFAULT_AUDIO_CODEC = 'pcm16'
+DEFAULT_PAD_TO_SIZE = 0
+DEFAULT_MODE_MAPPING = True
+DEFAULT_CONVERT_TO_V3 = True
+
+
+def resolve_audio_codec(hevag: bool = False, vorbis: bool = False) -> str:
+    """Resolve the FSB5 audio codec. Default: PCM16 (lossless)."""
+    if hevag:
+        return 'hevag'
+    if vorbis:
+        return 'vorbis'
+    return DEFAULT_AUDIO_CODEC
+
+
+def resolve_pad_to_size(pad_fsb5: bool = False) -> int:
+    """Resolve FSB5 pad target. Default: no padding (full song audio)."""
+    return ORIGINAL_RESOURCE_SIZE if pad_fsb5 else DEFAULT_PAD_TO_SIZE
+
+
+def resolve_mode_mapping(disable_beatmap_mode_mapping: bool = False) -> bool:
+    """Resolve beatmap mode mapping default. Default: ON."""
+    return DEFAULT_MODE_MAPPING and not disable_beatmap_mode_mapping
+
+
+def resolve_convert_to_v3(no_convert_to_v3: bool = False) -> bool:
+    """Resolve V2->V3 conversion default. Default: ON (V3 beatmaps untouched)."""
+    return DEFAULT_CONVERT_TO_V3 and not no_convert_to_v3
+
 # Beatmap difficulty names expected in the template
 DIFFICULTIES = ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']
 
@@ -1412,10 +1447,11 @@ def apply_mode_mapping(cab, enabled_modes: list[str], song_dir: str = None,
     """
     Apply mode mapping to a CAB bundle by enabling the given characteristic modes.
 
-    When ``song_dir`` and ``generated_files`` are provided, generated mode
-    beatmaps (``.dat`` files written by ``generate_missing_mode_beatmaps``) are
-    injected as new TextAsset objects in the CAB and linked to the corresponding
-    difficulty beatmap entries. Generated V2 beatmaps are converted to V3 before
+    When ``song_dir`` is provided, mode-specific beatmap (``.dat``) files on
+    disk — both newly-generated (from ``generated_files``) and pre-existing
+    (from a previous pipeline run or hand-authored) — are injected as new
+    TextAsset objects in the CAB and linked to the corresponding difficulty
+    beatmap entries. Generated V2 beatmaps are converted to V3 before
     injection. Otherwise falls back to cloning Standard references (legacy
     behavior — playable but all modes use Standard data).
 
@@ -1430,7 +1466,7 @@ def apply_mode_mapping(cab, enabled_modes: list[str], song_dir: str = None,
         Number of modes added
     """
     modes_to_add = [m for m in enabled_modes if m != "Standard"]
-    if song_dir and generated_files:
+    if song_dir:
         return add_mode_characteristics(cab, modes_to_add, song_dir=song_dir,
                                          generated_files=generated_files, bpm=bpm,
                                          target_name=target_name)
@@ -2175,10 +2211,13 @@ def manage_redirect_config(
 # ============================================================================
 
 FEATURES_FILENAME = "features.json"
+# Runtime feature flags read by the plugin at startup from features.json on PS4.
+# NOTE (v0.5314): enable_beatmap_mode_mapping was REMOVED — beatmap mode mapping is a
+# build-time pipeline feature (default ON, oppose with --disable-beatmap-mode-mapping),
+# baked into the bundle, not a runtime plugin toggle.
 DEFAULT_FEATURES = {
     "enable_custom_song_replacements": True,
     "enable_song_metadata_modification": True,
-    "enable_beatmap_mode_mapping": True,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -2609,8 +2648,14 @@ Examples:
                         help='Deploy to PS4 via FTP after building')
     parser.add_argument('--target-ip', default=None,
                         help='PS4 IP address for FTP deployment (overrides config)')
+    parser.add_argument('--pad-fsb5', action='store_true',
+                        help='Pad FSB5 to the original 12MB resource size. '
+                             'DANGER: with PCM16 this TRUNCATES songs longer than the '
+                             'slot (partial song). Default is NO padding (full audio). '
+                             'Opposes the no-pad default.')
     parser.add_argument('--no-pad', action='store_true',
-                        help='Skip padding FSB5 to 12MB')
+                        help='[default] Do not pad FSB5 to 12MB. This is now the default; '
+                             'flag kept for backward compatibility. See --pad-fsb5.')
     parser.add_argument('--preserve-metadata', action='store_true',
                         help='Do NOT update AudioClip or audio.gz metadata (uses original values)')
     parser.add_argument('--ignore-non-standard-beatmaps', action='store_true',
@@ -2621,17 +2666,21 @@ Examples:
                              '(e.g. "OneSaber,90Degree"). Makes the song playable in those '
                              'modes by cloning the Standard beatmaps. 360Degree is not supported '
                              'on PS4 and is ignored.')
+    parser.add_argument('--disable-beatmap-mode-mapping', action='store_true',
+                        help='Disable the beatmap mode mapping default (Standard-only bundle). '
+                             'Mode mapping is now ON by default: auto-detect custom song beatmap '
+                             'files and map them to game characteristic slots (OneSaber, NoArrows, '
+                             '90Degree) using a fallback chain, and generate missing mode beatmaps '
+                             'from Standard (see --skip-mode-generation).')
     parser.add_argument('--enable-beatmap-mode-mapping', action='store_true',
-                        help='Auto-detect custom song beatmap files and map them to game '
+                        help='[default] Auto-detect custom song beatmap files and map them to game '
                              'characteristic slots (OneSaber, NoArrows, 90Degree). '
-                             'Uses fallback chain for slots without detected files. '
-                             'Overrides --enable-modes for detected modes. Missing '
-                             'mode-specific beatmaps are generated from Standard by '
-                             'default (see --skip-mode-generation).')
+                             'This is now the default; flag kept for backward compatibility. '
+                             'Use --disable-beatmap-mode-mapping to opt out.')
     parser.add_argument('--skip-mode-generation', action='store_true',
-                        help='Do not generate missing mode-specific beatmaps when '
-                             '--enable-beatmap-mode-mapping is on (only enable the mode '
-                             'sets in the bundle; modes keep Standard data)')
+                        help='Do not generate missing mode-specific beatmaps (only enable the '
+                             'mode sets in the bundle; modes keep Standard data). Mode mapping '
+                             'itself stays on. Opposes the generation default.')
     parser.add_argument('--one-saber-min-gap', type=float, default=_ONE_SABER_MIN_GAP,
                         help='OneSaber generator: minimum beat gap between same-cell '
                              'arrowed notes (default: 0.25)')
@@ -2642,20 +2691,29 @@ Examples:
     parser.add_argument('--fallback-mode-map', action='append', default=None,
                         help='Override fallback chain for a mode slot. Format: SRC=DEST '
                              '(e.g. "90Degree=Standard" or "NoArrows=Standard"). '
-                             'Can be used multiple times. Only meaningful with '
-                             '--enable-beatmap-mode-mapping.')
+                             'Can be used multiple times.')
     parser.add_argument('--vorbis', action='store_true',
-                        help='Use Vorbis format (mode=15) instead of HEVAG for the FSB5 audio')
+                        help='Use Vorbis format (mode=15) for the FSB5 audio instead of PCM16')
+    parser.add_argument('--hevag', action='store_true',
+                        help='Use HEVAG format for the FSB5 audio instead of PCM16 '
+                             '(legacy; Sony proprietary)')
     parser.add_argument('--pcm16', action='store_true',
-                        help='Use PCM16 format (codec=2) instead of HEVAG for the FSB5 audio (lossless)')
+                        help='[default] Use PCM16 format (codec=2) for the FSB5 audio (lossless). '
+                             'This is now the default; flag kept for backward compatibility. '
+                             'Use --hevag or --vorbis to opt out.')
     parser.add_argument('--deploy-plugin', action='store_true',
                         help='Build and deploy the GoldHEN plugin to PS4')
     parser.add_argument('--debug-logging', action='store_true',
                         help='Build plugin with verbose logging (VERBOSE_LOG define). '
                              'Only meaningful with --deploy-plugin.')
+    parser.add_argument('--no-convert-to-v3', action='store_true',
+                        help='Disable V2->V3.2.0 beatmap conversion. Conversion is now ON by '
+                             'default (only converts V2 beatmaps, V3 are untouched). '
+                             'Opposes the convert-to-v3 default.')
     parser.add_argument('--convert-to-v3', action='store_true',
-                        help='Auto-convert V2 beatmaps (_notes/_time) to V3.2.0 format (colorNotes/b). '
-                             'Use if custom songs use V2 format.')
+                        help='[default] Auto-convert V2 beatmaps (_notes/_time) to V3.2.0 format '
+                             '(colorNotes/b). This is now the default; flag kept for backward '
+                             'compatibility. Use --no-convert-to-v3 to opt out.')
 
     # Plugin toggle flags
     parser.add_argument('--enable-plugin', action='store_true',
@@ -2695,6 +2753,11 @@ Examples:
                         help='Set a feature flag (format: feature_name=true/false). '
                              'Can be used multiple times. Flags are written to features.json '
                              'on PS4 at /data/GoldHEN/AFR/CUSA12878/features.json.')
+    parser.add_argument('--features-only', action='store_true',
+                        help='Apply feature flag changes (--set-feature) and deploy features.json '
+                             'to PS4, then exit. No song processing, no plugin deploy. '
+                             'Useful to toggle a runtime feature flag on the PS4 without '
+                             'reprocessing a song or rebuilding the plugin.')
 
     args = parser.parse_args()
 
@@ -2703,6 +2766,15 @@ Examples:
     cfg_ps4 = config.get('ps4', {})
     cfg_title = config.get('title', {})
     cfg_paths = config.get('paths', {})
+
+    # Features-only mode: change feature flags and exit (no song, no plugin, no redirects)
+    if args.features_only:
+        if not args.set_feature:
+            log.error("--features-only requires at least one --set-feature key=value")
+            sys.exit(1)
+        apply_feature_flags(args.set_feature, {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths})
+        log.info("Feature flags applied and deployed (features-only mode)")
+        sys.exit(0)
 
     # Plugin-only mode: deploy plugin and exit
     if args.deploy_plugin and not args.song_dir:
@@ -2826,34 +2898,37 @@ Examples:
             audio_path = lap_audio(audio_path, lap_info)
             info = sf.info(audio_path)
 
-        if args.vorbis:
+        codec = resolve_audio_codec(hevag=args.hevag, vorbis=args.vorbis)
+        # Default = no padding (full song audio). --pad-fsb5 restores 12MB truncation.
+        pad_to = resolve_pad_to_size(pad_fsb5=args.pad_fsb5)
+
+        if codec == 'vorbis':
             log.info("Using VORBIS format (mode=15) for FSB5")
             actual_sample_rate = min(info.samplerate, 44100)
             fsb5_bytes = build_vorbis_fsb5(audio_path,
                                             clip_seconds=30,
-                                            pad_to_size=ORIGINAL_RESOURCE_SIZE)
+                                            pad_to_size=pad_to)
             # Get PCM frame count from FSB5 sample descriptor
             sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
             total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
             duration = total_frames / float(actual_sample_rate) if actual_sample_rate > 0 else 0
             log.info(f"  Vorbis FSB5: {len(fsb5_bytes)} bytes, {duration:.1f}s")
-        elif args.pcm16:
+        elif codec == 'hevag':
+            log.info("Using HEVAG format for FSB5 (legacy)")
+            actual_sample_rate = info.samplerate
+            fsb5_bytes = audio_to_fsb5(audio_path, pad_to_size=pad_to)
+            # Get data_size from FSB5 header (before padding)
+            ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
+            duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
+        else:  # 'pcm16' (default)
             log.info("Using PCM16 format (codec=2) for FSB5 (lossless)")
             actual_sample_rate = min(info.samplerate, 44100)
-            pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
             fsb5_bytes = build_pcm16_fsb5(audio_path, pad_to_size=pad_to)
             # Get frame count from FSB5 sample descriptor
             sd_raw = struct.unpack_from('<Q', fsb5_bytes, 60)[0]
             total_frames = (sd_raw >> 34) & ((1 << 30) - 1)
             duration = total_frames / float(actual_sample_rate) if actual_sample_rate > 0 else 0
             log.info(f"  PCM16 FSB5: {len(fsb5_bytes)} bytes, {duration:.1f}s")
-        else:
-            actual_sample_rate = info.samplerate
-            pad_to = 0 if args.no_pad else ORIGINAL_RESOURCE_SIZE
-            fsb5_bytes = audio_to_fsb5(audio_path, pad_to_size=pad_to)
-            # Get data_size from FSB5 header (before padding)
-            ds = struct.unpack_from('<I', fsb5_bytes[16:], 4)[0]
-            duration = (ds / (16 * 2)) * 28 / float(actual_sample_rate)
 
     # -----------------------------------------------------------------------
     # Step 1: Load template bundle
@@ -2896,8 +2971,8 @@ Examples:
     mode_map_detected = {}
     mode_map_enabled_modes = ["Standard"]
     generated = []
-    if args.enable_beatmap_mode_mapping:
-        log.info("  Beatmap mode mapping enabled — auto-detecting modes...")
+    if resolve_mode_mapping(disable_beatmap_mode_mapping=args.disable_beatmap_mode_mapping):
+        log.info("  Beatmap mode mapping enabled (default) — auto-detecting modes...")
         mode_map_detected = detect_song_modes(args.song_dir)
         log.info(f"  Detected modes: {mode_map_detected}")
         mode_map_enabled_modes = build_mode_mapping(mode_map_detected, args.fallback_mode_map)
@@ -2922,7 +2997,7 @@ Examples:
     # -----------------------------------------------------------------------
     replaced = replace_beatmaps(cab, args.song_dir,
                                   ignore_non_standard=args.ignore_non_standard_beatmaps,
-                                  auto_convert=args.convert_to_v3)
+                                  auto_convert=resolve_convert_to_v3(args.no_convert_to_v3))
     log.info(f"Beatmaps replaced: {replaced}/5")
 
     # Count notes from Standard beatmaps for metadata

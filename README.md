@@ -321,7 +321,7 @@ The plugin is reloaded by GoldHEN when the game executable is launched. A full P
 |---------|-------|-----|
 | No "BS Deluxe" in log | Plugin not deployed | Run `deploy_all.sh` |
 | Old version shown | Plugin cache | Restart Beat Saber or reboot PS4 |
-| CE-34878-0 crash | Bundle CRC/size mismatch | Run pipeline with `--no-pad` or `--preserve-metadata` |
+| CE-34878-0 crash | Bundle CRC/size mismatch | Use default build (PCM16 + no-pad, both default since v0.5314) or `--preserve-metadata` |
 | "redirect" shows in log but song doesn't play | Bundle format issue | Verify bundle deployed correctly |
 
 ---
@@ -336,9 +336,6 @@ cd /workspace/beat_saber_deluxe
 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song <MAP_ID> \
     --target startmeup \
-    --pcm16 \
-    --no-pad \
-    --convert-to-v3 \
     --deploy \
     --generate-config \
     --deploy-config
@@ -347,12 +344,11 @@ python3 tools/full_custom_song_pipeline.py \
 **Parameters explained:**
 - `<MAP_ID>` — the BeatSaver map key (e.g. `1d6c7c2`). Find it on [BeatSaver.com](https://beatsaver.com) — it's the short hash in the URL (e.g. `beatsaver.com/maps/1d6c7c2`)
 - `--target startmeup` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
-- `--pcm16` — use PCM16 audio encoding instead of Vorbis (better quality, more compatible)
-- `--no-pad` — skip audio padding (faster, smaller bundles)
-- `--convert-to-v3` — convert beatmaps from V2 to V3 format (required for Beat Saber on PS4)
 - `--deploy` — upload the resulting bundle to PS4 via FTP
 - `--generate-config` — create/update the redirects config file
 - `--deploy-config` — upload the config to PS4
+
+> **v0.5314+ safe defaults (no flags needed):** PCM16 lossless audio + full-length (no padding truncation) + beatmap mode mapping (OneSaber/NoArrows/90Degree auto-generated to fill gaps) + V2→V3 conversion are all **default ON**. The old explicit flags (`--pcm16`, `--no-pad`, `--convert-to-v3`, `--enable-beatmap-mode-mapping`) are still accepted as no-op compat flags. To opt out: `--hevag`/`--vorbis` (codec), `--pad-fsb5` (**DANGER** — truncates audio to 12MB, produces partial songs), `--disable-beatmap-mode-mapping` (Standard only), `--no-convert-to-v3` (leave V2).
 
 **Example — download "Espresso" by Sabrina Carpenter and replace Start Me Up:**
 
@@ -360,7 +356,6 @@ python3 tools/full_custom_song_pipeline.py \
 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song 1d6c7c2 \
     --target startmeup \
-    --pcm16 --no-pad --convert-to-v3 \
     --deploy --generate-config --deploy-config
 ```
 
@@ -381,16 +376,17 @@ python3 tools/full_custom_song_pipeline.py \
 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song <MAP_ID> \
     --target startmeup \
-    --pcm16 --no-pad --convert-to-v3 --deploy
+    --deploy
 ```
 
 The pipeline automatically:
 1. Downloads the song ZIP from BeatSaver API
 2. Extracts the audio (WAV/OGG) and beatmap `.dat` files
-3. Converts audio to FSB5 format (PS4-compatible)
-4. Converts beatmaps from V2 to V3 format
-5. Packages everything into an AssetBundle
-6. Deploys to PS4 via FTP
+3. Converts audio to FSB5 format (PS4-compatible, PCM16 lossless by default)
+4. Converts beatmaps from V2 to V3 format (default ON)
+5. Auto-detects beatmap modes and generates missing OneSaber/NoArrows/90Degree variants (default ON)
+6. Packages everything into an AssetBundle
+7. Deploys to PS4 via FTP
 
 ### 6.2 Use a local song directory
 
@@ -400,7 +396,7 @@ If you already have a custom song folder with audio + beatmap files:
 python3 tools/full_custom_song_pipeline.py \
     --song-dir /path/to/song/folder \
     --target startmeup \
-    --pcm16 --no-pad --convert-to-v3 --deploy
+    --deploy
 ```
 
 The song folder should contain:
@@ -424,13 +420,21 @@ The pipeline (`tools/full_custom_song_pipeline.py`) performs these steps:
 
 | Flag | Description |
 |------|-------------|
-| `--vorbis` | Use Vorbis audio encoding instead of PCM16 (smaller files, may be slower) |
-| `--pcm16` | Use PCM16 audio encoding (recommended, better compatibility) |
-| `--no-pad` | Skip 12MB audio padding (reduces bundle size) |
+| `--vorbis` | Use Vorbis audio encoding instead of PCM16 (smaller files, may be slower) — opposes the PCM16 default |
+| `--hevag` | Use HEVAG audio encoding (Sony proprietary, usually blocked) — opposes the PCM16 default |
+| `--pcm16` | Use PCM16 audio encoding (**default** — lossless, best compatibility; kept as compat no-op) |
+| `--no-pad` | Skip 12MB audio padding (**default** — keeps full-length audio; kept as compat no-op) |
+| `--pad-fsb5` | **Restore** the old 12MB truncating padding (**DANGER**: produces partial/truncated songs) |
 | `--preserve-metadata` | Keep original song metadata (audio length, etc.) |
-| `--convert-to-v3` | Convert V2 beatmaps to V3 format (required for PS4) |
-| `--add-mode-characteristics` | Add gameplay mode characteristics (OneSaber, 90Degree, etc.) |
+| `--convert-to-v3` | Convert V2 beatmaps to V3 format (**default** — required for PS4; kept as compat no-op) |
+| `--no-convert-to-v3` | Leave V2 beatmaps unconverted (opposes the default) |
+| `--disable-beatmap-mode-mapping` | Standard-only bundle (opposes the default mode mapping) |
+| `--skip-mode-generation` | Keep mode mapping but don't generate missing mode beatmaps |
+| `--one-saber-min-gap <s>` | Min beats between same-cell arrowed notes (OneSaber generator, default 0.25) |
+| `--rotation-cycle-beats <b>` | Beats per 90-degree rotation flip (90Degree generator, default 8.0) |
 | `--enable-modes` | Comma-separated list of modes to enable (e.g. `OneSaber,90Degree`) |
+| `--features-only` | Apply + deploy `--set-feature` changes to features.json only, then exit (no song/plugin processing) |
+| `--set-feature key=value` | Set a runtime feature flag in features.json (use with `--features-only` or `--deploy-plugin`) |
 | `--ignore-non-standard-beatmaps` | Skip non-standard difficulty beatmaps |
 | `--target <name>` | PS4 song slot to replace (see [Available Song Slots](#available-song-slots-targets)) |
 | `--output <path>` | Custom output path for the built bundle |

@@ -1,5 +1,4 @@
 {
   "enable_custom_song_replacements": true,
-  "enable_song_metadata_modification": true,
-  "enable_beatmap_mode_mapping": true
+  "enable_song_metadata_modification": true
 }

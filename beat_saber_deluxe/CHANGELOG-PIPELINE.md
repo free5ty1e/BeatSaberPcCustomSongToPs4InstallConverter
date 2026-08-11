@@ -1,5 +1,25 @@
 # Pipeline Changelog
 
+## v0.5315 (2026-08-11)
+### Fixed
+- **Idempotency bug in mode mapping:** re-running the pipeline on a source dir that already contains generated mode `.dat` files (e.g. a prior run's output, or hand-authored modes) silently skipped TextAsset injection and fell back to cloning Standard references — producing a *different, degraded* bundle than the first build. `apply_mode_mapping()` gated injection on `song_dir AND non-empty generated_files`, but `add_mode_characteristics()` already scans `song_dir` for ALL mode files (pre-existing included). The gate now only requires `song_dir`, so a rebuild of a previously-built song dir yields a byte-equivalent, fully-populated bundle. Regression test: `test_idempotent_injection_with_pre_existing_mode_files`.
+- Tests: full suite pass (405/405; +1 idempotency regression).
+
+## v0.5314 (2026-08-11)
+### Changed
+- **Safe-by-default pipeline — standard command now bakes in the previously-required flags.** PCM16 + no-pad are now the DEFAULT audio settings, beatmap mode mapping + generation is ON by default, and V2→V3 conversion is ON by default. A plain `--song-dir X --target Y` build now produces a full-length, lossless, all-modes-populated bundle — no partial songs from a forgotten flag.
+- **Each new default has an oppose flag** (per project rule: any changed default needs a way to opt out):
+  - `--hevag` / `--vorbis` — opt out of the PCM16 default codec.
+  - `--pad-fsb5` — restore the old 12MB truncating padding (DANGER: produces partial songs; kept only for the rare case a slot needs exact-size resources).
+  - `--disable-beatmap-mode-mapping` — Standard-only bundle (opposes the new default).
+  - `--skip-mode-generation` — keep mode mapping but do not generate missing mode beatmaps.
+  - `--no-convert-to-v3` — leave V2 beatmaps unconverted (opposes the new default).
+  - The old flags (`--pcm16`, `--no-pad`, `--enable-beatmap-mode-mapping`, `--convert-to-v3`) are kept for backward compatibility and now match the defaults.
+- **`--features-only` standalone mode added:** apply `--set-feature key=value` changes and deploy `features.json` to PS4, then exit — no song processing, no plugin rebuild, no redirects. Audit found no standalone features-only mode previously existed; `--set-feature` only ran via `--deploy-plugin` or as a step of a full song build.
+- **`enable_beatmap_mode_mapping` removed from `features.json` / `DEFAULT_FEATURES`.** Mode mapping is a build-time pipeline feature (baked into the bundle), not a runtime plugin toggle — the v0.8040 plugin never parsed it. `features.json` now holds exactly the runtime flags the plugin reads at startup (`enable_custom_song_replacements`, `enable_song_metadata_modification`), so every flag in the file is handled the same way: read at runtime from the PS4 JSON, redeployable via `--features-only`.
+- Flag resolution moved to testable pure helpers: `resolve_audio_codec()`, `resolve_pad_to_size()`, `resolve_mode_mapping()`, `resolve_convert_to_v3()`.
+- Tests: +17 (default behavior resolution + runtime-only feature flags). Full suite 404/404 pass.
+
 ## v0.5313 (2026-08-10)
 ### Fixed
 - **90° rotation events now survive V2→V3 conversion (source song's 90Degree Expert keeps its lane changes):** `convert_v2_to_v3()` no longer hardcodes `"rotationEvents": []`. V2 spawn-rotation events (types 14/early, 15/late) are converted to V3 `rotationEvents` (`e` 0/1) with the authoritative BSMG value table → signed degrees: `0=-60, 1=-45, 2=-30, 3=-15, 4=+15, 5=+30, 6=+45, 7=+60`. Values are relative deltas the game accumulates. Laser-speed events (types 12/13) correctly remain basic events.

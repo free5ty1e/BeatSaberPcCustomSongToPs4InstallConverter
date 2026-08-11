@@ -45,6 +45,15 @@ from full_custom_song_pipeline import (
     FEATURES_FILENAME,
     SONG_METADATA_FILENAME,
     SONG_IDS_FILENAME,
+    DEFAULT_AUDIO_CODEC,
+    DEFAULT_PAD_TO_SIZE,
+    DEFAULT_MODE_MAPPING,
+    DEFAULT_CONVERT_TO_V3,
+    DEFAULT_FEATURES,
+    resolve_audio_codec,
+    resolve_pad_to_size,
+    resolve_mode_mapping,
+    resolve_convert_to_v3,
 )
 
 
@@ -658,8 +667,85 @@ class TestFeaturesConfigPaths:
 
 
 # ======================================================================
+# Default Behavior Resolution (v0.5314: safe-by-default pipeline)
+# ======================================================================
+class TestDefaultAudioCodec:
+    """Test the default-safe audio codec resolution."""
+
+    def test_default_is_pcm16(self):
+        assert DEFAULT_AUDIO_CODEC == 'pcm16'
+
+    def test_no_flags_returns_pcm16(self):
+        assert resolve_audio_codec() == 'pcm16'
+
+    def test_hevag_flag(self):
+        assert resolve_audio_codec(hevag=True) == 'hevag'
+
+    def test_vorbis_flag(self):
+        assert resolve_audio_codec(vorbis=True) == 'vorbis'
+
+    def test_hevag_takes_precedence_over_vorbis(self):
+        assert resolve_audio_codec(hevag=True, vorbis=True) == 'hevag'
+
+
+class TestDefaultPadToSize:
+    """Test the default-safe FSB5 padding resolution (no truncation by default)."""
+
+    def test_default_is_no_pad(self):
+        assert DEFAULT_PAD_TO_SIZE == 0
+
+    def test_no_flag_returns_zero(self):
+        assert resolve_pad_to_size() == 0
+
+    def test_pad_fsb5_restores_original_size(self):
+        assert resolve_pad_to_size(pad_fsb5=True) == 12305632
+
+    def test_pad_fsb5_truncation_guard(self):
+        # The dangerous old default (12MB truncation) must be opt-in only
+        assert resolve_pad_to_size(pad_fsb5=True) > resolve_pad_to_size()
+
+
+class TestDefaultModeMapping:
+    """Test that beatmap mode mapping is ON by default."""
+
+    def test_default_is_enabled(self):
+        assert DEFAULT_MODE_MAPPING is True
+
+    def test_no_flag_returns_enabled(self):
+        assert resolve_mode_mapping() is True
+
+    def test_disable_flag_turns_off(self):
+        assert resolve_mode_mapping(disable_beatmap_mode_mapping=True) is False
+
+
+class TestDefaultConvertToV3:
+    """Test that V2->V3 conversion is ON by default."""
+
+    def test_default_is_enabled(self):
+        assert DEFAULT_CONVERT_TO_V3 is True
+
+    def test_no_flag_returns_enabled(self):
+        assert resolve_convert_to_v3() is True
+
+    def test_no_convert_flag_turns_off(self):
+        assert resolve_convert_to_v3(no_convert_to_v3=True) is False
+
+
+# ======================================================================
 # Features Config Loading / Saving
 # ======================================================================
+class TestDefaultFeaturesRuntimeOnly:
+    """features.json must hold ONLY runtime plugin flags (read at startup on PS4).
+    Build-time pipeline features (e.g. mode mapping) are CLI options, not runtime flags."""
+
+    def test_mode_mapping_is_not_a_runtime_flag(self):
+        assert 'enable_beatmap_mode_mapping' not in DEFAULT_FEATURES
+
+    def test_runtime_flags_present(self):
+        assert DEFAULT_FEATURES['enable_custom_song_replacements'] is True
+        assert DEFAULT_FEATURES['enable_song_metadata_modification'] is True
+
+
 class TestLoadLocalFeatures:
     """Test features config loading."""
 

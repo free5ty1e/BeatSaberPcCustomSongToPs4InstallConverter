@@ -360,6 +360,101 @@ class TestModeBeatmapInjection(unittest.TestCase):
             # This is handled in add_mode_characteristics - verify the conversion logic
             self.assertIn('d', str(bm) or '_notes' in bm, "Should have note data")
 
+    def test_idempotent_injection_with_pre_existing_mode_files(self):
+        """Re-running the pipeline on a source dir that already has generated
+        mode .dat files (generated_files empty) must still inject the mode
+        beatmaps as new TextAssets, not fall back to cloning Standard refs."""
+        from UnityPy import load as load_bundle
+        import os as _os
+
+        with tempfile.TemporaryDirectory() as d:
+            files = {
+                "info.dat": json.dumps({"_songName": "Test", "_beatsPerMinute": 120.0}),
+                "EasyStandard.dat": self._v2(1.0, typ=0, d=3),
+                "NormalStandard.dat": self._v2(2.0, typ=1, d=1),
+                "HardStandard.dat": self._v2(3.0, typ=0, d=2),
+                "ExpertStandard.dat": self._v2(4.0, typ=1, d=0),
+                "ExpertPlusStandard.dat": self._v2(5.0, typ=0, d=1),
+            }
+            for name, content in files.items():
+                with open(os.path.join(d, name), 'w') as fh:
+                    fh.write(content)
+
+            # Simulate a previous run: generate the mode files once
+            detected = detect_song_modes(d)
+            enabled = build_mode_mapping(detected, None)
+            generate_missing_mode_beatmaps(d, detected, enabled, bpm=120.0)
+
+            test_bundle = _os.path.join(
+                _os.path.dirname(_os.path.dirname(__file__)),
+                "test_data", "template_standard.bundle"
+            )
+            if not _os.path.isfile(test_bundle):
+                self.skipTest("template_standard.bundle not available")
+
+            env = load_bundle(test_bundle)
+            bf_file = None
+            cab = None
+            for k, f in env.files.items():
+                bf_file = f
+                if hasattr(f, 'files'):
+                    for fk, ff in f.files.items():
+                        if hasattr(ff, 'objects') and ff.objects:
+                            cab = ff
+                            break
+                if cab:
+                    break
+
+            # Apply mode mapping with song_dir but EMPTY generated_files —
+            # pre-existing mode files on disk must still be injected
+            mode_count = add_mode_characteristics(
+                cab, ["OneSaber", "NoArrows"], song_dir=d,
+                generated_files=[], bpm=120.0, target_name="Test"
+            )
+            self.assertEqual(mode_count, 2)
+
+            # Save and reload to verify persisted changes (UnityPy typetree
+            # reads are cached in-session, so assertions need a fresh load)
+            import io as _io
+            result = bf_file.save(packer="lz4")
+            env2 = load_bundle(_io.BytesIO(result))
+            cab2 = None
+            for k, f in env2.files.items():
+                if hasattr(f, 'files'):
+                    for fk, ff in f.files.items():
+                        if hasattr(ff, 'objects') and ff.objects:
+                            cab2 = ff
+                            break
+                if cab2:
+                    break
+
+            beatmap_level = None
+            for pid, obj in cab2.objects.items():
+                if obj.class_id == 114:
+                    beatmap_level = obj
+                    break
+            self.assertIsNotNone(beatmap_level)
+
+            bl_tt = beatmap_level.read_typetree()
+            std_set = [s for s in bl_tt['_difficultyBeatmapSets']
+                       if s['_beatmapCharacteristicSerializedName'] == 'Standard'][0]
+            std_pids = [e['_beatmapAsset']['m_PathID'] for e in std_set['_difficultyBeatmaps']]
+
+            # New TextAssets must have been created for the modes
+            new_text_assets = 0
+            for pid, obj in cab2.objects.items():
+                if obj.class_id == 49 and obj.path_id not in std_pids:
+                    new_text_assets += 1
+            self.assertGreaterEqual(new_text_assets, 10,
+                "Pre-existing mode files should be injected as new TextAssets")
+
+            # Mode sets must reference DIFFERENT pathIDs than Standard
+            for s in bl_tt['_difficultyBeatmapSets']:
+                if s['_beatmapCharacteristicSerializedName'] in ('OneSaber', 'NoArrows'):
+                    for entry in s['_difficultyBeatmaps']:
+                        self.assertNotIn(entry['_beatmapAsset']['m_PathID'], std_pids,
+                            f"{s['_beatmapCharacteristicSerializedName']} should not clone Standard")
+
 
 if __name__ == '__main__':
     unittest.main()

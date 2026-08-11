@@ -1,4 +1,4 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8041 / v0.5307)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8040 / v0.5315)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
@@ -9,25 +9,25 @@ This document covers pipeline-specific details. See the **[main README](../READM
 `tools/full_custom_song_pipeline.py` is the main entry point.
 
 ```bash
-# Build a custom song bundle
+# Build a custom song bundle (safe defaults: PCM16 + full-length audio +
+# mode mapping + V2→V3 conversion are all ON automatically)
 python3 tools/full_custom_song_pipeline.py \
   --song-dir <song_directory> \
-  --target <slot_name> --pcm16 --no-pad \
-  --convert-to-v3 \
+  --target <slot_name> \
   --output custom_songs/<slot>_custom_v3.bundle
 
 # Build + deploy to PS4
 python3 tools/full_custom_song_pipeline.py \
   --song-dir <song_directory> \
-  --target <slot_name> --pcm16 --no-pad \
-  --convert-to-v3 --deploy --deploy-plugin --debug-logging
+  --target <slot_name> --deploy --deploy-plugin --debug-logging
 
 # Direct download from BeatSaver and deploy
 python3 tools/full_custom_song_pipeline.py \
   --download-beat-saver-song <map_id> \
-  --target <slot_name> --pcm16 --no-pad \
-  --convert-to-v3 --deploy --deploy-plugin
+  --target <slot_name> --deploy --deploy-plugin
 ```
+
+> **Safe defaults (v0.5314+):** PCM16 lossless audio (`--pcm16`), no padding truncation (`--no-pad`), beatmap mode mapping + missing-mode generation (`--enable-beatmap-mode-mapping`), and V2→V3 conversion (`--convert-to-v3`) are all **default ON**. The old flags still work as no-ops. Oppose flags: `--hevag`/`--vorbis`, `--pad-fsb5` (**DANGER** — truncates to partial songs), `--disable-beatmap-mode-mapping`, `--no-convert-to-v3`. `--features-only --set-feature key=value` applies+deploys runtime flags standalone.
 
 ### Pipeline Flags
 
@@ -38,20 +38,26 @@ python3 tools/full_custom_song_pipeline.py \
 | `--artist NAME` | Override artist/song-author name for metadata injection |
 | `--download-beat-saver-song <id>` | Download map directly from BeatSaver using map ID |
 | `--target` | Target slot (e.g. `startmeup`, `Oxytocin`, `2BeLoved`) |
-| `--pcm16` | PCM16 FSB5 audio (lossless) |
-| `--no-pad` | Don't extend audio (use when PCM16 > original resource size) |
-| `--convert-to-v3` | Auto-convert V2 beatmaps to V3.2.0 |
+| `--pcm16` | PCM16 FSB5 audio (lossless) — **default**; kept as compat no-op |
+| `--hevag` | HEVAG audio codec (Sony proprietary, usually blocked) — opposes the PCM16 default |
+| `--vorbis` | Vorbis audio codec (FMOD/libvorbis codebook mismatch, usually blocked) — opposes the PCM16 default |
+| `--no-pad` | Don't extend audio (use when PCM16 > original resource size) — **default**; kept as compat no-op |
+| `--pad-fsb5` | **Restore** old 12MB truncating padding (**DANGER**: partial/truncated songs) |
+| `--convert-to-v3` | Auto-convert V2 beatmaps to V3.2.0 — **default**; kept as compat no-op |
+| `--no-convert-to-v3` | Leave V2 beatmaps unconverted (opposes the default) |
+| `--enable-beatmap-mode-mapping` | Auto-detect custom song beatmap files and map them to game characteristic slots — **default**; kept as compat no-op |
+| `--disable-beatmap-mode-mapping` | Standard-only bundle (opposes the default) |
+| `--skip-mode-generation` | Keep mode mapping but skip generating missing mode beatmaps |
+| `--fallback-mode-map SRC=DEST` | Override fallback chain for a mode slot (repeatable). E.g. `"360Degree=90Degree"` or `"NoArrows=Standard"`. Only meaningful with mode mapping. |
+| `--features-only` | Apply + deploy `--set-feature` changes to features.json only, then exit (no song/plugin/redirect processing) |
+| `--set-feature key=value` | Set a runtime feature flag in features.json (requires `--features-only` or `--deploy-plugin`) |
 | `--deploy` | Upload bundle to PS4 via FTP |
 | `--deploy-plugin` | Build + deploy plugin PRX |
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) |
 | `--generate-config` | Update `redirects.json` config on PS4 |
 | `--enable-modes` | Comma-separated list of extra beatmap modes to enable (e.g. `OneSaber,90Degree`). Clones Standard beatmaps into the new characteristics so they appear in the in-game mode selector. |
-| `--enable-beatmap-mode-mapping` | Auto-detect custom song beatmap files and map them to game characteristic slots. Uses fallback chain for slots without dedicated files. Overrides `--enable-modes` for detected modes. |
-| `--fallback-mode-map SRC=DEST` | Override fallback chain for a mode slot (repeatable). E.g. `"360Degree=90Degree"` or `"NoArrows=Standard"`. Only meaningful with `--enable-beatmap-mode-mapping`. |
 | `--enable-plugin` | Enable the Beat Saber Deluxe plugin on PS4 (uncomments .prx entry in plugins.ini under [CUSA12878]) — tested and verified live on console |
 | `--disable-plugin` | Disable the Beat Saber Deluxe plugin on PS4 (play original Rolling Stones songs) — comments out entries with `#;` |
-| `--song-name NAME` | Override song display name for metadata injection into per-song bundle |
-| `--artist NAME` | Override artist/song-author name for metadata injection |
 
 ## Plugin Toggle (v0.51+)
 
@@ -119,10 +125,10 @@ python3 development/scripts/modify_pack_bundle.py
 
 ```bash
 # Build a bundle with OneSaber and 90Degree characteristics
+# (mode mapping + generation are default ON since v0.5314)
 python3 tools/full_custom_song_pipeline.py \
   --song-dir <song_directory> \
-  --target <slot_name> --pcm16 --no-pad \
-  --convert-to-v3 --enable-modes OneSaber,90Degree \
+  --target <slot_name> \
   --deploy
 ```
 

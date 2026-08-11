@@ -1,10 +1,11 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-08-09
-**Status:** ✅ **MODE SELECTOR GAP CLOSED + 90DEGREE FIXED** — Standard/OneSaber/NoArrows confirmed working on-device (Exp 181 deploy). Exp 182 found 90Degree had NEVER been visible because characteristic pathIDs were mislabeled repo-wide: the pack bundle's 90Degree preview slot pointed at the **360Degree** characteristic (`requires360=1`), which the game hides. All pids corrected to verified values (90Degree=`-5995858427784384822`), pack bundle rebuilt + redeployed. Awaiting boot test.
+**Last Updated:** 2026-08-11
+**Status:** ✅ **MODE SELECTOR GAP CLOSED + 90DEGREE FIXED + SAFE-BY-DEFAULT PIPELINE** — Standard/OneSaber/NoArrows confirmed working on-device (Exp 181 deploy). Exp 182 fixed 90Degree visibility (characteristic pathIDs corrected repo-wide). Exp 183 baked safe defaults into the pipeline (PCM16 + no-pad + mode mapping + V2→V3 all default ON with oppose flags; `--features-only` mode), fixed a mode-mapping idempotency bug, and rebuilt the full-audio `startmeup_v3.bundle` (39,697,727 B, 224.31s) reproducibly. **Deploy blocked: PS4 FTP flaky (192.168.100.117:2121).**
 - v0.8040 `open()` hook redirects `aa/catalog.json` (OPEN #58 confirmed in Exp 178)
 - Fresh `catalog_startmeup_modes.json` with correct dec-stream CRC (`0xe9e40bd3`) + size (7,905,425)
 - Patched `startmeup_pack_modes.bundle` adds 3 preview sets (OneSaber/NoArrows/90Degree) to StartMeUp BeatmapLevelSO — all 4 now point at correct characteristics
-- In-game mode selector for Start Me Up shows **Standard / OneSaber / NoArrows / 90Degree** (90Degree visible pending Exp 182 boot test)
+- In-game mode selector for Start Me Up shows **Standard / OneSaber / NoArrows / 90Degree** (90Degree visible pending boot test)
+- **Pipeline v0.5315:** standard command now produces full-length, lossless, all-modes bundles with zero flags; `--hevag`/`--vorbis`/`--pad-fsb5`/`--disable-beatmap-mode-mapping`/`--no-convert-to-v3`/`--skip-mode-generation` opt out; `--features-only` deploys runtime flags standalone; `features.json` holds only the 2 runtime flags the v0.8040 plugin reads
 
 **Key findings since last summary:**
 1. **Catalog redirect avenue CONFIRMED (Exp 178):** byte-identical `catalog_test.json` + `"aa/catalog.json": "catalog_test.json"` redirect → boot stable, `[OPEN #62] ... -> REDIRECTED` confirmed.
@@ -160,6 +161,7 @@ See [[ps4-file-system-redirects]] for deploy path details.
 | **180** | **v0.8040 / v0.5310** | **Exp 179 DEPLOYED + USER TEST — Mode Selector Gap CLOSED** | **✅ MODE SELECTOR GAP CLOSED (2026-08-08). All 4 modes visible (Standard/OneSaber/NoArrows/90Degree). 🔴 ISSUE FOUND: NoArrows mode shows arrows instead of dots — generator/injection bug. OneSaber/90Degree untested.** |
 | **181** | **v0.8040 / v0.5311** | **NoArrows bug ROOT-CAUSED + FIXED** | **✅ FIXED (2026-08-09). Two bugs in `_create_text_asset_object()`: `type_id=0` → MonoScript(115) instead of TextAsset(49); manual `struct.pack` (null term + len+1) vs Unity's `write_aligned_string` (int32 len + data + 4-byte align). Fixed + verified: all 5 NoArrows diffs have dots (d=8). 381 tests pass. Deployed; on-device confirmed NoArrows+OneSaber working.** |
 | **182** | **v0.8040 / v0.5312** | **90Degree root cause + pid correction + pack rebuild** | **✅ ROOT-CAUSED (2026-08-09): 90Degree had NEVER been visible — pack bundle's 90Degree preview slot pointed at the 360Degree characteristic (`requires360=1`, hidden by game). Characteristic pids mislabeled repo-wide; corrected all maps to verified values (Standard=`-7286399427822119286`, OneSaber=`-5623662769225589684`, NoArrows=`-8583864861369561029`, 90Degree=`-5995858427784384822`, 360Degree=`4533580413116749821`). Pack bundle rebuilt (7,905,425 B) + catalog regenerated (CRC 3924036563) + deployed. Regression test added. AWAITING BOOT TEST.** |
+| **183** | **v0.8040 / v0.5314→0.5315** | **Safe defaults baked in + idempotency fix + full-audio rebuild** | **✅ (2026-08-11) v0.5314: PCM16 + no-pad + mode mapping + V2→V3 all default ON (each with oppose flags), `--features-only` mode added, `enable_beatmap_mode_mapping` removed from runtime features.json (build-time CLI feature). v0.5315: FIXED mode-mapping idempotency bug — re-running on a source dir with pre-existing generated mode `.dat` files silently fell back to cloning Standard refs instead of injecting TextAssets (gate required `song_dir AND generated_files`; now just `song_dir`). 405/405 tests. Regenerated stale 90Degree source files (`t`→`et` lighting fix, BPM 130). Rebuilt `startmeup_v3.bundle` (39,697,727 B, full 224.31s audio, all 22 TextAssets semantic-identical to verified bundle). 🔴 DEPLOY BLOCKED — PS4 FTP down.** |
 
 ## Memory Injection Versions
 
@@ -203,8 +205,9 @@ See [[ps4-file-system-redirects]] for deploy path details.
 2. **Exp 179 deploy + test (COMPLETED):** ✅ DONE — mode selector gap closed. NoArrows bug found.
 3. **Exp 181 fix deploy (COMPLETED):** ✅ DONE — NoArrows dots + OneSaber confirmed on-device (Aug 9).
 4. **Exp 182 boot test (AWAITING USER):** Pack bundle rebuilt with corrected 90Degree pid + catalog redeployed (Aug 9 16:49). Confirm 90Degree button appears; test source 90Degree Expert + generated 90Degree difficulties.
-5. **Integrate the pack-patch build script into the production pipeline** (`tools/`) after Exp 182 on-device confirmation — currently a dev script per rules.
-6. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
+5. **Exp 183 deploy (BLOCKED — FTP down):** Deploy full-audio `startmeup_v3.bundle` (39,697,727 B) + cleaned `features.json` (2 runtime flags) to PS4 AFR; clear `bs_log.txt`. Then user boot test: full 224.31s audio (no truncation), 4 mode selectors, source 90° Expert lane behavior, lighting `et` events.
+6. **Integrate the pack-patch build script into the production pipeline** (`tools/`) after Exp 182 on-device confirmation — currently a dev script per rules.
+7. **Expand mode generation coverage** — test on other song dirs; confirm `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats` behavior end-to-end.
 
 ## Active Knowledge Gaps
 
