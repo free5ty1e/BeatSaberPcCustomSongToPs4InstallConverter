@@ -143,7 +143,7 @@ Add mode selector buttons (OneSaber, 90Degree) and change song display info for 
 - [x] Expanded generator test suite to 17 tests; full suite 365 pass (v0.5310, Exp 177)
 - [x] Deployed fresh `startmeup_v3` bundle (12,405,290 B) with 14 generated mode beatmaps + 3 mode sets (Exp 177)
 - [x] Mode selector UI visibility for procedurally generated modes — **✅ DONE (Exp 179/180 DEPLOYED + CONFIRMED): catalog-redirect + pack-bundle patch approach proven. Standard/OneSaber/NoArrows visible + working on-device.**
-- [x] **90Degree selector visibility FIXED (Exp 182, 2026-08-09):** 90Degree had NEVER been visible — characteristic pathIDs were mislabeled repo-wide; the pack bundle's 90Degree preview slot pointed at the 360Degree characteristic (`requires360=1`) which the game hides. All pid maps corrected to verified values (90Degree=`-5995858427784384822`), pack bundle rebuilt + catalog regenerated + deployed. Awaiting boot test.
+- [x] **90Degree selector visibility FIXED (Exp 182, 2026-08-09):** 90Degree had NEVER been visible — characteristic pathIDs were mislabeled repo-wide; the pack bundle's 90Degree preview slot pointed at the 360Degree characteristic (`requires360=1`) which the game hides. All pid maps corrected to verified values (90Degree=`-5995858427784384822`), pack bundle rebuilt + catalog regenerated + deployed. **BOOT TEST PASSED (2026-08-11): all 4 modes on Hard + 90Degree Expert — "worked perfectly, exactly as I envisioned."**
 
 ### "No Arrows" Mode Generator — ✅ DONE (v0.5310)
 Take a Standard beatmap and convert all arrow notes (`_cutDirection`/`d` > 0) to dot notes
@@ -177,5 +177,24 @@ angle back and forth every N beats.
 4. ✅ Close the selector gap (BeatmapLevelSO preview-set injection) so generated modes are visible/selectable in-game — **Exp 179 DEPLOYED + CONFIRMED WORKING (2026-08-08). Catalog-redirect + pack-bundle patch approach proven. OneSaber/NoArrows/90Degree now appear in selector.**
 
 5. ✅ **NoArrows generator bug FIXED (Exp 181, 2026-08-09)** — root cause was in `_create_text_asset_object()` (wrong type_id → MonoScript instead of TextAsset + wrong binary serialization). Fixed in pipeline v0.5311, verified locally (all NoArrows difficulties have dot notes). Deployed + confirmed on-device: NoArrows dots + OneSaber work.
-6. ✅ **90Degree selector FIXED (Exp 182, 2026-08-09)** — characteristic pids were mislabeled repo-wide; 90Degree preview slot pointed at 360Degree characteristic (`requires360=1`, hidden). All maps corrected to verified pids (90Degree=`-5995858427784384822`), pack bundle rebuilt + redeployed. Awaiting boot test.
-7. 🔲 **Integrate pack-patch build into production pipeline (`tools/`)** after Exp 182 on-device confirmation (no manual steps — user requirement).
+6. ✅ **90Degree selector FIXED (Exp 182, 2026-08-09)** — characteristic pids were mislabeled repo-wide; 90Degree preview slot pointed at 360Degree characteristic (`requires360=1`, hidden). All maps corrected to verified pids (90Degree=`-5995858427784384822`), pack bundle rebuilt + redeployed. **Boot test PASSED (2026-08-11).**
+7. ✅ **Espresso boot test PASSED (2026-08-11)** — full 224.31s audio, 4 modes on Hard, 90Degree Expert, lighting `et` events. "Worked perfectly, exactly as I envisioned."
+8. ✅ **Safe-by-default pipeline (v0.5314/5315, Exp 183)** — PCM16 + no-pad + mode mapping + V2→V3 all default ON (oppose flags exist); idempotency bug fixed; `--features-only` standalone mode.
+9. 🔲 **Integrate pack-patch build into production pipeline (`tools/`)** after Exp 182 on-device confirmation (no manual steps — user requirement).
+
+## M6 — Chromeo Source Recovery + Mass Redeploy (In Progress — v0.5316, Exp 184/185)
+
+### Objective
+Recover the 6 deleted Chromeo slot sources from deployed PS4 bundles, rebuild all 38 custom songs through the v0.5316 pipeline (mode mapping + generators, full audio, V2→V3), and mass-redeploy to the PS4.
+
+### Completed
+- [x] **Chromeo bundle extraction** (Exp 184): pulled 6 bundles from PS4; TextAssets gzip via `surrogateescape` decode; audio = `.resource` subfile (`CAB-<hash>.resource`). Beatmap formats: 4 slots V4.0.0 (relative `colorNotes{b,i}` + `colorNotesData{x,y,c,d}`), CycleHit/Ghost mixed V3.2.0/V4.0.0.
+- [x] **V4→V3.2.0 decoder** (`/tmp/opencode/reconstruct_chromeo_src.py`): merges data via `i` index with defaults, fills `bpmEvents` (per-slot BPM), validated decoded max beat vs audio.gz `bpmData[0].eb`.
+- [x] **Reconstruction output**: `songs/chromeo_backout/{slot}/` with `<Diff><Mode>.dat`, `Info.dat` (2.1.0, per-slot metadata), `audio.fsb`.
+- [x] **All 6 Chromeo rebuilt + verified** (Crystallized 59.2MB → WhatTheCat 37.8MB; full audio, corrected eb, generated modes).
+- [x] **Slot→source mapping for all 32 non-Chromeo slots** resolved via `songs_repo/` Info.dat names.
+- [x] **Mass re-run all 38 songs (v0.5316, Exp 185)**: 38/38 bundles in `/tmp/opencode/mass_build/` — every slot Standard 5/5 + OneSaber 5/5 + NoArrows 5/5 + 90Degree 5/5. 407/407 tests.
+- [x] **Generator bug fixed (v0.5316)**: V3 beatmaps may omit `x`/`y`/`b` (default 0) — OneSaber/90Degree generators crashed with KeyError. All reads now `.get(..., 0)`.
+- [x] **Deploy prep**: `redirects.json` regenerated (39 redirects), `deploy_all38.sh` written; `deploy_all.sh` (13-slot, pre-mode-mapping) confirmed OUTDATED.
+- [x] **Deploy to PS4 (Exp 186, 2026-08-12):** ✅ `deploy_all38.sh` ran — all 38 bundles uploaded + verified on-device (sizes match), `redirects.json` (39) + `song_metadata.json` verified. Plugin v0.8040 confirmed.
+- [ ] **User test**: Chromeo slots all 6, new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree across songs, full audio lengths.

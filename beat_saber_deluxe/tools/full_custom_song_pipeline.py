@@ -60,12 +60,44 @@ def load_config(config_path: str) -> dict:
         "title": {"id": "CUSA12878", "patch_suffix": "-patch"},
         "paths": {
             "afr_base": "/data/GoldHEN/AFR",
-            "afr_target_suffix": "_v3",
+            "afr_target_suffix": "_v3.bundle",
             "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
             "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
             "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
         },
-        "pipeline": {"default_target": "startmeup", "sample_rate": 44100}
+        "pipeline": {"default_target": "startmeup", "sample_rate": 44100},
+        # Pack bundle patch (Exp 179): the patched pack bundle and its catalog.json
+        # MUST be deployed as a matched pair. The redirects.json entry for the pack
+        # bundle is INVALID without the aa/catalog.json redirect because Unity
+        # validates the bundle CRC against the catalog m_Crc at startup — a patched
+        # bundle served against the ORIGINAL catalog crashes the game during the
+        # pack scan. These settings keep the pair always present.
+        "pack_bundle": {
+            "bundle_key": "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle",
+            "patched_bundle": "startmeup_pack_modes.bundle",
+            "patched_bundle_local": "/workspace/beat_saber_deluxe/startmeup_pack_modes.bundle",
+            "catalog_key": "aa/catalog.json",
+            "patched_catalog": "catalog_startmeup_modes.json",
+            "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_startmeup_modes.json",
+        },
+        # Mass deploy (deploy_all38.sh replacement): list of all custom song slots
+        # deployed as <slot>_v3.bundle into the AFR dir.
+        "mass_deploy": {
+            "bundle_dir": "/tmp/opencode/mass_build",
+            "slots": [
+                "startmeup", "angry", "bitemyheadoff", "cantyouhearmeknocking",
+                "deadmanwalking", "gimmeshelter", "icantgetnosatisfaction",
+                "livebythesword", "messitup", "paintitblack", "sugarsoaker",
+                "sympathyforthedevil", "wholewideworld",
+                "Oxytocin", "AllTheGoodGirlsGoToHell", "YouShouldSeeMeInACrown",
+                "Bellyache", "BuryAFriend", "IDidntChangeMyNumber",
+                "HappierThanEver", "BadGuy", "NDA", "ThereforeIAm",
+                "2BeLoved", "AboutDamnTime", "CuzILoveYou", "EverybodysGay",
+                "GoodAsHell", "Juice", "Tempo", "TruthHurts", "Worship",
+                "crystallized", "cyclehit", "exitthisearthsatomosphere",
+                "ghost", "lightitup", "whatthecat",
+            ],
+        },
     }
     if config_path and os.path.isfile(config_path):
         try:
@@ -704,10 +736,78 @@ def save_bundle(bf, output_path: str):
 # Step 7: Deploy to PS4
 # ============================================================================
 
+def _deployed_bundle_name(slot: str, config: dict) -> str:
+    """
+    Return the EXACT filename that a song bundle is deployed as on the PS4.
+
+    This is the single source of truth for deployed bundle naming: the remote
+    filename MUST be identical to what the local mass_build file is called
+    (e.g. `crystallized_v3.bundle`), because the game opens the redirect VALUE
+    verbatim — a mismatch means the freshly deployed bundle is never loaded and
+    the stale one keeps being served.
+
+    Naming: `{slot}{afr_target_suffix}` using the canonical slot casing from
+    mass_deploy.slots (the game's open() is case-sensitive, so the redirect
+    value must match the uploaded file byte-for-byte). Falls back to
+    `{slot}{_v3.bundle}` if no suffix is configured.
+    """
+    md = config.get('mass_deploy', {}) or {}
+    slots = md.get('slots', [])
+    canonical = slot
+    for s in slots:
+        if s.lower() == slot.lower():
+            canonical = s
+            break
+    suffix = config.get('paths', {}).get('afr_target_suffix', '_v3.bundle')
+    return f"{canonical}{suffix}"
+
+def _ensure_mass_song_redirects(redirect_data: dict, config: dict) -> int:
+    """
+    (Re)generate the per-song redirect entries so every VALUE points at the
+    exact deployed bundle filename (canonical slot casing + afr_target_suffix).
+
+    Preserves existing redirect KEYS (the game asset paths, e.g.
+    `BeatmapLevelsData/Crystallized`) while fixing their VALUES, adds any slot
+    missing from the config, and removes stale pre-`.bundle` entries
+    (e.g. value `Crystallized_v3` while the deployed file is
+    `crystallized_v3.bundle`). Returns the number of entries changed.
+    """
+    md = config.get('mass_deploy', {}) or {}
+    slots = md.get('slots', [])
+    if not slots:
+        return 0
+    redirects = redirect_data.setdefault('redirects', {})
+    changed = 0
+
+    for slot in slots:
+        key = f"BeatmapLevelsData/{slot}"
+        value = _deployed_bundle_name(slot, config)
+        # Reuse an existing key whose basename matches this slot (case-insensitive),
+        # so known-good game asset paths (e.g. `BeatmapLevelsData/Crystallized`)
+        # are preserved rather than replaced by the slot casing.
+        for k in list(redirects):
+            if k != key and k.startswith('BeatmapLevelsData/') \
+               and k[len('BeatmapLevelsData/'):].lower() == slot.lower():
+                key = k
+                break
+        # Remove stale pre-.bundle entries that shadow this slot.
+        for k in list(redirects):
+            if k != key and k.startswith('BeatmapLevelsData/') \
+               and k[len('BeatmapLevelsData/'):].lower() == slot.lower():
+                log.info(f"  🧹 Removed stale song redirect: {k} -> {redirects[k]}")
+                del redirects[k]
+                changed += 1
+        if redirects.get(key) != value:
+            redirects[key] = value
+            changed += 1
+    if changed:
+        log.info(f"  🎵 Ensured {len(slots)} song redirects point at deployed bundles ({changed} entries updated)")
+    return changed
+
 def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     """
     Upload the bundle to the PS4 via FTP.
-    Target path: {afr_base}/{title_id}/{target_name}{suffix}
+    Target path: {afr_base}/{title_id}/{remote_name}
     All paths read from config.
     """
     import subprocess as sp
@@ -718,13 +818,13 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
 
     afr_base = paths_cfg.get('afr_base', '/data/GoldHEN/AFR')
     title_id = title_cfg.get('id', 'CUSA12878')
-    suffix = paths_cfg.get('afr_target_suffix', '_v3')
     ftp_host = ps4_cfg.get('ip', '192.168.100.117')
     ftp_port = ps4_cfg.get('ftp_port', 2121)
     ftp_user = ps4_cfg.get('ftp_user', 'anonymous')
     ftp_pass = ps4_cfg.get('ftp_password', '')
 
-    remote_path = f"{afr_base}/{title_id}/{target_name}{suffix}"
+    remote_name = _deployed_bundle_name(target_name, config)
+    remote_path = f"{afr_base}/{title_id}/{remote_name}"
 
     user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
     cmd = [
@@ -1064,10 +1164,10 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
     out_notes = _get_color_notes(out)
     v3 = _is_v3_beatmap(out)
 
-    def _time(n): return float(n["b"] if v3 else n["_time"])
-    def _line(n): return int(n["x"] if v3 else n.get("_lineIndex", 0))
-    def _layer(n): return int(n["y"] if v3 else n.get("_lineLayer", 0))
-    def _dir(n): return int(n["d"] if v3 else n.get("_cutDirection", 0))
+    def _time(n): return float(n.get("b", 0.0) if v3 else n["_time"])
+    def _line(n): return int(n.get("x", 0) if v3 else n.get("_lineIndex", 0))
+    def _layer(n): return int(n.get("y", 0) if v3 else n.get("_lineLayer", 0))
+    def _dir(n): return int(n.get("d", 0) if v3 else n.get("_cutDirection", 0))
     def _is_bomb(n):
         return (int(n.get("c", 0)) if v3 else int(n.get("_type", 0))) == 3
 
@@ -1138,12 +1238,12 @@ def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE
     first_beat = 0.0
     last_beat = first_beat
     if notes:
-        first_beat = float(min(n["b"] for n in notes))
-        last_beat = float(max(n["b"] for n in notes))
+        first_beat = float(min(n.get("b", 0.0) for n in notes))
+        last_beat = float(max(n.get("b", 0.0) for n in notes))
     for obs in out.get("obstacles", []) or []:
-        last_beat = max(last_beat, float(obs["b"]))
+        last_beat = max(last_beat, float(obs.get("b", 0.0)))
     for ev in out.get("basicBeatmapEvents", []) or []:
-        last_beat = max(last_beat, float(ev["b"]))
+        last_beat = max(last_beat, float(ev.get("b", 0.0)))
 
     existing = list(out.get("rotationEvents", []) or [])
     events = []
@@ -2117,10 +2217,345 @@ def _deploy_redirect_to_ps4(config: dict):
     else:
         log.warning(f"  ⚠️  Redirect config deploy failed: {result.stderr}")
 
+
+# ---------------------------------------------------------------------------
+# Pack bundle + catalog redirect consistency (Exp 179 / Exp 180 crash fix)
+# ---------------------------------------------------------------------------
+# Unity validates a bundle's CRC (zlib.crc32 of the DECOMPRESSED stream) against
+# the m_Crc in catalog.json when the bundle is loaded. The patched rollingstones
+# pack bundle (startmeup_pack_modes.bundle) has a DIFFERENT dec-stream CRC than
+# the original, so redirecting it WITHOUT also redirecting aa/catalog.json makes
+# the game validate the patched bundle against the ORIGINAL catalog entry ->
+# CRC mismatch -> crash during the pack scan at boot (Exp 180 crash session 2,
+# died at ~[OPEN #591]).
+#
+# Rule enforced by the pipeline: the pack bundle redirect and the catalog
+# redirect are a MATCHED PAIR. When generating/configuring redirects.json the
+# pipeline ALWAYS (re)inserts both entries together and refuses to produce a
+# config that has one without the other.
+
+def _get_pack_bundle_redirects(config: dict) -> dict:
+    """
+    Return the mandatory pack bundle + catalog redirect pair from config.
+
+    Keys are the game asset paths, values are the AFR filenames. Returns {} if
+    the pack bundle patch is not configured.
+    """
+    pb = config.get('pack_bundle', {}) or {}
+    if not pb.get('bundle_key') or not pb.get('patched_bundle'):
+        return {}
+    redirects = {
+        pb['bundle_key']: pb['patched_bundle'],
+    }
+    if pb.get('catalog_key') and pb.get('patched_catalog'):
+        redirects[pb['catalog_key']] = pb['patched_catalog']
+    return redirects
+
+def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
+    """
+    Ensure the pack bundle + catalog redirect pair is present in redirect_data.
+
+    Inserted entries always override existing ones so a stale/wrong pack target
+    (e.g. rollingstones_pack_patched.bundle) can never survive a pipeline pass.
+    Also removes stale truncated-key variants of the pack bundle (e.g. a key
+    without the trailing ".bundle") that could shadow the correct entry via the
+    plugin's substring matching. Returns the number of redirects inserted/updated.
+    """
+    redirects = redirect_data.setdefault('redirects', {})
+    pair = _get_pack_bundle_redirects(config)
+    if not pair:
+        return 0
+    changed = 0
+
+    # Remove stale pack-bundle keys that are strict substrings of the canonical
+    # key (e.g. "...a99482a8a3da9e991e5ae36f2fea209c" vs "...a99482a8a3da9e991e5ae36f2fea209c.bundle").
+    # The plugin matches redirects with strstr(lower_path, lower_key), so a
+    # truncated key would match the same game path and could win first — a crash
+    # hazard if it points at the wrong bundle.
+    for key in list(pair):
+        lk = key.lower()
+        stale = [k for k in redirects
+                 if k != key and k.lower() in lk and lk.startswith(k.lower())]
+        for k in stale:
+            log.info(f"  🧹 Removed stale pack bundle redirect: {k} -> {redirects[k]}")
+            del redirects[k]
+            changed += 1
+
+    # Insert/override the canonical pair.
+    for key, val in pair.items():
+        if redirects.get(key) != val:
+            redirects[key] = val
+            changed += 1
+    if changed:
+        log.info(f"  🧩 Ensured pack bundle + catalog redirect pair ({changed} entries updated)")
+    return changed
+
+def _get_remote_pack_paths(config: dict) -> list:
+    """Return list of (local_path, remote_name) for the patched pack bundle + catalog."""
+    pb = config.get('pack_bundle', {}) or {}
+    out = []
+    if pb.get('patched_bundle_local') and pb.get('patched_bundle'):
+        out.append((pb['patched_bundle_local'], pb['patched_bundle']))
+    if pb.get('patched_catalog_local') and pb.get('patched_catalog'):
+        out.append((pb['patched_catalog_local'], pb['patched_catalog']))
+    return out
+
+def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool:
+    """Upload a single local file to the AFR dir on the PS4 via FTP. Returns True on success."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    cfg_title = config.get('title', {})
+    cfg_paths = config.get('paths', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    ftp_host = ps4_cfg.get('ip', '192.168.100.117')
+    ftp_port = ps4_cfg.get('ftp_port', 2121)
+    ftp_user = ps4_cfg.get('ftp_user', 'anonymous')
+    ftp_pass = ps4_cfg.get('ftp_password', '')
+
+    if not os.path.isfile(local_path):
+        log.warning(f"  ⚠️  Local file missing, cannot deploy: {local_path}")
+        return False
+
+    remote_path = f"{afr_base}/{title_id}/{remote_name}"
+    user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
+    cmd = [
+        "lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
+        "-e", f"put {local_path} -o {remote_path}; quit"
+    ]
+    log.info(f"  Deploying {remote_name} -> {remote_path}")
+    result = sp.run(cmd, capture_output=True, text=True, timeout=600)
+    if result.returncode == 0:
+        log.info(f"  ✅ {remote_name} deployed")
+        return True
+    log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
+    return False
+
+def deploy_pack_bundle(config: dict) -> bool:
+    """
+    Deploy the patched pack bundle + patched catalog.json to the PS4.
+
+    Both files must be uploaded BEFORE redirects.json references them, otherwise
+    the game would 404 on the redirected path. Returns True if all uploads OK.
+    """
+    log.info("📦 Deploying patched pack bundle + catalog to PS4...")
+    pairs = _get_remote_pack_paths(config)
+    if not pairs:
+        log.warning("  ⚠️  No pack_bundle configured (pack_bundle.* missing) — nothing to deploy")
+        return False
+    ok = True
+    for local_path, remote_name in pairs:
+        ok = _deploy_file_to_ps4(config, local_path, remote_name) and ok
+    return ok
+
+def deploy_mass_bundles(config: dict) -> bool:
+    """
+    Deploy all custom song bundles (mass_deploy.slots) to the PS4.
+
+    Uploads <bundle_dir>/<slot>_v3.bundle to AFR/<title>/<slot>_v3.bundle for
+    every configured slot. Returns True only if every bundle uploaded.
+    """
+    md = config.get('mass_deploy', {}) or {}
+    bundle_dir = md.get('bundle_dir', '/tmp/opencode/mass_build')
+    slots = md.get('slots', [])
+    suffix = config.get('paths', {}).get('afr_target_suffix', '_v3.bundle')
+    if not slots:
+        log.warning("  ⚠️  No mass_deploy.slots configured — nothing to deploy")
+        return False
+
+    log.info(f"🚚 Mass-deploying {len(slots)} song bundles from {bundle_dir} ...")
+    ok = True
+    for slot in slots:
+        local_path = os.path.join(bundle_dir, f"{slot}{suffix}")
+        if not os.path.isfile(local_path):
+            log.warning(f"  ⚠️  Missing bundle: {local_path}")
+            ok = False
+            continue
+        # Remote filename must be identical to the local file's basename so the
+        # redirect VALUES (built from the same slot list + suffix) match exactly.
+        ok = _deploy_file_to_ps4(config, local_path, os.path.basename(local_path)) and ok
+    return ok
+
+
+# ---------------------------------------------------------------------------
+# Post-deploy validation (Exp 180: self-validating pipeline)
+# ---------------------------------------------------------------------------
+
+def _list_remote_dir(config: dict) -> dict:
+    """
+    List the AFR title dir on the PS4 via FTP.
+    Returns {filename: size_bytes} for every file. Empty dict if unreachable.
+    """
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    cfg_title = config.get('title', {})
+    cfg_paths = config.get('paths', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    ftp_host = ps4_cfg.get('ip', '192.168.100.117')
+    ftp_port = ps4_cfg.get('ftp_port', 2121)
+    ftp_user = ps4_cfg.get('ftp_user', 'anonymous')
+    ftp_pass = ps4_cfg.get('ftp_password', '')
+
+    remote_dir = f"{afr_base}/{title_id}"
+    user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
+           "-e", f"ls {remote_dir}; quit"]
+    try:
+        result = sp.run(cmd, capture_output=True, text=True, timeout=60)
+    except Exception as e:
+        log.warning(f"  ⚠️  PS4 listing failed: {e}")
+        return {}
+    if result.returncode != 0:
+        log.warning(f"  ⚠️  PS4 listing failed: {result.stderr}")
+        return {}
+
+    files = {}
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 9 or not parts[0].startswith('-'):
+            continue
+        try:
+            size = int(parts[4])
+            name = ' '.join(parts[8:])
+            files[name] = size
+        except (ValueError, IndexError):
+            continue
+    return files
+
+def verify_ps4_deployment(config: dict) -> bool:
+    """
+    Validate what actually ended up on the PS4 after a deploy.
+
+    Checks (each reported PASS/FAIL to the user):
+      1. PS4 is reachable and the AFR title dir is listable.
+      2. The deployed redirects.json matches the local redirects.json (keys+values).
+      3. Every redirect target filename exists on the PS4 (no 404s at boot).
+      4. The patched pack bundle + patched catalog exist on the PS4.
+      5. The pack bundle + catalog redirect PAIR is present (the Exp 180 crash fix).
+      6. Redirect target file sizes on the PS4 match the local files (full transfer).
+
+    Returns True if all checks pass.
+    """
+    import subprocess as sp
+    import tempfile
+
+    log.info("🔎 Post-deploy PS4 validation...")
+    ok = True
+
+    # 1. Reachability + listing
+    remote_files = _list_remote_dir(config)
+    if not remote_files:
+        log.warning("  ❌ PS4 unreachable or AFR dir empty — cannot validate")
+        return False
+    log.info(f"  ✅ PS4 reachable: {len(remote_files)} files in AFR dir")
+
+    # 2. Deployed redirects.json matches local
+    local_path = _get_redirect_config_path()
+    local_data = _load_local_redirects(local_path)
+    ps4_cfg = config.get('ps4', {})
+    cfg_title = config.get('title', {})
+    cfg_paths = config.get('paths', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    ftp_host = ps4_cfg.get('ip', '192.168.100.117')
+    ftp_port = ps4_cfg.get('ftp_port', 2121)
+    ftp_user = ps4_cfg.get('ftp_user', 'anonymous')
+    ftp_pass = ps4_cfg.get('ftp_password', '')
+    remote_path = f"{afr_base}/{title_id}/{REDIRECT_CONFIG_FILENAME}"
+    user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_tmp = os.path.join(tmpdir, "redirects.json")
+        cmd = ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
+               "-e", f"get {remote_path} -o {local_tmp}; quit"]
+        try:
+            result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+            remote_ok = result.returncode == 0 and os.path.exists(local_tmp)
+        except Exception:
+            remote_ok = False
+        if remote_ok:
+            with open(local_tmp) as f:
+                remote_data = json.load(f)
+            local_red = local_data.get('redirects', {})
+            remote_red = remote_data.get('redirects', {})
+            if local_red == remote_red:
+                log.info(f"  ✅ redirects.json on PS4 matches local ({len(local_red)} redirects)")
+            else:
+                log.warning(f"  ❌ redirects.json MISMATCH: local {len(local_red)} vs PS4 {len(remote_red)} redirects")
+                for k in sorted(set(local_red) | set(remote_red)):
+                    lv, rv = local_red.get(k), remote_red.get(k)
+                    if lv != rv:
+                        log.warning(f"       {k}: local={lv}  PS4={rv}")
+                ok = False
+        else:
+            log.warning("  ❌ Could not download redirects.json from PS4")
+            ok = False
+
+    # 3. Every redirect target exists on PS4
+    missing = []
+    for val in local_data.get('redirects', {}).values():
+        if val not in remote_files:
+            missing.append(val)
+    if missing:
+        log.warning(f"  ❌ Redirect targets missing on PS4: {missing}")
+        ok = False
+    else:
+        log.info(f"  ✅ All {len(local_data.get('redirects', {}))} redirect targets exist on PS4")
+
+    # 4. Pack bundle + catalog files exist on PS4
+    pb = config.get('pack_bundle', {}) or {}
+    for key in ('patched_bundle', 'patched_catalog'):
+        name = pb.get(key)
+        if not name:
+            continue
+        if name in remote_files:
+            log.info(f"  ✅ {name} on PS4 ({remote_files[name]:,} bytes)")
+        else:
+            log.warning(f"  ❌ {name} MISSING on PS4")
+            ok = False
+
+    # 5. Pack bundle + catalog redirect PAIR present (Exp 180 crash fix)
+    redirects = local_data.get('redirects', {})
+    bundle_key = pb.get('bundle_key')
+    catalog_key = pb.get('catalog_key')
+    if bundle_key and catalog_key:
+        has_bundle = redirects.get(bundle_key) == pb.get('patched_bundle')
+        has_catalog = redirects.get(catalog_key) == pb.get('patched_catalog')
+        if has_bundle and has_catalog:
+            log.info(f"  ✅ Pack bundle + catalog redirect pair present ({pb.get('patched_bundle')} + {pb.get('patched_catalog')})")
+        else:
+            log.warning(f"  ❌ Pack bundle + catalog redirect pair BROKEN (bundle={has_bundle}, catalog={has_catalog})")
+            ok = False
+
+    # 6. Sizes match local files where available
+    size_mismatch = []
+    for val in local_data.get('redirects', {}).values():
+        # Guess local source: pack bundle/catalog, mass_build bundles, or AFR staging
+        for cand in [os.path.join(PROJECT_ROOT, val),
+                     os.path.join('/tmp/opencode/mass_build', val)]:
+            if os.path.isfile(cand):
+                local_size = os.path.getsize(cand)
+                remote_size = remote_files.get(val)
+                if remote_size is not None and remote_size != local_size:
+                    size_mismatch.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
+                break
+    if size_mismatch:
+        log.warning(f"  ❌ Size mismatches: {size_mismatch}")
+        ok = False
+    else:
+        log.info("  ✅ Redirect target sizes match local files (where available)")
+
+    if ok:
+        log.info("🎉 Post-deploy validation PASSED")
+    else:
+        log.warning("⚠️  Post-deploy validation FAILED — see issues above")
+    return ok
+
 def manage_redirect_config(
     config: dict,
     target_name: str | None = None,
-    bundle_suffix: str | None = None,
     generate: bool = False,
     deploy: bool = False,
     sync: bool = False,
@@ -2137,11 +2572,12 @@ def manage_redirect_config(
 
     When called without any mode flags, auto-generates if local file is missing
     or if a deploy/sync is happening.
+
+    Song redirect VALUES always point at the exact deployed bundle filename
+    (canonical slot casing + afr_target_suffix), so the game never loads a stale
+    pre-.bundle build after a mass deploy.
     """
     cfg_paths = config.get('paths', {})
-    # Use same suffix as deploy_to_ps4() so redirect filenames match actual bundle filenames
-    if bundle_suffix is None:
-        bundle_suffix = cfg_paths.get('afr_target_suffix', '_v3')
     cfg_title = config.get('title', {})
     title_id = cfg_title.get('id', 'CUSA12878')
     afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
@@ -2187,9 +2623,20 @@ def manage_redirect_config(
         if not target_name.startswith('BeatmapLevelsData/'):
             target_name = f"BeatmapLevelsData/{target_name}"
 
-        bundle_name = f"{target_name.split('/')[-1]}{bundle_suffix}"
+        bundle_name = _deployed_bundle_name(target_name.split('/')[-1], config)
         redirect_data.setdefault('redirects', {})[target_name] = bundle_name
         log.info(f"  Added redirect: {target_name} -> {bundle_name}")
+
+    # ALWAYS keep the per-song redirects pointing at the exact deployed bundle
+    # filenames (canonical slot casing + afr_target_suffix). This heals stale
+    # pre-.bundle values and stale key casing after any config operation.
+    _ensure_mass_song_redirects(redirect_data, config)
+
+    # ALWAYS keep the pack bundle + catalog redirect pair consistent (Exp 180):
+    # a config with a pack bundle redirect but no catalog redirect (or with a
+    # stale pack target) crashes the game at startup. This runs on every save so
+    # the pair can never be silently dropped by regeneration, sync, or enforce.
+    _ensure_pack_bundle_redirects(redirect_data, config)
 
     # Save updated config locally
     os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
@@ -2734,6 +3181,19 @@ Examples:
     parser.add_argument('--enforce-config', action='store_true',
                         help='Use only the local redirects.json as truth and deploy it to PS4')
 
+    # Pack bundle + post-deploy validation flags (Exp 180 crash fix)
+    parser.add_argument('--deploy-pack-bundle', action='store_true',
+                        help='Deploy the patched pack bundle + patched catalog.json to the PS4 '
+                             '(must be done before redirects.json references them)')
+    parser.add_argument('--deploy-mass-bundles', action='store_true',
+                        help='Deploy all custom song bundles from mass_deploy.bundle_dir to the PS4')
+    parser.add_argument('--verify-ps4', action='store_true',
+                        help='Run post-deploy PS4 validation (redirects match, all targets exist, '
+                             'pack bundle + catalog pair present, sizes match)')
+    parser.add_argument('--no-verify-ps4', action='store_true',
+                        help='Skip the automatic post-deploy PS4 validation that runs whenever '
+                             'any --deploy option is used')
+
     # BeatSaver song download
     parser.add_argument('--download-beat-saver-song', default=None, metavar='MAP_ID',
                         help='Download a song from BeatSaver by map key (e.g. "1d6c7c2") '
@@ -2800,6 +3260,29 @@ Examples:
         if args.set_feature:
             apply_feature_flags(args.set_feature, {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths})
 
+        sys.exit(0)
+
+    # Deploy-only modes (no song processing): mass bundles, pack bundle, validation.
+    if (args.deploy_mass_bundles or args.deploy_pack_bundle or args.verify_ps4) and not args.song_dir:
+        deploy_cfg = {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths,
+                      'pack_bundle': config.get('pack_bundle', {}),
+                      'mass_deploy': config.get('mass_deploy', {})}
+        if args.deploy_mass_bundles:
+            deploy_mass_bundles(deploy_cfg)
+        if args.deploy_pack_bundle:
+            deploy_pack_bundle(deploy_cfg)
+        if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config or args.deploy:
+            manage_redirect_config(
+                deploy_cfg,
+                target_name=None,
+                generate=(args.generate_config or args.deploy_config or args.sync_config or args.deploy),
+                deploy=(args.deploy_config or args.sync_config or args.enforce_config),
+                sync=args.sync_config,
+                enforce_local=args.enforce_config,
+            )
+        if args.verify_ps4 or (args.deploy or args.deploy_config or args.sync_config or args.enforce_config):
+            if not args.no_verify_ps4:
+                verify_ps4_deployment(deploy_cfg)
         sys.exit(0)
 
     # Plugin toggle mode: enable/disable without processing any song
@@ -3078,6 +3561,9 @@ Examples:
     # -----------------------------------------------------------------------
     # Step 7: Deploy bundle to PS4
     # -----------------------------------------------------------------------
+    deploy_cfg = {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths,
+                  'pack_bundle': config.get('pack_bundle', {}),
+                  'mass_deploy': config.get('mass_deploy', {})}
     if args.deploy:
         deploy_to_ps4(args.output, args.target, config)
 
@@ -3103,6 +3589,22 @@ Examples:
             sync=args.sync_config,
             enforce_local=args.enforce_config,
         )
+
+    # Step 9b: Deploy the patched pack bundle + catalog whenever anything is
+    # being deployed to the PS4. The redirects.json generated above always
+    # references the pack bundle + catalog pair (Exp 180 crash fix), so those
+    # files MUST exist on the PS4 before the game boots, otherwise the redirected
+    # path 404s and the pack scan crashes.
+    if should_deploy and not args.no_verify_ps4:
+        deploy_pack_bundle(deploy_cfg)
+
+    # Step 9c: Post-deploy validation (self-validating pipeline, Exp 180).
+    # Runs automatically whenever any --deploy option was used, unless
+    # --no-verify-ps4 is passed. Reports PASS/FAIL for every check.
+    if should_deploy and not args.no_verify_ps4:
+        verify_ps4_deployment(deploy_cfg)
+    elif args.verify_ps4:
+        verify_ps4_deployment(deploy_cfg)
 
     # -----------------------------------------------------------------------
     # Step 10: Feature flags

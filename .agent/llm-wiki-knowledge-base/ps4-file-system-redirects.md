@@ -7,14 +7,27 @@ metadata:
 
 # PS4 File System & Redirects
 
-## Plugin Redirect Table (beat_saber_deluxe.prx v0.44)
+## Redirect Source of Truth (v0.5318+)
 
-The redirect table is defined in `src/main.cpp` line 64-65:
+Redirects are **dynamic**, loaded by the plugin at runtime from `redirects.json` on the PS4
+(`/data/GoldHEN/AFR/CUSA12878/redirects.json`), NOT hardcoded in `main.cpp`. `load_redirects()`
+parses the JSON pairs; for each value without a `/`, the plugin prepends
+`AFR_BASE "/" TITLE_ID "/"` (see `src/main.cpp` `load_redirects`, e.g. line 187).
 
-```cpp
-if (strstr(path, "BeatmapLevelsData/startmeup"))
-    np = AFR_BASE "/" TITLE_ID "/startmeup_v3";
-```
+### ⚠️ CRITICAL — Redirect VALUE naming rule (Exp 187)
+
+- The plugin opens the redirect **VALUE verbatim** (`AFR_BASE/TITLE_ID/` + value), and `open()`
+  is **case-sensitive** → the value MUST byte-match the exact deployed bundle filename.
+- A value like `Crystallized_v3` silently keeps serving the STALE build while the freshly
+  deployed `crystallized_v3.bundle` sits unused — the game never errors (stale file exists).
+- Deployed bundle name = **canonical slot casing** (from `mass_deploy.slots`, matched
+  case-insensitively) + `paths.afr_target_suffix` (default `_v3.bundle`).
+- Pipeline enforcement: `_deployed_bundle_name()` (single source of truth) +
+  `_ensure_mass_song_redirects()` (runs on EVERY `manage_redirect_config` save, like the
+  pack/catalog pair): keeps known-good redirect KEYS, fixes VALUES to exact deployed names,
+  drops stale pre-`.bundle` entries, adds missing slots.
+- Keys are matched **case-insensitively** via lowered `strstr`, so key casing doesn't matter;
+  only the VALUE must be exact.
 
 ### ⚠️ CRITICAL: AFR vs Plugin Deploy Paths
 
@@ -28,7 +41,7 @@ if (strstr(path, "BeatmapLevelsData/startmeup"))
 **Deploy command:**
 ```bash
 lftp -u anonymous, -p 2121 192.168.100.117 \
-  -e "put custom_song.bundle -o /data/GoldHEN/AFR/CUSA12878/startmeup_v3; quit"
+  -e "put custom_song.bundle -o /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle; quit"
 ```
 
 ### 2. GoldHEN Plugins — PRX Plugin Files
@@ -55,17 +68,18 @@ lftp -u anonymous, -p 2121 192.168.100.117 \
 
 | Plugin matches | Redirects to | Deploy absolute path |
 |---|---|---|
-| `BeatmapLevelsData/startmeup` | `startmeup_v3` | `/data/GoldHEN/AFR/CUSA12878/startmeup_v3` |
+| `BeatmapLevelsData/startmeup` | `startmeup_v3.bundle` | `/data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle` |
 
-**Deploying to `startmeup` instead of `startmeup_v3` will have NO EFFECT.**
+**Deploying to `startmeup` instead of `startmeup_v3.bundle` will have NO EFFECT.**
 The bundle will sit on the PS4 but never be loaded by the game.
 
-### Current Active Redirects (v0.44)
+### Current Active Redirects (v0.5318)
 
-Only **one** redirect is active:
-- `BeatmapLevelsData/startmeup` → `startmeup_v3`
-
-To add more, modify `main.cpp` and add new `if (strstr(...))` clauses before the fallthrough.
+40 redirects in `redirects.json`: 38 song slots (`BeatmapLevelsData/<slot>` →
+`<slot>_v3.bundle`) + the pack pair (`aa/catalog.json` → `catalog_startmeup_modes.json` and
+`therollingstones_pack_assets_all_*.bundle` → `startmeup_pack_modes.bundle`, see
+[[pack-bundle-patching]]). To add more, use the pipeline (`--generate-config`) — it merges
+into the existing `redirects.json` and enforces naming + the pack pair on every save.
 
 ## AFR (Application File Redirect)
 
@@ -81,16 +95,18 @@ Where:
 
 For Beat Saber:
 ```
-/data/GoldHEN/AFR/CUSA12878/startmeup_v3   ← the custom AssetBundle
+/data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle   ← the custom AssetBundle
 ```
 
 ### Redirect Mechanism
-The plugin hooks `open()` and checks if the path contains a target string:
+The plugin hooks `open()` and checks if the path contains a target string (from the dynamic
+redirects.json, matched case-insensitively):
 ```cpp
-if (strstr(path, "BeatmapLevelsData/startmeup"))
-    np = AFR_BASE "/" TITLE_ID "/startmeup_v3";
+if (strstr(lowercased_path, "beatmaplevelsdata/startmeup"))
+    np = AFR_BASE "/" TITLE_ID "/startmeup_v3.bundle";
 ```
-When matched, it replaces the original path with the AFR path and calls `open()` on the redirected path.
+When matched, it replaces the original path with the AFR path and calls `open()` on the
+redirected path (the VALUE is opened verbatim — case-sensitive, byte-exact).
 
 ### Permission Fix
 AFR directories need proper permissions via `sceKernelMkdir` and `sceKernelFchmod`:
@@ -118,9 +134,16 @@ When the game opens a BeatmapLevelData file:
 4. Unity loads the AssetBundle from the handle
 5. Game uses assets from the bundle as if they were the original
 
+## PS4 Stale-File Hygiene (Exp 187)
+- The Aug-13 mass redeploy left BOTH old `<slot>_v3` files (no `.bundle`) AND fresh
+  `<slot>_v3.bundle` files on the PS4. The `--verify-ps4` size check could NOT catch stale
+  redirects because the stale file also exists. Cleanup: `development/scripts/cleanup_ps4_stale.sh`
+  (dry-run default). **Order matters: deploy the corrected `redirects.json` FIRST, then delete
+  stale files** — old redirect values still point at `_v3` files; deleting those first crashes boot.
+
 ## Important Notes
 - The redirect only intercepts the specific song file — other songs load normally
 - The environment/scene bundles also load normally (no redirect needed)
 - If the redirect target file doesn't exist, the original open() call returns -1 (file not found), causing the game to fail gracefully (return to menu)
 
-See also: [[plugin-architecture]], [[toolchain-and-build]], [[development-workflow]]
+See also: [[plugin-architecture]], [[pack-bundle-patching]], [[toolchain-and-build]], [[development-workflow]]

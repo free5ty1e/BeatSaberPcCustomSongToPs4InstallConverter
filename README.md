@@ -25,13 +25,13 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 |---------|--------|-------------|
 | [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md) | ✅ Working | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection |
 | [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working | Display custom song names and artists in-game via IL2CPP MoveNext hook |
-| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md) | ✅ Working (v0.5311+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection) |
+| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md) | ✅ Working (v0.5316+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection). Generated modes verified on-device (2026-08-11 boot test). |
 | Note Colors | ⏳ Planned | Custom left/right saber colors per song |
 
 > **⚠️ Current limitations:**
 > - **Single-artist packs only** — Song metadata modification works perfectly for single-artist packs (Rolling Stones, Billie Eilish, Lizzo). Multi-artist packs would incorrectly blank all artist names. Currently only single-artist packs are targeted.
 > - **Artist line is blank** — For single-artist packs, the artist line in the song list is intentionally blanked. The custom song name and artist are combined on the song name line (e.g., "Espresso / Sabrina Carpenter").
-> - **NoArrows bug FIXED (Exp 181, 2026-08-09)** — root cause was in `_create_text_asset_object()`: `type_id=0` mapped TextAssets to MonoScript(115) instead of TextAsset(49), and `struct.pack` used wrong binary format. Fixed with `EndianBinaryWriter.write_aligned_string()` + correct `type_id`. Awaiting PS4 deploy verification.
+> - **Deploy via per-song pipeline** — the old `deploy_all.sh` is OUTDATED (hardcoded 13 Rolling Stones slots, no mode mapping). Use `tools/full_custom_song_pipeline.py --song-dir <dir> --target <slot> --deploy --generate-config --deploy-config` per song, or `deploy_all38.sh` for a full 38-slot mass deploy (bundles must be built first into `/tmp/opencode/mass_build/`).
 
 ## Available Song Slots (Default Targets)
 
@@ -271,7 +271,7 @@ python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py \
 - **Port:** 2121 (GoldHEN's default FTP port)
 - **User:** `anonymous` (no password)
 - **Plugin destination:** `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
-- **Bundle destination:** `/data/GoldHEN/AFR/CUSA12878/<target>_v3`
+- **Bundle destination:** `/data/GoldHEN/AFR/CUSA12878/<slot>_v3.bundle` (exact filename — the plugin opens the redirect VALUE verbatim and `open()` is case-sensitive, so the value must byte-match the deployed file, Exp 187)
 - **Config destination:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
 - **Log file:** `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
 
@@ -299,7 +299,7 @@ grep "BS Deluxe" /tmp/ps4_log.txt
 
 # Check for redirects (songs being replaced)
 grep "->" /tmp/ps4_log.txt | grep AFR
-# Expected: "/.../BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3"
+# Expected: "/.../BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle"
 ```
 
 ### 4.2 Plugin hot-reload
@@ -360,7 +360,7 @@ python3 tools/full_custom_song_pipeline.py \
 ```
 
 **After the command completes:**
-1. The bundle is built and deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`
+1. The bundle is built and deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle`
 2. The redirect config is updated and deployed
 3. Restart Beat Saber on your PS4
 4. Navigate to the target song in the game's song pack — your custom song will play!
@@ -498,11 +498,11 @@ cp /tmp/ps4_log.txt "/workspace/.ai_memory/experiment_logs/ps4_log_$(date +%Y%m%
 === BS Deluxe v0.80 started ===           # Plugin header + version
 v0.80 — dynamic redirect config (...)
 loaded 32 redirects from config
-  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle
 open:/data/GoldHEN/AFR/CUSA12878/bs_log.txt
 [MEMINJ] Initialized                     # Memory injection module ready
 ...
-open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3   # Redirect fired!
+open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle   # Redirect fired!
 [MEMINJ] Scanning...                     # Memory injection triggered
 [MEMINJ] Found klass 0x... via pattern   # BeatmapLevelSO class found
 [MEMINJ] Found 1 candidates with klass   # Objects located

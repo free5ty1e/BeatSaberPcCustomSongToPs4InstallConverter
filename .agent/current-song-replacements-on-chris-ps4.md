@@ -1,9 +1,12 @@
 # Current Song Replacements on Chris's PS4
 
 > **Plugin:** Beat Saber Deluxe v0.8040  
-> **All 38 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo + 6 Camellia) with custom community songs.  
-> **Last rebuilt:** 2026-07-27 (v0.5305 — Camellia Music Pack expansion)
-> **Status:** ✅ All songs deployed. **Pack bundle redirect active** (CRC-corrected, Exp 142). **MoveNext() hook deployed** (v0.8039) — modifies BeatmapLevel fields before UI reads them. **Case fix** (v0.8040) — exact game strings from song IDs. **Awaiting test.**
+> **Pipeline:** v0.5316 (safe defaults: PCM16 + no-pad full audio + beatmap mode mapping/generators + V2→V3)
+> **All 38 songs replaced** (13 Rolling Stones + 10 Billie Eilish + 9 Lizzo + 6 Chromeo) with custom community songs.
+> **Last rebuilt:** 2026-08-12 — **mass re-run of all 38 songs** through the per-song pipeline (mode mapping + generators). Chromeo 6 rebuilt from PS4 bundle extraction (their source dirs were deleted; beatmaps reconstructed V4→V3.2.0).
+> **Status:** ✅ **DEPLOYED (2026-08-12)** — all 38 bundles + `redirects.json` (39 redirects) + `song_metadata.json` verified on PS4 (sizes match local builds exactly). Plugin v0.8040 confirmed. **AWAITING USER TEST** — spot-check Chromeo slots (all 6), new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree mode, full audio lengths.
+> **Mode mapping:** every slot now carries **Standard 5/5 + OneSaber 5/5 + NoArrows 5/5 + 90Degree 5/5** (generated gap-fill modes).
+> **Deploy note:** the old `deploy_all.sh` is **OUTDATED** (13 hardcoded Rolling Stones targets, `_v3` paths, no mode mapping). Use the per-song pipeline invocation (see "How to Deploy").
 
 ## Rolling Stones Replacements (13 songs)
 
@@ -70,17 +73,26 @@
 
 ## Total: 38 Custom Songs Deployed
 
-## How to Deploy (Full)
+## How to Deploy (Full — per-song pipeline)
 
 ```bash
 cd /workspace/beat_saber_deluxe
-./deploy_all.sh --debug
+# For each song: build + deploy with the pipeline (mode mapping + generators baked in)
+python3 tools/full_custom_song_pipeline.py \
+  --song-dir <source_dir> \
+  --audio <source_dir>/audio.fsb \     # only for Chromeo back-out dirs
+  --target <slot> \
+  --template /workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/<slot> \
+  --output /tmp/opencode/mass_build/<slot>_v3.bundle \
+  --deploy
 ```
 
 This deploys:
-- Plugin (v0.57 debug) → `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
-- All bundles → `/data/GoldHEN/AFR/CUSA12878/{slot}_v3`
-- `redirects.json` → `/data/GoldHEN/AFR/CUSA12878/redirects.json`
+- Plugin (v0.8040) → `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
+- Bundles → `/data/GoldHEN/AFR/CUSA12878/{slot}_v3` (redirected via `redirects.json`)
+- `redirects.json` / `song_metadata.json` → `/data/GoldHEN/AFR/CUSA12878/`
+
+> **⚠️ `deploy_all.sh` is OUTDATED** — it hardcodes 13 Rolling Stones targets with `_v3` paths and predates beatmap mode mapping. Do not use it for full deploys.
 
 ## How to Download & Deploy a New Song from BeatSaver
 
@@ -88,7 +100,6 @@ This deploys:
 python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py \
   --download-beat-saver-song <beatsaver_map_key> \
   --target <slot_name> \
-  --pcm16 --no-pad --convert-to-v3 \
   --deploy
 ```
 
@@ -98,7 +109,5 @@ Find songs at https://beatsaver.com. The map key is the short ID in the URL (e.g
 
 | Date | Reason | Songs Built/Modified |
 |------|--------|---------------------|
-| 2026-07-10 | Full rebuild all 13 — bpmEvents fix for V3, long-intro replacements | All 13 RS |
-| 2026-07-11 | Billie Eilish + Lizzo album mass rebuild | 19 new songs |
-| 2026-07-11 | NDA slot: replaced "360" (Charli xcx) with "Duvet" (Bôa) | NDA |
-| 2026-07-11 | Download feature validation: Oxytocin→Breezeblocks, then restored→Overdose | Oxytocin |
+| 2026-08-12 | Mass re-run all 38 songs (pipeline v0.5316): mode mapping + generators, full audio, V2→V3. Chromeo 6 rebuilt from PS4 extraction (V4→V3.2.0 decode). Fixed generator KeyError on omitted V3 fields. | All 38 |
+| 2026-08-11 | Espresso → `startmeup` (V2.1.0, 5 diffs); boot test PASSED; first full-audio no-pad build | startmeup |

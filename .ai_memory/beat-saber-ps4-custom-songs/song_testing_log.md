@@ -38,6 +38,7 @@ Records which custom songs have been tested on PS4, their sync status, and any i
 | 2026-07-11 | 360 | Charli xcx | 120 | ~203s | PCM16 FSB5 | ❌ | N/A | **Removed.** Song has 360-degree characteristics. Not suitable for PS4 VR. Replaced with Duvet. |
 | 2026-07-14 | Espresso (Start Me Up slot) | Sabrina Carpenter | 104 | ~177s | PCM16 FSB5 | ✅ Perfect | ✅ | **v0.64 redirect test** — No crash, full gameplay verified on Hard difficulty. v0.64 removes all IL2CPP hooks; redirect-only stable. |
 | 2026-08-09 | drop pop candy (Start Me Up slot) | Reol | 130 | 224s | PCM16 FSB5 | ✅ | ✅ | **Mode mapping (v0.5311):** NoArrows ✅ (dots confirmed on-device), OneSaber ✅ (single saber). Standard not re-tested this cycle. **90Degree NOT tested yet** — selector button was hidden until Exp 182 pid fix (was pointing at 360Degree characteristic); rebuilt pack bundle deployed Aug 9, awaiting boot test. |
+| 2026-08-11 | Espresso (Start Me Up slot) | Sabrina Carpenter | 104 | 224.31s | PCM16 FSB5 (full, no-pad) | ✅ | ✅ | **Full-audio + mode mapping (v0.5315/0.8040):** "worked perfectly — exactly as I envisioned." All 4 modes on Hard (Standard/OneSaber/NoArrows/90Degree) + 90Degree Expert (source lane behavior). Full 224.31s audio (no truncation), lighting `et` events correct. |
 
 ### Billie Eilish Replacements (Deployed 2026-07-11, Not Yet Tested)
 

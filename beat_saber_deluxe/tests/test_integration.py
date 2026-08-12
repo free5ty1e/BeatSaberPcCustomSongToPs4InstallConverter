@@ -297,6 +297,161 @@ class TestRedirectConfigManagement:
         assert len(result['redirects']) == 0
 
 
+class TestPackBundleRedirectConsistency:
+    """Test the pack bundle + catalog redirect pair consistency (Exp 180 crash fix)."""
+
+    PACK_CONFIG = {
+        'title': {'id': 'CUSA12878'},
+        'paths': {'afr_base': '/data/GoldHEN/AFR', 'afr_target_suffix': '_v3'},
+        'pack_bundle': {
+            'bundle_key': 'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle',
+            'patched_bundle': 'startmeup_pack_modes.bundle',
+            'catalog_key': 'aa/catalog.json',
+            'patched_catalog': 'catalog_startmeup_modes.json',
+        },
+    }
+
+    def test_get_pack_bundle_redirects_returns_pair(self):
+        """The pack bundle redirect always comes with the catalog redirect."""
+        from full_custom_song_pipeline import _get_pack_bundle_redirects
+        pair = _get_pack_bundle_redirects(self.PACK_CONFIG)
+        assert pair == {
+            'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle': 'startmeup_pack_modes.bundle',
+            'aa/catalog.json': 'catalog_startmeup_modes.json',
+        }
+
+    def test_get_pack_bundle_redirects_empty_without_config(self):
+        """No pack_bundle config -> no forced redirects."""
+        from full_custom_song_pipeline import _get_pack_bundle_redirects
+        config = {'title': {'id': 'CUSA12878'}, 'paths': {}}
+        assert _get_pack_bundle_redirects(config) == {}
+
+    def test_ensure_pack_bundle_redirects_adds_missing_pair(self):
+        """Regenerated config that lost the pack/catalog pair gets both restored."""
+        from full_custom_song_pipeline import _ensure_pack_bundle_redirects
+        data = {'redirects': {'BeatmapLevelsData/startmeup': 'startmeup_v3'}}
+        changed = _ensure_pack_bundle_redirects(data, self.PACK_CONFIG)
+        assert changed == 2
+        assert data['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
+        assert data['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
+
+    def test_ensure_pack_bundle_redirects_fixes_stale_pack_target(self):
+        """A stale pack target (e.g. rollingstones_pack_patched.bundle) is overwritten."""
+        from full_custom_song_pipeline import _ensure_pack_bundle_redirects
+        data = {'redirects': {
+            'BeatmapLevelsData/startmeup': 'startmeup_v3',
+            'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c': 'rollingstones_pack_patched.bundle',
+        }}
+        changed = _ensure_pack_bundle_redirects(data, self.PACK_CONFIG)
+        # 1 stale key removed + 2 canonical entries added/updated
+        assert changed == 3
+        assert data['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
+        assert data['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
+        assert 'rollingstones_pack_patched.bundle' not in data['redirects'].values()
+
+    def test_manage_redirect_config_never_drops_pack_pair(self, tmp_dir, monkeypatch):
+        """manage_redirect_config must ALWAYS keep the pack bundle + catalog pair."""
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._get_redirect_config_path',
+            lambda project_root=None: os.path.join(tmp_dir, 'redirects.json')
+        )
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._deploy_redirect_to_ps4',
+            lambda config: None
+        )
+        result = manage_redirect_config(
+            self.PACK_CONFIG, target_name='startmeup', generate=True, deploy=False
+        )
+        assert result['redirects']['BeatmapLevelsData/startmeup'] == 'startmeup_v3'
+        assert result['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
+        assert result['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
+
+    def test_load_config_defaults_include_pack_bundle(self):
+        """Default config carries the pack bundle settings (self-inclusive pipeline)."""
+        from full_custom_song_pipeline import load_config
+        cfg = load_config('/nonexistent/config.json')
+        assert cfg['pack_bundle']['bundle_key'].endswith('.bundle')
+        assert cfg['pack_bundle']['catalog_key'] == 'aa/catalog.json'
+        assert cfg['pack_bundle']['patched_catalog'] == 'catalog_startmeup_modes.json'
+        assert len(cfg['mass_deploy']['slots']) == 38
+
+
+class TestDeployedBundleNaming:
+    """Song redirect VALUES must match the exact deployed bundle filename (Exp 186).
+
+    The game opens the redirect VALUE verbatim and open() is case-sensitive, so a
+    value like `Crystallized_v3` silently keeps serving the stale build while the
+    fresh bundle sits on the PS4 as `crystallized_v3.bundle`.
+    """
+
+    MASS_CFG = {
+        'title': {'id': 'CUSA12878'},
+        'paths': {'afr_base': '/data/GoldHEN/AFR', 'afr_target_suffix': '_v3.bundle'},
+        'mass_deploy': {'slots': ['startmeup', 'crystallized', 'cyclehit',
+                                  'Oxytocin', 'AllTheGoodGirlsGoToHell']},
+    }
+
+    def test_deployed_bundle_name_uses_slot_casing(self):
+        """Deployed name uses the canonical slot casing from mass_deploy.slots."""
+        from full_custom_song_pipeline import _deployed_bundle_name
+        assert _deployed_bundle_name('Crystallized', self.MASS_CFG) == 'crystallized_v3.bundle'
+        assert _deployed_bundle_name('crystallized', self.MASS_CFG) == 'crystallized_v3.bundle'
+        assert _deployed_bundle_name('Oxytocin', self.MASS_CFG) == 'Oxytocin_v3.bundle'
+        assert _deployed_bundle_name('startmeup', self.MASS_CFG) == 'startmeup_v3.bundle'
+
+    def test_deployed_bundle_name_default_suffix(self):
+        """Falls back to _v3.bundle when no suffix is configured."""
+        from full_custom_song_pipeline import _deployed_bundle_name
+        cfg = {'paths': {}}
+        assert _deployed_bundle_name('startmeup', cfg) == 'startmeup_v3.bundle'
+
+    def test_ensure_mass_song_redirects_fixes_stale_values(self):
+        """Stale pre-.bundle values are healed to the deployed filename."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {
+            'BeatmapLevelsData/startmeup': 'startmeup_v3',
+            'BeatmapLevelsData/Crystallized': 'Crystallized_v3',
+        }}
+        changed = _ensure_mass_song_redirects(data, self.MASS_CFG)
+        assert changed >= 2
+        assert data['redirects']['BeatmapLevelsData/startmeup'] == 'startmeup_v3.bundle'
+        assert data['redirects']['BeatmapLevelsData/Crystallized'] == 'crystallized_v3.bundle'
+
+    def test_ensure_mass_song_redirects_adds_missing_slots(self):
+        """Slots missing from the config get added with the correct value."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {}}
+        changed = _ensure_mass_song_redirects(data, self.MASS_CFG)
+        assert changed == len(self.MASS_CFG['mass_deploy']['slots'])
+        for slot in self.MASS_CFG['mass_deploy']['slots']:
+            key = f"BeatmapLevelsData/{slot}"
+            assert data['redirects'][key] == f"{slot}_v3.bundle"
+
+    def test_manage_redirect_config_heals_stale_values(self, tmp_dir, monkeypatch):
+        """manage_redirect_config writes exact deployed filenames as values."""
+        from full_custom_song_pipeline import manage_redirect_config
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._get_redirect_config_path',
+            lambda project_root=None: os.path.join(tmp_dir, 'redirects.json')
+        )
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._deploy_redirect_to_ps4',
+            lambda config: None
+        )
+        result = manage_redirect_config(
+            self.MASS_CFG, target_name='crystallized', generate=True, deploy=False
+        )
+        assert result['redirects']['BeatmapLevelsData/crystallized'] == 'crystallized_v3.bundle'
+
+    def test_no_slots_no_change(self):
+        """No mass_deploy.slots -> no forced song redirects."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {'BeatmapLevelsData/startmeup': 'startmeup_v3'}}
+        changed = _ensure_mass_song_redirects(data, {'paths': {}})
+        assert changed == 0
+        assert data['redirects']['BeatmapLevelsData/startmeup'] == 'startmeup_v3'
+
+
 class TestSongMetadataManagement:
     """Test song metadata generation without FTP deployment."""
 

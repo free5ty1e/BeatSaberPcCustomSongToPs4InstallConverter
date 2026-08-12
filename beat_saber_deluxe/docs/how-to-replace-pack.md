@@ -47,7 +47,7 @@ python3 tools/full_custom_song_pipeline.py \
 After the pipeline completes:
 1. Ensure the log shows `✅ Redirect config deployed` and `Beatmaps replaced: X/5`.
 2. Check the PS4 folder `/data/GoldHEN/AFR/CUSA12878/` via FTP.
-3. You should see `{TargetSlot}_v3` bundles for every replaced song.
+3. You should see `{TargetSlot}_v3.bundle` bundles for every replaced song.
 
 ### 3. Final Metadata Sync
 Once all songs are deployed, perform a final sync of the metadata:

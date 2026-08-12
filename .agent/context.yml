@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5315" # in beat_saber_deluxe/VERSION — safe defaults + idempotency fix (Exp 183)
+pipeline_version: "0.5318" # in beat_saber_deluxe/VERSION — redirect VALUE naming fix (Exp 187)
 
 # Platform Constraints
 target_platform: PS4
@@ -41,12 +41,31 @@ redirect_config: redirects.json (deployed to PS4 at /data/GoldHEN/AFR/CUSA12878/
 # PS4 File Paths
 afr_base: /data/GoldHEN/AFR/CUSA12878
 afr_plugin_dir: /data/GoldHEN/plugins
-deploy_path_bundles: /data/GoldHEN/AFR/CUSA12878/{target}_v3
+deploy_path_bundles: /data/GoldHEN/AFR/CUSA12878/{slot}_v3.bundle   # exact filename; redirect VALUES MUST match (case-sensitive open(), Exp 187)
 deploy_path_config: /data/GoldHEN/AFR/CUSA12878/redirects.json
 deploy_path_metadata: /data/GoldHEN/AFR/CUSA12878/song_metadata.json
 deploy_path_plugin: /data/GoldHEN/plugins/beat_saber_deluxe.prx
 ps4_log: /data/GoldHEN/AFR/CUSA12878/bs_log.txt
 ftp_port: 2121
+
+# Deploy Naming (Exp 187 — CRITICAL)
+deploy_naming:
+  source_of_truth: _deployed_bundle_name(slot, config) in full_custom_song_pipeline.py
+  rule: >
+    Deployed bundle filename = canonical slot casing (from mass_deploy.slots, case-insensitive
+    match) + paths.afr_target_suffix. Default afr_target_suffix = "_v3.bundle" (was "_v3").
+    The plugin opens the redirect VALUE verbatim prefixed with AFR_BASE/TITLE_ID/ — open() is
+    case-sensitive, so a VALUE like "Crystallized_v3" silently serves a STALE build while the
+    fresh "crystallized_v3.bundle" sits unused. _ensure_mass_song_redirects() runs on every
+    manage_redirect_config save: keeps keys, fixes values to exact deployed names, drops stale
+    pre-.bundle entries, adds missing slots. deploy_mass_bundles uploads under
+    os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
+    has NO bundle_suffix param.
+  ps4_state: >
+    PS4 ONLINE since 2026-08-13. Corrected redirects.json (40 redirects, all exact `.bundle`
+    values) DEPLOYED + verified on-device. PS4 cleaned of 58 stale files (AFR dir 98→44):
+    all 38 <slot>_v3.bundle builds + pack pair + config + Media/ + Plugins/ remain. bs_log.txt
+    cleared for boot test. Pending: user boot test, then pull + archive bs_log.txt.
 
 # Song Slot Naming
 slot_note: >
@@ -127,19 +146,22 @@ mode_generation:
     for m_Name, `write_int(len) + write(bytes) + align_stream(4)` for m_Script, and set `type_id` to the 
     actual index from cab.types. Verified: all 5 NoArrows diffs have dots (d=8).
   next_steps:
-    1. Exp 183 deploy (BLOCKED - FTP down): full-audio startmeup_v3.bundle (39,697,727 B) + cleaned features.json (2 runtime flags) to PS4 AFR; clear bs_log.txt
-    2. Boot test: full 224.31s audio, 4 mode selectors, source 90Degree Expert + generated 90Degree difficulties, lighting events (et)
-    3. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
-    4. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
+    1. User test (Exp 186 deployed): 6 Chromeo slots, new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree across songs, full audio lengths. Then pull + archive bs_log.txt, update song_testing_log.md
+    2. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
+    3. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
 
-# Camellia Pack Replacement (Most Recent Work — v0.5305)
+# Camellia Pack Replacement — Chromeo Songs (recovered from PS4 bundles, Exp 184)
+# The 6 slot sources were DELETED locally; recovered from deployed bundles via
+# /tmp/opencode/reconstruct_chromeo_src.py (audio FSB + V4 beatmaps -> V3.2.0) into
+# beat-saber-ps4-custom-songs/songs/chromeo_backout/<slot>/ (with audio.fsb).
+# Current deployed content (from song_metadata.json), NOT the old Camellia-era swaps:
 camellia_slots:
-  Crystallized: { beatSaverId: "12a", replacement: "Bloom", artist: "ODESZA" }
-  CycleHit: { beatSaverId: "133", replacement: "Powerful", artist: "Major Lazer" }
-  ExitThisEarthsAtomosphere: { beatSaverId: "156", replacement: "Red Lips", artist: "GTA / Mendus" }
-  Ghost: { beatSaverId: "1bf", replacement: "Lone Digger", artist: "Caravan Palace" }
-  LightItUp: { beatSaverId: "7e", replacement: "Batshit", artist: "Sofi Tukker" }
-  WhatTheCat: { beatSaverId: "7f", replacement: "G.O.M.D", artist: "Sickick" }
+  Crystallized: { beatSaverId: "recovered", replacement: "Sexy Socialite", artist: "Chromeo" }
+  CycleHit: { beatSaverId: "recovered", replacement: "Jealous (I Ain't With It)", artist: "Chromeo" }
+  ExitThisEarthsAtomosphere: { beatSaverId: "recovered", replacement: "'Roni Got Me Stressed Out", artist: "Chromeo" }
+  Ghost: { beatSaverId: "recovered", replacement: "Green Light (Chromeo Remix)", artist: "Lorde, Chromeo" }
+  LightItUp: { beatSaverId: "recovered", replacement: "1999", artist: "Charli XCX & Troye Sivan" }
+  WhatTheCat: { beatSaverId: "recovered", replacement: "FANCY", artist: "TWICE" }
 
 # Standard Pipeline Command (BeatSaver download + deploy) — NO flags needed since v0.5314
 example_command: |
@@ -153,7 +175,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "405 tests (as of v0.5315); +17 default-resolution tests (v0.5314) + 1 idempotency regression (v0.5315)"
+test_count: "419 tests (as of v0.5318); +6 TestDeployedBundleNaming (v0.5318)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
@@ -188,9 +210,10 @@ kb_note: >
 experiment_log_active: .ai_memory/beat-saber-ps4-custom-songs/experiment_log.md
 experiment_log_archive_dir: .ai_memory/beat-saber-ps4-custom-songs/experiment_log_archive/
 experiment_log_note: >
-  Active log holds ONLY the current feature (Beatmap Mode Mapping, Exp 160+).
-  Prior features (Exp 1-159) archived in experiment_log_archive/ as
-  experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md.
+  Active log holds ONLY the current feature (Chromeo Source Recovery + Mass Redeploy, Exp 184+).
+  Prior features archived in experiment_log_archive/:
+  - experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md (Exp 1-159)
+  - experiment_log_beatmap-mode-mapping_exp160-183_2026-07-28_to_2026-08-11.md (Exp 160-183)
   Experiment numbers are globally sequential — when rotating, archive the old
   feature's log into experiment_log_archive/ and rewrite experiment_log.md fresh.
 
@@ -207,4 +230,4 @@ pitfalls:
   - PCM16 output is lossless but larger — always use --no-pad
   - V3 beatmap uses field 'c' for note color (not 'a' which is V2)
   - Song metadata: artist is intentionally blanked for single-artist packs; name+artist combined on name line
-  - Bundle naming: deployed as {target}_v3 (not just {target})
+  - Bundle naming: deployed as {slot}_v3.bundle (canonical casing + suffix); redirect VALUES must byte-match (Exp 187)

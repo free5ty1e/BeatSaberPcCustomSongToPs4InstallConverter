@@ -1,5 +1,30 @@
 # Pipeline Changelog
 
+## v0.5318 (2026-08-13)
+### Fixed
+- **Redirect VALUES must match the exact deployed bundle filename (Exp 187).** The game opens the redirect VALUE verbatim and `open()` is case-sensitive, so a value like `Crystallized_v3` silently keeps serving the stale Jul/Aug build while the freshly mass-deployed bundle sits on the PS4 as `crystallized_v3.bundle`. The Aug-13 redeploy uploaded all 38 new bundles correctly, but the generated `redirects.json` still pointed at old `_v3` names (and titlecase Camellia names) — the game would never have loaded the new builds. The pipeline now has a single source of truth for deployed bundle naming: `_deployed_bundle_name()` builds `{slot}{afr_target_suffix}` using the canonical slot casing from `mass_deploy.slots`, and `_ensure_mass_song_redirects()` (run on every config save, like the pack/catalog pair) rewrites every per-song value to that exact filename, preserving known-good keys while healing stale values. Default `afr_target_suffix` is now `_v3.bundle` (was `_v3`) so single-song deploys, mass deploys, and redirect values all converge on the same filenames.
+- **`deploy_mass_bundles` / `deploy_to_ps4` now upload under the exact filename the redirect will reference** (local file basename), so a future rename can never split "what's deployed" from "what the redirects point at".
+### Changed
+- `manage_redirect_config()` dropped its `bundle_suffix` parameter — target entries use `_deployed_bundle_name()` (canonical slot casing + suffix) instead of the caller-provided suffix string, eliminating the class of bug where the suffix used for uploading and the suffix used for redirects diverged.
+### Added
+- Regression tests: `TestDeployedBundleNaming` (6 tests) — slot-casing canonicalization, stale `_v3`/titlecase value healing, missing-slot insertion, default suffix fallback. Full suite 419/419 pass.
+
+## v0.5317 (2026-08-13)
+### Fixed
+- **PS4 crash at boot when the pack bundle is redirected without the catalog (Exp 180 root cause).** Unity validates a bundle against the `m_Crc` in `aa/catalog.json` at load time (crc32 of the *decompressed* stream, Exp 179). The patched pack bundle (`startmeup_pack_modes.bundle`) has a different dec-stream CRC than the original, so serving it against the ORIGINAL catalog → CRC mismatch → crash during the pack scan (observed: died at ~[OPEN #591] with a 39-redirect config that dropped `aa/catalog.json` and pointed the pack at the stale `rollingstones_pack_patched.bundle`).
+- **The pipeline now enforces the pack bundle + catalog redirect pair on every config save.** `manage_redirect_config` always calls `_ensure_pack_bundle_redirects()`, which (a) (re)inserts `aa/catalog.json -> catalog_startmeup_modes.json` and `therollingstones_pack_assets_all_*.bundle -> startmeup_pack_modes.bundle`, and (b) removes stale truncated-key variants that could shadow the canonical entry via the plugin's substring matching. A regenerated/synced/enforced `redirects.json` can no longer silently lose the pair that causes the boot crash. Regression tests: `TestPackBundleRedirectConsistency` (6 tests).
+### Added
+- **`--deploy-pack-bundle`** — uploads the patched pack bundle + patched `catalog_startmeup_modes.json` to the PS4 (both files must exist before `redirects.json` references them).
+- **`--deploy-mass-bundles`** — deploys all custom song bundles from `mass_deploy.bundle_dir` (38 slots) to the PS4; replaces the manual `deploy_all38.sh` loop.
+- **`--verify-ps4`** — post-deploy self-validation that reports PASS/FAIL for: PS4 reachability, deployed `redirects.json` matching local, every redirect target existing on the PS4, the pack bundle + catalog files present, the pack+catalog redirect pair intact, and redirect target sizes matching local files. **Auto-runs after any `--deploy*` invocation** (opt out with `--no-verify-ps4`), so a broken deploy is caught immediately instead of on the next console boot.
+- **`mass_deploy` + `pack_bundle` config defaults** in `load_config` so the pipeline is all-inclusive with zero manual config steps.
+### Changed
+- `--deploy-mass-bundles`/`--deploy-pack-bundle`/`--verify-ps4` are usable standalone (no `--song-dir`) and automatically regenerate + deploy a consistent `redirects.json` first.
+
+## v0.5316 (2026-08-12)
+### Fixed
+- **Mode generators crash on V3 beatmaps with omitted position fields.** Some BeatSaver sources (e.g. "Take Me to the Beach" for the `livebythesword` / `IDidntChangeMyNumber` slots) ship V3 notes with `y` (and sometimes `b`) omitted — valid per the V3 spec, where omitted fields default to 0. The OneSaber generator indexed `n["y"]`/`n["x"]` directly → `KeyError: 'y'`; the 90Degree generator indexed `n["b"]`/`obs["b"]`/`ev["b"]` directly. All generator field reads now use `.get(..., 0)` defaults for V3, matching the V2 branch. Regression tests: `test_v3_omitted_position_fields_default_to_zero` (OneSaber + NoArrows) and `test_v3_omitted_fields_in_90_degree`.
+
 ## v0.5315 (2026-08-11)
 ### Fixed
 - **Idempotency bug in mode mapping:** re-running the pipeline on a source dir that already contains generated mode `.dat` files (e.g. a prior run's output, or hand-authored modes) silently skipped TextAsset injection and fell back to cloning Standard references — producing a *different, degraded* bundle than the first build. `apply_mode_mapping()` gated injection on `song_dir AND non-empty generated_files`, but `add_mode_characteristics()` already scans `song_dir` for ALL mode files (pre-existing included). The gate now only requires `song_dir`, so a rebuild of a previously-built song dir yields a byte-equivalent, fully-populated bundle. Regression test: `test_idempotent_injection_with_pre_existing_mode_files`.

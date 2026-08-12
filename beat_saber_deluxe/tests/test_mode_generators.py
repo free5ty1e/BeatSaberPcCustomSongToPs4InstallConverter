@@ -84,6 +84,22 @@ class TestOneSaberGenerator(unittest.TestCase):
         self.assertEqual(len(gen["colorNotes"]), 1)
         self.assertEqual(gen["colorNotes"][0]["c"], 0)
 
+    def test_v3_omitted_position_fields_default_to_zero(self):
+        # V3 permits omitting x/y (and even b/d defaults). Some BeatSaver
+        # sources (e.g. "Take Me to the Beach") ship notes with only
+        # {"x","c","d","b"} — missing y. Regressions here crashed the
+        # pipeline with KeyError: 'y'.
+        data = {"version": "3.2.0", "colorNotes": [
+            {"b": 1.0, "x": 2, "c": 1, "d": 1},                 # no y
+            {"b": 1.0, "x": 2, "y": 1, "c": 0, "d": 2},
+            {"b": 4.0, "x": 0, "y": 0, "c": 1, "d": 8},
+        ]}
+        gen = _generate_one_saber(data)
+        self.assertEqual(len(gen["colorNotes"]), 2)  # simult drop leaves 2
+        self.assertTrue(all(n.get("c", 0) == 0 for n in gen["colorNotes"]))
+        gen = _generate_no_arrows(data)
+        self.assertTrue(all(n["d"] == 8 for n in gen["colorNotes"]))
+
     def test_input_not_mutated(self):
         data = {"_version": "2.0.0", "_notes": [V2_NOTE]}
         _generate_one_saber(data)
@@ -148,6 +164,18 @@ class Test90DegreeGenerator(unittest.TestCase):
         gen = _generate_90_degree(data, cycle_beats=4)
         self.assertEqual(len(gen["colorNotes"]), 2)
         self.assertEqual(gen["rotationEvents"][0], {"b": 1.0, "e": 1, "r": 15})
+
+    def test_v3_omitted_fields_in_90_degree(self):
+        # Notes/obstacles/events with omitted b must not crash the generator.
+        data = {"version": "3.2.0", "colorNotes": [
+            {"b": 1.0, "x": 2, "c": 1, "d": 1},   # no y
+            {"x": 1, "c": 0, "d": 2},             # no b
+        ], "obstacles": [{"b": 6.0}], "basicBeatmapEvents": [{"b": 8.0}]}
+        gen = _generate_90_degree(data, cycle_beats=8)
+        self.assertEqual(len(gen["colorNotes"]), 2)
+        # Omitted b defaults to beat 0, which becomes the sweep start.
+        self.assertEqual(gen["rotationEvents"][0]["b"], 0.0)
+        self.assertEqual(gen["rotationEvents"][-1]["b"], 8.0)  # spans the map
 
     def test_keeps_existing_rotation_events(self):
         data = {"version": "3.2.0", "colorNotes": [
