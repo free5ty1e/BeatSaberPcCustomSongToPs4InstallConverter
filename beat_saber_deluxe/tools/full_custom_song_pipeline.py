@@ -31,6 +31,7 @@ Pipeline Steps:
 import argparse
 import copy
 import gzip
+import hashlib
 import json
 import logging
 import os
@@ -66,19 +67,24 @@ def load_config(config_path: str) -> dict:
             "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
         },
         "pipeline": {"default_target": "startmeup", "sample_rate": 44100},
-        # Pack bundle patch (Exp 179): the patched pack bundle and its catalog.json
-        # MUST be deployed as a matched pair. The redirects.json entry for the pack
-        # bundle is INVALID without the aa/catalog.json redirect because Unity
-        # validates the bundle CRC against the catalog m_Crc at startup — a patched
-        # bundle served against the ORIGINAL catalog crashes the game during the
-        # pack scan. These settings keep the pair always present.
-        "pack_bundle": {
-            "bundle_key": "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle",
-            "patched_bundle": "startmeup_pack_modes.bundle",
-            "patched_bundle_local": "/workspace/beat_saber_deluxe/startmeup_pack_modes.bundle",
+        # Generalized pack patch (Exp 188+): ALL configured DLC packs get 4 preview
+        # mode sets (Standard/OneSaber/NoArrows/90Degree) × 5 difficulties. Built by
+        # tools/build_pack_mode_bundles.py from beat_saber_song_ids.json + the dump;
+        # every patched pack bundle is served via a redirect and a SINGLE merged
+        # catalog (aa/catalog.json -> catalog_pack_modes.json) carries the updated
+        # m_Crc/m_BundleSize for exactly the packs being patched. The merged catalog
+        # is regenerated from the ORIGIN catalog on every build so entries for packs
+        # NOT patched remain byte-identical (never point a redirect at a patched
+        # bundle without its matching catalog entry, and never update a catalog entry
+        # for a bundle that is served unpatched — both crash at boot, Exp 180).
+        "pack_modes": {
+            "packs": ["therollingstones", "billieeilish", "lizzo", "camellia"],
+            "build_dir": "/workspace/beat_saber_deluxe/pack_modes_bundles",
+            "song_ids_path": "/workspace/beat_saber_deluxe/beat_saber_song_ids.json",
+            "dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
             "catalog_key": "aa/catalog.json",
-            "patched_catalog": "catalog_startmeup_modes.json",
-            "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_startmeup_modes.json",
+            "patched_catalog": "catalog_pack_modes.json",
+            "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
         },
         # Mass deploy (deploy_all38.sh replacement): list of all custom song slots
         # deployed as <slot>_v3.bundle into the AFR dir.
@@ -123,6 +129,7 @@ def load_config(config_path: str) -> dict:
 # ---------------------------------------------------------------------------
 # Imports from our toolchain
 # ---------------------------------------------------------------------------
+import build_pack_mode_bundles as pack_modes_builder
 import soundfile as sf
 import UnityPy
 from UnityPy.streams import EndianBinaryReader
@@ -2236,19 +2243,25 @@ def _deploy_redirect_to_ps4(config: dict):
 
 def _get_pack_bundle_redirects(config: dict) -> dict:
     """
-    Return the mandatory pack bundle + catalog redirect pair from config.
+    Return the mandatory pack bundle + catalog redirect pairs from config.
 
     Keys are the game asset paths, values are the AFR filenames. Returns {} if
-    the pack bundle patch is not configured.
+    no pack patch is configured.
+
+    Single-pack prototype (`pack_bundle`, rollingstones/startmeup) is merged
+    FIRST; the generalized `pack_modes` redirects are merged LAST and override
+    overlapping keys, so when pack_modes covers the rollingstones pack (it is in
+    pack_modes.packs by default) the merged-catalog + pack_modes bundle win and
+    the startmeup prototype pair is superseded. Both stay consistent because the
+    merged catalog carries the rollingstones entry too.
     """
     pb = config.get('pack_bundle', {}) or {}
-    if not pb.get('bundle_key') or not pb.get('patched_bundle'):
-        return {}
-    redirects = {
-        pb['bundle_key']: pb['patched_bundle'],
-    }
-    if pb.get('catalog_key') and pb.get('patched_catalog'):
-        redirects[pb['catalog_key']] = pb['patched_catalog']
+    redirects = {}
+    if pb.get('bundle_key') and pb.get('patched_bundle'):
+        redirects[pb['bundle_key']] = pb['patched_bundle']
+        if pb.get('catalog_key') and pb.get('patched_catalog'):
+            redirects[pb['catalog_key']] = pb['patched_catalog']
+    redirects.update(_get_pack_modes_redirects(config))
     return redirects
 
 def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
@@ -2291,14 +2304,181 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
     return changed
 
 def _get_remote_pack_paths(config: dict) -> list:
-    """Return list of (local_path, remote_name) for the patched pack bundle + catalog."""
+    """Return list of (local_path, remote_name) for the patched pack bundles + catalogs."""
     pb = config.get('pack_bundle', {}) or {}
     out = []
     if pb.get('patched_bundle_local') and pb.get('patched_bundle'):
         out.append((pb['patched_bundle_local'], pb['patched_bundle']))
     if pb.get('patched_catalog_local') and pb.get('patched_catalog'):
         out.append((pb['patched_catalog_local'], pb['patched_catalog']))
+    # Generalized pack_modes bundles + shared merged catalog.
+    for e in _get_pack_modes_entries(config):
+        if os.path.isfile(e['local_path']):
+            out.append((e['local_path'], e['patched_bundle']))
+    pm = config.get('pack_modes', {}) or {}
+    if (pm.get('patched_catalog_local') and pm.get('patched_catalog')
+            and os.path.isfile(pm['patched_catalog_local'])):
+        out.append((pm['patched_catalog_local'], pm['patched_catalog']))
     return out
+
+def _load_pack_albums(config: dict) -> dict:
+    """Load the albums (keyed by pack name) from beat_saber_song_ids.json. {} on failure."""
+    pm = config.get('pack_modes', {}) or {}
+    path = pm.get('song_ids_path') or _get_song_ids_path()
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, 'r') as f:
+            data = json.load(f)
+        return {a.get('pack'): a for a in data.get('albums', []) if a.get('pack')}
+    except Exception:
+        return {}
+
+def _get_pack_modes_entries(config: dict) -> list:
+    """
+    Deterministic list of pack_modes entries derived from config + song_ids.json.
+
+    Each entry: {pack, bundle_key (original pack bundle asset path),
+    patched_bundle (AFR filename), local_path}. No build happens here — the
+    patched filename is derived deterministically from the original one.
+    """
+    pm = config.get('pack_modes', {}) or {}
+    packs = pm.get('packs') or []
+    if not packs:
+        return []
+    albums = _load_pack_albums(config)
+    build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    entries = []
+    for pack in packs:
+        album = albums.get(pack)
+        if not album or not album.get('packBundle'):
+            continue
+        original = album['packBundle']
+        patched = pack_modes_builder.patched_bundle_name(original)
+        entries.append({
+            'pack': pack,
+            'bundle_key': original,
+            'patched_bundle': patched,
+            'local_path': os.path.join(build_dir, patched),
+        })
+    return entries
+
+def _get_pack_modes_redirects(config: dict) -> dict:
+    """
+    Redirects for every pack_modes pack whose patched bundle exists locally.
+
+    The shared catalog redirect is only included when >=1 patched bundle exists
+    AND the merged catalog exists locally — the pipeline never points a redirect
+    at a file that is not ready to deploy (Exp 180 crash rule).
+    """
+    pm = config.get('pack_modes', {}) or {}
+    redirects = {}
+    present = [e for e in _get_pack_modes_entries(config) if os.path.isfile(e['local_path'])]
+    for e in present:
+        redirects[e['bundle_key']] = e['patched_bundle']
+    if present:
+        cat_local = pm.get('patched_catalog_local')
+        if (cat_local and os.path.isfile(cat_local)
+                and pm.get('catalog_key') and pm.get('patched_catalog')):
+            redirects[pm['catalog_key']] = pm['patched_catalog']
+    return redirects
+
+def _regenerate_merged_catalog(config: dict) -> int:
+    """
+    Regenerate catalog_pack_modes.json from the ORIGIN catalog, updating entries
+    for EXACTLY the current redirect set (configured packs whose patched bundle
+    exists locally). Build details come from the manifest. Returns entries updated.
+
+    The merged catalog must never cover a pack that is not being redirected (its
+    original bundle would then fail CRC validation against the updated catalog
+    entry at boot) and must never omit a pack that IS being redirected (its
+    patched bundle would then fail CRC validation against the original entry).
+    """
+    pm = config.get('pack_modes', {}) or {}
+    dump_dir = pm.get('dump_dir')
+    cat_path = os.path.join(dump_dir, "Media/StreamingAssets/aa/catalog.json") if dump_dir else ''
+    cat_out = pm.get('patched_catalog_local')
+    if not cat_out or not os.path.isfile(cat_path):
+        if cat_out:
+            log.warning(f"  ⚠️  Origin catalog not found ({cat_path}) — cannot regenerate merged catalog")
+        return 0
+    build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    manifest = {e['patchedBundle']: e for e in pack_modes_builder.load_manifest(build_dir)}
+    present = [e for e in _get_pack_modes_entries(config) if os.path.isfile(e['local_path'])]
+    to_update = []
+    for e in present:
+        m = manifest.get(e['patched_bundle'])
+        if m and m.get('catalogBundleName'):
+            to_update.append(m)
+    if not to_update:
+        log.info("  ℹ️  No pack_modes bundles to encode in merged catalog")
+        return 0
+    n = pack_modes_builder.write_merged_catalog(cat_path, to_update, cat_out)
+    log.info(f"  ✅ Merged catalog regenerated from origin ({n} entries): {cat_out}")
+    return n
+
+def _ensure_pack_mode_bundles(config: dict, force: bool = False,
+                              packs: list | None = None) -> int:
+    """
+    Build patched pack bundles + merged catalog for any configured pack whose
+    bundle is missing locally (or all with force=True). `packs` optionally
+    limits which packs to (re)build. Returns number of bundles built.
+    """
+    pm = config.get('pack_modes', {}) or {}
+    configured = pm.get('packs') or []
+    if not configured:
+        log.info("  ℹ️  pack_modes.packs not configured — nothing to build")
+        return 0
+    if packs is not None:
+        configured = [p for p in configured if p in packs]
+    entries = [e for e in _get_pack_modes_entries(config) if e['pack'] in configured]
+    missing = [e['pack'] for e in entries if force or not os.path.isfile(e['local_path'])]
+    built = 0
+    if missing:
+        dump_dir = pm.get('dump_dir')
+        if not dump_dir or not os.path.isdir(os.path.join(dump_dir, "Media/StreamingAssets/aa")):
+            log.warning(f"  ⚠️  Dump dir missing ({dump_dir}) — cannot build pack mode bundles")
+            return 0
+        song_ids = pm.get('song_ids_path') or _get_song_ids_path()
+        build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+        log.info(f"🔨 Building pack mode bundles for {len(missing)} pack(s): {', '.join(missing)}")
+        results = pack_modes_builder.build_pack_mode_bundles(
+            song_ids_path=song_ids, dump_dir=dump_dir, out_dir=build_dir, packs=missing)
+        for r in results:
+            log.info(f"    ✓ {r['pack']}: {r['patchedBundle']} ({r['size']:,} B, crc={r['crc']})")
+        built = len(results)
+    else:
+        log.info(f"  ✅ Pack mode bundles already built ({len(entries)} pack(s))")
+    # The merged catalog must always match the CURRENT redirect set (regenerated
+    # from origin each time so entries for untouched packs stay byte-identical).
+    _regenerate_merged_catalog(config)
+    return built
+
+def deploy_pack_modes(config: dict) -> bool:
+    """
+    Build-if-missing and deploy the generalized pack_modes bundles + merged catalog.
+
+    Deploys the FULL redirect set (all configured packs with built bundles) so the
+    deployed merged catalog always matches the deployed redirects. Returns True if
+    all uploads OK.
+    """
+    pm = config.get('pack_modes', {}) or {}
+    if not pm.get('packs'):
+        log.warning("  ⚠️  pack_modes not configured — nothing to deploy")
+        return False
+    _ensure_pack_mode_bundles(config)
+    pairs = [(e['local_path'], e['patched_bundle'])
+             for e in _get_pack_modes_entries(config) if os.path.isfile(e['local_path'])]
+    if pm.get('patched_catalog_local') and pm.get('patched_catalog'):
+        pairs.append((pm['patched_catalog_local'], pm['patched_catalog']))
+    if not pairs:
+        log.warning("  ⚠️  No pack_modes bundles available — nothing to deploy")
+        return False
+    log.info(f"📦 Deploying {len(pairs)} pack_modes file(s) to PS4...")
+    ok = True
+    for local_path, remote_name in pairs:
+        ok = _deploy_file_to_ps4(config, local_path, remote_name) and ok
+    return ok
 
 def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool:
     """Upload a single local file to the AFR dir on the PS4 via FTP. Returns True on success."""
@@ -2336,17 +2516,22 @@ def deploy_pack_bundle(config: dict) -> bool:
     """
     Deploy the patched pack bundle + patched catalog.json to the PS4.
 
-    Both files must be uploaded BEFORE redirects.json references them, otherwise
-    the game would 404 on the redirected path. Returns True if all uploads OK.
+    Also builds (if missing) and deploys the generalized pack_modes bundles +
+    merged catalog when pack_modes.packs is configured. Both file sets must be
+    uploaded BEFORE redirects.json references them, otherwise the game would 404
+    on the redirected path. Returns True if all uploads OK.
     """
     log.info("📦 Deploying patched pack bundle + catalog to PS4...")
-    pairs = _get_remote_pack_paths(config)
-    if not pairs:
-        log.warning("  ⚠️  No pack_bundle configured (pack_bundle.* missing) — nothing to deploy")
-        return False
     ok = True
-    for local_path, remote_name in pairs:
-        ok = _deploy_file_to_ps4(config, local_path, remote_name) and ok
+    pairs = _get_remote_pack_paths(config)
+    if pairs:
+        for local_path, remote_name in pairs:
+            ok = _deploy_file_to_ps4(config, local_path, remote_name) and ok
+    else:
+        log.warning("  ⚠️  No pack_bundle / pack_modes configured — nothing to deploy")
+        ok = False
+    if config.get('pack_modes', {}).get('packs'):
+        ok = deploy_pack_modes(config) and ok
     return ok
 
 def deploy_mass_bundles(config: dict) -> bool:
@@ -2504,30 +2689,32 @@ def verify_ps4_deployment(config: dict) -> bool:
     else:
         log.info(f"  ✅ All {len(local_data.get('redirects', {}))} redirect targets exist on PS4")
 
-    # 4. Pack bundle + catalog files exist on PS4
-    pb = config.get('pack_bundle', {}) or {}
-    for key in ('patched_bundle', 'patched_catalog'):
-        name = pb.get(key)
-        if not name:
-            continue
+    # 4. Pack bundle + catalog files exist on PS4 (single-pack pair + pack_modes)
+    remote_names = {name for local, name in _get_remote_pack_paths(config)}
+    for name in sorted(remote_names):
         if name in remote_files:
             log.info(f"  ✅ {name} on PS4 ({remote_files[name]:,} bytes)")
         else:
             log.warning(f"  ❌ {name} MISSING on PS4")
             ok = False
 
-    # 5. Pack bundle + catalog redirect PAIR present (Exp 180 crash fix)
+    # 5. Pack bundle + catalog redirect pairs present (Exp 180 crash fix).
+    # Covers the single-pack pair AND every configured pack_modes pack, plus the
+    # shared aa/catalog.json redirect (single-pack catalog OR merged catalog).
     redirects = local_data.get('redirects', {})
-    bundle_key = pb.get('bundle_key')
-    catalog_key = pb.get('catalog_key')
-    if bundle_key and catalog_key:
-        has_bundle = redirects.get(bundle_key) == pb.get('patched_bundle')
-        has_catalog = redirects.get(catalog_key) == pb.get('patched_catalog')
-        if has_bundle and has_catalog:
-            log.info(f"  ✅ Pack bundle + catalog redirect pair present ({pb.get('patched_bundle')} + {pb.get('patched_catalog')})")
-        else:
-            log.warning(f"  ❌ Pack bundle + catalog redirect pair BROKEN (bundle={has_bundle}, catalog={has_catalog})")
-            ok = False
+    expected = _get_pack_bundle_redirects(config)
+    broken = []
+    for key, val in expected.items():
+        if redirects.get(key) != val:
+            broken.append(f"{key} -> expected {val}, got {redirects.get(key)}")
+    if not expected:
+        log.info("  ℹ️  No pack redirects configured — pair check skipped")
+    elif broken:
+        log.warning(f"  ❌ Pack bundle + catalog redirect pair(s) BROKEN: {broken}")
+        ok = False
+    else:
+        log.info(f"  ✅ Pack bundle + catalog redirect pair(s) present "
+                 f"({len(expected)} entries, incl. aa/catalog.json)")
 
     # 6. Sizes match local files where available
     size_mismatch = []
@@ -2546,6 +2733,72 @@ def verify_ps4_deployment(config: dict) -> bool:
         ok = False
     else:
         log.info("  ✅ Redirect target sizes match local files (where available)")
+
+    # 7. Deployed catalog CONTENT is valid (Exp 190 hardening). Size checks alone
+    # cannot catch a stale catalog — the broken v0.5319 catalog and the fixed one
+    # are the SAME byte size (795,783). Verify the deployed catalog's entry
+    # dataIndexes all point at type-7 block starts AND that every configured
+    # pack's catalog block carries the expected m_Crc/m_BundleSize.
+    pm = config.get('pack_modes', {}) or {}
+    if pm.get('patched_catalog_local') and pm.get('patched_catalog'):
+        remote_cat_path = f"{afr_base}/{title_id}/{pm['patched_catalog']}"
+        local_cat_path = pm['patched_catalog_local']
+        try:
+            import build_pack_mode_bundles as pm_b
+            with tempfile.TemporaryDirectory() as tmpdir:
+                remote_cat_tmp = os.path.join(tmpdir, "catalog_remote.json")
+                result = sp.run(
+                    ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
+                     "-e", f"get {remote_cat_path} -o {remote_cat_tmp}; quit"],
+                    capture_output=True, text=True, timeout=60,
+                )
+                if result.returncode != 0 or not os.path.exists(remote_cat_tmp):
+                    log.warning(f"  ❌ Could not download {pm['patched_catalog']} from PS4 for content validation")
+                    ok = False
+                else:
+                    remote_cat = json.load(open(remote_cat_tmp))
+                    total, nonzero, bad = pm_b.validate_catalog_dataindexes(remote_cat)
+                    if bad:
+                        log.warning(f"  ❌ Deployed {pm['patched_catalog']} has {bad}/{total} INVALID entry dataIndexes "
+                                    f"({nonzero} nonzero) — the v0.5319 crash signature. Redeploy the catalog!")
+                        ok = False
+                    else:
+                        log.info(f"  ✅ Deployed {pm['patched_catalog']} dataIndexes valid "
+                                 f"({total} entries, {nonzero} nonzero, 0 bad)")
+                    # Verify deployed catalog content matches local build output.
+                    if os.path.isfile(local_cat_path):
+                        with open(local_cat_path, 'rb') as f:
+                            local_md5 = hashlib.md5(f.read()).hexdigest()
+                        with open(remote_cat_tmp, 'rb') as f:
+                            remote_md5 = hashlib.md5(f.read()).hexdigest()
+                        if local_md5 != remote_md5:
+                            log.warning(f"  ❌ Deployed {pm['patched_catalog']} does NOT match local build "
+                                        f"(md5 local={local_md5} vs PS4={remote_md5}) — redeploy it!")
+                            ok = False
+                        else:
+                            log.info(f"  ✅ Deployed {pm['patched_catalog']} md5 matches local build ({local_md5})")
+                    # Verify each configured pack's catalog entry carries the patched CRC/size.
+                    entries = _get_pack_modes_entries(config)
+                    manifest = {e['packBundle']: e for e in pm_b.load_manifest(pm['build_dir'])}
+                    checks = []
+                    for e in entries:
+                        me = manifest.get(e['bundle_key'])
+                        if me:
+                            checks.append((me['catalogBundleName'], me['crc'], me['size']))
+                    if checks:
+                        missing, mismatched = pm_b.validate_catalog_entries(remote_cat, checks)
+                        if missing or mismatched:
+                            log.warning(f"  ❌ Deployed catalog missing/incorrect pack entries: "
+                                        f"missing={missing} mismatched={mismatched}")
+                            ok = False
+                        else:
+                            log.info(f"  ✅ Deployed catalog carries patched CRC/size for all "
+                                     f"{len(checks)} configured packs")
+        except Exception as exc:
+            log.warning(f"  ❌ Catalog content validation errored: {exc}")
+            ok = False
+    else:
+        log.info("  ℹ️  No pack_modes catalog configured — catalog content check skipped")
 
     if ok:
         log.info("🎉 Post-deploy validation PASSED")
@@ -3185,6 +3438,19 @@ Examples:
     parser.add_argument('--deploy-pack-bundle', action='store_true',
                         help='Deploy the patched pack bundle + patched catalog.json to the PS4 '
                              '(must be done before redirects.json references them)')
+    parser.add_argument('--build-pack-modes', action='store_true',
+                        help='Build the generalized pack_modes bundles + merged catalog locally '
+                             '(no deploy). Only builds packs whose bundle is missing, unless '
+                             '--force-pack-modes is given.')
+    parser.add_argument('--force-pack-modes', action='store_true',
+                        help='Rebuild ALL configured pack_modes bundles even if they already exist '
+                             '(used with --build-pack-modes or --deploy-pack-modes)')
+    parser.add_argument('--pack-modes-packs', default=None, metavar='PACKS',
+                        help='Comma-separated subset of pack_modes.packs to build/deploy '
+                             '(default: all configured packs)')
+    parser.add_argument('--deploy-pack-modes', action='store_true',
+                        help='Build-if-missing + deploy the generalized pack_modes bundles and '
+                             'the shared merged catalog to the PS4')
     parser.add_argument('--deploy-mass-bundles', action='store_true',
                         help='Deploy all custom song bundles from mass_deploy.bundle_dir to the PS4')
     parser.add_argument('--verify-ps4', action='store_true',
@@ -3263,13 +3529,28 @@ Examples:
         sys.exit(0)
 
     # Deploy-only modes (no song processing): mass bundles, pack bundle, validation.
-    if (args.deploy_mass_bundles or args.deploy_pack_bundle or args.verify_ps4) and not args.song_dir:
+    if (args.deploy_mass_bundles or args.deploy_pack_bundle or args.deploy_pack_modes
+            or args.build_pack_modes or args.verify_ps4) and not args.song_dir:
         deploy_cfg = {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths,
                       'pack_bundle': config.get('pack_bundle', {}),
+                      'pack_modes': config.get('pack_modes', {}),
                       'mass_deploy': config.get('mass_deploy', {})}
+        pack_modes_packs = None
+        if args.pack_modes_packs:
+            pack_modes_packs = [p.strip() for p in args.pack_modes_packs.split(',') if p.strip()]
+        if args.build_pack_modes:
+            _ensure_pack_mode_bundles(deploy_cfg, force=args.force_pack_modes,
+                                      packs=pack_modes_packs)
         if args.deploy_mass_bundles:
             deploy_mass_bundles(deploy_cfg)
+        if args.deploy_pack_modes:
+            deploy_pack_modes(deploy_cfg)
         if args.deploy_pack_bundle:
+            if pack_modes_packs:
+                # Pre-build the requested subset so deploy_pack_bundle's build-if-missing
+                # and the redirect generation only cover exactly these packs.
+                _ensure_pack_mode_bundles(deploy_cfg, force=args.force_pack_modes,
+                                          packs=pack_modes_packs)
             deploy_pack_bundle(deploy_cfg)
         if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config or args.deploy:
             manage_redirect_config(
@@ -3563,6 +3844,7 @@ Examples:
     # -----------------------------------------------------------------------
     deploy_cfg = {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths,
                   'pack_bundle': config.get('pack_bundle', {}),
+                  'pack_modes': config.get('pack_modes', {}),
                   'mass_deploy': config.get('mass_deploy', {})}
     if args.deploy:
         deploy_to_ps4(args.output, args.target, config)
@@ -3575,11 +3857,21 @@ Examples:
         deploy_plugin(prx_path, config, debug=args.debug_logging)
 
     # -----------------------------------------------------------------------
+    # Step 9a: Deploy the patched pack bundles + catalogs (single pack + pack_modes)
+    # whenever anything is being deployed. This runs BEFORE redirects.json is
+    # generated so that the pack_modes redirects (which are only emitted for packs
+    # whose patched bundles exist locally) are picked up, and so the redirected
+    # files are already on the PS4 when the game boots (Exp 180 crash rule).
+    # -----------------------------------------------------------------------
+    should_generate = args.generate_config or args.deploy_config or args.sync_config or args.deploy
+    should_deploy = args.deploy_config or args.sync_config or args.enforce_config or args.deploy
+    if should_deploy:
+        deploy_pack_bundle(deploy_cfg)
+
+    # -----------------------------------------------------------------------
     # Step 9: Manage redirect config (redirects.json)
     # -----------------------------------------------------------------------
     # Auto-generate and auto-deploy config when deploying bundles
-    should_generate = args.generate_config or args.deploy_config or args.sync_config or args.deploy
-    should_deploy = args.deploy_config or args.sync_config or args.enforce_config or args.deploy
     if should_generate or should_deploy or args.sync_config or args.enforce_config:
         manage_redirect_config(
             config,
@@ -3589,14 +3881,6 @@ Examples:
             sync=args.sync_config,
             enforce_local=args.enforce_config,
         )
-
-    # Step 9b: Deploy the patched pack bundle + catalog whenever anything is
-    # being deployed to the PS4. The redirects.json generated above always
-    # references the pack bundle + catalog pair (Exp 180 crash fix), so those
-    # files MUST exist on the PS4 before the game boots, otherwise the redirected
-    # path 404s and the pack scan crashes.
-    if should_deploy and not args.no_verify_ps4:
-        deploy_pack_bundle(deploy_cfg)
 
     # Step 9c: Post-deploy validation (self-validating pipeline, Exp 180).
     # Runs automatically whenever any --deploy option was used, unless

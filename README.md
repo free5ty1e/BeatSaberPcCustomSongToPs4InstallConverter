@@ -660,7 +660,7 @@ class TestMyFeature:
 |-----------|--------|-------------|
 | M1: Song Replacement | ✅ Complete | Any song slot replaced with custom audio + beatmaps |
 | M2: Song Metadata | ✅ Complete | Custom song names and artists displayed in-game (single-artist packs) |
-| M3: Mode Selector | 🟡 In Progress | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
+| M3: Mode Selector | ✅ Complete | OneSaber/90Degree/NoArrows mode selector support via catalog-redirect + pack-bundle preview-set injection (4 modes × 5 difficulties for all DLC packs, generalized in v0.5319+) |
 | M4: Note Colors | ⏳ Planned | Custom left/right saber colors per song |
 | M5: Multi-Artist Packs | 🔬 Researching | Artist replacement for multi-artist packs without global blanking |
 

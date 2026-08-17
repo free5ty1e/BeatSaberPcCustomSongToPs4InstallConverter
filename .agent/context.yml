@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5318" # in beat_saber_deluxe/VERSION — redirect VALUE naming fix (Exp 187)
+pipeline_version: "0.5322" # in beat_saber_deluxe/VERSION — fixed catalog DEPLOYED + --verify-ps4 hardened with catalog content validation (Exp 191); dataIndex fix (Exp 189) + 360Degree CHAR_PATH_IDS cleanup (Exp 190)
 
 # Platform Constraints
 target_platform: PS4
@@ -62,10 +62,14 @@ deploy_naming:
     os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
     has NO bundle_suffix param.
   ps4_state: >
-    PS4 ONLINE since 2026-08-13. Corrected redirects.json (40 redirects, all exact `.bundle`
-    values) DEPLOYED + verified on-device. PS4 cleaned of 58 stale files (AFR dir 98→44):
-    all 38 <slot>_v3.bundle builds + pack pair + config + Media/ + Plugins/ remain. bs_log.txt
-    cleared for boot test. Pending: user boot test, then pull + archive bs_log.txt.
+    PS4 ONLINE since 2026-08-13. 43-redirect config (38 songs + 4 pack bundles + catalog)
+    deployed + verified. **Exp 191 (2026-08-16):** FIXED catalog `catalog_pack_modes.json`
+    (md5 975bacca0902624c9fb5c6a82cfa90c5, 0 invalid dataIndexes) DEPLOYED + verified on-device —
+    the PS4 had been running the OLD BROKEN v0.5319 catalog (70/2251 invalid, md5 0eb8a27d…)
+    because the Exp 189/190 fixes were never redeployed. Stale prototype files deleted from PS4:
+    catalog_startmeup_modes.json, startmeup_pack_modes.bundle. `--verify-ps4` now validates
+    deployed catalog CONTENT (dataIndexes + md5 + per-pack CRC/size). Pending: user boot test,
+    then pull + archive bs_log.txt.
 
 # Song Slot Naming
 slot_note: >
@@ -128,6 +132,42 @@ mode_generation:
     (7,905,425 B, dec-stream CRC 0xe9e40bd3, blob 440->1028 B with 4 preview sets) +
     catalog_startmeup_modes.json (only rolling-stones entry changed). Deployed + confirmed:
     selector shows Standard/OneSaber/NoArrows for Start Me Up; 90Degree FIXED in Exp 182.
+  generalized_pack_patch: >
+    ✅ GENERALIZED (Exp 188, 2026-08-14, pipeline v0.5319): ALL 36 DLC packs now get 4 preview
+    mode sets (Standard/OneSaber/NoArrows/90Degree) x 5 difficulties via
+    tools/build_pack_mode_bundles.py (production module) + tools/full_custom_song_pipeline.py
+    pack_modes integration. 36 bundles verified in pack_modes_bundles/ (303 BeatmapLevelSOs).
+    Single merged catalog catalog_pack_modes.json (aa/catalog.json redirect) carries updated
+    m_Crc/m_BundleSize for EXACTLY the redirected packs; pack_modes redirects override the
+    old single-pack (rollingstones/startmeup) prototype. Default packs:
+    therollingstones, billieeilish, lizzo, camellia. Manifest: pack_modes_bundles/manifest.json.
+    Deps: scan data in beat_saber_song_ids.json, origin catalog at ps4_dump/.../aa/catalog.json.
+    Deploy: --deploy-pack-modes / --deploy-pack-bundle / --build-pack-modes [--force-pack-modes]
+    [--pack-modes-packs a,b]. VERIFIED locally (CRCs match); on-device deploy + boot test PENDING.
+  catalog_dataindex_crash: >
+    🔴 FOUND+FIXED+DEPLOYED (Exp 189-191, 2026-08-15/16): Exp 188 deploy CRASHED PS4 at boot
+    (crash at OPEN #74 right after catalog redirect). Root cause: catalog m_EntryDataString is a
+    binary array of 2251 x 28-byte records; rec[4] is a byte dataIndex into m_ExtraDataString
+    (138 entries have dataIndexes >= 0, rest are -1). lizzo block grew +6 B (m_Crc 7->10 digits)
+    shifting later blocks, but dataIndexes were NOT shifted -> 70/2251 pointed at garbage.
+    update_catalog_entry() now shifts every rec[4] > patched-block-start by the block-edit delta.
+    Also fixed _parse_catalog_block() to regex-parse m_Crc/m_BundleSize (comma-split broke when
+    field was block's last JSON field, stripping the closing brace). Tests config-driven: 445/445.
+    ✅ REPRODUCIBILITY (Exp 190, v0.5321): leftover "360Degree" in CHAR_PATH_IDS (pre-Exp-175
+    purge) padded 360Degree preview sets 1→5 → 10/36 packs rebuilt non-identical (4 deployed
+    packs unaffected). Removed → all 36 rebuild byte-identical. CHAR_PATH_IDS must equal
+    TARGET_MODES (4 entries), never 360Degree.
+    ✅ EXP 191 (v0.5322, 2026-08-16): "STILL crashes" root cause = the fixed catalog was NEVER
+    redeployed — PS4 still ran the broken v0.5319 catalog (md5 0eb8a27d…, 70 invalid). Deployed
+    the fixed catalog (md5 975bacca…, 0 invalid) + verified on-device. **--verify-ps4 hardened
+    with check #7**: downloads the deployed catalog and validates (a) every entry dataIndex points
+    at a type-7 block start (validate_catalog_dataindexes), (b) md5 == local build, (c) every
+    configured pack's block has patched m_Crc/m_BundleSize (validate_catalog_entries). Broken vs
+    fixed catalogs are BYTE-IDENTICAL in size — size-only checks can NEVER catch a stale catalog.
+    Also removed legacy `pack_bundle` single-pack prototype from DEFAULT config (superseded by
+    pack_modes); stale PS4 files deleted. 451/451 tests. Crash logs:
+    .ai_memory/experiment_logs/v0.5319_crash_after_packmodes_deploy.txt +
+    v0.5321_crash_after_redeploy.txt. **USER BOOT TEST PENDING**.
   characteristic_pids: >
     VERIFIED (Exp 182) from sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
     (CAB cb38b3e2985c65d4cf8a63437da74a89). Historical pid labels were SWAPPED repo-wide:
@@ -147,8 +187,12 @@ mode_generation:
     actual index from cab.types. Verified: all 5 NoArrows diffs have dots (d=8).
   next_steps:
     1. User test (Exp 186 deployed): 6 Chromeo slots, new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree across songs, full audio lengths. Then pull + archive bs_log.txt, update song_testing_log.md
-    2. Integrate pack-patch build script into production pipeline (tools/) after on-device confirmation
-    3. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
+    2. ✅ Integrate pack-patch build script into production pipeline (tools/) — DONE v0.5319 (Exp 188)
+    3. ✅ Fix PS4 boot crash from pack_modes deploy — DONE v0.5320 (Exp 189, dataIndex shift + parse fix; catalog regenerated, 444/444 tests)
+    4. ✅ Pipeline reproducibility audit — DONE v0.5321 (Exp 190): removed leftover 360Degree from CHAR_PATH_IDS → all 36 packs rebuild byte-identical from tools/build_pack_mode_bundles.py (0/36 mismatches), 445/445 tests
+    5. ✅ REDEPLOY fixed merged catalog to PS4 + verify hardening — DONE v0.5322 (Exp 191, 2026-08-16): fixed catalog deployed (md5 975bacca…, 0 invalid) + verified on-device; --verify-ps4 now validates catalog CONTENT (dataIndexes + md5 + per-pack CRC/size); stale prototype files + legacy pack_bundle default config removed; 451/451 tests
+    6. ⏳ USER BOOT TEST (Exp 191): boot Beat Saber — expect STABLE boot through catalog redirect + pack scan, then verify 4 packs' modes on Hard+; pull + archive bs_log.txt
+    7. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
 
 # Camellia Pack Replacement — Chromeo Songs (recovered from PS4 bundles, Exp 184)
 # The 6 slot sources were DELETED locally; recovered from deployed bundles via
@@ -175,7 +219,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "419 tests (as of v0.5318); +6 TestDeployedBundleNaming (v0.5318)"
+test_count: "451 tests (as of v0.5322); +6 TestCatalogValidation (v0.5322)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
@@ -210,7 +254,7 @@ kb_note: >
 experiment_log_active: .ai_memory/beat-saber-ps4-custom-songs/experiment_log.md
 experiment_log_archive_dir: .ai_memory/beat-saber-ps4-custom-songs/experiment_log_archive/
 experiment_log_note: >
-  Active log holds ONLY the current feature (Chromeo Source Recovery + Mass Redeploy, Exp 184+).
+  Active log holds ONLY the current feature (Generalized Pack Patch — Pack Modes, Exp 188+).
   Prior features archived in experiment_log_archive/:
   - experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md (Exp 1-159)
   - experiment_log_beatmap-mode-mapping_exp160-183_2026-07-28_to_2026-08-11.md (Exp 160-183)

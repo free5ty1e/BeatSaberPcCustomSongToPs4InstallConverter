@@ -221,3 +221,54 @@ If pack bundle modification fails, fallback to memory injection — patch Beatma
 ```bash
 python3 /workspace/beat_saber_deluxe/tools/build_patched_pack_bundle.py
 ```
+
+## ✅ GENERALIZED (Exp 188, 2026-08-14): Pack Patch is now a production pipeline feature
+
+The rollingstones pack-patch (Exp 179-182) was generalized into the production pipeline (`tools/build_pack_mode_bundles.py`, pipeline v0.5319):
+
+- **ALL 36 DLC packs** patched: every replaced BeatmapLevelSO gets 4 preview mode sets (Standard/OneSaber/NoArrows/90Degree × 5 difficulties) = 303 BeatmapLevelSOs verified.
+- **Manifest:** `pack_modes_bundles/manifest.json` records per-pack `patchedBundle`/`size`/`crc` (dec-stream CRC)/`catalogBundleName`. Dev-built bundles adopted via `development/scripts/adopt_pack_modes_manifest.py`.
+- **Single merged catalog** `catalog_pack_modes.json` (redirect `aa/catalog.json`) carries updated `m_Crc`/`m_BundleSize` for EXACTLY the redirected packs; regenerated from ORIGIN each run so untouched entries stay byte-identical.
+- **Deterministic redirects:** `_get_pack_modes_redirects()` emits a pack redirect only when its patched bundle exists locally; catalog redirect only when merged catalog exists (Exp 180 crash rule). `pack_modes` redirects override the old single-pack prototype (`startmeup_pack_modes.bundle` pair).
+- **Deploy ordering:** pack bundles + catalogs deploy BEFORE `redirects.json` generation (Step 9a before Step 9).
+- **CLI:** `--build-pack-modes` / `--force-pack-modes` / `--pack-modes-packs` / `--deploy-pack-modes`.
+- **Config:** `pack_modes.packs` (default: therollingstones, billieeilish, lizzo, camellia).
+
+### CRITICAL: catalog.json binary entry structure (`m_ExtraDataString`)
+
+The catalog `m_EntryDataString` is NOT whole-string UTF-16. It is a **BINARY concatenation of per-entry blocks**:
+`type_byte + 1-byte-length assembly name + 1-byte-length class name + 4-byte JS length (BE) + UTF-16-LE JSON`.
+
+Whole-string UTF-16 decode misaligns blocks and makes the entry marker unfindable (camellia's entry failed this way). The pipeline's `update_catalog_entry()` walks blocks byte-wise and patches only the matching block in place, resizing the length field when digit counts change.
+
+### CRITICAL: `m_EntryDataString` records carry byte offsets into `m_ExtraDataString` (Exp 189)
+
+`m_EntryDataString` is a binary array of **2251 × 28-byte records** (7 int32 LE). Record field `rec[4]` is a **byte dataIndex** into `m_ExtraDataString` pointing at the start (type byte) of that entry's block. Verified on the real catalog: 138 entries carry dataIndexes ≥ 0 (those with AssetBundleRequestOptions blocks); the rest are -1 (sentinel, no block).
+
+**When a patched block's JSON grows/shrinks in byte length, every later block shifts, so EVERY entry dataIndex pointing past the patched block's start MUST be shifted by the same delta.** Exp 188 missed this: lizzo's `m_Crc` grew 7→10 digits (+6 bytes UTF-16), all 70 dataIndexes after it went stale → game read garbage → PS4 crash at OPEN #74 right after the catalog redirect loaded. `update_catalog_entry()` now rewrites `m_EntryDataString`, shifting `rec[4] += delta` for every record whose dataIndex points past the patched block's start, whenever a block edit changes byte length (`delta != 0`). Guarded by `'m_EntryDataString' in catalog_json` so synthetic catalogs without entry data still work.
+
+**Parse fragility (also fixed Exp 189):** `m_Crc`/`m_BundleSize` must be extracted from a block with regex (`"m_Crc":\s*(\d+)`) — splitting the block JSON on commas and taking text after `:` breaks when the field is the block's LAST JSON field (the token then includes the trailing `}` and the value-replace strips the block's closing brace, corrupting the JSON). The real BS catalog puts `m_BundleSize` mid-block so it wasn't hit in production, but it's a latent corruption bug.
+
+### Production fixes baked in (Exp 188)
+- Object-table offsets shift by cumulative deltas of patches starting BEFORE each object (own offset unchanged, only size field updates).
+- Patched blob's `byte_start` is NOT shifted by its own delta.
+- Mode-set extension checks `pid in CHAR_PATH_IDS.values()` (keys are mode-name strings).
+
+### ⚠️ 360Degree must NOT be in `CHAR_PATH_IDS` (Exp 190, 2026-08-15) — reproducibility
+360Degree was purged project-wide in Exp 175 (PS4's single camera can't track the full 360° arc; the game hides the 360Degree characteristic from the selector). `build_modes_blob` pads ANY set whose pid is in `CHAR_PATH_IDS.values()` to `TARGET_DIFFS` — so a leftover `"360Degree"` entry made the production module extend the 360Degree preview set 1→5 diffs (+144 B per patched blob) for every pack that ships one, producing bundles that did NOT byte-match the dev-built committed artifacts (10/36 packs diverged; the 4 deployed packs happened to be unaffected). Rule: **`CHAR_PATH_IDS` must contain exactly `TARGET_MODES` (4 entries), never 360Degree.** Guarded by `test_unsupported_360degree_set_not_extended`.
+
+### Production builder is the reproducibility source of truth (Exp 190)
+The original 36 `pack_modes_bundles/*.bundle` were built by the OLD dev script (`development/scripts/build_all_pack_modes.py`) and ADOPTED into the manifest — NOT by the production module. After the Exp 190 360Degree cleanup, `tools/build_pack_mode_bundles.py` reproduces ALL 36 committed bundles byte-identically (sizes + dec-stream CRCs, ~46 s for all 36) — a fresh user can reproduce the exact committed artifacts (or any pack subset) with zero manual steps.
+
+### Deployed 2026-08-14
+4 packs (therollingstones/billieeilish/lizzo/camellia) + merged catalog + 43-redirect config on PS4, post-deploy validation PASSED. **Exp 189 (2026-08-15):** the deploy crashed the PS4 at boot (stale dataIndexes — see above); fixed + merged catalog regenerated (0 invalid dataIndexes), pending redeploy + boot test. Tests are config-driven (derive packs from `cfg['pack_modes']['packs']`), no hardcoded packs. See [[addressables-crc-validation-timing]] and [[unityfs-v8-bundle-layout]].
+
+### ⚠️ Deploy is not the same as "the pipeline is fixed" — verify CONTENT, not just size (Exp 191, 2026-08-16)
+The Exp 189/190 fixes were correct, yet the user STILL crashed: **the fixed catalog was never redeployed to the PS4**. The PS4 kept running the broken v0.5319 `catalog_pack_modes.json` (70/2251 invalid dataIndexes, md5 `0eb8a27deb66c15e918aeec3dbd9a725`), so every launch crashed at OPEN #58/#74 right after the `aa/catalog.json` redirect — the exact same signature as before. Lessons:
+- **Broken vs fixed catalogs can be byte-identical in SIZE** (both 795,783 B here) — so size-only post-deploy checks can NEVER detect a stale catalog. Deploy + verify must validate catalog CONTENT.
+- `--verify-ps4` now has **check #7 (catalog content validation)**: downloads the deployed `catalog_pack_modes.json` and (a) validates every entry dataIndex points at a type-7 block start via `validate_catalog_dataindexes()` (bad = any dataIndex ≥ 0 not landing on a `0x07` block byte — the exact v0.5319 crash signature), (b) compares the deployed md5 against the local build output, (c) verifies every configured pack's block carries the patched `m_Crc`/`m_BundleSize` via `validate_catalog_entries()`. A stale/broken catalog now FAILS the post-deploy validation loudly instead of passing silently.
+- Reusable helpers in `tools/build_pack_mode_bundles.py`: `validate_catalog_dataindexes()`, `find_catalog_entry_js()` (byte-wise type-7 block walk — NEVER whole-string UTF-16 alignment, which misaligns for some blocks and can falsely report an entry "missing", e.g. camellia), `validate_catalog_entries()`.
+- **Always download fresh `bs_log.txt` after ANY change** and confirm the session survived past the catalog redirect before declaring success.
+- The legacy single-pack prototype (`pack_bundle` → `startmeup_pack_modes.bundle` + `catalog_startmeup_modes.json`) was removed from the DEFAULT config — fully superseded by `pack_modes` (rollingstones is in `pack_modes.packs`). Its code path still works for explicit configs; keeping it in defaults made `--verify-ps4` report phantom "MISSING on PS4" entries for the deleted prototype files.
+
+**Exp 191 (2026-08-16):** fixed catalog deployed (md5 `975bacca0902624c9fb5c6a82cfa90c5`, 0 invalid dataIndexes) + verified on-device; stale prototype files deleted from PS4; 451/451 tests. Awaiting user boot test.

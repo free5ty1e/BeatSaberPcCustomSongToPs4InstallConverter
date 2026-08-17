@@ -18,7 +18,7 @@ metadata:
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset
-- [[pack-bundle-patching|Pack Bundle Patching (CRC Correction Achieved)]] — Exp 142 CRC correction via GF(2) linear algebra. Padding bytes adjusted to match original CRC (0xdc8b314f). All prior failed approaches documented. LZ4HC requirement, CAB format, m_Script PPtr fix.
+- [[pack-bundle-patching|Pack Bundle Patching (CRC Correction Achieved)]] — Exp 142 CRC correction via GF(2) linear algebra. Padding bytes adjusted to match original CRC (0xdc8b314f). All prior failed approaches documented. LZ4HC requirement, CAB format, m_Script PPtr fix. Includes Exp 188-191: generalized pack patch, m_EntryDataString dataIndex shifting, 360Degree reproducibility, and "verify catalog CONTENT not size" (stale-catalog lesson).
 - [[unitypy-serialization|UnityPy Serialization]] — save_typetree vs set_raw_data, surrogateescape encoding
 - [[unityfs-v8-bundle-layout|UnityFS v8 Bundle Layout]] — UnityFS bundle header format, compression flags, block metadata
 

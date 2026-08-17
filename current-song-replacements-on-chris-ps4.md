@@ -1,40 +1,50 @@
-# drop pop candy Replacement (Start Me Up slot)
+# Current Custom Song Replacements on Chris's PS4
 
-## Current Status (2026-08-11)
+## Current Status (2026-08-16)
 
-**✅ MODE SELECTOR GAP CLOSED** (Exp 180, 2026-08-08) — Standard/OneSaber/NoArrows visible + working on-device.
-**✅ NoArrows BUG FIXED IN PIPELINE v0.5311** (Exp 181, 2026-08-09) — root cause was `_create_text_asset_object()` serialization (type_id + binary format). Rebuilt bundle verified locally (all NoArrows diffs = dots `d=8`).
-**✅ 90DEGREE ROOT CAUSE FOUND + FIXED** (Exp 182, 2026-08-09) — 90Degree had NEVER been visible: the pack bundle's 90Degree preview slot pointed at the **360Degree** characteristic (requires360=1) which the game hides. Characteristic pathIDs were mislabeled repo-wide; all corrected to verified values (90Degree=`-5995858427784384822`).
-**🔄 FULL-AUDIO REBUILD + IDEMPOTENCY FIX** (Exp 183, 2026-08-11) — previously-deployed bundle was **TRUNCATED to 69.76s** (built `--pcm16` without `--no-pad` → clipped to 12MB resource). v0.5314 baked PCM16 + no-pad + mode mapping + V2→V3 into the pipeline defaults; v0.5315 fixed the mode-mapping idempotency bug. Rebuilt `startmeup_v3.bundle` = **39,697,727 B, full 224.31s audio, all 4 modes** — reproducibly from the source song dir. **🔴 DEPLOY PENDING (PS4 FTP down / PS4 off).**
+**✅ GENERALIZED PACK PATCH DEPLOYED + VERIFIED ON-DEVICE** (Exp 188–191) — all configured DLC packs get 4 preview mode sets (Standard/OneSaber/NoArrows/90Degree × 5 difficulties) via patched pack bundles + a single merged catalog (`catalog_pack_modes.json`), plus 38 custom song bundle redirects.
 
-## Song Details
-- **Display Name:** drop pop candy / Reol
-- **Artist:** Reol
-- **BPM:** 130
-- **Level ID:** custom/drop_pop_candy
-- **Modes:** Standard, OneSaber, NoArrows, 90Degree (4 modes; 360Degree purged in Exp 175 — PS4 single-camera ~90° tracking)
+**✅ EXP 191 CATALOG CRASH FIX DEPLOYED (2026-08-16)** — the PS4 was running the OLD BROKEN v0.5319 catalog (70/2251 invalid dataIndexes, md5 `0eb8a27d…`) which crashed every launch right after the `aa/catalog.json` redirect (OPEN #58/#74). The fixed catalog (md5 `975bacca0902624c9fb5c6a82cfa90c5`, 0 invalid dataIndexes) is now deployed + verified on-device. **AWAITING USER BOOT TEST.**
+
+## Song Details (per-slot)
+
+| Slot | Custom song | Artist |
+|------|-------------|--------|
+| `startmeup` | Espresso | Sabrina Carpenter |
+| 37 other slots (Chromeo, Billie Eilish, Lizzo, Camellia packs) | custom songs | various |
+
+All songs: 4 modes × 5 difficulties (Standard/OneSaber/NoArrows/90Degree), full-length PCM16 audio, V3.2.0 beatmaps.
 
 ## Deployed Files on PS4 (AFR base `/data/GoldHEN/AFR/CUSA12878/`)
+
 | File | Content | Status |
 |------|---------|--------|
-| `BeatmapLevelsData/startmeup/startmeup_v3` | Per-song bundle (audio + 4 mode sets × 5 difficulties) | 🔴 **STALE (12,534,145 B, Aug 9 — truncated 69.76s audio). REPLACE with 39,697,727 B full-audio build.** |
-| `startmeup_pack_modes.bundle` | Patched Rolling Stones pack bundle (StartMeUp BeatmapLevelSO with 4 preview sets, CORRECTED 90Degree pid) | ✅ Deployed (7,905,425 B, Aug 9) |
-| `catalog_startmeup_modes.json` | Catalog (only rolling-stones entry changed, dec-stream CRC 3924036563) | ✅ Deployed (801,445 B, Aug 9) |
+| `<slot>_v3.bundle` (38) | Per-song bundles (audio + 4 mode sets × 5 difficulties) | ✅ Deployed |
+| `therollingstones_pack_modes_assets_all_*.bundle` (7,906,184 B) | Patched Rolling Stones pack bundle (4 preview sets) | ✅ Deployed |
+| `billieeilish_pack_modes_assets_all_*.bundle` (6,422,547 B) | Patched Billie Eilish pack bundle | ✅ Deployed |
+| `lizzo_pack_modes_assets_all_*.bundle` (6,893,737 B) | Patched Lizzo pack bundle | ✅ Deployed |
+| `camellia_pack_modes_assets_all_*.bundle` (5,188,380 B) | Patched Camellia pack bundle | ✅ Deployed |
+| `catalog_pack_modes.json` (795,783 B, md5 `975bacca…`) | Merged catalog: patched m_Crc/m_BundleSize for the 4 configured packs | ✅ Deployed + verified (0 invalid dataIndexes) |
+| `redirects.json` (43 redirects) | 38 song redirects + 4 pack bundle redirects + `aa/catalog.json` | ✅ Deployed + matches local |
+| `features.json` | 2 runtime flags (`enable_custom_song_replacements`, `enable_song_metadata_modification`) | ✅ Deployed |
 
-## Redirects.json Keys
-- `"BeatmapLevelsData/startmeup"` → `"startmeup_v3"`
-- `"aa/catalog.json"` → `"catalog_startmeup_modes.json"`
-- `"therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle"` → `"startmeup_pack_modes.bundle"`
+Legacy prototype files (`startmeup_pack_modes.bundle`, `catalog_startmeup_modes.json`) were **deleted from the PS4** (Exp 191 cleanup — superseded by the generalized pack_modes system).
 
-## Deploy Checklist (Exp 183 — ready, awaiting PS4)
-1. Upload `/workspace/startmeup_v3.bundle` (39,697,727 B) → `BeatmapLevelsData/startmeup/startmeup_v3` (replaces the truncated Aug 9 build).
-2. Upload `beat_saber_deluxe/features.json` (2 runtime flags only — mode-mapping flag removed in v0.5314).
-3. Clear `/data/GoldHEN/AFR/CUSA12878/bs_log.txt` before the boot test.
+## Redirects.json Keys (43)
+- 38 × `BeatmapLevelsData/<slot>` → `<slot>_v3.bundle`
+- `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle` → `therollingstones_pack_modes_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle`
+- `billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle` → `billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle`
+- `lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle` → `lizzo_pack_modes_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle`
+- `camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle` → `camellia_pack_modes_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle`
+- `aa/catalog.json` → `catalog_pack_modes.json`
 
-## Pending Test (Exp 182 + 183 — after deploy)
-1. Boot → Start Me Up → confirm **90Degree** button NOW APPEARS in the selector (was hidden before).
-2. Confirm song plays **full 224.31s** (previous bundle was truncated at 69.76s — the audio-truncation bug).
-3. Test the source song's **90Degree Expert** (Drop Pop Candy ships its own 90Degree Expert).
-4. Test generated **90Degree Easy/Normal/Hard/ExpertPlus** (rotation events every 8 beats) — confirm rotation works on PS4.
-5. Sanity: NoArrows (dots) + OneSaber still work after bundle swap; lighting events use correct `et` types.
-6. On-device confirmation → integrate pack-patch build script into production pipeline (`tools/`).
+## Pending Test (Exp 191)
+1. Boot Beat Saber — confirm **STABLE boot** through the `aa/catalog.json` redirect + pack scan (no crash at OPEN #58/#74).
+2. Confirm all 4 packs' songs show in the mode selector with all 4 modes (Standard/OneSaber/NoArrows/90Degree) on Hard+.
+3. Play a few songs from each pack to confirm bundle loads + audio.
+4. After test: pull `bs_log.txt` → archive to `.ai_memory/experiment_logs/` → clear it on the PS4 → record results in `song_testing_log.md`.
+
+## Useful Commands
+- **Deploy pack_modes + verify:** `python3 tools/full_custom_song_pipeline.py --deploy-pack-modes --deploy-config --verify-ps4`
+- **Verify only (validates deployed catalog CONTENT, not just size):** `python3 tools/full_custom_song_pipeline.py --verify-ps4`
+- **Pull log:** FTP `get /data/GoldHEN/AFR/CUSA12878/bs_log.txt` (port 2121)

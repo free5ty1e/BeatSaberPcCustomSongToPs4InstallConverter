@@ -61,7 +61,11 @@
             "90Degree": [
               "Normal"
             ]
-          }
+          },
+          "patchPathID": 4396255661720518053,
+          "blobOffset": 60104,
+          "blobSize": 748,
+          "previewSetCount": 5
         },
         {
           "songID": "BalearicPumping",
@@ -110,7 +114,11 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4081312345835031332,
+          "blobOffset": 59200,
+          "blobSize": 768,
+          "previewSetCount": 5
         },
         {
           "songID": "BeatSaber",
@@ -159,7 +167,11 @@
             "90Degree": [
               "Easy"
             ]
-          }
+          },
+          "patchPathID": -2655713405187350311,
+          "blobOffset": 40200,
+          "blobSize": 756,
+          "previewSetCount": 5
         },
         {
           "songID": "Breezer",
@@ -208,7 +220,11 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1130998052331565165,
+          "blobOffset": 44824,
+          "blobSize": 744,
+          "previewSetCount": 5
         },
         {
           "songID": "CommercialPumping",
@@ -257,7 +273,11 @@
             "90Degree": [
               "Normal"
             ]
-          }
+          },
+          "patchPathID": -8328162362770695934,
+          "blobOffset": 36624,
+          "blobSize": 780,
+          "previewSetCount": 5
         },
         {
           "songID": "CountryRounds",
@@ -306,7 +326,11 @@
             "90Degree": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": 5931262081471835221,
+          "blobOffset": 65112,
+          "blobSize": 792,
+          "previewSetCount": 5
         },
         {
           "songID": "Escape",
@@ -355,7 +379,11 @@
             "90Degree": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -7643296133839200448,
+          "blobOffset": 37408,
+          "blobSize": 772,
+          "previewSetCount": 5
         },
         {
           "songID": "Legend",
@@ -404,7 +432,11 @@
             "90Degree": [
               "Hard"
             ]
-          }
+          },
+          "patchPathID": 3166541545620444553,
+          "blobOffset": 58424,
+          "blobSize": 776,
+          "previewSetCount": 5
         },
         {
           "songID": "LvlInsane",
@@ -453,7 +485,11 @@
             "90Degree": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -6182737595961650807,
+          "blobOffset": 38344,
+          "blobSize": 752,
+          "previewSetCount": 5
         },
         {
           "songID": "TurnMeOn",
@@ -502,9 +538,19 @@
             "90Degree": [
               "Easy"
             ]
-          }
+          },
+          "patchPathID": -2392385878485809066,
+          "blobOffset": 41128,
+          "blobSize": 764,
+          "previewSetCount": 5
         }
-      ]
+      ],
+      "catalogBundleName": "d63a38388bea065febea86e63a449536",
+      "catalogCrc": 473079437,
+      "catalogBundleSize": 8779816,
+      "catalogDataIndex": 73359,
+      "packBundleSize": 8779816,
+      "patchDataOffset": 36432
     },
     {
       "pack": "ostvol2",
@@ -551,7 +597,11 @@
               "Hard",
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -7439701290630751887,
+          "blobOffset": 37072,
+          "blobSize": 668,
+          "previewSetCount": 3
         },
         {
           "songID": "Elixia",
@@ -594,7 +644,11 @@
               "Hard",
               "Expert"
             ]
-          }
+          },
+          "patchPathID": 3942636356776683999,
+          "blobOffset": 42064,
+          "blobSize": 636,
+          "previewSetCount": 3
         },
         {
           "songID": "INeedYou",
@@ -643,7 +697,11 @@
             "90Degree": [
               "Easy"
             ]
-          }
+          },
+          "patchPathID": 3719536753468601909,
+          "blobOffset": 41296,
+          "blobSize": 764,
+          "previewSetCount": 5
         },
         {
           "songID": "RumNBass",
@@ -692,7 +750,11 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6339379784525428872,
+          "blobOffset": 47504,
+          "blobSize": 760,
+          "previewSetCount": 5
         },
         {
           "songID": "UnlimitedPower",
@@ -743,9 +805,19 @@
             "90Degree": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -2273079772874251114,
+          "blobOffset": 38784,
+          "blobSize": 868,
+          "previewSetCount": 5
         }
-      ]
+      ],
+      "catalogBundleName": "6cba3bf3b5e1699ce02b8b60cba303b1",
+      "catalogCrc": 3282688678,
+      "catalogBundleSize": 4041347,
+      "catalogDataIndex": 74202,
+      "packBundleSize": 4041347,
+      "patchDataOffset": 36192
     },
     {
       "pack": "ostvol3",
@@ -783,7 +855,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2127590419698744994,
+          "blobOffset": 44576,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "FullCharge",
@@ -817,7 +893,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7185657893727092990,
+          "blobOffset": 50824,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "GiveALittleLove",
@@ -851,7 +931,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 8423108762460198566,
+          "blobOffset": 54984,
+          "blobSize": 456,
+          "previewSetCount": 1
         },
         {
           "songID": "Immortal",
@@ -891,7 +975,11 @@
             "90Degree": [
               "Normal"
             ]
-          }
+          },
+          "patchPathID": -3797493068523115323,
+          "blobOffset": 41208,
+          "blobSize": 524,
+          "previewSetCount": 3
         },
         {
           "songID": "Origins",
@@ -940,7 +1028,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5257980446476607453,
+          "blobOffset": 40208,
+          "blobSize": 824,
+          "previewSetCount": 4
         },
         {
           "songID": "ReasonForLiving",
@@ -985,9 +1077,19 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5636194670512370015,
+          "blobOffset": 39528,
+          "blobSize": 680,
+          "previewSetCount": 4
         }
-      ]
+      ],
+      "catalogBundleName": "9bfda9dde2a6d037ed3b48f61fc2c3ca",
+      "catalogCrc": 4293357327,
+      "catalogBundleSize": 5664813,
+      "catalogDataIndex": 75047,
+      "packBundleSize": 5664813,
+      "patchDataOffset": 36240
     },
     {
       "pack": "ostvol4",
@@ -1030,7 +1132,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1529027625674168552,
+          "blobOffset": 43768,
+          "blobSize": 588,
+          "previewSetCount": 2
         },
         {
           "songID": "ItTakesMe",
@@ -1064,7 +1170,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2437656549899217345,
+          "blobOffset": 47264,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "LudicrousPlus",
@@ -1103,7 +1213,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3231861613135194672,
+          "blobOffset": 40016,
+          "blobSize": 556,
+          "previewSetCount": 2
         },
         {
           "songID": "SpinEternally",
@@ -1137,9 +1251,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7921857516005016201,
+          "blobOffset": 36880,
+          "blobSize": 448,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "f078e423ec7e32bb3974ada6ac6b7311",
+      "catalogCrc": 2947772933,
+      "catalogBundleSize": 3818841,
+      "catalogDataIndex": 75892,
+      "packBundleSize": 3818841,
+      "patchDataOffset": 36144
     },
     {
       "pack": "ostvol5",
@@ -1177,7 +1301,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 8280100704519617221,
+          "blobOffset": 52104,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "DollarSeventyEight",
@@ -1211,7 +1339,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6924235446919325371,
+          "blobOffset": 37680,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "FinalBossChan",
@@ -1245,7 +1377,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5814605361025555455,
+          "blobOffset": 50736,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "Firestarter",
@@ -1284,7 +1420,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5441705152084404928,
+          "blobOffset": 38352,
+          "blobSize": 536,
+          "previewSetCount": 2
         },
         {
           "songID": "IWannaBeAMachine",
@@ -1318,7 +1458,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8893852883966658875,
+          "blobOffset": 36240,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "Magic",
@@ -1357,9 +1501,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7453642188277314750,
+          "blobOffset": 37120,
+          "blobSize": 556,
+          "previewSetCount": 2
         }
-      ]
+      ],
+      "catalogBundleName": "cdc32923d2c8e6a7524cd01583ec7165",
+      "catalogCrc": 119193771,
+      "catalogBundleSize": 5084010,
+      "catalogDataIndex": 76737,
+      "packBundleSize": 5084010,
+      "patchDataOffset": 36240
     },
     {
       "pack": "ostvol6",
@@ -1397,7 +1551,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2892532421993018376,
+          "blobOffset": 40888,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "HeavyWeight",
@@ -1431,7 +1589,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1257525100778525335,
+          "blobOffset": 43464,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "LiftOff",
@@ -1465,7 +1627,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6584870139110089333,
+          "blobOffset": 39888,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "PowerOfTheSaberBlade",
@@ -1499,7 +1665,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7634943846073107454,
+          "blobOffset": 38344,
+          "blobSize": 484,
+          "previewSetCount": 1
         },
         {
           "songID": "TempoKatana",
@@ -1533,9 +1703,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3175278908694925819,
+          "blobOffset": 40448,
+          "blobSize": 436,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "53c020e3118f7ee604c6ad8efc7591ee",
+      "catalogCrc": 3093244966,
+      "catalogBundleSize": 4704946,
+      "catalogDataIndex": 77580,
+      "packBundleSize": 4704946,
+      "patchDataOffset": 38064
     },
     {
       "pack": "ostvol7",
@@ -1573,7 +1753,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 31666691876197416,
+          "blobOffset": 45536,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "Lustre",
@@ -1607,7 +1791,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4749003394550006683,
+          "blobOffset": 41960,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "TheMaster",
@@ -1641,7 +1829,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7857510868359984851,
+          "blobOffset": 50232,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "Untamed",
@@ -1675,7 +1867,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4623531226968068854,
+          "blobOffset": 42360,
+          "blobSize": 408,
+          "previewSetCount": 1
         },
         {
           "songID": "WorldWideWeb",
@@ -1709,9 +1905,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -388277780052748063,
+          "blobOffset": 43880,
+          "blobSize": 420,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "b190d18a1d0143d1411f1471c8c1bfeb",
+      "catalogCrc": 1025670136,
+      "catalogBundleSize": 4738030,
+      "catalogDataIndex": 78425,
+      "packBundleSize": 4738030,
+      "patchDataOffset": 38064
     },
     {
       "pack": "debug",
@@ -1747,7 +1953,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3882311226718823688,
+          "blobOffset": 23992,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "Metronome",
@@ -1773,7 +1983,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 472700785507074816,
+          "blobOffset": 25424,
+          "blobSize": 284,
+          "previewSetCount": 1
         },
         {
           "songID": "PerformanceTest",
@@ -1801,9 +2015,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4425765329881505542,
+          "blobOffset": 23664,
+          "blobSize": 328,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "3d83895d158dc6b06437f968829bbd92",
+      "catalogCrc": 2222167512,
+      "catalogBundleSize": 1612476,
+      "catalogDataIndex": 21133,
+      "packBundleSize": 1612476,
+      "patchDataOffset": 23664
     },
     {
       "pack": "extras",
@@ -1841,7 +2065,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6472221100526742185,
+          "blobOffset": 43968,
+          "blobSize": 496,
+          "previewSetCount": 1
         },
         {
           "songID": "AngelVoices",
@@ -1884,7 +2112,11 @@
             "OneSaber": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -3986092458723105588,
+          "blobOffset": 46144,
+          "blobSize": 644,
+          "previewSetCount": 3
         },
         {
           "songID": "CrabRave",
@@ -1927,7 +2159,11 @@
             "90Degree": [
               "Hard"
             ]
-          }
+          },
+          "patchPathID": -798138209689575324,
+          "blobOffset": 47272,
+          "blobSize": 584,
+          "previewSetCount": 4
         },
         {
           "songID": "Danger",
@@ -1961,7 +2197,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3046662321013895424,
+          "blobOffset": 56096,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "EscapeRemix",
@@ -1995,7 +2235,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7157743486975067288,
+          "blobOffset": 60184,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "FitBeat",
@@ -2042,7 +2286,11 @@
               "Hard",
               "Expert"
             ]
-          }
+          },
+          "patchPathID": 5798301811367954706,
+          "blobOffset": 58704,
+          "blobSize": 728,
+          "previewSetCount": 4
         },
         {
           "songID": "OneHope",
@@ -2079,7 +2327,11 @@
             "OneSaber": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -479656001476049131,
+          "blobOffset": 50928,
+          "blobSize": 488,
+          "previewSetCount": 2
         },
         {
           "songID": "PopStars",
@@ -2122,7 +2374,11 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7477628210567804035,
+          "blobOffset": 39656,
+          "blobSize": 592,
+          "previewSetCount": 4
         },
         {
           "songID": "SpookyBeat",
@@ -2156,9 +2412,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2246282961454637878,
+          "blobOffset": 55512,
+          "blobSize": 448,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "279c4f12c30f2f1a107f67875ede6c75",
+      "catalogCrc": 3137861775,
+      "catalogBundleSize": 7018676,
+      "catalogDataIndex": 28716,
+      "packBundleSize": 7018676,
+      "patchDataOffset": 39072
     },
     {
       "pack": "billieeilish",
@@ -2233,7 +2499,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6637309859523771111,
+          "blobOffset": 59488,
+          "blobSize": 484,
+          "previewSetCount": 1
         },
         {
           "songID": "BadGuy",
@@ -2304,7 +2574,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4735038896246379292,
+          "blobOffset": 77256,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "Bellyache",
@@ -2375,7 +2649,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3111276072386971911,
+          "blobOffset": 63448,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "BuryAFriend",
@@ -2446,7 +2724,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1715252594629368193,
+          "blobOffset": 66992,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "HappierThanEver",
@@ -2522,7 +2804,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2811768763242975555,
+          "blobOffset": 76344,
+          "blobSize": 580,
+          "previewSetCount": 2
         },
         {
           "songID": "IDidntChangeMyNumber",
@@ -2593,7 +2879,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1788881320036241133,
+          "blobOffset": 70576,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "NDA",
@@ -2664,7 +2954,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5147862089466667779,
+          "blobOffset": 77688,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "Oxytocin",
@@ -2735,7 +3029,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7313189534479715260,
+          "blobOffset": 55112,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "ThereforeIAm",
@@ -2811,7 +3109,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6081906010871856952,
+          "blobOffset": 78704,
+          "blobSize": 568,
+          "previewSetCount": 2
         },
         {
           "songID": "YouShouldSeeMeInACrown",
@@ -2882,9 +3184,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5732621957986657774,
+          "blobOffset": 61808,
+          "blobSize": 464,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "f346c02fc33213552312491d3aca68f7",
+      "catalogCrc": 3472253161,
+      "catalogBundleSize": 6420087,
+      "catalogDataIndex": 4271,
+      "packBundleSize": 6420087,
+      "patchDataOffset": 52736
     },
     {
       "pack": "britneyspears",
@@ -2922,7 +3234,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5619402284930211967,
+          "blobOffset": 58032,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "Circus",
@@ -2956,7 +3272,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7278119846679130426,
+          "blobOffset": 54136,
+          "blobSize": 408,
+          "previewSetCount": 1
         },
         {
           "songID": "GimmeMore",
@@ -2990,7 +3310,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1554062949425053727,
+          "blobOffset": 60128,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "ImASlave4U",
@@ -3024,7 +3348,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5975918851789888444,
+          "blobOffset": 56048,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "MeAgainstTheMusic",
@@ -3058,7 +3386,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5451142731927142127,
+          "blobOffset": 76144,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "OopsIDidItAgain",
@@ -3092,7 +3424,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6971901076984916623,
+          "blobOffset": 78120,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "Overprotected",
@@ -3126,7 +3462,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 253569061459593146,
+          "blobOffset": 65784,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "Scream&Shout",
@@ -3160,7 +3500,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2996245602832746387,
+          "blobOffset": 59000,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "TillTheWorldEnds",
@@ -3194,7 +3538,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2820866638495387206,
+          "blobOffset": 59448,
+          "blobSize": 436,
+          "previewSetCount": 1
         },
         {
           "songID": "Toxic",
@@ -3228,7 +3576,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6010546197480748122,
+          "blobOffset": 55640,
+          "blobSize": 408,
+          "previewSetCount": 1
         },
         {
           "songID": "Womanizer",
@@ -3262,9 +3614,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8141400735880392560,
+          "blobOffset": 53712,
+          "blobSize": 420,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "a88f6a8ba31a1f1624a9b326f0d8501c",
+      "catalogCrc": 1973901890,
+      "catalogBundleSize": 8412366,
+      "catalogDataIndex": 8482,
+      "packBundleSize": 8412366,
+      "patchDataOffset": 52784
     },
     {
       "pack": "bts",
@@ -3302,7 +3664,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7038668606031926858,
+          "blobOffset": 60984,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "BoyWithLuv",
@@ -3336,7 +3702,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2838204249971658698,
+          "blobOffset": 76640,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "BurningUp",
@@ -3370,7 +3740,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8585739941682767571,
+          "blobOffset": 57168,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "Dionysus",
@@ -3404,7 +3778,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 622542900678102841,
+          "blobOffset": 75048,
+          "blobSize": 412,
+          "previewSetCount": 1
         },
         {
           "songID": "Dna",
@@ -3438,7 +3816,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7669600671040472924,
+          "blobOffset": 60184,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "Dope",
@@ -3472,7 +3854,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1651154819179569491,
+          "blobOffset": 71176,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "Dynamite",
@@ -3511,7 +3897,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -9223255117458624401,
+          "blobOffset": 52832,
+          "blobSize": 536,
+          "previewSetCount": 2
         },
         {
           "songID": "FakeLove",
@@ -3545,7 +3935,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2259809146546202338,
+          "blobOffset": 67528,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "Idol",
@@ -3579,7 +3973,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8667905148387781205,
+          "blobOffset": 56768,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "MicDrop",
@@ -3618,7 +4016,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3227801619262394198,
+          "blobOffset": 77080,
+          "blobSize": 568,
+          "previewSetCount": 2
         },
         {
           "songID": "NotToday",
@@ -3652,7 +4054,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3952723926680342882,
+          "blobOffset": 64352,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "Ugh",
@@ -3686,9 +4092,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1574957580245287208,
+          "blobOffset": 71576,
+          "blobSize": 400,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "5044031d62cf96461cae758fb6eae723",
+      "catalogCrc": 2687083592,
+      "catalogBundleSize": 9674068,
+      "catalogDataIndex": 9327,
+      "packBundleSize": 9674068,
+      "patchDataOffset": 52832
     },
     {
       "pack": "camellia",
@@ -3726,7 +4142,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4538655763419638137,
+          "blobOffset": 37952,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "CycleHit",
@@ -3765,7 +4185,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4331598339812801959,
+          "blobOffset": 38384,
+          "blobSize": 584,
+          "previewSetCount": 2
         },
         {
           "songID": "ExitThisEarthsAtomosphere",
@@ -3799,7 +4223,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2242241209527961565,
+          "blobOffset": 42120,
+          "blobSize": 484,
+          "previewSetCount": 1
         },
         {
           "songID": "Ghost",
@@ -3838,7 +4266,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2835507977929884253,
+          "blobOffset": 44440,
+          "blobSize": 540,
+          "previewSetCount": 2
         },
         {
           "songID": "LightItUp",
@@ -3872,7 +4304,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5305597072578024731,
+          "blobOffset": 37304,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "WhatTheCat",
@@ -3906,9 +4342,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 8984305693266715486,
+          "blobOffset": 51936,
+          "blobSize": 436,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "2edf6d9b81f40b537f174c3080eea3c9",
+      "catalogCrc": 1249869954,
+      "catalogBundleSize": 5187238,
+      "catalogDataIndex": 11860,
+      "packBundleSize": 5187238,
+      "patchDataOffset": 36240
     },
     {
       "pack": "daftpunk",
@@ -3946,7 +4392,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3943651386272252307,
+          "blobOffset": 69352,
+          "blobSize": 512,
+          "previewSetCount": 1
         },
         {
           "songID": "AroundTheWorldHarderBetterFasterStronger",
@@ -3980,7 +4430,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -9059278478216728032,
+          "blobOffset": 52960,
+          "blobSize": 548,
+          "previewSetCount": 1
         },
         {
           "songID": "DaFunkDaftendirekt",
@@ -4014,7 +4468,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2545099437407424999,
+          "blobOffset": 59568,
+          "blobSize": 500,
+          "previewSetCount": 1
         },
         {
           "songID": "GetLucky",
@@ -4048,7 +4506,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2356742382692159629,
+          "blobOffset": 66960,
+          "blobSize": 480,
+          "previewSetCount": 1
         },
         {
           "songID": "HarderBetterFasterStronger",
@@ -4082,7 +4544,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7917377752425836509,
+          "blobOffset": 78448,
+          "blobSize": 492,
+          "previewSetCount": 1
         },
         {
           "songID": "LoseYourselfToDance",
@@ -4116,7 +4582,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2641672437804732202,
+          "blobOffset": 59064,
+          "blobSize": 500,
+          "previewSetCount": 1
         },
         {
           "songID": "OneMoreTime",
@@ -4150,7 +4620,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7271939141160035952,
+          "blobOffset": 77296,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "PrimeTimeOfYourLifeBrainwasherRollinAliveLive2007",
@@ -4184,7 +4658,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6457656022742047782,
+          "blobOffset": 76664,
+          "blobSize": 560,
+          "previewSetCount": 1
         },
         {
           "songID": "Technologic",
@@ -4218,7 +4696,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -486393052293288327,
+          "blobOffset": 60416,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "VeridisQuo",
@@ -4252,9 +4734,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5081457139968040382,
+          "blobOffset": 56784,
+          "blobSize": 444,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "d6bbea7489ebe73f59a2cdb6098af746",
+      "catalogCrc": 2411815680,
+      "catalogBundleSize": 7385599,
+      "catalogDataIndex": 18602,
+      "packBundleSize": 7385599,
+      "patchDataOffset": 52736
     },
     {
       "pack": "edm",
@@ -4292,7 +4784,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5739051704102327223,
+          "blobOffset": 55224,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "Animals",
@@ -4326,7 +4822,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1098853690328732471,
+          "blobOffset": 68608,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "Freestyler",
@@ -4360,7 +4860,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5248576278463462790,
+          "blobOffset": 75408,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "GhostsNStuff",
@@ -4399,7 +4903,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 8396376871539417961,
+          "blobOffset": 78344,
+          "blobSize": 580,
+          "previewSetCount": 2
         },
         {
           "songID": "Icarus",
@@ -4438,7 +4946,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3357259647002394355,
+          "blobOffset": 73728,
+          "blobSize": 548,
+          "previewSetCount": 2
         },
         {
           "songID": "Sandstorm",
@@ -4472,7 +4984,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3024440607969040604,
+          "blobOffset": 62464,
+          "blobSize": 476,
+          "previewSetCount": 1
         },
         {
           "songID": "StayTheNight",
@@ -4506,7 +5022,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2177769051112108071,
+          "blobOffset": 64992,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "TheRockafellerSkank",
@@ -4540,7 +5060,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4982340135543773988,
+          "blobOffset": 56072,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "WaitingAllNight",
@@ -4574,7 +5098,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1848520418079622542,
+          "blobOffset": 72296,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "Witchcraft",
@@ -4608,9 +5136,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6380269934050084013,
+          "blobOffset": 76656,
+          "blobSize": 436,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "5df44c4664ff49a385f2e43edf00c4a7",
+      "catalogCrc": 4107105045,
+      "catalogBundleSize": 7794297,
+      "catalogDataIndex": 26187,
+      "packBundleSize": 7794297,
+      "patchDataOffset": 52736
     },
     {
       "pack": "falloutboy",
@@ -4648,7 +5186,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5250432533025362141,
+          "blobOffset": 55904,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "DanceDance",
@@ -4682,7 +5224,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5680335618473777268,
+          "blobOffset": 71928,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "IDontCare",
@@ -4721,7 +5267,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1242083812029018238,
+          "blobOffset": 62392,
+          "blobSize": 544,
+          "previewSetCount": 2
         },
         {
           "songID": "Immortals",
@@ -4755,7 +5305,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6154750169252844992,
+          "blobOffset": 55464,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "Irresistible",
@@ -4789,7 +5343,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 979644993526275685,
+          "blobOffset": 67736,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "MySongsKnow",
@@ -4828,7 +5386,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7481921680973703941,
+          "blobOffset": 54504,
+          "blobSize": 608,
+          "previewSetCount": 2
         },
         {
           "songID": "ThisAintAScene",
@@ -4862,7 +5424,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7982026216929152247,
+          "blobOffset": 73000,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "ThnksFrThMmrs",
@@ -4896,9 +5462,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3339822127986213923,
+          "blobOffset": 58920,
+          "blobSize": 452,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "4ce70a4d52370dd920625d63743dc5b7",
+      "catalogCrc": 1802459138,
+      "catalogBundleSize": 6529785,
+      "catalogDataIndex": 29561,
+      "packBundleSize": 6529785,
+      "patchDataOffset": 52640
     },
     {
       "pack": "greenday",
@@ -4941,7 +5517,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5266090171022637244,
+          "blobOffset": 79672,
+          "blobSize": 580,
+          "previewSetCount": 2
         },
         {
           "songID": "BoulevardOfBrokenDreams",
@@ -4975,7 +5555,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6322340086781163365,
+          "blobOffset": 81760,
+          "blobSize": 484,
+          "previewSetCount": 1
         },
         {
           "songID": "FatherOfAll",
@@ -5015,7 +5599,11 @@
             "90Degree": [
               "Normal"
             ]
-          }
+          },
+          "patchPathID": -8543624316950584226,
+          "blobOffset": 54256,
+          "blobSize": 544,
+          "previewSetCount": 3
         },
         {
           "songID": "FireReadyAim",
@@ -5055,7 +5643,11 @@
             "90Degree": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": 5190203158050136260,
+          "blobOffset": 79128,
+          "blobSize": 544,
+          "previewSetCount": 3
         },
         {
           "songID": "Holiday",
@@ -5100,7 +5692,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8230474013175083129,
+          "blobOffset": 54800,
+          "blobSize": 660,
+          "previewSetCount": 4
         },
         {
           "songID": "Minority",
@@ -5134,9 +5730,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1885451689884061888,
+          "blobOffset": 60712,
+          "blobSize": 424,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "eded39c84718279000c7025b013e321e",
+      "catalogCrc": 3927381096,
+      "catalogBundleSize": 4984947,
+      "catalogDataIndex": 35448,
+      "packBundleSize": 4984947,
+      "patchDataOffset": 53600
     },
     {
       "pack": "hiphop",
@@ -5174,7 +5780,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5375905375968870360,
+          "blobOffset": 64240,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "Anaconda",
@@ -5208,7 +5818,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8434929861118099842,
+          "blobOffset": 56808,
+          "blobSize": 404,
+          "previewSetCount": 1
         },
         {
           "songID": "GinAndJuice",
@@ -5242,7 +5856,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 9194562744237870473,
+          "blobOffset": 95056,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "Godzilla",
@@ -5276,7 +5894,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1380301095675310029,
+          "blobOffset": 71912,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "HeyYA",
@@ -5310,7 +5932,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6472342745146542713,
+          "blobOffset": 61224,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "Hypnotize",
@@ -5344,7 +5970,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7226203853613454955,
+          "blobOffset": 92680,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "NuthinButAGThang",
@@ -5378,7 +6008,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3691228167931010447,
+          "blobOffset": 65376,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "TheMessage",
@@ -5412,7 +6046,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8882189430633091702,
+          "blobOffset": 55520,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "TheWoo",
@@ -5446,9 +6084,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7620304990629168281,
+          "blobOffset": 93872,
+          "blobSize": 432,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "c364d5a125871b283e1a8257a4d43ae8",
+      "catalogCrc": 3293293776,
+      "catalogBundleSize": 6884971,
+      "catalogDataIndex": 39663,
+      "packBundleSize": 6884971,
+      "patchDataOffset": 54320
     },
     {
       "pack": "imaginedragons",
@@ -5493,7 +6141,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1010432720874327377,
+          "blobOffset": 81960,
+          "blobSize": 660,
+          "previewSetCount": 2
         },
         {
           "songID": "Believer",
@@ -5547,7 +6199,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1101680884739268795,
+          "blobOffset": 82680,
+          "blobSize": 1024,
+          "previewSetCount": 5
         },
         {
           "songID": "Bones",
@@ -5586,7 +6242,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8634382160976713484,
+          "blobOffset": 53560,
+          "blobSize": 556,
+          "previewSetCount": 2
         },
         {
           "songID": "Digital",
@@ -5633,7 +6293,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6634281538451124604,
+          "blobOffset": 56288,
+          "blobSize": 828,
+          "previewSetCount": 4
         },
         {
           "songID": "Enemy",
@@ -5672,7 +6336,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7078376974256288080,
+          "blobOffset": 95400,
+          "blobSize": 552,
+          "previewSetCount": 2
         },
         {
           "songID": "ItsTime",
@@ -5713,7 +6381,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4697508074010250032,
+          "blobOffset": 94072,
+          "blobSize": 736,
+          "previewSetCount": 2
         },
         {
           "songID": "Machine",
@@ -5754,7 +6426,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6583210248197736300,
+          "blobOffset": 57120,
+          "blobSize": 652,
+          "previewSetCount": 2
         },
         {
           "songID": "Natural",
@@ -5795,7 +6471,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -729683203426353839,
+          "blobOffset": 68176,
+          "blobSize": 732,
+          "previewSetCount": 2
         },
         {
           "songID": "Radioactive",
@@ -5836,7 +6516,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3359401882811159925,
+          "blobOffset": 92744,
+          "blobSize": 736,
+          "previewSetCount": 2
         },
         {
           "songID": "Thunder",
@@ -5883,7 +6567,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6686608961685073942,
+          "blobOffset": 55456,
+          "blobSize": 832,
+          "previewSetCount": 4
         },
         {
           "songID": "Warriors",
@@ -5924,7 +6612,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8874222618432475372,
+          "blobOffset": 52832,
+          "blobSize": 724,
+          "previewSetCount": 2
         },
         {
           "songID": "WhateverItTakes",
@@ -5970,9 +6662,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 212230951250813211,
+          "blobOffset": 70824,
+          "blobSize": 808,
+          "previewSetCount": 3
         }
-      ]
+      ],
+      "catalogBundleName": "b77c9ee22b2abb31f720c15b37e171cf",
+      "catalogCrc": 1525548259,
+      "catalogBundleSize": 8584182,
+      "catalogDataIndex": 42192,
+      "packBundleSize": 8584182,
+      "patchDataOffset": 52832
     },
     {
       "pack": "interscope",
@@ -6010,7 +6712,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3044685135801726769,
+          "blobOffset": 67288,
+          "blobSize": 452,
+          "previewSetCount": 1
         },
         {
           "songID": "DnaLamar",
@@ -6049,7 +6755,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 311595528166420859,
+          "blobOffset": 63672,
+          "blobSize": 552,
+          "previewSetCount": 2
         },
         {
           "songID": "DontCha",
@@ -6083,7 +6793,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5495594394874205903,
+          "blobOffset": 57656,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "PartyRockAnthem",
@@ -6117,7 +6831,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8985874052186509989,
+          "blobOffset": 54712,
+          "blobSize": 480,
+          "previewSetCount": 1
         },
         {
           "songID": "Rollin",
@@ -6151,7 +6869,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4209111101277953985,
+          "blobOffset": 58992,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "Sugar",
@@ -6190,7 +6912,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6392501774589112743,
+          "blobOffset": 71960,
+          "blobSize": 548,
+          "previewSetCount": 2
         },
         {
           "songID": "TheSweetEscape",
@@ -6224,9 +6950,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6006449061755902953,
+          "blobOffset": 57192,
+          "blobSize": 460,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "54229b72fd0a2529d263b1d39409bcee",
+      "catalogCrc": 1487001767,
+      "catalogBundleSize": 5550290,
+      "catalogDataIndex": 43037,
+      "packBundleSize": 5550290,
+      "patchDataOffset": 52592
     },
     {
       "pack": "ladygaga",
@@ -6264,7 +7000,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4690018439285460230,
+          "blobOffset": 59048,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "BadRomance",
@@ -6298,7 +7038,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 552588131672091053,
+          "blobOffset": 66512,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "BornThisWay",
@@ -6332,7 +7076,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3054060027986710200,
+          "blobOffset": 68152,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "JustDance",
@@ -6366,7 +7114,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5506063960052008986,
+          "blobOffset": 56432,
+          "blobSize": 476,
+          "previewSetCount": 1
         },
         {
           "songID": "Paparazzi",
@@ -6400,7 +7152,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4488469111318901965,
+          "blobOffset": 59488,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "PokerFace",
@@ -6439,7 +7195,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5497099154874400913,
+          "blobOffset": 56912,
+          "blobSize": 564,
+          "previewSetCount": 2
         },
         {
           "songID": "RainOnMe",
@@ -6478,7 +7238,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5481407981070235997,
+          "blobOffset": 76840,
+          "blobSize": 588,
+          "previewSetCount": 2
         },
         {
           "songID": "StupidLove",
@@ -6512,7 +7276,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -349102471314041723,
+          "blobOffset": 63760,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "Telephone",
@@ -6546,7 +7314,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 8457350240375462978,
+          "blobOffset": 78320,
+          "blobSize": 464,
+          "previewSetCount": 1
         },
         {
           "songID": "TheEdgeOfGlory",
@@ -6580,9 +7352,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4923166413005884614,
+          "blobOffset": 58592,
+          "blobSize": 456,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "e0883af80b8e8c0bcb5425ccda735879",
+      "catalogCrc": 2546301119,
+      "catalogBundleSize": 7456951,
+      "catalogDataIndex": 48934,
+      "packBundleSize": 7456951,
+      "patchDataOffset": 52736
     },
     {
       "pack": "linkinpark",
@@ -6627,7 +7409,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6375778936034226699,
+          "blobOffset": 89752,
+          "blobSize": 772,
+          "previewSetCount": 2
         },
         {
           "songID": "BreakingTheHabit",
@@ -6668,7 +7454,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6108226044124371262,
+          "blobOffset": 88976,
+          "blobSize": 776,
+          "previewSetCount": 2
         },
         {
           "songID": "Faint",
@@ -6709,7 +7499,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4340231904267349741,
+          "blobOffset": 70016,
+          "blobSize": 736,
+          "previewSetCount": 2
         },
         {
           "songID": "GivenUp",
@@ -6750,7 +7544,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1925632505711037123,
+          "blobOffset": 76432,
+          "blobSize": 744,
+          "previewSetCount": 2
         },
         {
           "songID": "InTheEnd",
@@ -6791,7 +7589,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 791416696761557076,
+          "blobOffset": 75616,
+          "blobSize": 740,
+          "previewSetCount": 2
         },
         {
           "songID": "NewDivide",
@@ -6832,7 +7634,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7312256675527801984,
+          "blobOffset": 68432,
+          "blobSize": 760,
+          "previewSetCount": 2
         },
         {
           "songID": "Numb",
@@ -6878,7 +7684,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7548521326759351291,
+          "blobOffset": 67408,
+          "blobSize": 856,
+          "previewSetCount": 3
         },
         {
           "songID": "OneStepCloser",
@@ -6919,7 +7729,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5674538516662137137,
+          "blobOffset": 87904,
+          "blobSize": 756,
+          "previewSetCount": 2
         },
         {
           "songID": "Papercut",
@@ -6960,7 +7774,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1067153196015838144,
+          "blobOffset": 71544,
+          "blobSize": 748,
+          "previewSetCount": 2
         },
         {
           "songID": "SomewhereIBelong",
@@ -7001,7 +7819,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 9064692500224548276,
+          "blobOffset": 96760,
+          "blobSize": 756,
+          "previewSetCount": 2
         },
         {
           "songID": "WhatIveDone",
@@ -7047,9 +7869,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6657807731191821979,
+          "blobOffset": 90528,
+          "blobSize": 892,
+          "previewSetCount": 3
         }
-      ]
+      ],
+      "catalogBundleName": "340ea9bed7ed750e560f2518230ae342",
+      "catalogCrc": 3009972383,
+      "catalogBundleSize": 9187588,
+      "catalogDataIndex": 51459,
+      "packBundleSize": 9187588,
+      "patchDataOffset": 52784
     },
     {
       "pack": "linkinpark2",
@@ -7087,7 +7919,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 839132496399402873,
+          "blobOffset": 63384,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "Crawling",
@@ -7121,7 +7957,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7213795963374056351,
+          "blobOffset": 72312,
+          "blobSize": 436,
+          "previewSetCount": 1
         },
         {
           "songID": "FightingMyself",
@@ -7155,7 +7995,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4848392862023488094,
+          "blobOffset": 57400,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "InMyHead",
@@ -7189,7 +8033,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3881803447145682178,
+          "blobOffset": 70000,
+          "blobSize": 452,
+          "previewSetCount": 1
         },
         {
           "songID": "Lost",
@@ -7223,7 +8071,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3811763222598240198,
+          "blobOffset": 69568,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "MoreTheVictim",
@@ -7257,7 +8109,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2113546209884174616,
+          "blobOffset": 66736,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "NumbEncore",
@@ -7291,7 +8147,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6543463508686463320,
+          "blobOffset": 70984,
+          "blobSize": 476,
+          "previewSetCount": 1
         },
         {
           "songID": "RememberTheName",
@@ -7325,9 +8185,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5231741356263210391,
+          "blobOffset": 56352,
+          "blobSize": 480,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "0da2802ed07a1e782f152a34cadda9bc",
+      "catalogCrc": 3233750921,
+      "catalogBundleSize": 5846672,
+      "catalogDataIndex": 52304,
+      "packBundleSize": 5846672,
+      "patchDataOffset": 52640
     },
     {
       "pack": "lizzo",
@@ -7407,7 +8277,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6612461083772428578,
+          "blobOffset": 56184,
+          "blobSize": 564,
+          "previewSetCount": 2
         },
         {
           "songID": "AboutDamnTime",
@@ -7483,7 +8357,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2924162753203434074,
+          "blobOffset": 59712,
+          "blobSize": 572,
+          "previewSetCount": 2
         },
         {
           "songID": "CuzILoveYou",
@@ -7554,7 +8432,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6689999575863481554,
+          "blobOffset": 55744,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "EverybodysGay",
@@ -7625,7 +8507,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4286617058708178656,
+          "blobOffset": 72056,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "GoodAsHell",
@@ -7696,7 +8582,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4076761262583297757,
+          "blobOffset": 56976,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "Juice",
@@ -7767,7 +8657,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7346542252403914886,
+          "blobOffset": 54712,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "Tempo",
@@ -7838,7 +8732,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7685799661570532306,
+          "blobOffset": 76592,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "TruthHurts",
@@ -7909,7 +8807,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6234362687989548111,
+          "blobOffset": 75432,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "Worship",
@@ -7980,9 +8882,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7742812441140574752,
+          "blobOffset": 54104,
+          "blobSize": 424,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "0092fb8fb92ea09b9665fceaf1a42d0e",
+      "catalogCrc": 7067311,
+      "catalogBundleSize": 6892932,
+      "catalogDataIndex": 56515,
+      "packBundleSize": 6892932,
+      "patchDataOffset": 52688
     },
     {
       "pack": "metallica",
@@ -8020,7 +8932,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5972815075072636194,
+          "blobOffset": 83184,
+          "blobSize": 552,
+          "previewSetCount": 1
         },
         {
           "songID": "Battery",
@@ -8054,7 +8970,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7016664630143918981,
+          "blobOffset": 88024,
+          "blobSize": 536,
+          "previewSetCount": 1
         },
         {
           "songID": "Blackened",
@@ -8088,7 +9008,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8572135322743207335,
+          "blobOffset": 55936,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "CreepingDeath",
@@ -8122,7 +9046,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2748174851527466485,
+          "blobOffset": 64832,
+          "blobSize": 568,
+          "previewSetCount": 1
         },
         {
           "songID": "EnterSandman",
@@ -8156,7 +9084,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1342108414192520390,
+          "blobOffset": 75024,
+          "blobSize": 560,
+          "previewSetCount": 1
         },
         {
           "songID": "FadeToBlack",
@@ -8190,7 +9122,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 526563677492669020,
+          "blobOffset": 74288,
+          "blobSize": 564,
+          "previewSetCount": 1
         },
         {
           "songID": "ForWhomTheBellTolls",
@@ -8224,7 +9160,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3223147230244927859,
+          "blobOffset": 63768,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "Fuel",
@@ -8258,7 +9198,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7810932773695528633,
+          "blobOffset": 57040,
+          "blobSize": 520,
+          "previewSetCount": 1
         },
         {
           "songID": "HitTheLights",
@@ -8292,7 +9236,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6910246850006871425,
+          "blobOffset": 86488,
+          "blobSize": 572,
+          "previewSetCount": 1
         },
         {
           "songID": "KingNothing",
@@ -8326,7 +9274,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -386755036486101923,
+          "blobOffset": 71264,
+          "blobSize": 552,
+          "previewSetCount": 1
         },
         {
           "songID": "LuxAeterna",
@@ -8360,7 +9312,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5752647646168624696,
+          "blobOffset": 82632,
+          "blobSize": 552,
+          "previewSetCount": 1
         },
         {
           "songID": "MasterOfPuppets",
@@ -8394,7 +9350,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3476595953483166149,
+          "blobOffset": 77816,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "NothingElseMatters",
@@ -8428,7 +9388,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 215808736452982627,
+          "blobOffset": 73528,
+          "blobSize": 584,
+          "previewSetCount": 1
         },
         {
           "songID": "One",
@@ -8462,7 +9426,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8586097926125949670,
+          "blobOffset": 55416,
+          "blobSize": 520,
+          "previewSetCount": 1
         },
         {
           "songID": "SadButTrue",
@@ -8496,7 +9464,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5222021678765685540,
+          "blobOffset": 62704,
+          "blobSize": 560,
+          "previewSetCount": 1
         },
         {
           "songID": "SeekAndDestroy",
@@ -8530,7 +9502,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3142439765900823119,
+          "blobOffset": 64216,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "TheUnforgiven",
@@ -8564,9 +9540,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7657059433841049488,
+          "blobOffset": 91768,
+          "blobSize": 568,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "3f7e9cd7a118c648e107ec508b70b369",
+      "catalogCrc": 520030146,
+      "catalogBundleSize": 11502719,
+      "catalogDataIndex": 60726,
+      "packBundleSize": 11502719,
+      "patchDataOffset": 53072
     },
     {
       "pack": "monstercat",
@@ -8609,7 +9595,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5942495075231760022,
+          "blobOffset": 80232,
+          "blobSize": 564,
+          "previewSetCount": 2
         },
         {
           "songID": "EmojiVIP",
@@ -8643,7 +9633,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1635975810993178433,
+          "blobOffset": 67448,
+          "blobSize": 436,
+          "previewSetCount": 1
         },
         {
           "songID": "Epic",
@@ -8683,7 +9677,11 @@
             "90Degree": [
               "Expert"
             ]
-          }
+          },
+          "patchPathID": -7949503944385091723,
+          "blobOffset": 57936,
+          "blobSize": 524,
+          "previewSetCount": 3
         },
         {
           "songID": "FeelingStronger",
@@ -8717,7 +9715,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6027909118242542860,
+          "blobOffset": 61472,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "Overkill",
@@ -8762,7 +9764,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3014251585715865744,
+          "blobOffset": 63176,
+          "blobSize": 648,
+          "previewSetCount": 4
         },
         {
           "songID": "Rattlesnake",
@@ -8802,7 +9808,11 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2463759962507332040,
+          "blobOffset": 74336,
+          "blobSize": 540,
+          "previewSetCount": 3
         },
         {
           "songID": "Stronger",
@@ -8836,7 +9846,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2703162682013070235,
+          "blobOffset": 74880,
+          "blobSize": 436,
+          "previewSetCount": 1
         },
         {
           "songID": "ThisTime",
@@ -8875,7 +9889,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4962278470635388234,
+          "blobOffset": 78824,
+          "blobSize": 552,
+          "previewSetCount": 2
         },
         {
           "songID": "TillItsOver",
@@ -8915,7 +9933,11 @@
             "90Degree": [
               "Easy"
             ]
-          }
+          },
+          "patchPathID": 7663694214219463038,
+          "blobOffset": 81768,
+          "blobSize": 544,
+          "previewSetCount": 3
         },
         {
           "songID": "WeWontBeAlone",
@@ -8949,9 +9971,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4128284286230226843,
+          "blobOffset": 62704,
+          "blobSize": 468,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "52ab666fa14a79666c0ba7ef56db837d",
+      "catalogCrc": 2955069634,
+      "catalogBundleSize": 7588757,
+      "catalogDataIndex": 63257,
+      "packBundleSize": 7588757,
+      "patchDataOffset": 52736
     },
     {
       "pack": "monstercatvol2",
@@ -8989,7 +10021,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4580367366995723445,
+          "blobOffset": 63872,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "Dabadabadabadaba",
@@ -9023,7 +10059,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6281910593240928242,
+          "blobOffset": 79792,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "DeadManWalking",
@@ -9057,7 +10097,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1869985344990149318,
+          "blobOffset": 71032,
+          "blobSize": 436,
+          "previewSetCount": 1
         },
         {
           "songID": "Endgame",
@@ -9091,7 +10135,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2100770763282593332,
+          "blobOffset": 66648,
+          "blobSize": 408,
+          "previewSetCount": 1
         },
         {
           "songID": "FinalBoss",
@@ -9125,7 +10173,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7671007113298286866,
+          "blobOffset": 80960,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "MemoryBank",
@@ -9159,7 +10211,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6872193943140696748,
+          "blobOffset": 57360,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "Mercenary",
@@ -9193,7 +10249,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5339952277195596682,
+          "blobOffset": 61864,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "Pump",
@@ -9227,7 +10287,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3465265107769285988,
+          "blobOffset": 75720,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "Rad",
@@ -9261,7 +10325,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2291266519713486978,
+          "blobOffset": 71704,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "RIOT",
@@ -9295,7 +10363,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8117361268607820632,
+          "blobOffset": 54000,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "ThronesOfBlood",
@@ -9329,7 +10401,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1984223781913284727,
+          "blobOffset": 67056,
+          "blobSize": 436,
+          "previewSetCount": 1
         },
         {
           "songID": "WakeUp",
@@ -9363,9 +10439,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -9089716119187676832,
+          "blobOffset": 52832,
+          "blobSize": 408,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "4d5cacf97abe012ff06416a484560b09",
+      "catalogCrc": 664091134,
+      "catalogBundleSize": 9384389,
+      "catalogDataIndex": 67472,
+      "packBundleSize": 9384389,
+      "patchDataOffset": 52832
     },
     {
       "pack": "panicatthedisco",
@@ -9403,7 +10489,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6082515439999742241,
+          "blobOffset": 57488,
+          "blobSize": 456,
+          "previewSetCount": 1
         },
         {
           "songID": "DancingsNotACrime",
@@ -9437,7 +10527,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 9053938000607324651,
+          "blobOffset": 89136,
+          "blobSize": 476,
+          "previewSetCount": 1
         },
         {
           "songID": "EmperorsNewClothes",
@@ -9484,7 +10578,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4194337029221052543,
+          "blobOffset": 77072,
+          "blobSize": 872,
+          "previewSetCount": 4
         },
         {
           "songID": "HeyLookMaIMadeIt",
@@ -9518,7 +10616,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1933530107007923393,
+          "blobOffset": 67920,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "HighHopes",
@@ -9570,7 +10672,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -9176094044159347795,
+          "blobOffset": 52736,
+          "blobSize": 972,
+          "previewSetCount": 5
         },
         {
           "songID": "SayAmen",
@@ -9604,7 +10710,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7407946904447801885,
+          "blobOffset": 54792,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "SugarSoaker",
@@ -9638,7 +10748,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8899629290305948872,
+          "blobOffset": 53712,
+          "blobSize": 452,
+          "previewSetCount": 1
         },
         {
           "songID": "TheGreatestShow",
@@ -9690,7 +10804,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6094055103157205134,
+          "blobOffset": 56552,
+          "blobSize": 936,
+          "previewSetCount": 5
         },
         {
           "songID": "Victorious",
@@ -9731,7 +10849,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3709531142004469365,
+          "blobOffset": 61632,
+          "blobSize": 736,
+          "previewSetCount": 2
         },
         {
           "songID": "VivaLasVengeance",
@@ -9765,9 +10887,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1136320264042768192,
+          "blobOffset": 68568,
+          "blobSize": 468,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "e0f26cc3a31e14f7f649b83a66f31453",
+      "catalogCrc": 3220126308,
+      "catalogBundleSize": 7497692,
+      "catalogDataIndex": 80948,
+      "packBundleSize": 7497692,
+      "patchDataOffset": 52736
     },
     {
       "pack": "queen",
@@ -9805,7 +10937,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6427782477069048240,
+          "blobOffset": 54160,
+          "blobSize": 484,
+          "previewSetCount": 1
         },
         {
           "songID": "BohemianRhapsody",
@@ -9844,7 +10980,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6017505685932004489,
+          "blobOffset": 81944,
+          "blobSize": 588,
+          "previewSetCount": 2
         },
         {
           "songID": "CrazyLittleThingCalledLove",
@@ -9878,7 +11018,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3932281492739324556,
+          "blobOffset": 60784,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "DontStopMeNow",
@@ -9917,7 +11061,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6897664671252475190,
+          "blobOffset": 83144,
+          "blobSize": 552,
+          "previewSetCount": 2
         },
         {
           "songID": "IWantItAll",
@@ -9951,7 +11099,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4124558311991921602,
+          "blobOffset": 80872,
+          "blobSize": 420,
+          "previewSetCount": 1
         },
         {
           "songID": "KillerQueen",
@@ -9985,7 +11137,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2119571770365890935,
+          "blobOffset": 65192,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "OneVision",
@@ -10019,7 +11175,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8358644710869970636,
+          "blobOffset": 52960,
+          "blobSize": 416,
+          "previewSetCount": 1
         },
         {
           "songID": "SomebodyToLove",
@@ -10053,7 +11213,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1575966098681411395,
+          "blobOffset": 66232,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "StoneColdCrazy",
@@ -10087,7 +11251,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6091666731613587838,
+          "blobOffset": 82536,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "WeAreTheChampions",
@@ -10121,7 +11289,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -1438477511255432689,
+          "blobOffset": 66656,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "WeWillRockYou",
@@ -10155,9 +11327,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4601032212100161494,
+          "blobOffset": 55352,
+          "blobSize": 460,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "39465e78430f4873441beda234a8b6ea",
+      "catalogCrc": 3946066753,
+      "catalogBundleSize": 7852590,
+      "catalogDataIndex": 87686,
+      "packBundleSize": 7852590,
+      "patchDataOffset": 52784
     },
     {
       "pack": "rocketleague",
@@ -10201,7 +11383,11 @@
             "90Degree": [
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4452800799411894931,
+          "blobOffset": 65560,
+          "blobSize": 532,
+          "previewSetCount": 3
         },
         {
           "songID": "LuvUNeedU",
@@ -10246,7 +11432,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7510466231337093015,
+          "blobOffset": 55696,
+          "blobSize": 660,
+          "previewSetCount": 4
         },
         {
           "songID": "Play",
@@ -10285,7 +11475,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3112207104467802194,
+          "blobOffset": 64904,
+          "blobSize": 540,
+          "previewSetCount": 2
         },
         {
           "songID": "RockIt",
@@ -10319,7 +11513,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6883288909652586680,
+          "blobOffset": 67768,
+          "blobSize": 428,
+          "previewSetCount": 1
         },
         {
           "songID": "Shiawase",
@@ -10353,7 +11551,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7882378595950407708,
+          "blobOffset": 54832,
+          "blobSize": 424,
+          "previewSetCount": 1
         },
         {
           "songID": "TestMe",
@@ -10387,9 +11589,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 8427589781853019714,
+          "blobOffset": 68872,
+          "blobSize": 436,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "1fc8742d1cb4529f460062a783d7130a",
+      "catalogCrc": 3941364839,
+      "catalogBundleSize": 6452206,
+      "catalogDataIndex": 91897,
+      "packBundleSize": 6452206,
+      "patchDataOffset": 52544
     },
     {
       "pack": "rockmixtape",
@@ -10432,7 +11644,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2236539407062339437,
+          "blobOffset": 61384,
+          "blobSize": 576,
+          "previewSetCount": 2
         },
         {
           "songID": "EyeOfTheTiger",
@@ -10466,7 +11682,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5729761416825793944,
+          "blobOffset": 59328,
+          "blobSize": 456,
+          "previewSetCount": 1
         },
         {
           "songID": "FreeBird",
@@ -10500,7 +11720,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4948591331176772516,
+          "blobOffset": 60088,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "IWasMadeLovingYou",
@@ -10534,7 +11758,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2532808997475206278,
+          "blobOffset": 69360,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "SevenNationArmy",
@@ -10568,7 +11796,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2490015493433826244,
+          "blobOffset": 68888,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "SmellsLikeTeenSpirit",
@@ -10602,7 +11834,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 615084262874452140,
+          "blobOffset": 64480,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "SweetChildOMine",
@@ -10636,7 +11872,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5856350607112752387,
+          "blobOffset": 58744,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "ThePretender",
@@ -10675,9 +11915,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1779448887059752950,
+          "blobOffset": 67704,
+          "blobSize": 576,
+          "previewSetCount": 2
         }
-      ]
+      ],
+      "catalogBundleName": "5260cb6dbde0fe4c78fd89955037d8ff",
+      "catalogCrc": 3401700571,
+      "catalogBundleSize": 5917937,
+      "catalogDataIndex": 92742,
+      "packBundleSize": 5917937,
+      "patchDataOffset": 52640
     },
     {
       "pack": "shockdrop",
@@ -10715,7 +11965,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8492710278995835052,
+          "blobOffset": 53824,
+          "blobSize": 556,
+          "previewSetCount": 1
         },
         {
           "songID": "Houdini",
@@ -10749,7 +12003,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2166888775241766175,
+          "blobOffset": 63104,
+          "blobSize": 400,
+          "previewSetCount": 1
         },
         {
           "songID": "NotLikeUs",
@@ -10783,9 +12041,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6217833438264841710,
+          "blobOffset": 67432,
+          "blobSize": 560,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "532e925e5fa665bbf32f85acaa82253f",
+      "catalogCrc": 1594197594,
+      "catalogBundleSize": 3290501,
+      "catalogDataIndex": 96114,
+      "packBundleSize": 3290501,
+      "patchDataOffset": 53024
     },
     {
       "pack": "skrillex",
@@ -10828,7 +12096,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4835395234143014138,
+          "blobOffset": 57440,
+          "blobSize": 568,
+          "previewSetCount": 2
         },
         {
           "songID": "Butterflies",
@@ -10862,7 +12134,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7070616892308007242,
+          "blobOffset": 73504,
+          "blobSize": 452,
+          "previewSetCount": 1
         },
         {
           "songID": "DontGo",
@@ -10896,7 +12172,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3194520764588392955,
+          "blobOffset": 71464,
+          "blobSize": 452,
+          "previewSetCount": 1
         },
         {
           "songID": "FirstOfTheYear",
@@ -10935,7 +12215,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1190286059268929867,
+          "blobOffset": 70192,
+          "blobSize": 584,
+          "previewSetCount": 2
         },
         {
           "songID": "RaggaBomb",
@@ -10969,7 +12253,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 60595735480060355,
+          "blobOffset": 66720,
+          "blobSize": 432,
+          "previewSetCount": 1
         },
         {
           "songID": "RockNRoll",
@@ -11003,7 +12291,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 882946954008470871,
+          "blobOffset": 69720,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "ScaryMonstersAndNiceSprites",
@@ -11037,7 +12329,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4628703902315562880,
+          "blobOffset": 58008,
+          "blobSize": 484,
+          "previewSetCount": 1
         },
         {
           "songID": "TheDevilsDen",
@@ -11071,9 +12367,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -9214826029838725134,
+          "blobOffset": 52640,
+          "blobSize": 456,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "e37730d5b87cb5ab2aeda7c5965aff27",
+      "catalogCrc": 2080735229,
+      "catalogBundleSize": 6439277,
+      "catalogDataIndex": 96959,
+      "packBundleSize": 6439277,
+      "patchDataOffset": 52640
     },
     {
       "pack": "therollingstones",
@@ -11111,7 +12417,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3170025482082031519,
+          "blobOffset": 81864,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "BiteMyHeadOff",
@@ -11145,7 +12455,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1971664079490701747,
+          "blobOffset": 79464,
+          "blobSize": 456,
+          "previewSetCount": 1
         },
         {
           "songID": "CantYouHearMeKnocking",
@@ -11179,7 +12493,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5323443480442096181,
+          "blobOffset": 85960,
+          "blobSize": 480,
+          "previewSetCount": 1
         },
         {
           "songID": "GimmeShelter",
@@ -11213,7 +12531,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 9064810937293319906,
+          "blobOffset": 88736,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "ICantGetNoSatisfaction",
@@ -11247,7 +12569,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7925444553580850911,
+          "blobOffset": 59864,
+          "blobSize": 500,
+          "previewSetCount": 1
         },
         {
           "songID": "LiveByTheSword",
@@ -11281,7 +12607,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -6341404880563585153,
+          "blobOffset": 61088,
+          "blobSize": 476,
+          "previewSetCount": 1
         },
         {
           "songID": "MessItUp",
@@ -11315,7 +12645,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -8171401172262322755,
+          "blobOffset": 59104,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "PaintItBlack",
@@ -11349,7 +12683,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5665336422041669152,
+          "blobOffset": 87248,
+          "blobSize": 464,
+          "previewSetCount": 1
         },
         {
           "songID": "StartMeUp",
@@ -11383,7 +12721,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2287600824654271910,
+          "blobOffset": 79920,
+          "blobSize": 440,
+          "previewSetCount": 1
         },
         {
           "songID": "SympathyForTheDevil",
@@ -11417,7 +12759,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -3434743624602896033,
+          "blobOffset": 64528,
+          "blobSize": 488,
+          "previewSetCount": 1
         },
         {
           "songID": "WholeWideWorld",
@@ -11451,9 +12797,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 3178431758200191277,
+          "blobOffset": 82312,
+          "blobSize": 452,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "51dc790300eb3d900786837beb3ac335",
+      "catalogCrc": 3700109647,
+      "catalogBundleSize": 7902803,
+      "catalogDataIndex": 102017,
+      "packBundleSize": 7902803,
+      "patchDataOffset": 53456
     },
     {
       "pack": "theweeknd",
@@ -11496,7 +12852,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -2580065770098900726,
+          "blobOffset": 66328,
+          "blobSize": 580,
+          "previewSetCount": 2
         },
         {
           "songID": "CantFeelMyFace",
@@ -11530,7 +12890,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5727407002866709602,
+          "blobOffset": 77008,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "DieForYou",
@@ -11564,7 +12928,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6566868138939736153,
+          "blobOffset": 77808,
+          "blobSize": 468,
+          "previewSetCount": 1
         },
         {
           "songID": "HowDoIMakeYouLoveMe",
@@ -11598,7 +12966,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 883978304504864401,
+          "blobOffset": 73600,
+          "blobSize": 476,
+          "previewSetCount": 1
         },
         {
           "songID": "IFeelItComing",
@@ -11632,7 +13004,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 5421992670705212250,
+          "blobOffset": 76424,
+          "blobSize": 472,
+          "previewSetCount": 1
         },
         {
           "songID": "LessThanZero",
@@ -11666,7 +13042,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -4013906255636096291,
+          "blobOffset": 65272,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "PrayForMe",
@@ -11700,7 +13080,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7836129355303255712,
+          "blobOffset": 81584,
+          "blobSize": 460,
+          "previewSetCount": 1
         },
         {
           "songID": "Sacrifice",
@@ -11734,7 +13118,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 1921812166382474014,
+          "blobOffset": 74176,
+          "blobSize": 444,
+          "previewSetCount": 1
         },
         {
           "songID": "SaveYourTears",
@@ -11773,7 +13161,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 2965040307124575813,
+          "blobOffset": 74624,
+          "blobSize": 576,
+          "previewSetCount": 2
         },
         {
           "songID": "Starboy",
@@ -11807,7 +13199,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 26729165876487731,
+          "blobOffset": 70800,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "TakeMyBreath",
@@ -11841,7 +13237,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 4919798531115258382,
+          "blobOffset": 75976,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "TheHills",
@@ -11875,9 +13275,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -7527455438191543683,
+          "blobOffset": 56592,
+          "blobSize": 436,
+          "previewSetCount": 1
         }
-      ]
+      ],
+      "catalogBundleName": "12142c8f40c475a0c37570bc05452d48",
+      "catalogCrc": 188965482,
+      "catalogBundleSize": 8549860,
+      "catalogDataIndex": 106228,
+      "packBundleSize": 8549860,
+      "patchDataOffset": 52832
     },
     {
       "pack": "timbaland",
@@ -11920,7 +13330,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 6317123530662133534,
+          "blobOffset": 76544,
+          "blobSize": 568,
+          "previewSetCount": 2
         },
         {
           "songID": "Famous",
@@ -11954,7 +13368,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": 7863639950560914940,
+          "blobOffset": 78776,
+          "blobSize": 452,
+          "previewSetCount": 1
         },
         {
           "songID": "HasAMeaning",
@@ -11994,7 +13412,11 @@
             "90Degree": [
               "Hard"
             ]
-          }
+          },
+          "patchPathID": 6036316039145833757,
+          "blobOffset": 75984,
+          "blobSize": 556,
+          "previewSetCount": 3
         },
         {
           "songID": "WhatILike",
@@ -12028,7 +13450,11 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -323313361771651586,
+          "blobOffset": 68144,
+          "blobSize": 448,
+          "previewSetCount": 1
         },
         {
           "songID": "WhileWereYoung",
@@ -12067,9 +13493,19 @@
               "Expert",
               "ExpertPlus"
             ]
-          }
+          },
+          "patchPathID": -5156240041565532952,
+          "blobOffset": 60176,
+          "blobSize": 556,
+          "previewSetCount": 2
         }
-      ]
+      ],
+      "catalogBundleName": "da8279aa3da4d78113cd611c58435eb1",
+      "catalogCrc": 2472273069,
+      "catalogBundleSize": 3406524,
+      "catalogDataIndex": 108755,
+      "packBundleSize": 3406524,
+      "patchDataOffset": 53360
     }
   ]
 }

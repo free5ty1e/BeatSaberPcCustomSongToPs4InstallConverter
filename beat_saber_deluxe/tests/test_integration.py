@@ -366,13 +366,13 @@ class TestPackBundleRedirectConsistency:
         assert result['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
         assert result['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
 
-    def test_load_config_defaults_include_pack_bundle(self):
-        """Default config carries the pack bundle settings (self-inclusive pipeline)."""
+    def test_load_config_defaults_include_pack_modes(self):
+        """Default config carries the generalized pack_modes settings; the legacy
+        single-pack pack_bundle prototype is gone (superseded by pack_modes)."""
         from full_custom_song_pipeline import load_config
         cfg = load_config('/nonexistent/config.json')
-        assert cfg['pack_bundle']['bundle_key'].endswith('.bundle')
-        assert cfg['pack_bundle']['catalog_key'] == 'aa/catalog.json'
-        assert cfg['pack_bundle']['patched_catalog'] == 'catalog_startmeup_modes.json'
+        assert 'pack_bundle' not in cfg, "legacy single-pack prototype removed from defaults"
+        assert cfg['pack_modes']['patched_catalog'] == 'catalog_pack_modes.json'
         assert len(cfg['mass_deploy']['slots']) == 38
 
 
