@@ -141,6 +141,22 @@ When the game opens a BeatmapLevelData file:
   (dry-run default). **Order matters: deploy the corrected `redirects.json` FIRST, then delete
   stale files** — old redirect values still point at `_v3` files; deleting those first crashes boot.
 
+## ⚠️ CRITICAL: Stale Pack Redirect Removal (Exp 195)
+
+**When removing a pack from `pack_modes.packs`, its old pack redirect in `redirects.json`
+MUST also be removed.** Without this:
+1. The old redirect still points at the patched pack bundle
+2. The catalog no longer has that pack's CRC patched (regenerated from config)
+3. Game loads the patched bundle, validates CRC against catalog → **CE-34878-0 crash**
+
+The pipeline's `_ensure_pack_bundle_redirects()` now removes stale pack redirects using
+hash-based matching (`assets_all_<hash>.bundle` regex). Any pack redirect whose hash
+doesn't match a current config pack is deleted on every `manage_redirect_config` save.
+
+Also: when deploying a subset of packs for testing, you must use a temporary config file
+(`--config /tmp/test_1pack_config.json`) because `_regenerate_merged_catalog()` always
+uses ALL packs from `config['pack_modes']['packs']`, NOT the `--pack-modes-packs` CLI flag.
+
 ## Important Notes
 - The redirect only intercepts the specific song file — other songs load normally
 - The environment/scene bundles also load normally (no redirect needed)

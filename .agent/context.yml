@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline (v0.8050/v0.8051 crashed at startup, Exp 176)
-pipeline_version: "0.5322" # in beat_saber_deluxe/VERSION — fixed catalog DEPLOYED + --verify-ps4 hardened with catalog content validation (Exp 191); dataIndex fix (Exp 189) + 360Degree CHAR_PATH_IDS cleanup (Exp 190)
+plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline a8a06f0 (v0.8050/v0.8051 crashed at startup Exp 176; re-corrupted by Gemini regressions post-Exp-192, RE-RESTORED 2026-08-18 Exp 193)
+pipeline_version: "0.5324" # in beat_saber_deluxe/VERSION — Fixed stale pack redirect removal (Exp 195); OneSaber notes RIGHT/BLUE (Exp 192); catalog DEPLOYED + --verify-ps4 hardened (Exp 191); dataIndex fix (Exp 189) + 360Degree cleanup (Exp 190)
 
 # Platform Constraints
 target_platform: PS4

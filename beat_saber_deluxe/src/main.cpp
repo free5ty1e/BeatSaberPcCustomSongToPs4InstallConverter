@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8040"
+#define PLUGIN_VERSION "v0.8041"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -207,6 +207,18 @@ static void load_redirects(void) {
         snprintf(sample, sizeof(sample), "  e.g. %s -> %s", REDIRECT_KEYS[0], REDIRECT_VALS[0]);
         log_write(sample);
         }
+    // Count redirect types for diagnostic summary
+    int n_songs = 0, n_packs = 0, n_catalog = 0;
+    for (int i = 0; i < REDIRECT_COUNT; i++) {
+        if (strstr(REDIRECT_KEYS[i], "catalog")) n_catalog++;
+        else if (strstr(REDIRECT_KEYS[i], "pack_assets")) n_packs++;
+        else n_songs++;
+    }
+    {
+        char sbuf[256];
+        snprintf(sbuf, sizeof(sbuf), "  breakdown: %d songs, %d packs, %d catalog", n_songs, n_packs, n_catalog);
+        log_write(sbuf);
+    }
     }
 
 static void free_redirects(void) {

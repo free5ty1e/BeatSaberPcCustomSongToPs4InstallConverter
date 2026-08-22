@@ -34,13 +34,14 @@
     "BeatmapLevelsData/Tempo": "Tempo_v3.bundle",
     "BeatmapLevelsData/TruthHurts": "TruthHurts_v3.bundle",
     "BeatmapLevelsData/Worship": "Worship_v3.bundle",
-    "BeatmapLevelsData/crystallized": "crystallized_v3.bundle",
-    "BeatmapLevelsData/cyclehit": "cyclehit_v3.bundle",
-    "BeatmapLevelsData/exitthisearthsatomosphere": "exitthisearthsatomosphere_v3.bundle",
-    "BeatmapLevelsData/ghost": "ghost_v3.bundle",
-    "BeatmapLevelsData/lightitup": "lightitup_v3.bundle",
-    "BeatmapLevelsData/whatthecat": "whatthecat_v3.bundle",
+    "BeatmapLevelsData/Crystallized": "crystallized_v3.bundle",
+    "BeatmapLevelsData/CycleHit": "cyclehit_v3.bundle",
+    "BeatmapLevelsData/ExitThisEarthsAtomosphere": "exitthisearthsatomosphere_v3.bundle",
+    "BeatmapLevelsData/Ghost": "ghost_v3.bundle",
+    "BeatmapLevelsData/LightItUp": "lightitup_v3.bundle",
+    "BeatmapLevelsData/WhatTheCat": "whatthecat_v3.bundle",
+    "aa/catalog.json": "catalog_pack_modes.json",
     "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle": "therollingstones_pack_modes_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle",
-    "aa/catalog.json": "catalog_pack_modes.json"
+    "billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle": "billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle"
   }
 }

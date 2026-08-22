@@ -1,5 +1,18 @@
 # Pipeline Changelog
 
+## v0.5324 (2026-08-22)
+### Fixed
+- **Stale pack redirects survive when packs are removed from `pack_modes.packs` — caused CE-34878-0 crash on 4-pack deploy.** `_ensure_pack_bundle_redirects()` only added/updated pack redirects, never removed them. When the config had 4 packs, all 4 pack redirects were written to `redirects.json`. Then removing packs from the config left stale redirects pointing at patched bundles whose catalog entries no longer had matching CRCs — the game loaded the patched bundles, validated CRCs against the catalog, and crashed. Added stale pack redirect removal: any `assets_all_*_pack_*.bundle` redirect not in the current config's pack list is now deleted on every `manage_redirect_config` pass.
+### Changed
+- Pipeline version bumped 0.5323 → 0.5324.
+
+## v0.5323 (2026-08-16)
+### Fixed
+- **OneSaber mode was unplayable: the procedural generator forced every note to the LEFT (red) saber.** `_generate_one_saber` used `_ONE_SABER_COLOR = 0` (red), but OneSaber is played exclusively with the RIGHT (blue) saber — so every generated OneSaber note was the wrong color and could not be hit by the (only) right saber. Confirmed by real in-headset play: 90° and No-Arrows were fun, OneSaber was broken (all red notes). Flipped `_ONE_SABER_COLOR = 1` (RIGHT/BLUE) so OneSaber notes are now blue in V2 (`_type = 1`) and V3 (`c = 1` / `a = 1`).
+- **Regenerated all buggy OneSaber beatmaps from their Standard sources** via the new `development/scripts/regenerate_onesaber_blue.py`. 33 red OneSaber `.dat` files were regenerated to blue; the 12–15 already-blue (correct, incl. mapper-authored) OneSaber maps were left untouched. Final verified state: 0 red OneSaber files across `beat-saber-ps4-custom-songs/songs/`, all remaining maps blue (or empty). Note: a plain pipeline re-run does NOT fix already-generated red files (generator skips songs that already ship their own `<Diff>OneSaber.dat`) — force-regeneration is required.
+### Changed
+- Pipeline version bumped 0.5322 → 0.5323.
+
 ## v0.5322 (2026-08-16)
 ### Fixed
 - **"Beat Saber still crashes" after the v0.5320 dataIndex fix (Exp 191): the fixed catalog was never deployed.** The v0.5320/v0.5321 pipeline changes were all local — the PS4 still ran the broken v0.5319 `catalog_pack_modes.json` (70/2251 invalid entry dataIndexes, md5 `0eb8a27d…`), so every launch crashed right after the `aa/catalog.json` redirect (OPEN #58/#74) exactly as before. Downloaded the fresh crash log (`.ai_memory/experiment_logs/v0.5321_crash_after_redeploy.txt`), diffed the deployed catalog against the local fixed one (same byte size 795,783 — so size-only checks can never catch this), confirmed the deployed file was the stale broken build, then deployed the fixed catalog (md5 `975bacca…`, 0 invalid) and re-validated on-device.

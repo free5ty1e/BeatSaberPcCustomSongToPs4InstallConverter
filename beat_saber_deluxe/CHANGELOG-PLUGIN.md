@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8040 (RE-RESTORED to a8a06f0)] — 2026-08-18
+### Reverted
+- **Startup-crash fix (Exp 193):** after Exp 192 a different model regressed `src/main.cpp` (commits `311c6ff` v0.8049, `9326177`/`a47918e` v0.8050 360Degree purge, `e18921b` re-enabled RAM mode injection) → `cb2ed1a` instant crash at startup with NO plugin notification. Chris's manual revert to v0.8040 (`298bbd2`) still crashed (corrupted, non-baseline source).
+- **Restored `src/main.cpp` to the exact stable baseline `a8a06f0`** (the v0.8051-parent used successfully across Exp 176–192, and in the Aug-17 clean boot). GoldHEN Detour API hooks for fopen/open/close + TMP_Text/MoveNext metadata hooks; `enable_beatmap_mode_mapping` ignored (no RAM scan, no freeze, no crash). Rebuilt → valid FSELF (105,200 B), deployed to `/data/GoldHEN/plugins/`.
+- **Asset layer verified clean** (so the revert is the real fix): catalog dataIndexes 0 invalid, all 4 patched packs + the typo-hash duplicate load in UnityPy, `redirects.json` 43 entries sane, 7 "missing-source" slots still have `*_v3.bundle` on PS4.
+
 ## [v0.8040 (RESTORED)] — 2026-08-06
 ### Reverted
 - **Startup-crash fix:** v0.8050/v0.8051 caused an **instant crash at launch with no plugin notification** (Exp 176). Root cause: the v0.8050 "cleanup" rewrote `src/main.cpp` to use a **manual 12-byte `memcpy` absolute-jump hook** (`install_hook` on `sys_open`) and re-enabled `src/hooks.cpp` in the Makefile (it had been `filter-out`'d in every stable build). Writing over the live `open` prologue without a trampoline → CE-34878-0. The `cb2ed1a` `sceKernelMprotect` attempt did not help.

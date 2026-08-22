@@ -48,7 +48,7 @@ class TestOneSaberGenerator(unittest.TestCase):
             {"_time": 2.0, "_lineIndex": 1, "_lineLayer": 1, "_type": 1, "_cutDirection": 2},
         ]}
         gen = _generate_one_saber(data)
-        self.assertTrue(all(n["_type"] == 0 for n in gen["_notes"]))
+        self.assertTrue(all(n["_type"] == 1 for n in gen["_notes"]))
 
     def test_drops_simultaneous_notes(self):
         data = {"_version": "2.0.0", "_notes": [
@@ -82,7 +82,7 @@ class TestOneSaberGenerator(unittest.TestCase):
         ]}
         gen = _generate_one_saber(data)
         self.assertEqual(len(gen["colorNotes"]), 1)
-        self.assertEqual(gen["colorNotes"][0]["c"], 0)
+        self.assertEqual(gen["colorNotes"][0]["c"], 1)
 
     def test_v3_omitted_position_fields_default_to_zero(self):
         # V3 permits omitting x/y (and even b/d defaults). Some BeatSaver
@@ -96,7 +96,7 @@ class TestOneSaberGenerator(unittest.TestCase):
         ]}
         gen = _generate_one_saber(data)
         self.assertEqual(len(gen["colorNotes"]), 2)  # simult drop leaves 2
-        self.assertTrue(all(n.get("c", 0) == 0 for n in gen["colorNotes"]))
+        self.assertTrue(all(n.get("c", 1) == 1 for n in gen["colorNotes"]))
         gen = _generate_no_arrows(data)
         self.assertTrue(all(n["d"] == 8 for n in gen["colorNotes"]))
 

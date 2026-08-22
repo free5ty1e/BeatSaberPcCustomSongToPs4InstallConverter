@@ -1111,7 +1111,7 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
 # format-aware (V2: _notes/_time/_cutDirection, V3: colorNotes/b/d) and
 # never mutates its input.
 
-_ONE_SABER_COLOR = 0          # OneSaber uses a single saber color (left/0)
+_ONE_SABER_COLOR = 1          # OneSaber uses the RIGHT (blue) saber exclusively (right/1)
 _ONE_SABER_MIN_GAP = 0.25     # beats — closer same-cell arrowed notes are un-hittable
 _ROTATION_CYCLE_BEATS = 8.0   # 90Degree — one lane-rotation event every N beats (2 measures at 4/4)
 _ROTATION_STEP_DEGREES = 15   # 90Degree — single-lane step per rotation event (15° = 1 lane)
@@ -1155,7 +1155,8 @@ def _generate_no_arrows(beatmap_data: dict) -> dict:
 def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP) -> dict:
     """Convert a Standard beatmap into a playable OneSaber variant.
 
-    - Recolors every color note to a single saber color (0 / left).
+    - Recolors every color note to a single saber color (1 / right — OneSaber
+      is played exclusively with the right/blue saber).
     - Removes notes that are impossible to hit with one saber:
       * simultaneous notes (one saber can only cut one note per instant), and
       * arrowed notes closer than ``min_gap`` beats to an earlier note in the
@@ -2270,9 +2271,8 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
 
     Inserted entries always override existing ones so a stale/wrong pack target
     (e.g. rollingstones_pack_patched.bundle) can never survive a pipeline pass.
-    Also removes stale truncated-key variants of the pack bundle (e.g. a key
-    without the trailing ".bundle") that could shadow the correct entry via the
-    plugin's substring matching. Returns the number of redirects inserted/updated.
+    Also removes stale truncated-key variants and stale pack redirects for packs
+    no longer in the config. Returns the number of redirects inserted/updated.
     """
     redirects = redirect_data.setdefault('redirects', {})
     pair = _get_pack_bundle_redirects(config)
@@ -2293,6 +2293,35 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
             log.info(f"  🧹 Removed stale pack bundle redirect: {k} -> {redirects[k]}")
             del redirects[k]
             changed += 1
+
+    # Remove stale pack redirects for packs no longer in config.  Without this,
+    # removing a pack from pack_modes.packs would leave its old redirect in
+    # redirects.json, causing the game to load a patched bundle whose catalog
+    # entry no longer has a matching CRC — the CE-34878-0 crash.
+    # Use hash-based matching: extract the content hash from "assets_all_<hash>.bundle"
+    # and skip removal if any current pack has the same hash.
+    import re
+    valid_pack_keys = set(pair.keys())
+    valid_hashes = set()
+    _hash_re = re.compile(r'assets_all_([a-f0-9]+)\.bundle', re.IGNORECASE)
+    for pk in valid_pack_keys:
+        m = _hash_re.search(pk)
+        if m:
+            valid_hashes.add(m.group(1).lower())
+    stale_pack_keys = []
+    for k in list(redirects):
+        m = _hash_re.search(k)
+        if not m:
+            continue
+        if k in valid_pack_keys:
+            continue
+        if m.group(1).lower() in valid_hashes:
+            continue
+        stale_pack_keys.append(k)
+    for k in stale_pack_keys:
+        log.info(f"  🧹 Removed stale pack redirect (pack no longer configured): {k} -> {redirects[k]}")
+        del redirects[k]
+        changed += 1
 
     # Insert/override the canonical pair.
     for key, val in pair.items():

@@ -8,7 +8,7 @@
       "size": 6422547,
       "crc": 2764333114,
       "catalogBundleName": "f346c02fc33213552312491d3aca68f7",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "britneyspears",
@@ -18,7 +18,7 @@
       "size": 8413241,
       "crc": 3795629990,
       "catalogBundleName": "a88f6a8ba31a1f1624a9b326f0d8501c",
-      "patched_slots": 0
+      "patched_slots": 11
     },
     {
       "pack": "bts",
@@ -28,7 +28,7 @@
       "size": 9676634,
       "crc": 1218218649,
       "catalogBundleName": "5044031d62cf96461cae758fb6eae723",
-      "patched_slots": 0
+      "patched_slots": 12
     },
     {
       "pack": "camellia",
@@ -38,7 +38,7 @@
       "size": 5188380,
       "crc": 1774973702,
       "catalogBundleName": "2edf6d9b81f40b537f174c3080eea3c9",
-      "patched_slots": 0
+      "patched_slots": 6
     },
     {
       "pack": "daftpunk",
@@ -48,7 +48,7 @@
       "size": 7388550,
       "crc": 1981084229,
       "catalogBundleName": "d6bbea7489ebe73f59a2cdb6098af746",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "debug",
@@ -58,7 +58,7 @@
       "size": 1613635,
       "crc": 3769927523,
       "catalogBundleName": "3d83895d158dc6b06437f968829bbd92",
-      "patched_slots": 0
+      "patched_slots": 3
     },
     {
       "pack": "edm",
@@ -68,7 +68,7 @@
       "size": 7796498,
       "crc": 179504350,
       "catalogBundleName": "5df44c4664ff49a385f2e43edf00c4a7",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "extras",
@@ -78,7 +78,7 @@
       "size": 7022727,
       "crc": 2792200380,
       "catalogBundleName": "279c4f12c30f2f1a107f67875ede6c75",
-      "patched_slots": 0
+      "patched_slots": 9
     },
     {
       "pack": "falloutboy",
@@ -88,7 +88,7 @@
       "size": 6534953,
       "crc": 4064886626,
       "catalogBundleName": "4ce70a4d52370dd920625d63743dc5b7",
-      "patched_slots": 0
+      "patched_slots": 8
     },
     {
       "pack": "greenday",
@@ -98,7 +98,7 @@
       "size": 4989193,
       "crc": 3950812983,
       "catalogBundleName": "eded39c84718279000c7025b013e321e",
-      "patched_slots": 0
+      "patched_slots": 6
     },
     {
       "pack": "hiphop",
@@ -108,7 +108,7 @@
       "size": 6886705,
       "crc": 1662260529,
       "catalogBundleName": "c364d5a125871b283e1a8257a4d43ae8",
-      "patched_slots": 0
+      "patched_slots": 9
     },
     {
       "pack": "imaginedragons",
@@ -118,7 +118,7 @@
       "size": 8586620,
       "crc": 637401437,
       "catalogBundleName": "b77c9ee22b2abb31f720c15b37e171cf",
-      "patched_slots": 0
+      "patched_slots": 12
     },
     {
       "pack": "interscope",
@@ -128,7 +128,7 @@
       "size": 5552951,
       "crc": 744942855,
       "catalogBundleName": "54229b72fd0a2529d263b1d39409bcee",
-      "patched_slots": 0
+      "patched_slots": 7
     },
     {
       "pack": "ladygaga",
@@ -138,7 +138,7 @@
       "size": 7459008,
       "crc": 1731133253,
       "catalogBundleName": "e0883af80b8e8c0bcb5425ccda735879",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "linkinpark",
@@ -148,7 +148,7 @@
       "size": 9188608,
       "crc": 1305859334,
       "catalogBundleName": "340ea9bed7ed750e560f2518230ae342",
-      "patched_slots": 0
+      "patched_slots": 11
     },
     {
       "pack": "linkinpark2",
@@ -158,7 +158,7 @@
       "size": 5848400,
       "crc": 2104822936,
       "catalogBundleName": "0da2802ed07a1e782f152a34cadda9bc",
-      "patched_slots": 0
+      "patched_slots": 8
     },
     {
       "pack": "lizzo",
@@ -168,7 +168,7 @@
       "size": 6893737,
       "crc": 3554675978,
       "catalogBundleName": "0092fb8fb92ea09b9665fceaf1a42d0e",
-      "patched_slots": 0
+      "patched_slots": 9
     },
     {
       "pack": "metallica",
@@ -178,7 +178,7 @@
       "size": 11503758,
       "crc": 134516113,
       "catalogBundleName": "3f7e9cd7a118c648e107ec508b70b369",
-      "patched_slots": 0
+      "patched_slots": 17
     },
     {
       "pack": "monstercat",
@@ -188,7 +188,7 @@
       "size": 7593122,
       "crc": 4066611325,
       "catalogBundleName": "52ab666fa14a79666c0ba7ef56db837d",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "monstercatvol2",
@@ -198,7 +198,7 @@
       "size": 9386082,
       "crc": 2373022132,
       "catalogBundleName": "4d5cacf97abe012ff06416a484560b09",
-      "patched_slots": 0
+      "patched_slots": 12
     },
     {
       "pack": "ostvol1",
@@ -208,7 +208,7 @@
       "size": 8782166,
       "crc": 1844245576,
       "catalogBundleName": "d63a38388bea065febea86e63a449536",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "ostvol2",
@@ -218,7 +218,7 @@
       "size": 4043230,
       "crc": 3573837530,
       "catalogBundleName": "6cba3bf3b5e1699ce02b8b60cba303b1",
-      "patched_slots": 0
+      "patched_slots": 5
     },
     {
       "pack": "ostvol3",
@@ -228,7 +228,7 @@
       "size": 5665468,
       "crc": 657862521,
       "catalogBundleName": "9bfda9dde2a6d037ed3b48f61fc2c3ca",
-      "patched_slots": 0
+      "patched_slots": 6
     },
     {
       "pack": "ostvol4",
@@ -238,7 +238,7 @@
       "size": 3819957,
       "crc": 43149483,
       "catalogBundleName": "f078e423ec7e32bb3974ada6ac6b7311",
-      "patched_slots": 0
+      "patched_slots": 4
     },
     {
       "pack": "ostvol5",
@@ -248,7 +248,7 @@
       "size": 5085654,
       "crc": 3101841192,
       "catalogBundleName": "cdc32923d2c8e6a7524cd01583ec7165",
-      "patched_slots": 0
+      "patched_slots": 6
     },
     {
       "pack": "ostvol6",
@@ -258,7 +258,7 @@
       "size": 4708025,
       "crc": 1354457501,
       "catalogBundleName": "53c020e3118f7ee604c6ad8efc7591ee",
-      "patched_slots": 0
+      "patched_slots": 5
     },
     {
       "pack": "ostvol7",
@@ -268,7 +268,7 @@
       "size": 4740454,
       "crc": 353396718,
       "catalogBundleName": "b190d18a1d0143d1411f1471c8c1bfeb",
-      "patched_slots": 0
+      "patched_slots": 5
     },
     {
       "pack": "panicatthedisco",
@@ -278,7 +278,7 @@
       "size": 7501362,
       "crc": 605971006,
       "catalogBundleName": "e0f26cc3a31e14f7f649b83a66f31453",
-      "patched_slots": 0
+      "patched_slots": 10
     },
     {
       "pack": "queen",
@@ -288,7 +288,7 @@
       "size": 7854227,
       "crc": 2478015802,
       "catalogBundleName": "39465e78430f4873441beda234a8b6ea",
-      "patched_slots": 0
+      "patched_slots": 11
     },
     {
       "pack": "rocketleague",
@@ -298,7 +298,7 @@
       "size": 6454834,
       "crc": 312651653,
       "catalogBundleName": "1fc8742d1cb4529f460062a783d7130a",
-      "patched_slots": 0
+      "patched_slots": 6
     },
     {
       "pack": "rockmixtape",
@@ -308,7 +308,7 @@
       "size": 5923269,
       "crc": 1725770060,
       "catalogBundleName": "5260cb6dbde0fe4c78fd89955037d8ff",
-      "patched_slots": 0
+      "patched_slots": 8
     },
     {
       "pack": "shockdrop",
@@ -318,7 +318,7 @@
       "size": 3300262,
       "crc": 1330697078,
       "catalogBundleName": "532e925e5fa665bbf32f85acaa82253f",
-      "patched_slots": 0
+      "patched_slots": 3
     },
     {
       "pack": "skrillex",
@@ -328,7 +328,7 @@
       "size": 6441423,
       "crc": 3047789595,
       "catalogBundleName": "e37730d5b87cb5ab2aeda7c5965aff27",
-      "patched_slots": 0
+      "patched_slots": 8
     },
     {
       "pack": "therollingstones",
@@ -338,7 +338,7 @@
       "size": 7906184,
       "crc": 3803925175,
       "catalogBundleName": "51dc790300eb3d900786837beb3ac335",
-      "patched_slots": 0
+      "patched_slots": 11
     },
     {
       "pack": "theweeknd",
@@ -348,7 +348,7 @@
       "size": 8555996,
       "crc": 550903064,
       "catalogBundleName": "12142c8f40c475a0c37570bc05452d48",
-      "patched_slots": 0
+      "patched_slots": 12
     },
     {
       "pack": "timbaland",
@@ -358,7 +358,7 @@
       "size": 3411033,
       "crc": 346238220,
       "catalogBundleName": "da8279aa3da4d78113cd611c58435eb1",
-      "patched_slots": 0
+      "patched_slots": 5
     }
   ]
 }

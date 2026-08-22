@@ -686,7 +686,9 @@ def write_merged_catalog(dump_catalog_path, results, out_path):
     for r in results:
         cat = update_catalog_entry(cat, r['catalogBundleName'], r['crc'], r['size'])
         updated += 1
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    d = os.path.dirname(out_path)
+    if d:
+        os.makedirs(d, exist_ok=True)
     with open(out_path, 'w') as f:
         json.dump(cat, f)
         f.write('\n')
@@ -697,10 +699,13 @@ def main():
     args = sys.argv[1:]
     write = '--write' in args
     packs = None
+    dump_dir = None
     if '--packs' in args:
         packs = [p.strip() for p in args[args.index('--packs') + 1].split(',')]
+    if '--dump-dir' in args:
+        dump_dir = args[args.index('--dump-dir') + 1]
 
-    results = build_pack_mode_bundles(packs=packs)
+    results = build_pack_mode_bundles(packs=packs, dump_dir=dump_dir)
     print(f"Packs patched: {len(results)}")
     for r in results:
         print(f"  {r['pack']:20s} {r['patchedBundle']} ({r['size']:,} B, crc={r['crc']}) "
@@ -709,6 +714,8 @@ def main():
         cat_out = os.path.join(PROJECT_ROOT, "catalog_pack_modes.json")
         cat_path = os.path.join(PROJECT_ROOT, "ps4_dump", "CUSA12878-patch",
                                 "Media/StreamingAssets/aa/catalog.json")
+        if dump_dir:
+            cat_path = os.path.join(dump_dir, "Media/StreamingAssets/aa/catalog.json")
         n = write_merged_catalog(cat_path, results, cat_out)
         print(f"Wrote {cat_out} ({n} catalog entries updated)")
     else:
