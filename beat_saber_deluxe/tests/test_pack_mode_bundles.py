@@ -190,7 +190,9 @@ class TestPatchedBundleNaming:
 
 class TestBuildModesBlob:
     def test_single_standard_set_becomes_four_sets(self):
-        """One Standard set (3 diffs) -> 4 modes x 5 diffs each."""
+        """One Standard set (3 diffs) -> 4 modes x 5 diffs each.
+        New mode entries use their OWN characteristic pathID (hardware-validated
+        structure, Exp 198/199 — all-same-pathID crashes at menu init)."""
         blob, _ = _make_synthetic_blob([(CHAR_PATH_IDS['Standard'], 3)])
         info = walk_blob(blob)
         assert info is not None
@@ -198,10 +200,34 @@ class TestBuildModesBlob:
         assert changed
         new_info = walk_blob(new_blob)
         assert new_info['setCount'] == 4
-        pids = {s['pathID'] for s in new_info['sets']}
-        assert pids == set(CHAR_PATH_IDS[m] for m in TARGET_MODES)
-        for s in new_info['sets']:
+        pids = [s['pathID'] for s in new_info['sets']]
+        for s, pid in zip(new_info['sets'], pids):
             assert s['diffCount'] == TARGET_DIFFS
+        # Distinct pathIDs: exactly the four characteristic pathIDs, one per mode.
+        assert sorted(pids) == sorted(CHAR_PATH_IDS[m] for m in TARGET_MODES), \
+            f"expected distinct characteristic pathIDs {TARGET_MODES}, got {pids}"
+
+    def test_new_mode_entries_use_own_pathids_and_clean_ranks(self):
+        """Hardware-proven invariant (RS bundle the user played all 4 modes on):
+        every preview set has a DISTINCT pathID and ranks exactly [0..4].
+        Regression guard for the v0.5325 all-Standard-pathID boot crash (Exp 198)."""
+        import struct as _struct
+        blob, _ = _make_synthetic_blob([(CHAR_PATH_IDS['Standard'], 5)])
+        info = walk_blob(blob)
+        new_blob, changed = build_modes_blob(blob, info)
+        assert changed
+        new_info = walk_blob(new_blob)
+        pids = [s['pathID'] for s in new_info['sets']]
+        assert len(set(pids)) == len(pids), f"duplicate pathIDs in sets: {pids}"
+        assert set(pids) == set(CHAR_PATH_IDS[m] for m in TARGET_MODES)
+        # Ranks of every padded/new set must be exactly {0,1,2,3,4}
+        po = new_info['setsOff'] + 4
+        for s in new_info['sets']:
+            ranks = [_struct.unpack_from('<i', new_blob, po + 16 + d * DIFF_BYTES)[0]
+                     for d in range(s['diffCount'])]
+            assert sorted(ranks) == list(range(TARGET_DIFFS)), \
+                f"set pathID {s['pathID']} has ranks {ranks}, expected [0..{TARGET_DIFFS - 1}]"
+            po += 16 + s['diffCount'] * DIFF_BYTES
 
     def test_short_onesaber_extended_to_five(self):
         """Existing OneSaber with 2 diffs is padded to 5; missing modes added."""

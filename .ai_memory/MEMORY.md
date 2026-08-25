@@ -1,5 +1,8 @@
 # Memory Index
 
+## Workflow Rules
+- [PS4 Deploys: Pipeline Only](ps4-deploys-pipeline-only.md) - user directive (Exp 199): no manual file manipulation; deploy via pipeline flags, fix in pipeline code, reconcile console state before tests.
+
 ## 📋 Master Index
 - [Research Index](RESEARCH_INDEX.md) — **START HERE.** Comprehensive catalog of all project documents, status, and quick commands.
 

@@ -1,5 +1,20 @@
 # Pipeline Changelog
 
+## v0.5326 (2026-08-25)
+### Fixed
+- **REVERTS the v0.5325 pathID change — it was the boot-crash, not the fix (Exp 198).** Hardware evidence: the RS bundle the user successfully played all 4 modes on uses DISTINCT characteristic pathIDs per preview set (Standard/OneSaber/NoArrows/90Degree = `CHAR_PATH_IDS[mode]`, even though NoArrows/90Degree have no BeatmapData asset in the pack — the game never resolves them there). The v0.5325 change pointed all four sets at Standard's pathID instead; that structure (4 identical PPtrs) crashes the game at menu init with CE-34878-0 the moment the song-select UI builds the mode list for a redirected pack (reproduced with lizzo-only config, `v0.5325_lizzofix_stage1_boot_crash.txt`). `build_modes_blob()` now appends new mode entries with their OWN `CHAR_PATH_IDS[mode]` again.
+- **Kept the v0.5325 rank-dedup padding improvement:** short existing sets (< 5 difficulties) are padded to 5 by copying only template records whose difficulty rank isn't already present (no duplicate ranks), falling back to plain padding only if the template runs out.
+- Tests updated to pin the hardware-proven invariant: every patched SO has exactly 4 sets, all pathIDs distinct and equal to `CHAR_PATH_IDS[mode]` for the four target modes, and every set's difficulty ranks are exactly `[0,1,2,3,4]`. New regression test `test_new_mode_entries_use_own_pathids_and_clean_ranks`.
+- Reference artifact preserved: `development/reference_bundles/therollingstones_WORKING_v0.5324era_aug20.bundle` (md5 `5ed23829…`) — the hardware-validated structure, with README documenting the extracted layout.
+### Changed
+- Pipeline version bumped 0.5325 → 0.5326.
+
+## v0.5325 (2026-08-25)
+### Fixed
+- **No Arrows / 90° gameplay crash: `build_modes_blob()` used target mode's pathID instead of Standard's pathID for cloned entries.** When a pack had songs with pre-existing non-Standard modes (e.g., lizzo with Standard+OneSaber), the function created new mode entries (NoArrows, 90°) using their OWN characteristic pathIDs (e.g., NoArrows `-8583864861369561029`). But BeatmapLevelsData files only contain BeatmapData assets for modes present in the ORIGINAL pack blob — so the game couldn't find the NoArrows/90° assets and crashed (CE-34878-0). therollingstones worked because ALL its songs were Standard-only, so all cloned entries used Standard's pathID. Fix: new mode entries now use `std_path_id` (Standard's pathID from the existing dict) instead of `CHAR_PATH_IDS[mode]`. Updated tests to match new behavior (new entries share Standard's pathID; pre-existing entries keep theirs).
+### Changed
+- Pipeline version bumped 0.5324 → 0.5325.
+
 ## v0.5324 (2026-08-22)
 ### Fixed
 - **Stale pack redirects survive when packs are removed from `pack_modes.packs` — caused CE-34878-0 crash on 4-pack deploy.** `_ensure_pack_bundle_redirects()` only added/updated pack redirects, never removed them. When the config had 4 packs, all 4 pack redirects were written to `redirects.json`. Then removing packs from the config left stale redirects pointing at patched bundles whose catalog entries no longer had matching CRCs — the game loaded the patched bundles, validated CRCs against the catalog, and crashed. Added stale pack redirect removal: any `assets_all_*_pack_*.bundle` redirect not in the current config's pack list is now deleted on every `manage_redirect_config` pass.

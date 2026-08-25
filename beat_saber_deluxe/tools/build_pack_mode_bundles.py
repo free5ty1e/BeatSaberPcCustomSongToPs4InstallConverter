@@ -250,9 +250,34 @@ def build_modes_blob(orig_blob, info):
         diffs = s['diffs']
         dc = s['diffCount']
         if pid in CHAR_PATH_IDS.values() and dc < TARGET_DIFFS:
-            diffs = (diffs + template)[:TARGET_DIFFS * DIFF_BYTES]
+            existing_ranks = set()
+            for d in range(dc):
+                rank = struct.unpack_from('<i', diffs, d * DIFF_BYTES)[0]
+                existing_ranks.add(rank)
+            needed = TARGET_DIFFS - dc
+            pad = bytearray()
+            tpos = 0
+            while len(pad) < needed * DIFF_BYTES and tpos + DIFF_BYTES <= len(template):
+                rank = struct.unpack_from('<i', template, tpos)[0]
+                if rank not in existing_ranks:
+                    pad.extend(template[tpos:tpos + DIFF_BYTES])
+                    existing_ranks.add(rank)
+                tpos += DIFF_BYTES
+            if len(pad) < needed * DIFF_BYTES:
+                tpos = 0
+                while len(pad) < needed * DIFF_BYTES and tpos + DIFF_BYTES <= len(template):
+                    pad.extend(template[tpos:tpos + DIFF_BYTES])
+                    tpos += DIFF_BYTES
+            diffs = bytes(diffs) + bytes(pad[:needed * DIFF_BYTES])
             dc = TARGET_DIFFS
         final.append({'pathID': pid, 'fileID': s['fileID'], 'diffs': diffs, 'diffCount': dc})
+    # New mode entries MUST use their OWN characteristic pathID (CHAR_PATH_IDS[mode]),
+    # even when that pathID has no BeatmapData asset in the pack. Hardware-validated
+    # (Exp 198/199): the working RS bundle (all 11 songs playable in all 4 modes) uses
+    # distinct pathIDs per set; pointing every set at Standard's pathID instead
+    # (v0.5325) crashes the game at menu init with CE-34878-0 — four preview sets
+    # sharing one PPtr is rejected when the song-select UI builds its mode list.
+    # Reference: development/reference_bundles/therollingstones_WORKING_v0.5324era_aug20.bundle
     for mode in TARGET_MODES:
         pid = CHAR_PATH_IDS[mode]
         if pid in existing:

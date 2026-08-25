@@ -5,8 +5,8 @@
       "packBundle": "billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
       "patchedBundle": "billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
       "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
-      "size": 6422547,
-      "crc": 2764333114,
+      "size": 6422555,
+      "crc": 3691215397,
       "catalogBundleName": "f346c02fc33213552312491d3aca68f7",
       "patched_slots": 10
     },
@@ -35,8 +35,8 @@
       "packBundle": "camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle",
       "patchedBundle": "camellia_pack_modes_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle",
       "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/camellia_pack_modes_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle",
-      "size": 5188380,
-      "crc": 1774973702,
+      "size": 5188388,
+      "crc": 808520009,
       "catalogBundleName": "2edf6d9b81f40b537f174c3080eea3c9",
       "patched_slots": 6
     },
@@ -165,8 +165,8 @@
       "packBundle": "lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle",
       "patchedBundle": "lizzo_pack_modes_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle",
       "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/lizzo_pack_modes_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle",
-      "size": 6893737,
-      "crc": 3554675978,
+      "size": 6893745,
+      "crc": 3526914570,
       "catalogBundleName": "0092fb8fb92ea09b9665fceaf1a42d0e",
       "patched_slots": 9
     },
