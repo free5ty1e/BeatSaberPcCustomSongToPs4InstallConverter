@@ -1,5 +1,12 @@
 # Pipeline Changelog
 
+## v0.5327 (2026-08-25)
+### Changed
+- **`mass_deploy.bundle_dir` moved from ephemeral `/tmp/opencode/mass_build` to the stable committed path `/workspace/beat_saber_deluxe/mass_bundles`** (default config + `deploy_mass_bundles` fallback + `verify_ps4_deployment` size-check source). A fresh container/PS4 can now reproduce the full loadout without any /tmp state.
+- `development/scripts/build_deploy_all38.py` rewritten as build-all → deploy-once: PHASE 1 runs the per-song pipeline for all 38 slots (no `--deploy`) writing `mass_bundles/<slot>_v3.bundle`; PHASE 2 is a single `--deploy-mass-bundles --deploy-pack-modes --deploy-config --verify-ps4` invocation. Previously every per-song run re-uploaded all pack bundles + catalog (38× redundant) and redeployed redirects mid-batch. Unresolved sources now ABORT before building anything instead of silently skipping. Source resolution covers `songs/chromeo_backout/` and fixes the 2BeLoved metadata-key match (`2 Be Loved (Am I Ready)`). Chromeo backout dirs carry pre-extracted FSB5 audio only — the script now passes `--audio <dir>/audio.fsb` when present (their dirs have no .wav/.ogg for auto-discovery; this was previously a manual flag).
+### Fixed
+- `--verify-ps4` redirect size check looked in `/tmp/opencode/mass_build` for song bundles; now reads `mass_deploy.bundle_dir` from config.
+
 ## v0.5326 (2026-08-25)
 ### Fixed
 - **REVERTS the v0.5325 pathID change — it was the boot-crash, not the fix (Exp 198).** Hardware evidence: the RS bundle the user successfully played all 4 modes on uses DISTINCT characteristic pathIDs per preview set (Standard/OneSaber/NoArrows/90Degree = `CHAR_PATH_IDS[mode]`, even though NoArrows/90Degree have no BeatmapData asset in the pack — the game never resolves them there). The v0.5325 change pointed all four sets at Standard's pathID instead; that structure (4 identical PPtrs) crashes the game at menu init with CE-34878-0 the moment the song-select UI builds the mode list for a redirected pack (reproduced with lizzo-only config, `v0.5325_lizzofix_stage1_boot_crash.txt`). `build_modes_blob()` now appends new mode entries with their OWN `CHAR_PATH_IDS[mode]` again.

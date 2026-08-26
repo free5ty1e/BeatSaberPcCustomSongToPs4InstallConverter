@@ -201,3 +201,20 @@ Recover the 6 deleted Chromeo slot sources from deployed PS4 bundles, rebuild al
 - [x] **Deploy prep**: `redirects.json` regenerated (39 redirects), `deploy_all38.sh` written; `deploy_all.sh` (13-slot, pre-mode-mapping) confirmed OUTDATED.
 - [x] **Deploy to PS4 (Exp 186, 2026-08-12):** ✅ `deploy_all38.sh` ran — all 38 bundles uploaded + verified on-device (sizes match), `redirects.json` (39) + `song_metadata.json` verified. Plugin v0.8040 confirmed.
 - [ ] **User test**: Chromeo slots all 6, new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree across songs, full audio lengths.
+
+## M8 — Generalized Pack Modes: Full-Fleet Validation (IN PROGRESS — v0.5326/0.5327, Exp 198-200)
+
+### Objective
+Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely via pipeline automation: all 38 custom songs rebuilt through the current pipeline, all 4 replaced packs fully patched, every song showing Standard/OneSaber/NoArrows/90Degree.
+
+### Completed
+- [x] **Exp 198/199 (v0.5325→0.5326): boot-crash root cause INVERTED** — the v0.5325 "pathID fix" (all preview sets → Standard's pathID) was ITSELF fatal: CE-34878-0 at menu init with 4 identical PPtrs. Hardware-proven golden structure = DISTINCT `CHAR_PATH_IDS[mode]` pathIDs per set (+ ranks [0..4], rank-dedup padding kept). Reverted; lizzo rebuild byte-identical to known-good (`345d6a0e…`), RS rebuild identical to golden working bundle (`5ed23829…`); regression tests pin the invariant (562/562). Reference bundle archived (`development/reference_bundles/`). User VERIFIED: boot clean + No Arrows gameplay OK.
+- [x] **User directive adopted:** everything through pipeline flags, fixes in pipeline code, no manual file manipulation (saved to agent memory).
+- [x] **v0.5327 automation hardening:** stable `mass_deploy.bundle_dir` (`beat_saber_deluxe/mass_bundles/`, was /tmp); `build_deploy_all38.py` rewritten build-all→deploy-once with abort-on-unresolved; Chromeo backout source resolution + `--audio audio.fsb` pass-through; 2BeLoved metadata-key match fixed. All 36 pack bundles rebuilt with corrected structure.
+
+### Completed (Exp 200)
+- [x] **Full-fleet rebuild + one-shot deploy** — 38/38 song bundles built (Chromeo via `--audio audio.fsb`), 36 pack bundles rebuilt with golden structure, catalog + redirects.json (43) deployed via pipeline flags; **Post-deploy validation PASSED**.
+- [x] **Selector mechanism identified** — mode selector comes from PACK preview sets; per-song template SOs are a different class (`*BeatmapLevelData`) and never carried mode sets (explains Standard-only customs under lizzo-only config).
+
+### Pending
+- [ ] **User acceptance test** — across all 4 packs: customs show 4 modes, OneSaber notes BLUE (v0.5323 fix on hardware at last), full audio lengths, Chromeo slots, No Arrows/90° gameplay.

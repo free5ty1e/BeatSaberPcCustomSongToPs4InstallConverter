@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline a8a06f0 (v0.8050/v0.8051 crashed at startup Exp 176; re-corrupted by Gemini regressions post-Exp-192, RE-RESTORED 2026-08-18 Exp 193)
-pipeline_version: "0.5326" # in beat_saber_deluxe/VERSION - REVERTED v0.5325 pathID change (it WAS the boot crash; distinct CHAR_PATH_IDS[mode] pathIDs are the hardware-proven structure), kept rank-dedup padding (Exp 199); NoArrows/90deg structure fixes (Exp 197); stale pack redirect removal (Exp 195); OneSaber notes RIGHT/BLUE (Exp 192); catalog dataIndex fix (Exp 189)
+pipeline_version: "0.5327" # in beat_saber_deluxe/VERSION - stable mass_bundles dir + build-all/deploy-once automation (Exp 200); REVERTED v0.5325 pathID change - distinct CHAR_PATH_IDS[mode] pathIDs are the hardware-proven structure (Exp 199); stale pack redirect removal (Exp 195); OneSaber notes RIGHT/BLUE (Exp 192); catalog dataIndex fix (Exp 189)
 
 # Platform Constraints
 target_platform: PS4
@@ -62,16 +62,17 @@ deploy_naming:
     os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
     has NO bundle_suffix param.
   ps4_state: >
-    **Exp 199 (2026-08-25):** DEPLOYED VIA PIPELINE, AWAITING BOOT TEST. v0.5325 all-same-pathID
-    structure CE-34878-0'd at menu init (Exp 198 boot test); REVERTED in v0.5326 to distinct
-    CHAR_PATH_IDS[mode] pathIDs (the hardware-proven golden structure). Lizzo rebuild byte-identical
-    to known-good (345d6a0e...), RS rebuild identical to golden (5ed23829...). Deployed with
-    --config development/ps4_config_lizzo_only.json --deploy-pack-modes --deploy-config
-    --verify-ps4: deployed lizzo bundle md5 345d6a0e... (6,893,745 B) + lizzo-only catalog
-    0c65f1b1... + redirects.json regenerated to 40 entries (38 songs restored + lizzo pair +
-    catalog pair); post-deploy validation PASSED; bs_log.txt cleared. USER DIRECTIVE: everything
-    through pipeline flags only, no manual file manipulation. Next: user boot test (browse lizzo,
-    play No Arrows / 90deg / OneSaber), then stage-2 full 4-pack deploy via default config.
+    **Exp 200 (2026-08-25): FULL FLEET DEPLOYED, AWAITING BOOT TEST.** All 38 custom songs
+    rebuilt via v0.5327 pipeline into stable mass_bundles/ (Chromeo needs --audio audio.fsb),
+    all 36 pack bundles rebuilt with golden distinct-pathID structure (RS md5 5ed23829... =
+    hardware-proven bundle), catalog_pack_modes.json regenerated (md5 11d01abb..., 4 configured
+    packs CRC/size updated), redirects.json = 43 entries (38 songs + 4 pack pairs +
+    aa/catalog.json pair). Deployed via pipeline only: --deploy-mass-bundles, then
+    --deploy-pack-modes --deploy-config --verify-ps4 => Post-deploy validation PASSED.
+    bs_log.txt cleared. KEY MECHANISM: mode selector is driven by PACK preview sets;
+    per-song SOs never carried them (template BeatmapLevelData class differs from pack
+    BeatmapLevelSO - blob injection never implemented). User test: 4 modes on customs in all
+    packs, blue OneSaber, Chromeo slots. Repro commands: current-song-replacements doc.
 # Song Slot Naming
 slot_note: >
   Slots are the filename stem from BeatmapLevelsData/ (e.g. "startmeup", "Crystallized").

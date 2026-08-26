@@ -87,9 +87,12 @@ def load_config(config_path: str) -> dict:
             "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
         },
         # Mass deploy (deploy_all38.sh replacement): list of all custom song slots
-        # deployed as <slot>_v3.bundle into the AFR dir.
+        # deployed as <slot>_v3.bundle into the AFR dir. bundle_dir is a STABLE
+        # committed location (not /tmp) so a fresh container can reproduce the
+        # exact loadout: build_deploy_all38.py writes builds here, then
+        # --deploy-mass-bundles uploads them.
         "mass_deploy": {
-            "bundle_dir": "/tmp/opencode/mass_build",
+            "bundle_dir": "/workspace/beat_saber_deluxe/mass_bundles",
             "slots": [
                 "startmeup", "angry", "bitemyheadoff", "cantyouhearmeknocking",
                 "deadmanwalking", "gimmeshelter", "icantgetnosatisfaction",
@@ -2571,7 +2574,7 @@ def deploy_mass_bundles(config: dict) -> bool:
     every configured slot. Returns True only if every bundle uploaded.
     """
     md = config.get('mass_deploy', {}) or {}
-    bundle_dir = md.get('bundle_dir', '/tmp/opencode/mass_build')
+    bundle_dir = md.get('bundle_dir', '/workspace/beat_saber_deluxe/mass_bundles')
     slots = md.get('slots', [])
     suffix = config.get('paths', {}).get('afr_target_suffix', '_v3.bundle')
     if not slots:
@@ -2747,10 +2750,12 @@ def verify_ps4_deployment(config: dict) -> bool:
 
     # 6. Sizes match local files where available
     size_mismatch = []
+    _mass_dir = (config.get('mass_deploy', {}) or {}).get(
+        'bundle_dir', '/workspace/beat_saber_deluxe/mass_bundles')
     for val in local_data.get('redirects', {}).values():
-        # Guess local source: pack bundle/catalog, mass_build bundles, or AFR staging
+        # Guess local source: pack bundle/catalog, mass_bundles, or AFR staging
         for cand in [os.path.join(PROJECT_ROOT, val),
-                     os.path.join('/tmp/opencode/mass_build', val)]:
+                     os.path.join(_mass_dir, val)]:
             if os.path.isfile(cand):
                 local_size = os.path.getsize(cand)
                 remote_size = remote_files.get(val)

@@ -257,6 +257,10 @@ Whole-string UTF-16 decode misaligns blocks and makes the entry marker unfindabl
 ### ⚠️ 360Degree must NOT be in `CHAR_PATH_IDS` (Exp 190, 2026-08-15) — reproducibility
 360Degree was purged project-wide in Exp 175 (PS4's single camera can't track the full 360° arc; the game hides the 360Degree characteristic from the selector). `build_modes_blob` pads ANY set whose pid is in `CHAR_PATH_IDS.values()` to `TARGET_DIFFS` — so a leftover `"360Degree"` entry made the production module extend the 360Degree preview set 1→5 diffs (+144 B per patched blob) for every pack that ships one, producing bundles that did NOT byte-match the dev-built committed artifacts (10/36 packs diverged; the 4 deployed packs happened to be unaffected). Rule: **`CHAR_PATH_IDS` must contain exactly `TARGET_MODES` (4 entries), never 360Degree.** Guarded by `test_unsupported_360degree_set_not_extended`.
 
+### Chromeo backout sources need explicit FSB5 audio (Exp 200)
+
+`songs/chromeo_backout/<Slot>/` dirs (recovered from PS4 bundles) carry only beatmap `.dat` + `Info.dat` + `audio.fsb` — no .wav/.ogg for the pipeline's auto-discovery. Mass builds must pass `--audio <dir>/audio.fsb` (pre-encoded FSB5 pass-through). `development/scripts/build_deploy_all38.py` does this automatically when `audio.fsb` is present.
+
 ### Production builder is the reproducibility source of truth (Exp 190)
 The original 36 `pack_modes_bundles/*.bundle` were built by the OLD dev script (`development/scripts/build_all_pack_modes.py`) and ADOPTED into the manifest — NOT by the production module. After the Exp 190 360Degree cleanup, `tools/build_pack_mode_bundles.py` reproduces ALL 36 committed bundles byte-identically (sizes + dec-stream CRCs, ~46 s for all 36) — a fresh user can reproduce the exact committed artifacts (or any pack subset) with zero manual steps.
 
@@ -272,6 +276,10 @@ The Exp 189/190 fixes were correct, yet the user STILL crashed: **the fixed cata
 - The legacy single-pack prototype (`pack_bundle` → `startmeup_pack_modes.bundle` + `catalog_startmeup_modes.json`) was removed from the DEFAULT config — fully superseded by `pack_modes` (rollingstones is in `pack_modes.packs`). Its code path still works for explicit configs; keeping it in defaults made `--verify-ps4` report phantom "MISSING on PS4" entries for the deleted prototype files.
 
 **Exp 191 (2026-08-16):** fixed catalog deployed (md5 `975bacca0902624c9fb5c6a82cfa90c5`, 0 invalid dataIndexes) + verified on-device; stale prototype files deleted from PS4; 451/451 tests. Awaiting user boot test.
+
+### Per-song bundles do NOT carry mode sets - the selector comes from the PACK (Exp 200)
+
+Custom-song level bundles (`<slot>_v3.bundle`) contain all 17 beatmap TextAssets (4 modes x diffs) but their `*BeatmapLevelData` MonoBehaviour is a DIFFERENT class than the pack's BeatmapLevelSO (characteristic list + per-difficulty PPtr entries; NOT walk_blob-compatible; the song pipeline's "Blob not yet injected into CAB" step was never implemented). The in-game mode selector is driven by the PACK bundle's `_previewDifficultyBeatmapSets`. Consequence: a custom slot shows 4 modes only when its pack is also patched+redirected (a customs-only redirect config shows Standard-only selectors). Gameplay for modes missing real beatmap data falls back gracefully (proven: lizzo No Arrows played with no NoArrows .dat in stock lizzo files). Template-SO expansion = possible Exp 201 if ever needed.
 
 ### ⚠️ PREVIEW SET pathIDs must be DISTINCT per mode - the Exp 197 "fix" was INVERTED (Exp 198/199, 2026-08-25)
 
