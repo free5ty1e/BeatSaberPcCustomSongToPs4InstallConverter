@@ -465,6 +465,69 @@ def is_v2_beatmap(data: dict) -> bool:
     return False
 
 
+# Complete V3.2.0 schema as emitted by the game's own files and by
+# convert_v2_to_v3(). Beatmaps entering a bundle MUST carry every array the PS4
+# deserializer expects — minimal-schema maps (e.g. V4→V3-reconstructed Chromeo
+# sources with only 8 keys, Exp 200) crash the game at gameplay load with
+# CE-34878-0.
+_V3_REQUIRED_ARRAYS = (
+    "colorNotes",
+    "bombNotes",
+    "obstacles",
+    "sliders",
+    "burstSliders",
+    "basicBeatmapEvents",
+    "colorBoostBeatmapEvents",
+    "bpmEvents",
+    "rotationEvents",
+    "waypoints",
+    "lightColorEventBoxGroups",
+    "lightRotationEventBoxGroups",
+    "lightTranslationEventBoxGroups",
+    "arcs",
+    "chains",
+)
+
+_V3_REQUIRED_SCALARS = {
+    "useNormalEventsAsCompatibleEvents": True,
+    "customData": {},
+}
+
+
+def normalize_v3_schema(data: dict) -> dict:
+    """Fill missing V3 arrays/fields with empty defaults (idempotent).
+
+    Returns the same dict mutated in place when nothing was missing; a patched
+    copy otherwise. Logs nothing — callers report what changed if they care.
+    """
+    changed = False
+    for key in _V3_REQUIRED_ARRAYS:
+        if key not in data or data[key] is None:
+            data[key] = []
+            changed = True
+    for key, default in _V3_REQUIRED_SCALARS.items():
+        if key not in data:
+            data[key] = default if not isinstance(default, dict) else dict(default)
+            changed = True
+    # basicEventTypesWithKeywords must exist and be a dict with 'd' list
+    if not isinstance(data.get("basicEventTypesWithKeywords"), dict):
+        types = sorted({int(e.get("et", 0)) for e in data.get("basicBeatmapEvents", [])
+                        if isinstance(e, dict)})
+        data["basicEventTypesWithKeywords"] = {
+            "d": [{"e": t, "n": f"EventType{t}"} for t in types]
+        }
+        changed = True
+    elif "d" not in data["basicEventTypesWithKeywords"]:
+        data["basicEventTypesWithKeywords"]["d"] = []
+        changed = True
+    return data
+
+
+def beatmap_is_empty(data: dict) -> bool:
+    """True when a V3 beatmap has no playable content (no notes/bombs/obstacles)."""
+    return not (data.get("colorNotes") or data.get("bombNotes") or data.get("obstacles"))
+
+
 # V2 rotation event (types 14/15) _value enumeration -> signed degrees.
 # Negative = counter-clockwise (left), positive = clockwise (right). These are
 # RELATIVE deltas the game accumulates onto the current spawn rotation.
@@ -632,6 +695,44 @@ def _select_beatmap_file(diff: str, beatmap_files: list, ignore_non_standard: bo
     return None
 
 
+def _find_populated_beatmap(beatmap_dir: str, empty_file: str):
+    """Find a Standard beatmap file in beatmap_dir that has playable content.
+
+    Used as a donor for empty difficulties (Exp 200: Chromeo V4→V3 reconstruction
+    produced zero-note Easy maps). Preference order: Normal, Hard, Expert,
+    ExpertPlus, Easy — the closest full-fidelity neighbors of an empty slot.
+    Returns an absolute path or None.
+    """
+    preference = ['Normal', 'Hard', 'Expert', 'ExpertPlus', 'Easy']
+    for diff in preference:
+        for f in sorted(os.listdir(beatmap_dir)):
+            if not f.endswith(('.dat', '.json')) or f == empty_file:
+                continue
+            base = os.path.basename(f)
+            stem = base.replace('.dat', '').replace('.json', '')
+            # Standard-only donors (no mode suffix); accept both naming
+            # conventions: bare "Normal.dat" and suffixed "NormalStandard.dat"
+            # (the V4→V3 backout layout).
+            if 'lightshow' in stem.lower() or any(
+                    m.lower() in stem.lower()
+                    for m in ('onesaber', 'noarrows', '90degree', '360degree')):
+                continue
+            if stem not in (diff, f"{diff}Standard"):
+                continue
+            path = os.path.join(beatmap_dir, f)
+            try:
+                with open(path, 'r', encoding='utf-8') as fh:
+                    j = json.load(fh)
+            except Exception:
+                continue
+            notes = j.get('colorNotes') or (
+                [{'b': n.get('_time')} for n in j.get('_notes', [])
+                 if int(n.get('_type', 0)) != 3])
+            if notes:
+                return path
+    return None
+
+
 def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_convert=False):
     """
     Replace all 5 difficulty beatmaps with custom ones.
@@ -698,6 +799,35 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
                 if auto_convert and is_v2_beatmap(data):
                     data = convert_v2_to_v3(data, default_bpm=bpm)
                     log.info(f"  Converted V2 -> V3: '{matched_file}'")
+
+                # Normalize to the complete V3 schema — minimal-schema maps
+                # (missing basicBeatmapEvents/waypoints/light*EventBoxGroups, e.g.
+                # V4→V3-reconstructed Chromeo sources) crash the game at gameplay
+                # load (Exp 200).
+                missing_before = set(_V3_REQUIRED_ARRAYS) - set(data)
+                normalize_v3_schema(data)
+                if missing_before:
+                    log.info(f"  Normalized V3 schema of '{matched_file}' "
+                             f"(added {sorted(missing_before)})")
+
+                # Empty-beatmap fallback: a playable difficulty with zero notes
+                # crashes/bricks the slot (Chromeo Easy maps decoded empty, Exp 200).
+                # Clone the closest populated difficulty's content so the slot plays.
+                if beatmap_is_empty(data):
+                    donor = _find_populated_beatmap(beatmap_dir, matched_file)
+                    if donor:
+                        with open(donor, 'r', encoding='utf-8') as fh:
+                            ddata = json.load(fh)
+                        if is_v2_beatmap(ddata):
+                            ddata = convert_v2_to_v3(ddata, default_bpm=bpm)
+                        normalize_v3_schema(ddata)
+                        data['colorNotes'] = ddata.get('colorNotes', [])
+                        data['bombNotes'] = ddata.get('bombNotes', [])
+                        data['obstacles'] = ddata.get('obstacles', [])
+                        data['sliders'] = ddata.get('sliders', [])
+                        data['burstSliders'] = ddata.get('burstSliders', [])
+                        log.info(f"  '{matched_file}' had NO notes — cloned playable "
+                                 f"content from '{os.path.basename(donor)}'")
 
                 # Fix V3/V4 beatmaps with empty/missing bpmEvents (same BPM=60 fallback bug)
                 if not data.get('bpmEvents'):
@@ -1056,6 +1186,23 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
                             if is_v2_beatmap(bm_data):
                                 bm_data = convert_v2_to_v3(bm_data, default_bpm=bpm)
                                 log.info(f"  {mode}/{diff}: converted V2→V3 for injection")
+                            # Normalize to complete V3 schema (Exp 200 crash fix) and
+                            # rescue empty maps from the Standard donor chain.
+                            normalize_v3_schema(bm_data)
+                            if beatmap_is_empty(bm_data):
+                                donor = _find_populated_beatmap(song_dir, fname)
+                                if donor:
+                                    with open(donor, 'r', encoding='utf-8') as fh:
+                                        ddata = json.load(fh)
+                                    if is_v2_beatmap(ddata):
+                                        ddata = convert_v2_to_v3(ddata, default_bpm=bpm)
+                                    normalize_v3_schema(ddata)
+                                    for k in ('colorNotes', 'bombNotes', 'obstacles',
+                                              'sliders', 'burstSliders'):
+                                        bm_data[k] = ddata.get(k, [])
+                                    log.info(f"  {mode}/{diff}: source map EMPTY — "
+                                             f"cloned playable content from "
+                                             f"{os.path.basename(donor)}")
                             # Fix empty bpmEvents (same fallback as replace_beatmaps)
                             if not bm_data.get('bpmEvents'):
                                 bm_data['bpmEvents'] = [{"b": 0, "m": bpm}]

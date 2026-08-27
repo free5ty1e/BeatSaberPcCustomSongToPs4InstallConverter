@@ -1,5 +1,13 @@
 # Pipeline Changelog
 
+## v0.5328 (2026-08-26)
+### Fixed
+- **Camellia-pack custom songs crash at gameplay load (CE-34878-0, Exp 200):** the 6 Chromeo slots' beatmaps came from the V4→V3.2.0 PS4-bundle reconstruction and were (a) MINIMAL-schema — missing `basicBeatmapEvents`, `waypoints`, `lightColorEventBoxGroups`, `lightRotationEventBoxGroups`, `lightTranslationEventBoxGroups`, `useNormalEventsAsCompatibleEvents`, `customData` that every hardware-proven-good map carries, and (b) three slots had ZERO-NOTE Easy difficulties (`cyclehit`/`exitthisearthsatomosphere`/`lightitup` decoded empty). User boot test: RS/lizzo/billieeilish customs all played fine; Chromeo selection crashed before environment/audio loads.
+- **Fix A — full-schema normalization at injection:** new `normalize_v3_schema()` fills every missing V3 array/field with game-standard defaults; wired into BOTH injection paths (`replace_beatmaps` for Standard diffs + mode-beatmap injection). Idempotent, preserves existing content.
+- **Fix B — empty-difficulty rescue:** new `_find_populated_beatmap()` finds a populated Standard donor (preference Normal > Hard > Expert > ExpertPlus > Easy; accepts both `Normal.dat` and `NormalStandard.dat` naming) and clones its playable content into empty difficulties so no slot ships an unplayable map. Note: rescued Easy maps now carry the donor difficulty's note content (documented trade-off vs a crashing/empty slot).
+### Tests
+- 9 new tests incl. a regression test against the actual Roni backout sources (empty-Easy rescue + Hard schema normalization). Suite: 571 passing.
+
 ## v0.5327 (2026-08-25)
 ### Changed
 - **`mass_deploy.bundle_dir` moved from ephemeral `/tmp/opencode/mass_build` to the stable committed path `/workspace/beat_saber_deluxe/mass_bundles`** (default config + `deploy_mass_bundles` fallback + `verify_ps4_deployment` size-check source). A fresh container/PS4 can now reproduce the full loadout without any /tmp state.

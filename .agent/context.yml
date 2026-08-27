@@ -62,17 +62,16 @@ deploy_naming:
     os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
     has NO bundle_suffix param.
   ps4_state: >
-    **Exp 200 (2026-08-25): FULL FLEET DEPLOYED, AWAITING BOOT TEST.** All 38 custom songs
-    rebuilt via v0.5327 pipeline into stable mass_bundles/ (Chromeo needs --audio audio.fsb),
-    all 36 pack bundles rebuilt with golden distinct-pathID structure (RS md5 5ed23829... =
-    hardware-proven bundle), catalog_pack_modes.json regenerated (md5 11d01abb..., 4 configured
-    packs CRC/size updated), redirects.json = 43 entries (38 songs + 4 pack pairs +
-    aa/catalog.json pair). Deployed via pipeline only: --deploy-mass-bundles, then
-    --deploy-pack-modes --deploy-config --verify-ps4 => Post-deploy validation PASSED.
-    bs_log.txt cleared. KEY MECHANISM: mode selector is driven by PACK preview sets;
-    per-song SOs never carried them (template BeatmapLevelData class differs from pack
-    BeatmapLevelSO - blob injection never implemented). User test: 4 modes on customs in all
-    packs, blue OneSaber, Chromeo slots. Repro commands: current-song-replacements doc.
+    **Exp 200 (2026-08-26): v0.5328 REDEPLOY IN PROGRESS.** User-verified: boot clean,
+    RS/lizzo/billieeilish customs play NoArrows fine; Camellia/Chromeo selection crashed
+    CE-34878-0 at gameplay load. Root cause: V4-to-V3-reconstructed Chromeo beatmaps are
+    minimal-schema (8 keys vs required 17-key V3 set) and 3 slots have zero-note Easy maps.
+    v0.5328: normalize_v3_schema() at both injection points + empty-difficulty rescue
+    (_find_populated_beatmap donor clone); 571/571 tests. Full rebuild+redeploy via
+    build_deploy_all38.py running. Crash log archived:
+    experiment_logs/v0.5327_camellia_chromeo_crash.txt. Next: user re-tests Chromeo slots,
+    then generalization test on a fresh music pack (user directive: pipeline must target
+    ANY song pack / song in the game).
 # Song Slot Naming
 slot_note: >
   Slots are the filename stem from BeatmapLevelsData/ (e.g. "startmeup", "Crystallized").

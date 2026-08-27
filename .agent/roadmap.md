@@ -216,5 +216,8 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] **Full-fleet rebuild + one-shot deploy** — 38/38 song bundles built (Chromeo via `--audio audio.fsb`), 36 pack bundles rebuilt with golden structure, catalog + redirects.json (43) deployed via pipeline flags; **Post-deploy validation PASSED**.
 - [x] **Selector mechanism identified** — mode selector comes from PACK preview sets; per-song template SOs are a different class (`*BeatmapLevelData`) and never carried mode sets (explains Standard-only customs under lizzo-only config).
 
-### Pending
-- [ ] **User acceptance test** — across all 4 packs: customs show 4 modes, OneSaber notes BLUE (v0.5323 fix on hardware at last), full audio lengths, Chromeo slots, No Arrows/90° gameplay.
+### User acceptance (partial pass — Exp 200)
+- [x] Boot clean; stock song OK; RS + lizzo + billieeilish customs play No Arrows fine; OneSaber-blue + full-audio untested this round.
+- [x] **Chromeo crash root-caused (v0.5328):** reconstructed V4→V3 maps were minimal-schema (8 vs 17 required keys) + zero-note Easy maps in 3 slots → CE-34878-0 at gameplay load. Fixed with `normalize_v3_schema()` at both injection points + empty-difficulty donor rescue. 571/571 tests.
+- [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy.
+- [ ] **Generalization test (M9)**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).

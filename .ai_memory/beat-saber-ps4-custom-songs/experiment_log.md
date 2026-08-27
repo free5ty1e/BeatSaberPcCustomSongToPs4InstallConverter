@@ -231,3 +231,18 @@ metadata:
   bs_log.txt cleared for the boot test.
 - **Status:** 🟢 **DEPLOYED + VALIDATED — AWAITING USER BOOT TEST.** Test plan: (1) boot → menu; (2) each of the 4 packs shows mode selectors with all 4 modes on its songs; (3) play a CUSTOM slot in each pack (esp. therollingstones custom under patched RS pack — the previously-missing case) on Standard + No Arrows; (4) OneSaber notes should be BLUE now (v0.5323 fix finally on hardware); (5) spot-check Chromeo slots (fresh audio via audio.fsb pass-through).
 - **Reproducible command list:** recorded in `.agent/current-song-replacements-on-chris-ps4.md` § "Reproducible Deployment".
+
+### Experiment 200 (cont.): Camellia/Chromeo Gameplay Crash Root-Caused — v0.5328 Schema Normalization + Empty-Map Rescue (2026-08-26)
+- **User boot test of the full-fleet deploy:** ✅ boot clean; stock song Standard OK; RS custom NoArrows OK; lizzo custom NoArrows OK; billieeilish custom NoArrows OK. ❌ **Camellia custom (Chromeo, 'Roni Got Me Stressed Out') crashed CE-34878-0 at gameplay load.** User confirmed pipeline-only deployment (no manual steps) and directed: fix this pack, then generalize to ANY pack/song, then test a fresh pack.
+- **Log evidence** (`experiment_logs/v0.5327_camellia_chromeo_crash.txt`, 922 lines): camellia pack bundle opened (#844), `BeatmapLevelsData/exitthisearthsatomosphere` redirected ×2 (#845/#846), then log ENDS — death BEFORE the environment-scenes/maincore opens that every successful play shows. = crash during gameplay-load beatmap deserialization.
+- **Root cause (bundle forensics, Roni vs user-played-good BuryAFriend):**
+  - The Chromeo slots' beatmaps come from the V4→V3.2.0 PS4-bundle reconstruction (`songs/chromeo_backout/`) and had NEVER been hardware-verified.
+  - Defect A: minimal schema — all Chromeo maps carry only 8 keys (`arcs/bombNotes/bpmEvents/chains/colorNotes/obstacles/rotationEvents/version`); every working map carries the full 17-key V3 set incl. `basicBeatmapEvents`, `waypoints`, `lightColorEventBoxGroups`, `useNormalEventsAsCompatibleEvents`. The game's deserializer hits the missing arrays during gameplay load → CE-34878-0.
+  - Defect B: 3 slots (`cyclehit`, `exitthisearthsatomosphere`, `lightitup`) have ZERO-NOTE Easy difficulties (decoder produced empty Easy maps in source).
+  - Ruled out: audio (FSB5 byte-identical to extracted source, header format identical to working builds), SO structure (parsed identically to working bundles via newly reverse-engineered BeatmapLevelData geometry: sets → [rank u32][z][beatmapPid i64][z][lightshowPid i64] × diffCount), beatmap version (3.2.0 also works elsewhere), bpmData eb values (odd but sourced from original game files).
+- **Fix (pipeline v0.5328):**
+  - `normalize_v3_schema()` — fills every missing V3 array/field with game-standard defaults; wired into BOTH injection paths (Standard replace + mode-beatmap inject). Idempotent.
+  - `_find_populated_beatmap()` + empty-map rescue — clones playable content from the closest populated Standard donor into zero-note difficulties (accepts both `Normal.dat` and `NormalStandard.dat` naming). Trade-off documented: rescued Easy plays donor-difficulty content instead of crashing/being empty.
+  - 9 new tests incl. regression against actual Roni sources; **571/571 pass**.
+- **Redeploy:** full `build_deploy_all38.py` run (all 38 rebuilt + one-shot deploy + verify).
+- **Status:** 🟡 REBUILDING/REDEPLOYING — then user re-tests Chromeo slots.
