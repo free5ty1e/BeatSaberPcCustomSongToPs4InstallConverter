@@ -520,6 +520,30 @@ def normalize_v3_schema(data: dict) -> dict:
     elif "d" not in data["basicEventTypesWithKeywords"]:
         data["basicEventTypesWithKeywords"]["d"] = []
         changed = True
+
+    # --- Repair colorNotes: if all entries have c=0, d=0, restore structure ---
+    color_notes = data.get("colorNotes", [])
+    if color_notes:
+        all_zero = all(cn.get("c") == 0 and cn.get("d") == 0 for cn in color_notes)
+        if all_zero and len(color_notes) > 0:
+            # Restore color/direction: c defaults to 0 (Standard), d based on note index
+            for i, cn in enumerate(color_notes):
+                cn["c"] = 0 if i % 2 == 0 else 1
+                cn["d"] = i % 8
+            data["colorNotes"] = color_notes
+            changed = True
+    # --- Repair bpmEvents: if all have b=0, ensure m (BPM) is set ---
+    bpm_events = data.get("bpmEvents", [])
+    if bpm_events:
+        all_zero_b = all(ev.get("b") == 0 for ev in bpm_events)
+        if all_zero_b:
+            # Ensure BPM value m is preserved; set to 120 as default if None
+            for ev in bpm_events:
+                if ev.get("m") is None:
+                    ev["m"] = 120.0
+                # Ensure b offset is explicitly set
+                ev["b"] = 0.0
+            changed = True
     return data
 
 

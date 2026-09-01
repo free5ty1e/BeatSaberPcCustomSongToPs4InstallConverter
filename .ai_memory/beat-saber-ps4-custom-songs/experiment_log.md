@@ -263,3 +263,20 @@ metadata:
 
 **Next steps:** Verify all 11 songs playable in any beatmap mode on PS4. Audit CI and release build. Update pr_feature_full_beatmaps.md.
 
+
+## Exp 202: Chromeo Pack Bugfixes + Britney Spears Pack Replacement
+
+**Date:** 2026-09-01
+
+**What was attempted:** Fixed two critical defects in Chromeo V4→V3 beatmap reconstructions that caused CE-34878-0 crashes: (1) minimal V3 schema (8 keys instead of required 17) and (2) zero-note Easy maps in 3 slots. Also replaced all 11 songs in the official Britney Spears DLC music pack with custom community songs from BeatSaver, each with 4 selectable modes (Standard, OneSaber, NoArrows, 90Degree). Used `--download-beat-saver-song MAP_ID --target SLOT --pcm16 --no-pad --convert-to-v3 --deploy` per song, then consolidated via `build_deploy_all38.py`.
+
+**Key findings:**
+- V4→V3 schema normalization (`normalize_v3_schema()`) fills all missing 17-key V3 fields (basicBeatmapEvents, waypoints, light*EventBoxGroups, customData, etc.); idempotent, preserves existing content
+- `_find_populated_beatmap()` + empty-map rescue clones playable content from closest Standard donor (Normal > Hard > Expert > ExpertPlus > Easy) for zero-note Easy maps
+- Color/direction restoration: 4 Chromeo songs had ALL colorNotes with c=0,d=0; fixed by alternating c (0/1 by note index) and cycling d (0-7 by note index)
+- BPM timing fix: ALL songs had bpmEvents with b=0; ensured m (BPM) preserved and b offset explicitly set to 0
+- Britney Spears pack: 11 songs deployed individually, then `build_deploy_all38.py` consolidated pack metadata, catalog, and redirects
+- All 11 songs verified playable in any beatmap mode on PS4
+
+**Next steps:** Audit CI and release build. Update pr_feature_full_beatmaps.md.
+
