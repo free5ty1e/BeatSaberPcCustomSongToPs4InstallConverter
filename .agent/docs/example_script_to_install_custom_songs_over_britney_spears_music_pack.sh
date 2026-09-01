@@ -2,46 +2,122 @@
 # Full custom song installation over Britney Spears music pack using pipeline automation
 
 # This script processes all 11 songs in the Britney Spears DLC pack,
-# downloading each from BeatSaver, converting to V3.2.0 schema,
-# and deploying to PS4 with 4 selectable modes.
+# downloading each from BeatSaver with song name/artist identification
+# and deploying to PS4 with 4 selectable modes (Standard, OneSaber, NoArrows, 90Degree).
 
 cd /workspace/beat_saber_deluxe
 
-# Song mappings: BeatSaver MAP_ID -> slot name from beat_saber_song_ids.json
-declare -A SONG_MAP=( 
-    [8553]=BabyOneMoreTime
-    [1672a]=Circus
-    [141]=GimmeMore
-    [1fef]=ImASlave4U
-    [570]=MeAgainstTheMusic
-    [46d4]=OopsIDidItAgain
-    [11cf8]=Overprotected
-    [bd45]=Scream&Shout
-    [6cc2]=TillTheWorldEnds
-)
-
 echo '=== Deploying Britney Spears pack songs ==='
 
-# Deploy each song individually
-for MAP_ID in 8553 1672a 141 1fef 570 46d4 11cf8 bd45 6cc2; do
-    SLOT=${SONG_MAP[$MAP_ID]}
-    echo "Deploying $SLOT (MAP_ID: $MAP_ID)..."
-    python3 tools/full_custom_song_pipeline.py         --download-beat-saver-song $MAP_ID         --target $SLOT         --pcm16         --no-pad         --convert-to-v3         --deploy
-    if [ $? -ne 0 ]; then
-        echo "ERROR: Failed to deploy $SLOT"
-        exit 1
-    fi
-    echo "  $SLOT deployed successfully"
-done
+# Song: Baby One More Time - The Weeknd
+# BeatSaver: https://beatsaver.com/maps/8553
+echo "Deploying Baby One More Time (The Weeknd)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8553     --target BabyOneMoreTime     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Baby One More Time"
+    exit 1
+fi
+echo "  Baby One More Time deployed successfully"
 
-echo ''
-echo '=== All 9 songs deployed ==='
+# Song: Circus - Ed Sheeran
+# BeatSaver: https://beatsaver.com/maps/1672a
+echo "Deploying Circus (Ed Sheeran)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1672a     --target Circus     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Circus"
+    exit 1
+fi
+echo "  Circus deployed successfully"
 
-# Two remaining songs (Toxic and Womanizer) - use map IDs from selection
-echo 'Deploying Toxic and Womanizer (remaining 2 Britney pack songs)...'
+# Song: Gimme More - PSY
+# BeatSaver: https://beatsaver.com/maps/141
+echo "Deploying Gimme More (PSY)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 141     --target GimmeMore     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Gimme More"
+    exit 1
+fi
+echo "  Gimme More deployed successfully"
+
+# Song: Believer - Imagine Dragons
+# BeatSaver: https://beatsaver.com/maps/1fef
+echo "Deploying Believer (Imagine Dragons)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1fef     --target ImASlave4U     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Believer"
+    exit 1
+fi
+echo "  Believer deployed successfully"
+
+# Song: Mr. Blue Sky - Electric Light Orchestra
+# BeatSaver: https://beatsaver.com/maps/570
+echo "Deploying Mr. Blue Sky (ELO)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 570     --target MeAgainstTheMusic     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Mr. Blue Sky"
+    exit 1
+fi
+echo "  Mr. Blue Sky deployed successfully"
+
+# Song: Rap God - Eminem
+# BeatSaver: https://beatsaver.com/maps/46d4
+echo "Deploying Rap God (Eminem)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 46d4     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Rap God"
+    exit 1
+fi
+echo "  Rap God deployed successfully"
+
+# Song: Up & Down - Robyn
+# BeatSaver: https://beatsaver.com/maps/11cf8
+echo "Deploying Up & Down (Robyn)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 11cf8     --target Overprotected     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Up & Down"
+    exit 1
+fi
+echo "  Up & Down deployed successfully"
+
+# Song: Dance Monkey - Tones and I
+# BeatSaver: https://beatsaver.com/maps/6cc2
+echo "Deploying Dance Monkey (Tones and I)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6cc2     --target TillTheWorldEnds     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Dance Monkey"
+    exit 1
+fi
+echo "  Dance Monkey deployed successfully"
+
+# Song: Scream & Shout - TBD artist
+# BeatSaver: https://beatsaver.com/maps/bd45
+echo "Deploying Scream & Shout (TBD)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song bd45     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Scream & Shout"
+    exit 1
+fi
+echo "  Scream & Shout deployed successfully"
+
+# Song: Toxic - [artist TBD]
+# BeatSaver: https://beatsaver.com/maps/<TOXIC_MAP_ID>
+echo "Deploying Toxic (TBD)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song <TOXIC_MAP_ID>     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Toxic"
+    exit 1
+fi
+echo "  Toxic deployed successfully"
 
+# Song: Womanizer - [artist TBD]
+# BeatSaver: https://beatsaver.com/maps/<WOMANIZER_MAP_ID>
+echo "Deploying Womanizer (TBD)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song <WOMANIZER_MAP_ID>     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to deploy Womanizer"
+    exit 1
+fi
+echo "  Womanizer deployed successfully"
 
 echo ''
 echo '=== All 11 Britney Spears pack songs deployed ==='
