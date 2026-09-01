@@ -39,3 +39,4 @@ temp/
 *.cab
 *.bundle
 beat_saber_deluxe/.coverage
+song_metadata.json

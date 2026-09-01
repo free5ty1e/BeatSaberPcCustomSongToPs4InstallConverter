@@ -246,3 +246,20 @@ metadata:
   - 9 new tests incl. regression against actual Roni sources; **571/571 pass**.
 - **Redeploy:** full `build_deploy_all38.py` run (all 38 rebuilt + one-shot deploy + verify).
 - **Status:** 🟡 REBUILDING/REDEPLOYING — then user re-tests Chromeo slots.
+
+## Exp 202: Britney Spears Pack Replacement — 11 songs over official DLC
+
+**Date:** 2026-09-01
+
+**What was attempted:** Replaced all 11 songs in the official Britney Spears DLC music pack with custom community songs from BeatSaver, making all 4 beatmap modes (Standard, OneSaber, NoArrows, 90Degree) selectable and playable. Used `--download-beat-saver-song` pipeline command per song with `--pcm16 --no-pad --convert-to-v3 --deploy` flags, then consolidated deploy via `build_deploy_all38.py`.
+
+**Key findings:**
+- Britney Spears pack has 11 songs (BabyOneMoreTime, Circus, GimmeMore, ImASlave4U, MeAgainstTheMusic, OopsIDidItAgain, Overprotected, Scream&Shout, TillTheWorldEnds, Toxic, Womanizer), each with 5 difficulties
+- Target slot IDs from `beat_saber_song_ids.json` pack key `britneyspears`
+- Pipeline `--download-beat-saver-song MAP_ID --target SLOT_ID --pcm16 --no-pad --convert-to-v3 --deploy` successfully downloads and deploys each song
+- All 11 songs deployed individually, then `build_deploy_all38.py` consolidates pack metadata, catalog, and redirects in one pass
+- Mode selectors driven by PACK bundle preview sets (Exp 199/200 finding), not per-song bundles
+- `song_metadata.json` at project root is auto-managed by pipeline; added to `.gitignore` to prevent accidental commits
+
+**Next steps:** Verify all 11 songs playable in any beatmap mode on PS4. Audit CI and release build. Update pr_feature_full_beatmaps.md.
+
