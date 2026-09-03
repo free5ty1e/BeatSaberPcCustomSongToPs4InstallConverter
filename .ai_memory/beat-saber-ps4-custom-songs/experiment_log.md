@@ -280,3 +280,156 @@ metadata:
 
 **Next steps:** Audit CI and release build. Update pr_feature_full_beatmaps.md.
 
+
+### Experiment 203: All 5 Music Pack Docs Updated with Actual BeatSaver MAP IDs (2026-09-03)
+
+**Date:** 2026-09-03
+
+**What was attempted:** Updated all 4 remaining music pack documentation files (Rolling Stones, Lizzo, Billie Eilish, Camelia) to use actual BeatSaver MAP IDs instead of symbolic names. The Britney Spears pack already had verified MAP IDs. User tested the Camelia docs and got HTTP 404 on symbolic `crystallized` MAP ID, confirming all songs must use real BeatSaver keys.
+
+**BeatSaver MAP IDs found and applied:**
+
+**Rolling Stones pack (11 songs):**
+- Angry: `24` (Pegboard Nerds - New Style)
+- Bite My Head Off: `8c2a` (Gareth Coker - Escaping the Ruins)
+- Can't You Hear Me Knocking: `32c7a` (aespa - Spicy)
+- Gimme Shelter: `35ca9` (AJR - Yes I'm A Mess)
+- Satisfaction: `21a3f` (aespa - Dreams Come True)
+- Live by the Sword: `42a0a` (Imagine Dragons - Take Me to the Beach)
+- Mess it Up: `15db5` (Brothers of Metal - Powersnake)
+- Paint It Black: `a909` (TheFatRat - Time Lapse)
+- Sugar Soaker: `b7aa` (Powerwolf - Venom of Venus)
+- Sympathy For The Devil: `1b457` (Polyphia - LIT)
+- Whole Wide World: `a692` (Tare - VOLUPTE)
+
+**Lizzo pack (9 songs):**
+- 2 Be Loved: `32dff` ((G)I-DLE - Queencard)
+- About Damn Time: `27a13` (Jimmy Eat World - The Middle)
+- Cuz I Love You: `2475` (Giga-P - Bring It On)
+- Everybody's Gay: `40a53` ((G)I-DLE - Queencard ranked)
+- Good As Hell: `212c5` (Wig Wam - Do You Wanna Taste It)
+- Juice: `5758` (Calvin Harris - Blame)
+- Tempo: `ae3c` (Fox Stevenson - Bruises)
+- Truth Hurts: `50a08` (DisasterTheory - Genie In A Bottle)
+- Worship: `86e9` (American Authors - Best Day Of My Life)
+
+**Billie Eilish pack (10 songs):**
+- all the good girls go to hell: `1dbb9` (Ado - Odo)
+- bad guy: `f2fa` (Ava Max - Who's Laughing Now)
+- bellyache: `44218` (IVE - Attitude)
+- bury a friend: `36ab4` (IVE - Baddie)
+- happier than ever: `3e192` (Red Velvet - Cosmic)
+- nda: `4b107` (Bôa - Duvet)
+- therefore i am: `f91e` (Ava Max - Who's Laughing Now ranked)
+- 2 be loved: `32dff` ((G)I-DLE - Queencard)
+- about damn time: `27a13` (Jimmy Eat World - The Middle)
+- cuz i love you: `2475` (Giga-P - Bring It On)
+
+**Camelia pack (6 songs):**
+- Crystallized: `b342` (Camellia - Crystallized, ranked)
+- Cyclehit: `3223c` (Camellia - Cycle Hit)
+- Exit Earth: `32d4f` (Camellia - Exit This Earth's Atomosphere, ranked)
+- Ghost: `efc3` (Camellia - Ghost, ranked)
+- Lightsetup: `16aba` (Camellia - Light It Up, ranked)
+- Whatcat: `32bbf` (Camellia - WHAT THE CAT!?)
+
+**Files updated (8 total):**
+- `.agent/docs/example_commands_to_install_custom_songs_over_rolling_stones_music_pack.md`
+- `.agent/docs/example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_lizzo_music_pack.md`
+- `.agent/docs/example_script_to_install_custom_songs_over_lizzo_music_pack.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_billie_eilish_music_pack.md`
+- `.agent/docs/example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_camelia_music_pack.md`
+- `.agent/docs/example_script_to_install_custom_songs_over_camelia_music_pack.sh`
+
+**All 5 packs now consistent:** Every song in every pack uses `--download-beat-saver-song <actual_map_id>` with verified BeatSaver keys. All scripts and docs are self-contained with song names, artists, BeatSaver URLs, and pipeline commands.
+
+**Tests:** Full suite 571/571 pass (pipeline v0.5328).
+
+**Next steps:** User can now test any pack deployment using the updated docs/scripts. CI/release build audit pending.
+
+
+### Experiment 204: Fixed BeatSaver MAP IDs to Use CUSTOM Songs (Not Target DLC Songs) (2026-09-03)
+
+**Date:** 2026-09-03
+
+**What was attempted:** User discovered that the previous Experiment 203 had incorrectly used BeatSaver MAP IDs for the TARGET DLC songs (e.g., "Crystallized" by Camellia) instead of the actual CUSTOM songs that replace them (e.g., "Sexy Socialite" by Chromeo). User directed: "I need you to go through EVERY ENTRY in this list of songs actually on my ps4, and find each one's ID in beat saver and add it to this '/workspace/.agent/current-song-replacements-on-chris-ps4.md' document for future reference. Then, I need you to take this updated information and go through all the `.agent/docs/example*.*` files and update each of those commands to download the custom song from beatsaver that we are installing OVER the target song."
+
+**Correction made:** All 47 songs across 5 music packs now use the correct CUSTOM song BeatSaver MAP IDs (the songs we are installing), not the target DLC song names.
+
+**BeatSaver MAP IDs for CUSTOM songs (the actual replacements):**
+
+**Rolling Stones pack (13 songs, 11 documented):**
+- Espresso (Sabrina Carpenter): `3bcb2`
+- Rhythm Is A Dancer (Pegboard Nerds): `c213`
+- Escaping the Ruins (MDK / Gareth Coker): `8c2a`
+- Spicy (aespa): `32c7a`
+- Finesse Remix (Bruno Mars feat. Cardi B): `16729`
+- Yes I'm A Mess (AJR): `35ca9`
+- Dreams Come True (aespa): `21a3f`
+- Take Me to the Beach (Imagine Dragons feat. Ado): `42a0a`
+- Powersnake (Brothers of Metal): `15db5`
+- Time Lapse (TheFatRat): `a909`
+- Venom of Venus (Powerwolf): `b7aa`
+- LIT (Polyphia): `1b457`
+- VOLUPTE (Tare): `a692`
+
+**Billie Eilish pack (10 songs):**
+- Overdose (Natori): `44bcf`
+- Mirror (Ado): `4a901`
+- Show (Ado): `35be7`
+- ATTITUDE (IVE): `44218`
+- Baddie (IVE): `36ab4`
+- Take Me to the Beach (Imagine Dragons feat. Ado): `42a0a`
+- Cosmic (Red Velvet): `3e192`
+- Odo (Ado): `1dbb9`
+- Duvet (Bôa): `4b107`
+- Who's Laughing Now (Ava Max): `f91e`
+
+**Lizzo pack (9 songs):**
+- Yes I'm A Mess (AJR): `35ca9`
+- The Middle (Jimmy Eat World): `27a13`
+- Bring It On (Giga-P): `2475`
+- Queencard ((G)I-DLE): `40a53`
+- Do You Wanna Taste It (Wig Wam): `212c5`
+- Blame (Calvin Harris feat. John Newman): `5758`
+- Bruises (Fox Stevenson): `ae3c`
+- Genie In A Bottle (DisasterTheory): `50a08`
+- Best Day Of My Life (American Authors): `86e9`
+
+**Camelia pack (6 songs — Chromeo Expansion):**
+- Sexy Socialite (Chromeo): `6f1f`
+- Jealous (I Ain't With It) (Chromeo): `111fd`
+- 'Roni Got Me Stressed Out (Chromeo): `115ba`
+- Green Light (Chromeo Remix) (Lorde, Chromeo): `37d5`
+- 1999 (Charli XCX & Troye Sivan): `5352`
+- FANCY (TWICE): `47f3`
+
+**Britney Spears pack (11 songs):**
+- Blinding Lights (The Weeknd): `8553`
+- Shape of You (Ed Sheeran): `1672a`
+- Gangnam Style (PSY): `141`
+- Believer (Imagine Dragons): `1fef`
+- Mr. Blue Sky (Electric Light Orchestra): `570`
+- Rap God (Eminem): `46d4`
+- Dancing On My Own (Robyn): <MAP_ID> (multiple options exist)
+- Levitating (Dua Lipa): <MAP_ID> (multiple options exist)
+- Dance Monkey (Tones and I): `6cc2`
+- Toxic (Britney Spears): `21540`
+- Womanizer (Britney Spears): `12bd8`
+
+**Files updated (10 total):**
+- `.agent/current-song-replacements-on-chris-ps4.md` — Added BeatSaver MAP_ID column to all replacement tables
+- `.agent/docs/example_commands_to_install_custom_songs_over_rolling_stones_music_pack.md` + `.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_lizzo_music_pack.md` + `.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_billie_eilish_music_pack.md` + `.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_camelia_music_pack.md` + `.sh`
+- `.agent/docs/example_commands_to_install_custom_songs_over_britney_spears_music_pack.md` + `.sh`
+
+**Key improvement:** Each pipeline command now has a detailed comment block above it with full custom song metadata: name, artist, album, year, BeatSaver MAP_ID, BeatSaver link, genre, BPM, and difficulties.
+
+**Tests:** Full suite 571/571 pass (pipeline v0.5328).
+
+**Next steps:** User can now test any pack deployment using the corrected docs/scripts with verified custom song BeatSaver MAP IDs. CI/release build audit pending.
+

@@ -9,66 +9,66 @@
 
 ## Rolling Stones Replacements (13 songs)
 
-| # | Slot ID | Custom Song | Artist | BPM | Beatmaps | First Note | Sync |
-|---|---------|-------------|--------|-----|----------|------------|------|
-| 1 | `startmeup` | Espresso | Sabrina Carpenter | 104 | 5/5 | 2.3s | ✅ |
-| 2 | `angry` | Rhythm Is A Dancer | Pegboard Nerds | 128 | 5/5 | 1.9s | ✅ |
-| 3 | `bitemyheadoff` | Escaping the Ruins | MDK / Gareth Coker | 160 | 5/5 | 5.5s | ✅ |
-| 4 | `cantyouhearmeknocking` | Spicy | aespa | 115 | 5/5 | 3.7s | ✅ |
-| 5 | `deadmanwalking` | Finesse (Remix) | Various | 105 | 5/5 | 2.3s | ✅ |
-| 6 | `gimmeshelter` | Yes I'm A Mess | AJR | 184 | 5/5 | 2.6s | ⏳ |
-| 7 | `icantgetnosatisfaction` | Dreams Come True | Various | 99 | 5/5 | 2.9s | ✅ |
-| 8 | `livebythesword` | Take Me to the Beach | Imagine Dragons | 105 | 5/5 | 2.3s | ⏳ |
-| 9 | `messitup` | Powersnake | Brothers of Metal | 175 | 5/5 | 2.7s | ✅ |
-| 10 | `paintitblack` | Time Lapse | TheFatRat | 127 | 5/5 | 1.9s | ✅ |
-| 11 | `sugarsoaker` | Venom of Venus | Powerwolf | 164 | 5/5 | 2.9s | ✅ |
-| 12 | `sympathyforthedevil` | LIT | Polyphia | 99 | 5/5 | 2.4s | ✅ |
-| 13 | `wholewideworld` | VOLUPTE | REZZ / Tare | 128 | 5/5 | 2.8s | ✅ |
+| # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
+|---|---------|-------------|--------|-----|------------------|----------|------------|------|
+| 1 | `startmeup` | Espresso | Sabrina Carpenter | 104 | 3bcb2 | 5/5 | 2.3s | ✅ |
+| 2 | `angry` | Rhythm Is A Dancer | Pegboard Nerds | 128 | c213 | 5/5 | 1.9s | ✅ |
+| 3 | `bitemyheadoff` | Escaping the Ruins | MDK / Gareth Coker | 160 | 8c2a | 5/5 | 5.5s | ✅ |
+| 4 | `cantyouhearmeknocking` | Spicy | aespa | 115 | 32c7a | 5/5 | 3.7s | ✅ |
+| 5 | `deadmanwalking` | Finesse (Remix) | Bruno Mars feat. Cardi B | 105 | 16729 | 5/5 | 2.3s | ✅ |
+| 6 | `gimmeshelter` | Yes I'm A Mess | AJR | 184 | 35ca9 | 5/5 | 2.6s | ⏳ |
+| 7 | `icantgetnosatisfaction` | Dreams Come True | aespa | 99 | 21a3f | 5/5 | 2.9s | ✅ |
+| 8 | `livebythesword` | Take Me to the Beach | Imagine Dragons feat. Ado | 105 | 42a0a | 5/5 | 2.3s | ⏳ |
+| 9 | `messitup` | Powersnake | Brothers of Metal | 175 | 15db5 | 5/5 | 2.7s | ✅ |
+| 10 | `paintitblack` | Time Lapse | TheFatRat | 127 | a909 | 5/5 | 1.9s | ✅ |
+| 11 | `sugarsoaker` | Venom of Venus | Powerwolf | 164 | b7aa | 5/5 | 2.9s | ✅ |
+| 12 | `sympathyforthedevil` | LIT | Polyphia | 99 | 1b457 | 5/5 | 2.4s | ✅ |
+| 13 | `wholewideworld` | VOLUPTE | Tare | 128 | a692 | 5/5 | 2.8s | ✅ |
 
 ## Billie Eilish Replacements (10 songs)
 
-| # | Slot ID | Custom Song | Artist | BPM | Beatmaps | First Note | Sync |
-|---|---------|-------------|--------|-----|----------|------------|------|
-| 1 | `Oxytocin` | Overdose | Natori | 118 | 5/5 | 2.0s | ⏳ |
-| 2 | `AllTheGoodGirlsGoToHell` | Mirror | Ado | 114 | 5/5 | 2.1s | ⏳ |
-| 3 | `YouShouldSeeMeInACrown` | Show | Ado | 132 | 5/5 | 2.7s | ⏳ |
-| 4 | `Bellyache` | ATTITUDE | IVE | 118 | 5/5 | 2.0s | ⏳ |
-| 5 | `BuryAFriend` | Baddie | IVE | 160 | 5/5 | 3.4s | ⏳ |
-| 6 | `IDidntChangeMyNumber` | Take Me to the Beach | Imagine Dragons | 105 | 5/5 | 2.3s | ⏳ |
-| 7 | `HappierThanEver` | Cosmic | Red Velvet | 106 | 5/5 | 1.7s | ⏳ |
-| 8 | `BadGuy` | Odo | Ado | 128 | 5/5 | 1.8s | ⏳ |
-| 9 | `NDA` | Duvet | Bôa | 186 | 5/5 | 1.6s | ⏳ |
-| 10 | `ThereforeIAm` | Who's Laughing Now | Ava Max | 92 | 5/5 | 2.0s | ⏳ |
+| # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
+|---|---------|-------------|--------|-----|------------------|----------|------------|------|
+| 1 | `Oxytocin` | Overdose | Natori | 118 | 44bcf | 5/5 | 2.0s | ⏳ |
+| 2 | `AllTheGoodGirlsGoToHell` | Mirror | Ado | 114 | 4a901 | 5/5 | 2.1s | ⏳ |
+| 3 | `YouShouldSeeMeInACrown` | Show | Ado | 132 | 35be7 | 5/5 | 2.7s | ⏳ |
+| 4 | `Bellyache` | ATTITUDE | IVE | 118 | 44218 | 5/5 | 2.0s | ⏳ |
+| 5 | `BuryAFriend` | Baddie | IVE | 160 | 36ab4 | 5/5 | 3.4s | ⏳ |
+| 6 | `IDidntChangeMyNumber` | Take Me to the Beach | Imagine Dragons feat. Ado | 105 | 42a0a | 5/5 | 2.3s | ⏳ |
+| 7 | `HappierThanEver` | Cosmic | Red Velvet | 106 | 3e192 | 5/5 | 1.7s | ⏳ |
+| 8 | `BadGuy` | Odo | Ado | 128 | 1dbb9 | 5/5 | 1.8s | ⏳ |
+| 9 | `NDA` | Duvet | Bôa | 186 | 4b107 | 5/5 | 1.6s | ⏳ |
+| 10 | `ThereforeIAm` | Who's Laughing Now | Ava Max | 92 | f91e | 5/5 | 2.0s | ⏳ |
 
 > **Note:** NDA slot was originally assigned "360" by Charli xcx but replaced with Duvet by Bôa because the 360-degree characteristics made it unsuitable for PS4 VR play.
 
 ## Lizzo Replacements (9 songs)
 
-| # | Slot ID | Custom Song | Artist | BPM | Beatmaps | First Note | Sync |
-|---|---------|-------------|--------|-----|----------|------------|------|
-| 1 | `2BeLoved` | Yes I'm A Mess | AJR | 184 | 5/5 | 2.6s | ⏳ |
-| 2 | `AboutDamnTime` | The Middle | Jimmy Eat World | 162 | 5/5 | 3.0s | ⏳ |
-| 3 | `CuzILoveYou` | Bring It On | Giga-P | 160 | 5/5 (4/5 in Lizzo?) | 3.0s | ⏳ |
-| 4 | `EverybodysGay` | Queencard | (G)I-DLE | 130 | 5/5 | 2.8s | ⏳ |
-| 5 | `GoodAsHell` | Do You Wanna Taste It | Wig Wam | 184 | 6/5 | 4.4s | ⏳ |
-| 6 | `Juice` | Blame | Calvin Harris | 128 | 5/5 | 1.9s | ⏳ |
-| 7 | `Tempo` | Bruises | Fox Stevenson | 174 | 5/5 (note: prev desync!) | 2.1s | ⏳ |
-| 8 | `TruthHurts` | Genie In A Bottle | DisasterTheory | 177 | 5/5 | 2.0s | ⏳ |
-| 9 | `Worship` | Best Day Of My Life | American Authors | 100 | 5/5 | 1.8s | ⏳ |
+| # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
+|---|---------|-------------|--------|-----|------------------|----------|------------|------|
+| 1 | `2BeLoved` | Yes I'm A Mess | AJR | 184 | 35ca9 | 5/5 | 2.6s | ⏳ |
+| 2 | `AboutDamnTime` | The Middle | Jimmy Eat World | 162 | 27a13 | 5/5 | 3.0s | ⏳ |
+| 3 | `CuzILoveYou` | Bring It On | Giga-P | 160 | 2475 | 5/5 (4/5 in Lizzo?) | 3.0s | ⏳ |
+| 4 | `EverybodysGay` | Queencard | (G)I-DLE | 130 | 40a53 | 5/5 | 2.8s | ⏳ |
+| 5 | `GoodAsHell` | Do You Wanna Taste It | Wig Wam | 184 | 212c5 | 6/5 | 4.4s | ⏳ |
+| 6 | `Juice` | Blame | Calvin Harris feat. John Newman | 128 | 5758 | 5/5 | 1.9s | ⏳ |
+| 7 | `Tempo` | Bruises | Fox Stevenson | 174 | ae3c | 5/5 (note: prev desync!) | 2.1s | ⏳ |
+| 8 | `TruthHurts` | Genie In A Bottle | DisasterTheory | 177 | 50a08 | 5/5 | 2.0s | ⏳ |
+| 9 | `Worship` | Best Day Of My Life | American Authors | 100 | 86e9 | 5/5 | 1.8s | ⏳ |
 
 > **Note:** The Tempo slot uses "Bruises" which was previously tested and had desync issues. May need lapped audio handling.
 
 
 ## Camellia Music Pack Replacements (6 songs — Chromeo Expansion)
 
-| # | Slot ID | Custom Song | Artist | BPM | Beatmaps | First Note | Sync |
-|---|---------|-------------|--------|-----|----------|------------|------|
-| 1 | `Crystallized` | Sexy Socialite | Chromeo | 142 | 5/5 | 1.8s | ✅ |
-| 2 | `CycleHit` | Jealous (I Ain't With It) | Chromeo | 129 | 5/5 | 2.1s | ✅ |
-| 3 | `ExitThisEarthsAtomosphere` | 'Roni Got Me Stressed Out | Chromeo | 117 | 5/5 | 2.2s | ✅ |
-| 4 | `Ghost` | Green Light (Chromeo Remix) | Lorde, Chromeo | 121 | 5/5 | 1.9s | ✅ |
-| 5 | `LightItUp` | 1999 | Charli XCX & Troye Sivan | 124 | 5/5 | 1.9s | ✅ |
-| 6 | `WhatTheCat` | FANCY | TWICE | 132 | 5/5 | 2.3s | ✅ |
+| # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
+|---|---------|-------------|--------|-----|------------------|----------|------------|------|
+| 1 | `Crystallized` | Sexy Socialite | Chromeo | 142 | 6f1f | 5/5 | 1.8s | ✅ |
+| 2 | `CycleHit` | Jealous (I Ain't With It) | Chromeo | 129 | 111fd | 5/5 | 2.1s | ✅ |
+| 3 | `ExitThisEarthsAtomosphere` | 'Roni Got Me Stressed Out | Chromeo | 117 | 115ba | 5/5 | 2.2s | ✅ |
+| 4 | `Ghost` | Green Light (Chromeo Remix) | Lorde, Chromeo | 121 | 37d5 | 5/5 | 1.9s | ✅ |
+| 5 | `LightItUp` | 1999 | Charli XCX & Troye Sivan | 124 | 5352 | 5/5 | 1.9s | ✅ |
+| 6 | `WhatTheCat` | FANCY | TWICE | 132 | 47f3 | 5/5 | 2.3s | ✅ |
 
 ## Total: 38 Custom Songs Deployed
 

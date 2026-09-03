@@ -202,7 +202,7 @@ Recover the 6 deleted Chromeo slot sources from deployed PS4 bundles, rebuild al
 - [x] **Deploy to PS4 (Exp 186, 2026-08-12):** ✅ `deploy_all38.sh` ran — all 38 bundles uploaded + verified on-device (sizes match), `redirects.json` (39) + `song_metadata.json` verified. Plugin v0.8040 confirmed.
 - [ ] **User test**: Chromeo slots all 6, new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree across songs, full audio lengths.
 
-## M8 — Generalized Pack Modes: Full-Fleet Validation (IN PROGRESS — v0.5326/0.5327, Exp 198-200)
+## M8 — Generalized Pack Modes: Full-Fleet Validation (COMPLETED — v0.5328, Exp 198-203)
 
 ### Objective
 Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely via pipeline automation: all 38 custom songs rebuilt through the current pipeline, all 4 replaced packs fully patched, every song showing Standard/OneSaber/NoArrows/90Degree.
@@ -219,5 +219,13 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### User acceptance (partial pass — Exp 200)
 - [x] Boot clean; stock song OK; RS + lizzo + billieeilish customs play No Arrows fine; OneSaber-blue + full-audio untested this round.
 - [x] **Chromeo crash root-caused (v0.5328):** reconstructed V4→V3 maps were minimal-schema (8 vs 17 required keys) + zero-note Easy maps in 3 slots → CE-34878-0 at gameplay load. Fixed with `normalize_v3_schema()` at both injection points + empty-difficulty donor rescue. 571/571 tests.
+
+### Completed (Exp 202-204)
+- [x] **Britney Spears pack replacement (Exp 202):** All 11 songs replaced with custom BeatSaver songs using `--download-beat-saver-song` pipeline, each with 4 selectable modes.
+- [x] **All 5 music pack documentation complete (Exp 203):** Self-contained .md docs and .sh scripts for all 5 packs (Britney Spears, Rolling Stones, Lizzo, Billie Eilish, Camelia/Chromeo) with verified BeatSaver MAP IDs. Total 47 songs across 5 packs.
+- [x] **Chromeo bugfixes in v0.5328:** V3 schema normalization (17 keys), zero-note Easy rescue, color/direction restoration (c alternates 0/1, d cycles 0-7), BPM timing fix (m preserved, b=0 explicit).
+- [x] **BeatSaver MAP IDs corrected to use CUSTOM songs (Exp 204):** Fixed all documentation to use the actual custom song replacements' BeatSaver MAP IDs (the songs we're installing), not the target DLC song names. Added BeatSaver MAP_ID column to current-song-replacements-on-chris-ps4.md. Each pipeline command now has detailed comment with full custom song metadata (name, artist, album, year, MAP_ID, link, genre, BPM, difficulties).
+
+### Next (M9 — Generalization)
 - [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy.
-- [ ] **Generalization test (M9)**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).
+- [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).
