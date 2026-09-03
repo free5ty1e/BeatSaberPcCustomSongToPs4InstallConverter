@@ -9,14 +9,14 @@ All custom songs deploy with 4 selectable modes (Standard, OneSaber, NoArrows, 9
 ## Target: Camelia (Chromeo) Official DLC Pack
 
 - **Pack key**: `camelia`
-- **Pack bundle**: `camelia_pack_assets_all_<hash>.bundle`
+- **Pack bundle**: `camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle`
 - **6 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
   1. Crystallized → Custom: Sexy Socialite (Chromeo)
-  2. Cyclehit → Custom: Jealous (I Ain't With It) (Chromeo)
-  3. Exit Earth → Custom: 'Roni Got Me Stressed Out (Chromeo)
+  2. CycleHit → Custom: Jealous (I Ain't With It) (Chromeo)
+  3. ExitThisEarthsAtomosphere → Custom: 'Roni Got Me Stressed Out (Chromeo)
   4. Ghost → Custom: Green Light (Chromeo Remix) (Lorde, Chromeo)
-  5. Lightsetup → Custom: 1999 (Charli XCX & Troye Sivan)
-  6. Whatcat → Custom: FANCY (TWICE)
+  5. LightItUp → Custom: 1999 (Charli XCX & Troye Sivan)
+  6. WhatTheCat → Custom: FANCY (TWICE)
 
 ## Where Target Metadata Lives
 
@@ -51,7 +51,7 @@ song_metadata.json
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy
 
-# 2. Cyclehit → Jealous (I Ain't With It) (Chromeo)
+# 2. CycleHit → Jealous (I Ain't With It) (Chromeo)
 # Custom Song: Jealous (I Ain't With It)
 # Artist: Chromeo
 # Album: Head Over Heels
@@ -61,9 +61,9 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f  
 # Genre: Funk / Disco / Electronic
 # BPM: 129
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd     --target Cyclehit     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy
 
-# 3. Exit Earth → 'Roni Got Me Stressed Out (Chromeo)
+# 3. ExitThisEarthsAtomosphere → 'Roni Got Me Stressed Out (Chromeo)
 # Custom Song: 'Roni Got Me Stressed Out
 # Artist: Chromeo
 # Album: Head Over Heels
@@ -73,7 +73,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd 
 # Genre: Funk / Disco / Electronic
 # BPM: 117
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba     --target ExitEarth     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy
 
 # 4. Ghost → Green Light (Chromeo Remix) (Lorde, Chromeo)
 # Custom Song: Green Light (Chromeo Remix)
@@ -87,7 +87,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba 
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy
 
-# 5. Lightsetup → 1999 (Charli XCX & Troye Sivan)
+# 5. LightItUp → 1999 (Charli XCX & Troye Sivan)
 # Custom Song: 1999
 # Artist: Charli XCX & Troye Sivan
 # Album: (single)
@@ -97,9 +97,9 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5  
 # Genre: Pop / Synth-pop
 # BPM: 124
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352     --target Lightsetup     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy
 
-# 6. Whatcat → FANCY (TWICE)
+# 6. WhatTheCat → FANCY (TWICE)
 # Custom Song: FANCY
 # Artist: TWICE
 # Album: Fancy You
@@ -109,5 +109,5 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352  
 # Genre: K-Pop / Pop
 # BPM: 132
 # Difficulties: 5/5 (Easy through Expert+) [Normal, Hard, Expert, Expert+]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 47f3     --target Whatcat     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 47f3     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy
 ```

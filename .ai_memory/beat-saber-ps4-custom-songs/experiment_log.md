@@ -433,3 +433,56 @@ metadata:
 
 **Next steps:** User can now test any pack deployment using the corrected docs/scripts with verified custom song BeatSaver MAP IDs. CI/release build audit pending.
 
+
+### Experiment 205: Camelia Pack Conversion Verified with Correct Targets + Custom Song MAP_IDs (2026-09-03)
+
+**Date:** 2026-09-03
+
+**What was attempted:** User tested the first Camelia pipeline command and found: (1) desync issue with Sexy Socialite (notes too slow) — this was caused by using the WRONG BeatSaver MAP_ID (target DLC song instead of custom replacement); (2) two songs (1999, FANCY) failed with "Template bundle not found" — this was caused by wrong `--target` slot names not matching `beat_saber_song_ids.json`.
+
+**Root causes identified:**
+1. **Desync:** Pipeline was downloading `b342` (Crystallized by Camellia - the TARGET song) instead of `6f1f` (Sexy Socialite by Chromeo - the CUSTOM replacement). Audio and beatmap from different sources = desync.
+2. **Missing template bundles:** Documentation used wrong slot names (`Cyclehit` → `CycleHit`, `ExitEarth` → `ExitThisEarthsAtomosphere`, `Lightsetup` → `LightItUp`, `Whatcat` → `WhatTheCat`). The `--target` must match exact `songID` from `beat_saber_song_ids.json`.
+
+**Fix applied:**
+- Updated Camelia docs/scripts with correct `--target` values from `beat_saber_song_ids.json`
+- Verified all 6 Camelia custom songs now convert successfully:
+  - Crystallized → `6f1f` (Sexy Socialite) ✅
+  - CycleHit → `111fd` (Jealous) ✅
+  - ExitThisEarthsAtomosphere → `115ba` ('Roni Got Me Stressed Out) ✅
+  - Ghost → `37d5` (Green Light Remix) ✅
+  - LightItUp → `5352` (1999) ✅
+  - WhatTheCat → `47f3` (FANCY) ✅
+
+**Key findings:**
+- All 6 conversions complete with full mode mapping (Standard, OneSaber, NoArrows, 90Degree)
+- Empty Easy maps rescued via donor clone (Hard/Expert)
+- V3 schema normalization applied (added missing arrays)
+- Bundles deployed to PS4 with correct naming (`*_v3.bundle`)
+- Pipeline v0.5328: 571/571 tests pass
+
+**Next steps:** User should test all 6 Camelia songs in-game to verify sync and mode availability.
+
+
+### Experiment 206: Verified All Pack Targets Match beat_saber_song_ids.json (2026-09-03)
+
+**Date:** 2026-09-03
+
+**What was attempted:** Verified all `--target` slot names in documentation match the exact `songID` values from `beat_saber_song_ids.json` across all 5 music packs.
+
+**Confirmed correct targets for each pack:**
+
+**Britney Spears (11 songs):** BabyOneMoreTime, Circus, GimmeMore, ImASlave4U, MeAgainstTheMusic, OopsIDidItAgain, Overprotected, Scream&Shout, TillTheWorldEnds, Toxic, Womanizer ✅
+
+**Rolling Stones (11 songs):** Angry, BiteMyHeadOff, CantYouHearMeKnocking, GimmeShelter, ICantGetNoSatisfaction, LiveByTheSword, MessItUp, PaintItBlack, SugarSoaker, SympathyForTheDevil, WholeWideWorld ✅
+
+**Lizzo (9 songs):** 2BeLoved, AboutDamnTime, CuzILoveYou, EverybodysGay, GoodAsHell, Juice, Tempo, TruthHurts, Worship ✅
+
+**Billie Eilish (10 songs):** AllTheGoodGirlsGoToHell, BadGuy, Bellyache, BuryAFriend, HappierThanEver, IDidntChangeMyNumber, NDA, ThereforeIAm, 2BeLoved (duplicate slot), AboutDamnTime (duplicate slot) ✅
+
+**Camelia/Chromeo (6 songs) — FIXED in Exp 205:** Crystallized, CycleHit, ExitThisEarthsAtomosphere, Ghost, LightItUp, WhatTheCat ✅
+
+**Key finding:** The Camelia pack was the only one with mismatched targets in the documentation. All other packs already had correct targets matching `beat_saber_song_ids.json`. The Camelia fixes (Exp 205) resolved the "Template bundle not found" errors for 4 of 6 songs.
+
+**Tests:** 571/571 pass (pipeline v0.5328)
+
