@@ -36,12 +36,24 @@ from full_custom_song_pipeline import (
     _get_remote_song_metadata_path,
     _load_local_song_metadata,
     load_bpm_regions,
+    detect_song_modes,
+    build_mode_mapping,
+    GAME_CHARACTERISTIC_MODES,
     DIFFICULTIES,
     PROJECT_ROOT,
     REDIRECT_CONFIG_FILENAME,
     FEATURES_FILENAME,
     SONG_METADATA_FILENAME,
     SONG_IDS_FILENAME,
+    DEFAULT_AUDIO_CODEC,
+    DEFAULT_PAD_TO_SIZE,
+    DEFAULT_MODE_MAPPING,
+    DEFAULT_CONVERT_TO_V3,
+    DEFAULT_FEATURES,
+    resolve_audio_codec,
+    resolve_pad_to_size,
+    resolve_mode_mapping,
+    resolve_convert_to_v3,
 )
 
 
@@ -200,8 +212,47 @@ class TestConvertV2ToV3:
         }
         result = convert_v2_to_v3(v2)
         assert len(result['basicBeatmapEvents']) == 2
-        assert result['basicBeatmapEvents'][0]['t'] == 0
+        assert result['basicBeatmapEvents'][0]['et'] == 0
         assert result['basicBeatmapEvents'][0]['i'] == 1
+        assert result['basicBeatmapEvents'][1]['et'] == 4
+
+    def test_rotation_events_passed_through(self):
+        """V2 spawn-rotation events (types 14/15) become V3 rotationEvents."""
+        v2 = {
+            "_notes": [],
+            "_events": [
+                {"_time": 2.0, "_type": 14, "_value": 3},  # early, 15° CCW (left)
+                {"_time": 9.0, "_type": 12, "_value": 1},   # laser speed — stays basic
+                {"_time": 9.5, "_type": 15, "_value": 4},   # late, 15° CW (right)
+            ]
+        }
+        result = convert_v2_to_v3(v2)
+        assert result['rotationEvents'] == [
+            {"b": 2.0, "e": 0, "r": -15},
+            {"b": 9.5, "e": 1, "r": 15},
+        ]
+        assert [e['et'] for e in result['basicBeatmapEvents']] == [12]
+
+    def test_rotation_value_enumeration(self):
+        """Every V2 rotation value maps to its signed degree delta."""
+        v2 = {
+            "_notes": [],
+            "_events": [
+                {"_time": float(i), "_type": 15, "_value": v}
+                for i, v in enumerate((0, 1, 2, 3, 4, 5, 6, 7))
+            ]
+        }
+        result = convert_v2_to_v3(v2)
+        assert [e['r'] for e in result['rotationEvents']] == \
+            [-60, -45, -30, -15, 15, 30, 45, 60]
+        assert all(e['e'] == 1 for e in result['rotationEvents'])
+        assert result['basicBeatmapEvents'] == []
+
+    def test_no_events_produce_empty_rotation_list(self):
+        v2 = {"_notes": []}
+        result = convert_v2_to_v3(v2)
+        assert result['rotationEvents'] == []
+        assert result['basicBeatmapEvents'] == []
 
     def test_version_field(self):
         v2 = {"_notes": []}
@@ -248,10 +299,11 @@ class TestSelectBeatmapFile:
         result = _select_beatmap_file("Hard", files)
         assert result == "Hard90Degree.dat"
 
-    def test_360degree_last_resort(self):
+    def test_360degree_excluded(self):
+        """360Degree files are always excluded (unsupported on PS4 camera)."""
         files = ["Hard360Degree.dat"]
         result = _select_beatmap_file("Hard", files)
-        assert result == "Hard360Degree.dat"
+        assert result is None
 
     def test_ignore_non_standard_suppresses_tier4(self):
         files = ["Hard90Degree.dat", "Hard360Degree.dat"]
@@ -492,21 +544,21 @@ class TestBuildBeatmapLevelSOBlob:
         assert found, f"BPM {bpm} not found in blob"
 
     def test_preview_mode_count(self):
-        """Should have 5 preview modes."""
+        """Mode count integer should be stored correctly at the expected offset (4 modes)."""
         diff_data = b'\x00' * (5 * 36)
         blob = _build_beatmap_level_so_blob(
             song_name="T", song_sub_name="", song_author="A",
             level_author="M", bpm=120.0, preview_diff_count=5,
             diff_data=diff_data,
         )
-        # 5 modes at the end: each has 4 (fileID) + 8 (pathID) + 4 (diff_count) + 180 (5*36) = 196 bytes
-        # Total mode data = 5 * 196 = 980 + 4 (count) = 984
-        # Count should be 5
+        # 4 modes at the end: each has 4 (fileID) + 8 (pathID) + 4 (diff_count) + 180 (5*36) = 196 bytes
+        # Total mode data = 4 * 196 = 784 + 4 (count) = 788
+        # Count should be 4
         # Find it by scanning backwards from end
-        total_mode_size = 5 * (4 + 8 + 4 + 5 * 36) + 4
+        total_mode_size = 4 * (4 + 8 + 4 + 5 * 36) + 4
         count_offset = len(blob) - total_mode_size
         count = struct.unpack_from('<i', blob, count_offset)[0]
-        assert count == 5
+        assert count == 4
 
     def test_level_id_in_blob(self):
         """The level_id string should appear in the blob."""
@@ -615,8 +667,85 @@ class TestFeaturesConfigPaths:
 
 
 # ======================================================================
+# Default Behavior Resolution (v0.5314: safe-by-default pipeline)
+# ======================================================================
+class TestDefaultAudioCodec:
+    """Test the default-safe audio codec resolution."""
+
+    def test_default_is_pcm16(self):
+        assert DEFAULT_AUDIO_CODEC == 'pcm16'
+
+    def test_no_flags_returns_pcm16(self):
+        assert resolve_audio_codec() == 'pcm16'
+
+    def test_hevag_flag(self):
+        assert resolve_audio_codec(hevag=True) == 'hevag'
+
+    def test_vorbis_flag(self):
+        assert resolve_audio_codec(vorbis=True) == 'vorbis'
+
+    def test_hevag_takes_precedence_over_vorbis(self):
+        assert resolve_audio_codec(hevag=True, vorbis=True) == 'hevag'
+
+
+class TestDefaultPadToSize:
+    """Test the default-safe FSB5 padding resolution (no truncation by default)."""
+
+    def test_default_is_no_pad(self):
+        assert DEFAULT_PAD_TO_SIZE == 0
+
+    def test_no_flag_returns_zero(self):
+        assert resolve_pad_to_size() == 0
+
+    def test_pad_fsb5_restores_original_size(self):
+        assert resolve_pad_to_size(pad_fsb5=True) == 12305632
+
+    def test_pad_fsb5_truncation_guard(self):
+        # The dangerous old default (12MB truncation) must be opt-in only
+        assert resolve_pad_to_size(pad_fsb5=True) > resolve_pad_to_size()
+
+
+class TestDefaultModeMapping:
+    """Test that beatmap mode mapping is ON by default."""
+
+    def test_default_is_enabled(self):
+        assert DEFAULT_MODE_MAPPING is True
+
+    def test_no_flag_returns_enabled(self):
+        assert resolve_mode_mapping() is True
+
+    def test_disable_flag_turns_off(self):
+        assert resolve_mode_mapping(disable_beatmap_mode_mapping=True) is False
+
+
+class TestDefaultConvertToV3:
+    """Test that V2->V3 conversion is ON by default."""
+
+    def test_default_is_enabled(self):
+        assert DEFAULT_CONVERT_TO_V3 is True
+
+    def test_no_flag_returns_enabled(self):
+        assert resolve_convert_to_v3() is True
+
+    def test_no_convert_flag_turns_off(self):
+        assert resolve_convert_to_v3(no_convert_to_v3=True) is False
+
+
+# ======================================================================
 # Features Config Loading / Saving
 # ======================================================================
+class TestDefaultFeaturesRuntimeOnly:
+    """features.json must hold ONLY runtime plugin flags (read at startup on PS4).
+    Build-time pipeline features (e.g. mode mapping) are CLI options, not runtime flags."""
+
+    def test_mode_mapping_is_not_a_runtime_flag(self):
+        assert 'enable_beatmap_mode_mapping' not in DEFAULT_FEATURES
+
+    def test_runtime_flags_present(self):
+        assert DEFAULT_FEATURES['enable_custom_song_replacements'] is True
+        assert DEFAULT_FEATURES['enable_song_metadata_modification'] is True
+
+
 class TestLoadLocalFeatures:
     """Test features config loading."""
 
@@ -788,3 +917,209 @@ class TestDifficultyNames:
     def test_standard_difficulties(self):
         expected = ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']
         assert DIFFICULTIES == expected
+
+
+# ======================================================================
+# Beatmap Mode Detection
+# ======================================================================
+class TestDetectSongModes:
+    """Test detect_song_modes() with various beatmap file arrangements."""
+
+    def test_bare_standard_files(self, tmp_dir):
+        """Bare .dat files (no mode suffix) are detected as Standard."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}.dat"), 'w') as f:
+                json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert len(modes['Standard']) == 5
+
+    def test_standard_suffix_files(self, tmp_dir):
+        """Files with Standard suffix are detected."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert len(modes['Standard']) == 5
+
+    def test_one_saber_suffix(self, tmp_dir):
+        """ExpertPlusOneSaber.dat is detected as OneSaber/ExpertPlus."""
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'ExpertPlus' in modes['OneSaber']
+
+    def test_one_saber_prefix(self, tmp_dir):
+        """OneSaberExpert.dat (prefix-style) is detected as OneSaber/Expert."""
+        with open(os.path.join(tmp_dir, "OneSaberExpert.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'Expert' in modes['OneSaber']
+
+    def test_multiple_modes(self, tmp_dir):
+        """Song with Standard + OneSaber + 360Degree is detected completely
+        (360Degree is excluded — unsupported on PS4)."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({}, f)
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Expert360Degree.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Normal360Degree.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes and len(modes['Standard']) == 5
+        assert 'OneSaber' in modes and modes['OneSaber'] == ['ExpertPlus']
+        assert '360Degree' not in modes
+
+    def test_alias_single_saber(self, tmp_dir):
+        """SingleSaber is aliased to OneSaber."""
+        with open(os.path.join(tmp_dir, "ExpertPlusSingleSaber.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'SingleSaber' not in modes
+
+    def test_excludes_info_lightshow(self, tmp_dir):
+        """Info.dat, BPMInfo.dat, and Lightshow files are excluded."""
+        with open(os.path.join(tmp_dir, "Info.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "BPMInfo.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "LightshowExpert.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "AudioData.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert modes == {} or 'Standard' not in modes
+
+    def test_empty_dir(self, tmp_dir):
+        """Empty directory returns empty dict."""
+        modes = detect_song_modes(tmp_dir)
+        assert modes == {}
+
+    def test_legacy_mode(self, tmp_dir):
+        """Legacy files (from official songs) are detected as Standard."""
+        with open(os.path.join(tmp_dir, "EasyLegacy.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert modes.get('Standard') == ['Easy']
+
+    def test_beatmap_dot_format(self, tmp_dir):
+        """Expert.beatmap.dat format is detected as Standard/Expert."""
+        with open(os.path.join(tmp_dir, "ExpertPlus.beatmap.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert 'ExpertPlus' in modes['Standard']
+
+    def test_no_arrows(self, tmp_dir):
+        """NoArrows mode detection."""
+        with open(os.path.join(tmp_dir, "HardNoArrows.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'NoArrows' in modes
+        assert modes['NoArrows'] == ['Hard']
+
+    def test_lawless_alias(self, tmp_dir):
+        """Lawless is aliased to NoArrows."""
+        with open(os.path.join(tmp_dir, "ExpertLawless.dat"), 'w') as f:
+            json.dump({}, f)
+        modes = detect_song_modes(tmp_dir)
+        assert 'NoArrows' in modes
+        assert 'Lawless' not in modes
+
+
+# ======================================================================
+# Mode Mapping Builder
+# ======================================================================
+class TestBuildModeMapping:
+    """Test build_mode_mapping() with various fallback scenarios."""
+
+    def test_standard_only(self):
+        """Only Standard detected — all modes resolved via fallback chain."""
+        modes = {"Standard": ["Easy", "Normal", "Hard", "Expert", "ExpertPlus"]}
+        result = build_mode_mapping(modes)
+        assert result == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_one_saber_detected(self):
+        """Standard + OneSaber detected — both enabled."""
+        modes = {
+            "Standard": ["Easy", "Normal", "Hard", "Expert", "ExpertPlus"],
+            "OneSaber": ["ExpertPlus"],
+        }
+        result = build_mode_mapping(modes)
+        assert "Standard" in result
+        assert "OneSaber" in result
+
+    def test_all_four_modes_detected(self):
+        """All 4 supported modes detected — all enabled (360Degree excluded)."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "OneSaber": list(DIFFICULTIES),
+            "NoArrows": list(DIFFICULTIES),
+            "90Degree": list(DIFFICULTIES),
+        }
+        result = build_mode_mapping(modes)
+        assert result == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_noarrows_falls_back_standard(self):
+        """NoArrows not detected — falls back to Standard."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+        }
+        result = build_mode_mapping(modes)
+        # NoArrows not detected, fallback chain: NoArrows←Standard
+        assert "NoArrows" in result  # resolved via fallback
+
+    def test_360degree_never_enabled(self):
+        """360Degree is never enabled even if files are detected."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "360Degree": ["Expert", "Hard"],
+        }
+        result = build_mode_mapping(modes)
+        assert "360Degree" not in result
+        assert set(result) <= set(GAME_CHARACTERISTIC_MODES)
+
+    def test_custom_fallback_90_to_standard(self):
+        """Custom fallback 90Degree=Standard."""
+        modes = {"Standard": list(DIFFICULTIES)}
+        result = build_mode_mapping(modes, fallback_mode_map=["90Degree=Standard"])
+        assert "90Degree" in result
+
+    def test_custom_fallback_noarrows_skip(self):
+        """Custom fallback NoArrows=Standard."""
+        modes = {"Standard": list(DIFFICULTIES)}
+        result = build_mode_mapping(modes, fallback_mode_map=["NoArrows=Standard"])
+        assert "NoArrows" in result
+
+    def test_empty_detected(self):
+        """Empty detected modes returns just Standard."""
+        result = build_mode_mapping({})
+        assert result == ["Standard"]
+
+    def test_partial_detected(self):
+        """Only OneSaber detected without Standard.
+        Standard is always present, so all other modes resolve via fallback."""
+        modes = {"OneSaber": ["Expert"]}
+        result = build_mode_mapping(modes)
+        assert result == list(GAME_CHARACTERISTIC_MODES)
+        # OneSaber resolved from detected
+        # NoArrows, 90Degree resolved via Standard fallback
+
+    def test_noarrows_and_90degree_detected(self):
+        """NoArrows and 90Degree detected, but not OneSaber."""
+        modes = {
+            "Standard": list(DIFFICULTIES),
+            "NoArrows": ["Easy", "Normal", "Hard", "Expert"],
+            "90Degree": ["Normal"],
+        }
+        result = build_mode_mapping(modes)
+        assert "NoArrows" in result
+        assert "90Degree" in result
+        assert "OneSaber" in result  # falls back to Standard

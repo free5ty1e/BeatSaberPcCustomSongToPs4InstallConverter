@@ -4,6 +4,107 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8040 (RE-RESTORED to a8a06f0)] — 2026-08-18
+### Reverted
+- **Startup-crash fix (Exp 193):** after Exp 192 a different model regressed `src/main.cpp` (commits `311c6ff` v0.8049, `9326177`/`a47918e` v0.8050 360Degree purge, `e18921b` re-enabled RAM mode injection) → `cb2ed1a` instant crash at startup with NO plugin notification. Chris's manual revert to v0.8040 (`298bbd2`) still crashed (corrupted, non-baseline source).
+- **Restored `src/main.cpp` to the exact stable baseline `a8a06f0`** (the v0.8051-parent used successfully across Exp 176–192, and in the Aug-17 clean boot). GoldHEN Detour API hooks for fopen/open/close + TMP_Text/MoveNext metadata hooks; `enable_beatmap_mode_mapping` ignored (no RAM scan, no freeze, no crash). Rebuilt → valid FSELF (105,200 B), deployed to `/data/GoldHEN/plugins/`.
+- **Asset layer verified clean** (so the revert is the real fix): catalog dataIndexes 0 invalid, all 4 patched packs + the typo-hash duplicate load in UnityPy, `redirects.json` 43 entries sane, 7 "missing-source" slots still have `*_v3.bundle` on PS4.
+
+## [v0.8040 (RESTORED)] — 2026-08-06
+### Reverted
+- **Startup-crash fix:** v0.8050/v0.8051 caused an **instant crash at launch with no plugin notification** (Exp 176). Root cause: the v0.8050 "cleanup" rewrote `src/main.cpp` to use a **manual 12-byte `memcpy` absolute-jump hook** (`install_hook` on `sys_open`) and re-enabled `src/hooks.cpp` in the Makefile (it had been `filter-out`'d in every stable build). Writing over the live `open` prologue without a trampoline → CE-34878-0. The `cb2ed1a` `sceKernelMprotect` attempt did not help.
+- **Restored plugin source to the exact v0.8051-parent baseline `a8a06f0` (v0.8040):** `src/main.cpp` (795 lines, GoldHEN `Detour_Construct`/`Detour_DetourFunction` API for fopen/open/close + TMP_Text/MoveNext metadata hooks), `src/hooks.cpp` (excluded from build again), `Makefile` (`filter-out src/crt_patch.cpp src/hooks.cpp src/main_printf_backup.cpp`).
+- Build: 88,752 bytes. All 365 tests pass. Deployed to PS4.
+### Removed
+- Legacy memory-scan machinery was NOT reintroduced — v0.8040 already predates the Phase 2 scan experiments (Exp 160+). The mode-mapping feature flag (`enable_beatmap_mode_mapping`) is simply ignored by v0.8040 (no scan, no freeze, no crash).
+
+## [v0.8051] — 2026-08-04
+### Changed
+- **Removed legacy memory injection scan** — Cleaned all memory-scanning logic and scan-worker threads from `src/main.cpp`, fixing the multi-minute startup freeze.
+- Version bump v0.8050 → v0.8051.
+- ⚠️ **REVERTED 2026-08-06** — this build crashed Beat Saber instantly at startup (manual `memcpy` hook architecture). See v0.8040 (RESTORED) above.
+
+## [v0.8050] — 2026-08-04
+### Changed
+- **Purged all 360Degree mode support** across plugin (`src/main.cpp`), pipeline, tools, and test suites, aligning with PS4 physical single-camera (~90°) tracking limitations.
+- Retained 4 valid modes: `Standard`, `OneSaber`, `NoArrows`, `90Degree`, gated behind the existing `enable_beatmap_mode_mapping` / `g_feature_beatmap_mode_mapping` feature flag.
+- Version bump v0.8049 → v0.8050. All tests passing.
+
+## [v0.8049] — 2026-08-03
+### Changed
+- **Removed strict bundle-open gate on MoveNext scan trigger** — v0.8048's `g_mode_pack_last_open` bundle-open guard prevented the scan from firing when navigating song lists because the pack bundle open happened before the final cell render sequence. Moving to v0.8049 allows the scan to fire immediately on the first MoveNext occurrence without strict dependency on a subsequent pack bundle open event.
+- **Audio preview preservation** — Verified that synchronous heap scans inside `open_hook` break audio preview streaming threads; mode scan triggering is kept strictly decoupled in `MoveNext` and song-start hooks.
+- Version bump v0.8048 → v0.8049. Build 105,120 bytes. 361/361 pytest pass.
+### Changed
+- **Scan trigger timing fix (v0.8047 test result: scan fired before any pack BeatmapLevelSO was deserialized)** — the v0.8047 log (`v0.8047_scan_diag.txt`, 893 lines) proved the root cause was **timing, not scan logic or offsets**: the scan ran from the FIRST MoveNext call (open #731), but the selected pack's bundle only (re)opened at `[OPEN #792]`/`#794` — AFTER all 22 song cells had rendered. Every BeatmapLevelSO offset (0x18/0x20/0x98, verified against `dump.cs` TypeDefIndex 11680) was correct; the objects simply didn't exist in the GC heap yet. So v0.8048:
+  - **Tracked pack data loads** — `open_hook` now records the last `*_pack_assets_all_*.bundle` open that happens **after** the first MoveNext (`g_mode_pack_last_open`). Startup catalog opens (before any MoveNext) only CRC-check bundles and are ignored.
+  - **Gated MoveNext trigger** — `mode_try_patch_from_move_next` only fires the scan when a fresh pack data load occurred since the last scan (`g_mode_pack_last_open > g_mode_scan_last_open`).
+  - **Retryable failures** — `mode_patch_all` no longer permanently sets `g_mode_preview_done = -1` on the klass-not-found / no-BSL / no-charSO paths. Failures now stay retryable, bounded by `MODE_MAX_ATTEMPTS` (4). This fixes the v0.8047 one-shot bug where a single too-early scan permanently disabled the feature.
+  - **Song-start fallback trigger (v0.77-proven)** — `open_hook` also fires the scan when a `BeatmapLevelsData` path opens (custom song load), where v0.77 found 17 BSL candidates. Shares the same 4-attempt budget.
+  - **Re-entrancy guard** — `g_mode_scan_in_progress` prevents the scan from re-triggering itself through the nested `log_write` → `open_hook` calls.
+  - **MoveNext hook decoupled from metadata flag** — the hook (and mode trigger) now install and run when EITHER `song_metadata_modification` or `beatmap_mode_mapping` is on; the metadata replacement block stays gated on its own flag.
+- Version bump v0.8047 → v0.8048. Build 105,120 bytes. 361/361 pytest pass.
+
+## [v0.8047] — 2026-08-01
+### Changed
+- **Deeper mode-scan diagnostics (v0.8046 test result: all 25,443 candidates failed the preview-array check)** — v0.8046 found 12 candidates but every one was rejected by `mode_preview_arr_ok` (arrfail=25443, strfail=0). Candidate addresses (0x1C2–0x1D5xxxxx) + `lid=0x3BA3D70A...` (packed floats) identified them as **serialized pack-bundle data in RAM, not live managed objects**. v0.8047 changes the scan to prove this:
+  - **v0.77-proven pointer upper bound** — levelID/songName/authorName must be `[16MB, 512GB]` (was unbounded above) to kill float/plain-data false positives (e.g. `0x3BA3D70A3BA3D70A`).
+  - **Reordered checks** — the levelID **string extraction now runs BEFORE the preview-array check** (v0.8046 ran it after, so `strfail` was always 0 and nothing ever hit it).
+  - **Klass-hit bucketing** — counters split `klass(mod)` (0x80000000–0x90000000) vs `klass(8g)` (0x200000000–0x210000000) so the log shows which range produces the false positives.
+  - **`mode_preview_arr_ok` failure breakdown** — now returns a failure stage (1=arrptr, 2=arrklassRd, 3=arrklassRng, 4=len, 5=first, 6=elemKlass, 7=char, 8=diffs); the summary line reports counts per stage and the first 8 failures are logged with the levelID string.
+  - **Raw-object dumps** — `[MODE] raw64@0x...` logs the first 64 bytes of up to 4 candidates for manual field-offset verification against the DummyDll layout (BLS_OFFSET_* constants may be wrong for v2.04).
+- Version bump v0.8046 → v0.8047. Build 105,120 bytes. 361/361 pytest pass.
+
+## [v0.8046] — 2026-07-31
+### Fixed
+- **"BeatmapLevelSO klass not found" (v0.8045 test result)** — v0.8045 no longer crashed (syscall probing confirmed working, `prot=0x3`), but the scan found no valid objects. Two bugs fixed:
+  - **`mode_extract_string` length-selection bug** — `len = (len_10 valid && len_14 == 0) ? len_10 : len_14` always picked garbage `len_14`, because for a real IL2CPP string `len_14` is the first two UTF-16 chars combined (e.g. `0x00740053`), never 0. So every levelID extraction failed and the klass find returned nothing. Now mirrors `extract_utf16_string`'s proven fallback chain (use `len_10` unless `len_14` is a plausible length in `(0,256)`).
+  - **Scan range too narrow** — v0.8045 scanned 16MB–4GB + 8–8.25GB; v0.77's proven scan that found 17 candidates covered 16MB–64GB. Low range widened to 16MB–64GB at 1MB page reads (same ~64K syscall count as the old 4GB@64KB, so the stutter stays brief); high 8–8.25GB range kept at 64KB.
+- **1MB scan buffer moved off the stack** — `g_mode_scan_page` static global (v0.78 lesson: a 1MB stack buffer crashes the plugin).
+### Added
+- **Scan diagnostics** — `mode_find_beatmap_level_so_klass` now logs `[MODE]   cand klass=... @... ver=... lid=...` for the first 12 candidates passing the klass+version+pointer checks, plus a summary `[MODE] Scan diag: ok=N klass=N ver=N ptrs=N arrfail=N strfail=N` on failure — so the next test log shows exactly which structural check rejects candidates (and where they live).
+- **Region-jump optimization** — when a page read fails (hole/partial mapping), the scan jumps to the next mapping boundary via `sceKernelQueryMemoryProtection` instead of stepping page-by-page.
+
+## [v0.8045] — 2026-07-31
+### Fixed
+- **Instant crash when entering Solo song list (v0.8043/v0.8044 regression, root cause finally confirmed)** — both the worker-thread scan (v0.8043) and the synchronous in-hook scan (v0.8044) crashed with CE-34878-0 inside `mode_find_beatmap_level_so_klass()`. The crash log (`v0.8044_crash_sync.txt`) shows the scan started but the game died during it. Root cause: the proven-safe v0.74–v0.8008 scans ran from the **open()/redirect song-start hook** (GC quiescent), but the v0.8043/44 scans run during **song-list rendering**, when the game's GC actively throws page-protection SIGSEGV/SIGBUS faults on its own threads. Our process-wide handlers hijacked those faults → `siglongjmp` to the scan stack → instant crash, regardless of which thread ran the scan.
+- **Signal-handler memory probing eliminated entirely** — `mode_try_read()`/`mode_extract_string()`/`extract_utf16_string()` now use **`sceKernelQueryMemoryProtection`** (a real libkernel syscall that queries the mapped range + protection of an address without faulting). This removes the whole class of "process-wide handler hijacks game GC faults" crashes, including the per-call `sigaction` in `extract_utf16_string`.
+- **Safe self-test + fail-closed** — before scanning, the plugin verifies `sceKernelQueryMemoryProtection` returns sane results for a known-good address. If it's a stub (like mincore/msync), the mode scan is disabled cleanly (log message) instead of risking a crash.
+### Removed
+- `mode_install_handlers()`/`mode_restore_handlers()`/`mode_fault_handler()`, `g_mode_jmpbuf`, `g_old_segv`, `g_old_bus`, `g_mode_handlers_installed`, `g_extract_jmp_buf`, and the `<setjmp.h>`/`<signal.h>` includes.
+### Changed
+- Scan still triggers from the MoveNext hook during song-list rendering, but is now signal-free so it no longer depends on GC being quiescent.
+
+## [v0.8044] — 2026-07-31
+### Fixed
+- **Instant crash when entering Solo song list (v0.8043 regression)** — the background scan worker thread installed process-wide SIGSEGV/SIGBUS handlers; while they were active, the game's own GC page-protection faults on the main thread were hijacked and `siglongjmp`'d into the worker's stack → instant crash. Reverted to the proven v0.74–v0.8008 pattern: **synchronous scan on the game thread** inside the MoveNext hook (game pauses ~1-2s once).
+- **Per-page sigaction overhead removed** — handlers are now installed once via `mode_install_handlers()` for the whole scan and restored once by `mode_restore_handlers()`; `mode_try_read()`/`mode_extract_string()` take the fast path when handlers are already installed.
+### Changed
+- Removed the pthread worker thread and `-lpthread` from the Makefile.
+- Widened BeatmapCharacteristicSO neighbor scan from ±2MB to ±16MB (characteristic SOs live in a shared bundle and may be farther apart).
+
+## [v0.8043] — 2026-07-31
+### Fixed
+- **Mode scan trigger never fired** — v0.8042 required the runtime `BeatmapLevel.levelID` to start with `"custom/"`, but it is the original pack ID (e.g. "StartMeUp"). Trigger now fires on ANY song `BeatmapLevel` from the MoveNext hook.
+- **Patch filter skipped everything** — v0.8042 only patched `BeatmapLevelSO` objects whose `_levelID` starts with `"custom/"`; pack `BeatmapLevelSO` objects carry original IDs. Now ALL found `BeatmapLevelSO` objects are patched (every pack on this PS4 is fully custom).
+### Changed
+- **Klass discovery is structural, not anchored** — `mode_find_beatmap_level_so_klass()` no longer needs a known levelID; it finds the first object matching klass-range + version 1-50 + valid `_levelID`/`_songName`/`_songAuthorName` pointers + a structurally valid `_previewDifficultyBeatmapSets` array (new `mode_preview_arr_ok()` guard, also applied in the collector to reject false positives).
+- Added diagnostic logging of every found BeatmapLevelSO levelID/address.
+- ⚠️ **NOT USER-TESTABLE — instant crash when entering Solo** (worker-thread signal hijack). Superseded by v0.8044.
+
+## [v0.8042] — 2026-07-30
+### Added
+- Phase 2: BeatmapLevelSO memory injection for mode preview data
+- Scans IL2CPP heap for BeatmapLevelSO objects matching custom song levelID
+- Finds all 5 BeatmapCharacteristicSO by klass matching + serializedName validation
+- Builds new _previewDifficultyBeatmapSets array with 5 mode entries at runtime
+- Triggers once from MoveNext hook when first custom song cell renders
+- Gated behind g_feature_beatmap_mode_mapping (enable_beatmap_mode_mapping flag)
+
+## [v0.8041] — 2026-07-28
+### Added
+- **Feature flag `g_feature_beatmap_mode_mapping`** — parsed from `features.json` `enable_beatmap_mode_mapping` key. No runtime behavior in this release (pipeline-side only in v0.5307). Gating scaffold for Phase 2 (plugin runtime mode injection).
+
 ## [v0.8040] — 2026-07-27
 ### Fixed
 - **Case-insensitive metadata matching** — `find_metadata_replacement()` now trims trailing spaces before comparison. Game uses different casing than expected (e.g. "all the good girls go to hell" vs "All The Good Girls Go to Hell", "Mess it Up" vs "Mess It Up").

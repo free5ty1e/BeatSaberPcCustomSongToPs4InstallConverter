@@ -714,3 +714,111 @@ class TestScanBeatmapMaxBeatV2V3:
             json.dump(data, f)
 
         assert _scan_beatmap_max_beat(tmp_dir) == 5.0
+
+
+# ======================================================================
+# Exp 200 (v0.5328): V3 schema normalization + empty-beatmap rescue
+# ======================================================================
+class TestV3SchemaNormalization:
+    """Minimal-schema V3 maps crash the PS4 at gameplay load (Exp 200: Chromeo
+    V4→V3 reconstruction emitted 8-key maps; game needs the full schema)."""
+
+    def test_normalize_fills_missing_arrays(self):
+        from full_custom_song_pipeline import normalize_v3_schema
+        minimal = {"version": "3.2.0", "colorNotes": [{"b": 1, "x": 1, "y": 0, "c": 0, "d": 0}]}
+        out = normalize_v3_schema(minimal)
+        for key in ("basicBeatmapEvents", "waypoints", "lightColorEventBoxGroups",
+                    "obstacles", "bpmEvents", "chains", "arcs"):
+            assert isinstance(out[key], list), f"{key} should be a filled list"
+        assert out["useNormalEventsAsCompatibleEvents"] is True
+        assert "customData" in out
+        assert isinstance(out["basicEventTypesWithKeywords"], dict)
+
+    def test_normalize_is_idempotent(self):
+        from full_custom_song_pipeline import normalize_v3_schema
+        m = {"version": "3.2.0", "colorNotes": []}
+        once = normalize_v3_schema(dict(m))
+        twice = normalize_v3_schema(once)
+        assert sorted(once.keys()) == sorted(twice.keys())
+
+    def test_normalize_preserves_existing_content(self):
+        from full_custom_song_pipeline import normalize_v3_schema
+        full = {"version": "3.2.0", "colorNotes": [{"b": 2}], "obstacles": [{"b": 1}],
+                "useNormalEventsAsCompatibleEvents": False}
+        out = normalize_v3_schema(full)
+        assert out["colorNotes"] == [{"b": 2}]
+        assert out["obstacles"] == [{"b": 1}]
+        assert out["useNormalEventsAsCompatibleEvents"] is False
+
+    def test_beatmap_is_empty(self):
+        from full_custom_song_pipeline import beatmap_is_empty
+        assert beatmap_is_empty({"colorNotes": [], "bombNotes": [], "obstacles": []})
+        assert not beatmap_is_empty({"colorNotes": [{"b": 1}]})
+
+
+class TestEmptyBeatmapRescue:
+    """Chromeo Easy maps decoded with zero notes; pipeline must clone playable
+    content from the closest populated Standard difficulty."""
+
+    def test_find_populated_beatmap_prefers_normal(self, tmp_path):
+        from full_custom_song_pipeline import _find_populated_beatmap
+        (tmp_path / "EasyStandard.dat").write_text(json.dumps(
+            {"version": "3.2.0", "colorNotes": []}))
+        (tmp_path / "NormalStandard.dat").write_text(json.dumps(
+            {"version": "3.2.0", "colorNotes": [{"b": 1, "x": 0, "y": 1, "c": 0, "d": 1}]}))
+        donor = _find_populated_beatmap(str(tmp_path), "EasyStandard.dat")
+        assert donor is not None and "NormalStandard" in donor
+
+    def test_find_populated_skips_mode_files(self, tmp_path):
+        from full_custom_song_pipeline import _find_populated_beatmap
+        # Only mode files present — none qualify as Standard donors
+        (tmp_path / "ExpertOneSaber.dat").write_text(json.dumps(
+            {"version": "3.2.0", "colorNotes": [{"b": 1}]}))
+        assert _find_populated_beatmap(str(tmp_path), "EasyStandard.dat") is None
+
+    def test_find_populated_skips_empty_donors(self, tmp_path):
+        from full_custom_song_pipeline import _find_populated_beatmap
+        (tmp_path / "NormalStandard.dat").write_text(json.dumps(
+            {"version": "3.2.0", "colorNotes": []}))
+        (tmp_path / "HardStandard.dat").write_text(json.dumps(
+            {"version": "3.2.0", "colorNotes": [{"b": 5}]}))
+        donor = _find_populated_beatmap(str(tmp_path), "EasyStandard.dat")
+        assert donor is not None and "HardStandard" in donor
+
+
+class TestRoniSourceRegression:
+    """The actual Exp 200 crashing source: ExitThisEarthsAtomosphere backout.
+    After the fix, injecting its files must yield full-schema, non-empty maps."""
+
+    RONI = "/workspace/beat-saber-ps4-custom-songs/songs/chromeo_backout/ExitThisEarthsAtomosphere"
+
+    @pytest.mark.skipif(not os.path.isdir(RONI), reason="Chromeo backout sources not present")
+    def test_roni_easy_gets_rescued(self, tmp_path):
+        import shutil
+        from full_custom_song_pipeline import (
+            normalize_v3_schema, beatmap_is_empty, _find_populated_beatmap,
+            is_v2_beatmap,
+        )
+        workdir = tmp_path / "roni"
+        shutil.copytree(self.RONI, str(workdir))
+        empty_file = "EasyStandard.dat"
+        data = json.load(open(workdir / empty_file))
+        assert beatmap_is_empty(data), "precondition: Roni Easy is empty in source"
+        donor = _find_populated_beatmap(str(workdir), empty_file)
+        assert donor is not None, "must find a populated donor among Roni diffs"
+        ddata = json.load(open(donor))
+        if is_v2_beatmap(ddata):
+            from full_custom_song_pipeline import convert_v2_to_v3
+            ddata = convert_v2_to_v3(ddata)
+        normalize_v3_schema(ddata)
+        data.update({k: ddata[k] for k in ("colorNotes", "bombNotes", "obstacles")})
+        assert not beatmap_is_empty(data)
+
+    @pytest.mark.skipif(not os.path.isdir(RONI), reason="Chromeo backout sources not present")
+    def test_roni_normal_normalized_has_events_field(self):
+        from full_custom_song_pipeline import normalize_v3_schema
+        data = json.load(open(os.path.join(self.RONI, "HardStandard.dat")))
+        assert "basicBeatmapEvents" not in data, "precondition: Hard lacks events array"
+        normalize_v3_schema(data)
+        assert isinstance(data["basicBeatmapEvents"], list)
+        assert "waypoints" in data

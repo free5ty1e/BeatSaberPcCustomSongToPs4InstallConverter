@@ -45,3 +45,32 @@ Custom environment names from BeatSaver (e.g., `FHMPlat`, `Kwangya_Portal`) do n
 
 - [[toolchain-and-build]] — For UABEA and asset patching tools
 - [[assetbundle-structure]] — For how AssetBundles are structured
+
+---
+
+## PS4 Process Signal Handling — CRITICAL (Exp 165–166, 2026-07-31)
+
+**Never install process-wide SIGSEGV/SIGBUS handlers for memory probing while the game is actively rendering/allocating (e.g. the song list). Doing so crashes the game — REGARDLESS of which thread runs the scan.**
+
+### Why
+
+- `sigaction()` signal dispositions are **per-process**, not per-thread.
+- Unity's garbage collector (and other subsystems) use page-protection signals (SIGSEGV/SIGBUS via mprotect) internally for write barriers / dirty tracking.
+- While our handlers are installed, a GC page-protection fault on the **main game thread** is delivered to *our* handler → it calls `siglongjmp()` to a scan `sigjmp_buf` → the main thread resumes executing in the wrong stack frame → catastrophic corruption → instant crash (CE-34878-0), no error dialog.
+
+### Evidence
+
+| Version | Approach | Result |
+|---------|----------|--------|
+| v0.74–v0.8008 | Synchronous scan in **song-start redirect hook** (GC quiescent), persistent handlers | ✅ Found 17 candidates, no crash |
+| v0.8043 | Scan in detached pthread, per-call sigaction | ❌ Instant crash on entering Solo song list (GC active) |
+| v0.8044 | **Synchronous** scan in MoveNext hook (song-list render), persistent handlers | ❌ **Crash again at the same point** — log ends at `[MODE] Starting BeatmapLevelSO memory scan...`. The thread is irrelevant; the handlers during active rendering are the hazard. |
+| v0.8045 | Signal-free: `sceKernelQueryMemoryProtection` syscall reads | 🔲 Deployed, awaiting test |
+
+### Rules
+
+1. **Prefer `sceKernelQueryMemoryProtection` for safe reads** — a real libkernel syscall that reports the mapped range `[start,end)` + protection of an address WITHOUT faulting. Self-test it once against a known-good address and fail-closed (disable the scan) if it's a stub — `mincore`/`msync` are stubs on PS4, but query-memory-protection is a real, commonly-used syscall.
+2. If a fault-catching read is truly unavoidable, run it ONLY at quiescent moments — the open()/redirect song-start hook, as v0.74–v0.8008 proved safe. **Never during song-list rendering.**
+3. `sigsetjmp`/`siglongjmp` must be set up and executed on the **same thread** (a `sigjmp_buf` is thread-stack-scoped).
+4. **Background threads created from hooks are unsafe** (v0.8016, `scePthreadCreate`).
+5. The v0.8045 plugin removed ALL signal handlers: `mode_try_read()`, `mode_extract_string()`, and `extract_utf16_string()` all go through `sceKernelQueryMemoryProtection`.

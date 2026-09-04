@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION)
-pipeline_version: "0.5306" # in beat_saber_deluxe/VERSION
+plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline a8a06f0 (v0.8050/v0.8051 crashed at startup Exp 176; re-corrupted by Gemini regressions post-Exp-192, RE-RESTORED 2026-08-18 Exp 193)
+pipeline_version: "0.5328" # in beat_saber_deluxe/VERSION - normalize_v3_schema() fills all 17 V3 keys, empty-difficulty rescue, color/direction restore (c alternates 0/1, d cycles 0-7), BPM timing fix (m preserved, b=0); 571/531 tests; all 5 music pack docs with verified BeatSaver MAP IDs (Exp 203)
 
 # Platform Constraints
 target_platform: PS4
@@ -20,11 +20,15 @@ toolchain: OpenOrbis PS4 Toolchain (devcontainer pre-installed)
 
 # Audio Format (IMPORTANT — non-negotiable)
 required_audio_format: PCM16 FSB5 (codec=2)
-required_flags: "--pcm16 --no-pad --convert-to-v3"
+required_flags: "--pcm16 --no-pad --convert-to-v3"   # NOW THE DEFAULTS (v0.5314+); kept as no-op compat flags
 why_pcm16: >
   HEVAG is Sony proprietary (blocked), Vorbis has FMOD/libvorbis codebook mismatch (blocked).
   PCM16 is lossless and works. --no-pad because PCM16 output is often larger than original
   resource. --convert-to-v3 because Beat Saber PS4 requires V3.2.0 beatmaps.
+  v0.5314 BAKED THESE IN as defaults: a plain `--song-dir X --target Y` build now produces
+  full-length, lossless, all-modes bundles. Oppose flags if ever needed:
+  --hevag / --vorbis (codec), --pad-fsb5 (DANGER: truncates to 12MB → partial songs),
+  --no-convert-to-v3 (leave V2), --disable-beatmap-mode-mapping (Standard-only).
 
 # Key Architecture
 pipeline_script: beat_saber_deluxe/tools/full_custom_song_pipeline.py
@@ -37,13 +41,35 @@ redirect_config: redirects.json (deployed to PS4 at /data/GoldHEN/AFR/CUSA12878/
 # PS4 File Paths
 afr_base: /data/GoldHEN/AFR/CUSA12878
 afr_plugin_dir: /data/GoldHEN/plugins
-deploy_path_bundles: /data/GoldHEN/AFR/CUSA12878/{target}_v3
+deploy_path_bundles: /data/GoldHEN/AFR/CUSA12878/{slot}_v3.bundle   # exact filename; redirect VALUES MUST match (case-sensitive open(), Exp 187)
 deploy_path_config: /data/GoldHEN/AFR/CUSA12878/redirects.json
 deploy_path_metadata: /data/GoldHEN/AFR/CUSA12878/song_metadata.json
 deploy_path_plugin: /data/GoldHEN/plugins/beat_saber_deluxe.prx
 ps4_log: /data/GoldHEN/AFR/CUSA12878/bs_log.txt
 ftp_port: 2121
 
+# Deploy Naming (Exp 187 — CRITICAL)
+deploy_naming:
+  source_of_truth: _deployed_bundle_name(slot, config) in full_custom_song_pipeline.py
+  rule: >
+    Deployed bundle filename = canonical slot casing (from mass_deploy.slots, case-insensitive
+    match) + paths.afr_target_suffix. Default afr_target_suffix = "_v3.bundle" (was "_v3").
+    The plugin opens the redirect VALUE verbatim prefixed with AFR_BASE/TITLE_ID/ — open() is
+    case-sensitive, so a VALUE like "Crystallized_v3" silently serves a STALE build while the
+    fresh "crystallized_v3.bundle" sits unused. _ensure_mass_song_redirects() runs on every
+    manage_redirect_config save: keeps keys, fixes values to exact deployed names, drops stale
+    pre-.bundle entries, adds missing slots. deploy_mass_bundles uploads under
+    os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
+    has NO bundle_suffix param.
+  ps4_state: >
+    **Exp 207 (2026-09-03): UNIFIED --deploy-full FLAG FOR COMPLETE ORCHESTRATION.** Added
+    `--deploy-full` to `full_custom_song_pipeline.py` that handles complete end-to-end
+    orchestration in one command: song bundle + pack mode bundles + merged catalog +
+    redirects.json + post-deploy validation. All 5 music pack docs/scripts updated to use
+    `--deploy-full`. The Charli XCX / 1999 song (and all others) now work correctly with a
+    single command that downloads fresh from BeatSaver and handles everything. Pipeline
+    v0.5328 fully operational: 571/571 tests pass. Ready for user testing or CI/release
+    build audit.
 # Song Slot Naming
 slot_note: >
   Slots are the filename stem from BeatmapLevelsData/ (e.g. "startmeup", "Crystallized").
@@ -52,35 +78,147 @@ slot_note: >
 
 # Plugin Features
 plugin_features:
-  - open() hook: redirects file reads to AFR custom bundles
+  - open() hook: redirects file reads to AFR custom bundles (GoldHEN Detour API)
   - MoveNext() hook (RVA 0x1D377C0): modifies BeatmapLevel fields for song name/artist
+  - ⚠️ v0.8040 RESTORED 2026-08-06: v0.8050/v0.8051 rewrote main.cpp to use a manual 12-byte
+    memcpy absolute-jump hook (install_hook on sys_open) + re-enabled src/hooks.cpp in the
+    Makefile → INSTANT STARTUP CRASH (CE-34878-0, no notification). GoldHEN Detour API hooks
+    restored; hooks.cpp re-excluded via Makefile filter-out. NEVER re-enable hooks.cpp / never
+    call install_hook (see hook-failures.md).
+  - Mode mapping Phase 2 (RAM scan of _previewDifficultyBeatmapSets) = DEAD END (Exp 160-174).
+    v0.8040 ignores enable_beatmap_mode_mapping entirely (no scan, no freeze, no crash).
   - Features gated via features.json at AFR path
 feature_flags:
-  enable_custom_song_replacements: false  # gates bundle redirects
-  enable_song_metadata_modification: false # gates MoveNext() hook
+  enable_custom_song_replacements: true  # gates bundle redirects (runtime, v0.8040 reads from features.json)
+  enable_song_metadata_modification: true # gates MoveNext() hook (runtime, v0.8040 reads from features.json)
+  # NOTE (v0.5314): enable_beatmap_mode_mapping REMOVED from features.json — it was never a runtime
+  # flag; mode mapping is a BUILD-TIME pipeline feature baked into the bundle. features.json now
+  # holds exactly the 2 runtime flags the plugin reads. Deployable standalone via `--features-only`.
 
-# Camellia Pack Replacement (Most Recent Work — v0.5305)
+# Safe Defaults (v0.5314+)
+safe_defaults:
+  audio_codec: pcm16            # oppose: --hevag / --vorbis
+  pad_to_size: 0                # oppose: --pad-fsb5 (DANGER, truncates)
+  mode_mapping: true            # oppose: --disable-beatmap-mode-mapping (--skip-mode-generation keeps mapping, skips generation)
+  convert_to_v3: true           # oppose: --no-convert-to-v3
+  features_only: >
+    Standalone mode: `--features-only --set-feature key=value` applies + deploys features.json
+    then exits — no song/plugin/redirect processing. Requires --set-feature (errors otherwise).
+  resolution_helpers: resolve_audio_codec, resolve_pad_to_size, resolve_mode_mapping, resolve_convert_to_v3
+
+# Mode Generation (v0.5310, default ON since v0.5314)
+mode_generation:
+  default: >
+    Mode mapping is DEFAULT ON (v0.5314+). Pipeline AUTO-GENERATES missing
+    <Diff><Mode>.dat files (OneSaber/NoArrows/90Degree) from the Standard beatmap
+    in Step 5a, BEFORE beatmap replacement. Songs' own mode files are never overwritten.
+    Idempotent (v0.5315): re-running on a source dir with pre-existing mode files still
+    injects them as TextAssets (no Standard-clone fallback).
+  flags:
+    --skip-mode-generation: opt out of generation (mapping still applies)
+    --one-saber-min-gap: "0.25"  # min beats between same-cell arrowed notes (OneSaber)
+    --rotation-cycle-beats: "8.0" # beats per 90-degree rotation flip (90Degree)
+    --disable-beatmap-mode-mapping: Standard-only bundle (opposes the default)
+  known_gap: >
+    Mode selector in-game still shows only Standard because it reads pack-level
+    BeatmapLevelSO._previewDifficultyBeatmapSets, which the pipeline cannot inject yet
+    (UnityPy 1.25.0 ObjectReader/CAB-write blocker, Exp 177).
+  closing_gap: >
+    ✅ CLOSED (Exp 180, 2026-08-08): v0.8040 open() hook redirects aa/catalog.json (OPEN #62),
+    so we control the Addressables catalog CRC+size expectations. KEY: catalog m_Crc =
+    zlib.crc32 of the DECOMPRESSED stream, NOT the compressed file (original file CRC
+    0x63520032 vs catalog 0xdc8b314f = dec-stream CRC). Exp 179 built startmeup_pack_modes.bundle
+    (7,905,425 B, dec-stream CRC 0xe9e40bd3, blob 440->1028 B with 4 preview sets) +
+    catalog_startmeup_modes.json (only rolling-stones entry changed). Deployed + confirmed:
+    selector shows Standard/OneSaber/NoArrows for Start Me Up; 90Degree FIXED in Exp 182.
+  generalized_pack_patch: >
+    ✅ GENERALIZED (Exp 188, 2026-08-14, pipeline v0.5319): ALL 36 DLC packs now get 4 preview
+    mode sets (Standard/OneSaber/NoArrows/90Degree) x 5 difficulties via
+    tools/build_pack_mode_bundles.py (production module) + tools/full_custom_song_pipeline.py
+    pack_modes integration. 36 bundles verified in pack_modes_bundles/ (303 BeatmapLevelSOs).
+    Single merged catalog catalog_pack_modes.json (aa/catalog.json redirect) carries updated
+    m_Crc/m_BundleSize for EXACTLY the redirected packs; pack_modes redirects override the
+    old single-pack (rollingstones/startmeup) prototype. Default packs:
+    therollingstones, billieeilish, lizzo, camellia. Manifest: pack_modes_bundles/manifest.json.
+    Deps: scan data in beat_saber_song_ids.json, origin catalog at ps4_dump/.../aa/catalog.json.
+    Deploy: --deploy-pack-modes / --deploy-pack-bundle / --build-pack-modes [--force-pack-modes]
+    [--pack-modes-packs a,b]. VERIFIED locally (CRCs match); on-device deploy + boot test PENDING.
+  catalog_dataindex_crash: >
+    🔴 FOUND+FIXED+DEPLOYED (Exp 189-191, 2026-08-15/16): Exp 188 deploy CRASHED PS4 at boot
+    (crash at OPEN #74 right after catalog redirect). Root cause: catalog m_EntryDataString is a
+    binary array of 2251 x 28-byte records; rec[4] is a byte dataIndex into m_ExtraDataString
+    (138 entries have dataIndexes >= 0, rest are -1). lizzo block grew +6 B (m_Crc 7->10 digits)
+    shifting later blocks, but dataIndexes were NOT shifted -> 70/2251 pointed at garbage.
+    update_catalog_entry() now shifts every rec[4] > patched-block-start by the block-edit delta.
+    Also fixed _parse_catalog_block() to regex-parse m_Crc/m_BundleSize (comma-split broke when
+    field was block's last JSON field, stripping the closing brace). Tests config-driven: 445/445.
+    ✅ REPRODUCIBILITY (Exp 190, v0.5321): leftover "360Degree" in CHAR_PATH_IDS (pre-Exp-175
+    purge) padded 360Degree preview sets 1→5 → 10/36 packs rebuilt non-identical (4 deployed
+    packs unaffected). Removed → all 36 rebuild byte-identical. CHAR_PATH_IDS must equal
+    TARGET_MODES (4 entries), never 360Degree.
+    ✅ EXP 191 (v0.5322, 2026-08-16): "STILL crashes" root cause = the fixed catalog was NEVER
+    redeployed — PS4 still ran the broken v0.5319 catalog (md5 0eb8a27d…, 70 invalid). Deployed
+    the fixed catalog (md5 975bacca…, 0 invalid) + verified on-device. **--verify-ps4 hardened
+    with check #7**: downloads the deployed catalog and validates (a) every entry dataIndex points
+    at a type-7 block start (validate_catalog_dataindexes), (b) md5 == local build, (c) every
+    configured pack's block has patched m_Crc/m_BundleSize (validate_catalog_entries). Broken vs
+    fixed catalogs are BYTE-IDENTICAL in size — size-only checks can NEVER catch a stale catalog.
+    Also removed legacy `pack_bundle` single-pack prototype from DEFAULT config (superseded by
+    pack_modes); stale PS4 files deleted. 451/451 tests. Crash logs:
+    .ai_memory/experiment_logs/v0.5319_crash_after_packmodes_deploy.txt +
+    v0.5321_crash_after_redeploy.txt. **USER BOOT TEST PENDING**.
+  characteristic_pids: >
+    VERIFIED (Exp 182) from sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+    (CAB cb38b3e2985c65d4cf8a63437da74a89). Historical pid labels were SWAPPED repo-wide:
+    Standard=-7286399427822119286, OneSaber=-5623662769225589684,
+    NoArrows=-8583864861369561029, 90Degree=-5995858427784384822, 360Degree=4533580413116749821.
+    90Degree selector was hidden because its preview slot pointed at the 360Degree
+    characteristic (requires360=1). Each pid drives BOTH the selector button AND gameplay
+    difficulty-set lookup. ALL maps in tools/ + development/scripts corrected; regression
+    test added (test_verified_characteristic_pids). Pack bundle rebuilt + redeployed (Aug 9).
+  noarrows_bug: >
+    FIXED (Exp 181): NoArrows showed arrows instead of dots. Root cause was in `_create_text_asset_object()` 
+    — TWO bugs: (1) `type_id=0` mapped new TextAssets to MonoScript(115) instead of TextAsset(49), 
+    causing the game to skip them and fall back to Standard; (2) manual `struct.pack` used null terminators 
+    + `len+1` instead of Unity's `write_aligned_string` format (int32 length + data + 4-byte alignment), 
+    causing "read_str out of bounds" in Unity runtime. FIX: use `EndianBinaryWriter.write_aligned_string()` 
+    for m_Name, `write_int(len) + write(bytes) + align_stream(4)` for m_Script, and set `type_id` to the 
+    actual index from cab.types. Verified: all 5 NoArrows diffs have dots (d=8).
+  next_steps:
+    1. User test (Exp 186 deployed): 6 Chromeo slots, new Billie songs (Oxytocin/NDA/ThereforeIAm), 90Degree across songs, full audio lengths. Then pull + archive bs_log.txt, update song_testing_log.md
+    2. ✅ Integrate pack-patch build script into production pipeline (tools/) — DONE v0.5319 (Exp 188)
+    3. ✅ Fix PS4 boot crash from pack_modes deploy — DONE v0.5320 (Exp 189, dataIndex shift + parse fix; catalog regenerated, 444/444 tests)
+    4. ✅ Pipeline reproducibility audit — DONE v0.5321 (Exp 190): removed leftover 360Degree from CHAR_PATH_IDS → all 36 packs rebuild byte-identical from tools/build_pack_mode_bundles.py (0/36 mismatches), 445/445 tests
+    5. ✅ REDEPLOY fixed merged catalog to PS4 + verify hardening — DONE v0.5322 (Exp 191, 2026-08-16): fixed catalog deployed (md5 975bacca…, 0 invalid) + verified on-device; --verify-ps4 now validates catalog CONTENT (dataIndexes + md5 + per-pack CRC/size); stale prototype files + legacy pack_bundle default config removed; 451/451 tests
+    6. ⏳ USER BOOT TEST (Exp 191): boot Beat Saber — expect STABLE boot through catalog redirect + pack scan, then verify 4 packs' modes on Hard+; pull + archive bs_log.txt
+    7. Expand mode generation coverage (other song dirs, --skip-mode-generation, generator flags end-to-end)
+
+# Camellia Pack Replacement — Chromeo Songs (recovered from PS4 bundles, Exp 184)
+# The 6 slot sources were DELETED locally; recovered from deployed bundles via
+# /tmp/opencode/reconstruct_chromeo_src.py (audio FSB + V4 beatmaps -> V3.2.0) into
+# beat-saber-ps4-custom-songs/songs/chromeo_backout/<slot>/ (with audio.fsb).
+# Current deployed content (from song_metadata.json), NOT the old Camellia-era swaps:
 camellia_slots:
-  Crystallized: { beatSaverId: "12a", replacement: "Bloom", artist: "ODESZA" }
-  CycleHit: { beatSaverId: "133", replacement: "Powerful", artist: "Major Lazer" }
-  ExitThisEarthsAtomosphere: { beatSaverId: "156", replacement: "Red Lips", artist: "GTA / Mendus" }
-  Ghost: { beatSaverId: "1bf", replacement: "Lone Digger", artist: "Caravan Palace" }
-  LightItUp: { beatSaverId: "7e", replacement: "Batshit", artist: "Sofi Tukker" }
-  WhatTheCat: { beatSaverId: "7f", replacement: "G.O.M.D", artist: "Sickick" }
+  Crystallized: { beatSaverId: "recovered", replacement: "Sexy Socialite", artist: "Chromeo" }
+  CycleHit: { beatSaverId: "recovered", replacement: "Jealous (I Ain't With It)", artist: "Chromeo" }
+  ExitThisEarthsAtomosphere: { beatSaverId: "recovered", replacement: "'Roni Got Me Stressed Out", artist: "Chromeo" }
+  Ghost: { beatSaverId: "recovered", replacement: "Green Light (Chromeo Remix)", artist: "Lorde, Chromeo" }
+  LightItUp: { beatSaverId: "recovered", replacement: "1999", artist: "Charli XCX & Troye Sivan" }
+  WhatTheCat: { beatSaverId: "recovered", replacement: "FANCY", artist: "TWICE" }
 
-# Standard Pipeline Command (BeatSaver download + deploy)
+# Standard Pipeline Command (BeatSaver download + deploy) — NO flags needed since v0.5314
 example_command: |
   python3 tools/full_custom_song_pipeline.py \
       --download-beat-saver-song <MAP_ID> \
       --target <slot_name> \
       --song-name "Song Name" \
       --artist "Artist Name" \
-      --pcm16 --no-pad --convert-to-v3 \
       --deploy --generate-config --deploy-config
+  # (--pcm16 --no-pad --convert-to-v3 --enable-beatmap-mode-mapping are now DEFAULTS)
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "335 tests across 10 files (as of v0.5306)"
+test_count: "451 tests (as of v0.5322); +6 TestCatalogValidation (v0.5322)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
@@ -101,6 +239,7 @@ docs_files:
   - beat_saber_deluxe/docs/camellia-pack-example.md
   - beat_saber_deluxe/docs/features/custom-song-replacement.md
   - beat_saber_deluxe/docs/features/song-metadata-modification.md
+  - beat_saber_deluxe/docs/features/beatmap-mode-mapping.md
   - docs/developer-info.md
 
 # Knowledge Base
@@ -109,6 +248,17 @@ knowledge_base_index: .agent/llm-wiki-knowledge-base/index.md
 kb_note: >
   Contains 39+ pages covering audio formats, beatmap conversion, plugin architecture,
   PS4 environment, Unity/AssetBundle internals, and pipeline tooling. Read index.md first.
+
+# Experiment Log (PER-FEATURE — rotation rule §3.0)
+experiment_log_active: .ai_memory/beat-saber-ps4-custom-songs/experiment_log.md
+experiment_log_archive_dir: .ai_memory/beat-saber-ps4-custom-songs/experiment_log_archive/
+experiment_log_note: >
+  Active log holds ONLY the current feature (Generalized Pack Patch — Pack Modes, Exp 188+).
+  Prior features archived in experiment_log_archive/:
+  - experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md (Exp 1-159)
+  - experiment_log_beatmap-mode-mapping_exp160-183_2026-07-28_to_2026-08-11.md (Exp 160-183)
+  Experiment numbers are globally sequential — when rotating, archive the old
+  feature's log into experiment_log_archive/ and rewrite experiment_log.md fresh.
 
 # Git Guardrails (IMPORTANT)
 git_commit_forbidden: true  # Do not commit — user commits manually
@@ -121,6 +271,6 @@ pitfalls:
   - Song IDs case sensitivity: game uses different casing than BeatSaver; use beat_saber_song_ids.json
   - Redirect keys MUST have BeatmapLevelsData/ prefix (plugin uses strstr())
   - PCM16 output is lossless but larger — always use --no-pad
-  - V3 beatmap field: "c" for note color (not "a" which is V2)
+  - V3 beatmap uses field 'c' for note color (not 'a' which is V2)
   - Song metadata: artist is intentionally blanked for single-artist packs; name+artist combined on name line
-  - Bundle naming: deployed as {target}_v3 (not just {target})
+  - Bundle naming: deployed as {slot}_v3.bundle (canonical casing + suffix); redirect VALUES must byte-match (Exp 187)

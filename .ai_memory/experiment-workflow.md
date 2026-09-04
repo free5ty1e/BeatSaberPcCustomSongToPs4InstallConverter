@@ -44,7 +44,8 @@
     llm-wiki-knowledge-base/      # 24-page wiki (durable knowledge)
   .ai_memory/
     beat-saber-ps4-custom-songs/
-      experiment_log.md           # Sequential experiment log
+      experiment_log.md           # ACTIVE log — CURRENT feature ONLY (per-feature, Exp 160+ = Beatmap Mode Mapping)
+      experiment_log_archive/     # Archived per-feature logs (Exp 1-159 prior features; read-only)
       song_testing_log.md         # Song test results table
       beat_saber_song_ids.json    # All 306 official song bundles
       user_preferences.md         # User constraints/preferences
@@ -60,7 +61,8 @@ Each experiment follows this exact sequence:
 
 1. Read all active docs to establish context:
    - `.agent/project_summary.md` — current status, what's being tested, next steps
-   - `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` — latest entries
+   - `.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md` — latest entries (per-feature: current feature only)
+   - `.ai_memory/beat-saber-ps4-custom-songs/experiment_log_archive/` — older features (read-only reference)
    - `.ai_memory/beat-saber-ps4-custom-songs/song_testing_log.md` — song test results
    - `CLAUDE.md` — danger mode guardrails
 2. Read any relevant source files that need to change.

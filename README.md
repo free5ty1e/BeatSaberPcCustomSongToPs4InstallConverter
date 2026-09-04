@@ -25,13 +25,13 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 |---------|--------|-------------|
 | [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md) | ✅ Working | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection |
 | [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working | Display custom song names and artists in-game via IL2CPP MoveNext hook |
-| Extra Game Modes | 🟡 Experimental | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
+| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md) | ✅ Working (v0.5316+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection). Generated modes verified on-device (2026-08-11 boot test). |
 | Note Colors | ⏳ Planned | Custom left/right saber colors per song |
 
 > **⚠️ Current limitations:**
 > - **Single-artist packs only** — Song metadata modification works perfectly for single-artist packs (Rolling Stones, Billie Eilish, Lizzo). Multi-artist packs would incorrectly blank all artist names. Currently only single-artist packs are targeted.
 > - **Artist line is blank** — For single-artist packs, the artist line in the song list is intentionally blanked. The custom song name and artist are combined on the song name line (e.g., "Espresso / Sabrina Carpenter").
-> - **Extra game modes** — Mode selector buttons may appear via IL2CPP hook, but labels show "Standard" for all modes. Actual mode selection during gameplay works for OneSaber and 90Degree if modes are set via `--add-mode-characteristics`.
+> - **Deploy via per-song pipeline** — the old `deploy_all.sh` is OUTDATED (hardcoded 13 Rolling Stones slots, no mode mapping). Use `tools/full_custom_song_pipeline.py --song-dir <dir> --target <slot> --deploy --generate-config --deploy-config` per song, or `deploy_all38.sh` for a full 38-slot mass deploy (bundles must be built first into `/tmp/opencode/mass_build/`).
 
 ## Available Song Slots (Default Targets)
 
@@ -78,6 +78,37 @@ The pipeline can target **any** song present in the game's dump — if the song 
 
 ## 11. Developer Information
 See [docs/developer-info.md](docs/developer-info.md) for build, test, and release procedures.
+
+## 12. Backup Utility
+The `backup-beat-saber-deluxe-files.py` script provides backup, clean, and restore functionality for Beat Saber Deluxe files on PS4.
+
+- **Backup**: `./backup-beat-saber-deluxe-files.py backup` — Creates a datetime-stamped backup zip of all BS Deluxe files from PS4
+- **Clean PS4**: `./backup-beat-saber-deluxe-files.py backup --clean-ps4` — Backs up then clears all BS Deluxe files for fresh deployment
+- **Restore**: `./backup-beat-saber-deluxe-files.py restore <path>` — Restores files from a backup zip/directory to PS4
+- **Local mode**: Add `--local` flag for testing without PS4 connectivity
+
+Usage examples:
+```bash
+# Backup current PS4 state
+./backup-beat-saber-deluxe-files.py backup
+
+# Backup and clean PS4 for fresh deployment
+./backup-beat-saber-deluxe-files.py backup --clean-ps4
+
+# Restore from a backup
+./backup-beat-saber-deluxe-files.py restore /path/to/backup.zip
+
+# Clean PS4 first, then restore
+./backup-beat-saber-deluxe-files.py restore /path/to/backup.zip --clean-ps4
+
+# List backup contents
+./backup-beat-saber-deluxe-files.py list /path/to/backup.zip
+
+# Run in local mode (no PS4 required)
+./backup-beat-saber-deluxe-files.py backup --local
+```
+
+Full documentation: [backup-documentation.md](./backup-documentation.md)
 
 ## 12. License & Credits
 
@@ -271,7 +302,7 @@ python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py \
 - **Port:** 2121 (GoldHEN's default FTP port)
 - **User:** `anonymous` (no password)
 - **Plugin destination:** `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
-- **Bundle destination:** `/data/GoldHEN/AFR/CUSA12878/<target>_v3`
+- **Bundle destination:** `/data/GoldHEN/AFR/CUSA12878/<slot>_v3.bundle` (exact filename — the plugin opens the redirect VALUE verbatim and `open()` is case-sensitive, so the value must byte-match the deployed file, Exp 187)
 - **Config destination:** `/data/GoldHEN/AFR/CUSA12878/redirects.json`
 - **Log file:** `/data/GoldHEN/AFR/CUSA12878/bs_log.txt`
 
@@ -299,7 +330,7 @@ grep "BS Deluxe" /tmp/ps4_log.txt
 
 # Check for redirects (songs being replaced)
 grep "->" /tmp/ps4_log.txt | grep AFR
-# Expected: "/.../BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3"
+# Expected: "/.../BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle"
 ```
 
 ### 4.2 Plugin hot-reload
@@ -321,7 +352,7 @@ The plugin is reloaded by GoldHEN when the game executable is launched. A full P
 |---------|-------|-----|
 | No "BS Deluxe" in log | Plugin not deployed | Run `deploy_all.sh` |
 | Old version shown | Plugin cache | Restart Beat Saber or reboot PS4 |
-| CE-34878-0 crash | Bundle CRC/size mismatch | Run pipeline with `--no-pad` or `--preserve-metadata` |
+| CE-34878-0 crash | Bundle CRC/size mismatch | Use default build (PCM16 + no-pad, both default since v0.5314) or `--preserve-metadata` |
 | "redirect" shows in log but song doesn't play | Bundle format issue | Verify bundle deployed correctly |
 
 ---
@@ -333,26 +364,26 @@ This is the fastest way to get a custom song onto your PS4. Run this single comm
 ```bash
 cd /workspace/beat_saber_deluxe
 
+# Complete end-to-end deployment in ONE command:
+# - Downloads song from BeatSaver
+# - Converts to V3.2.0 (V2→V3 auto-conversion)
+# - Generates all 4 modes (Standard, OneSaber, NoArrows, 90Degree)
+# - Builds song bundle with PCM16 lossless audio
+# - Builds/deploys pack mode bundles + merged catalog
+# - Deploys song bundle, pack bundles, catalog, redirects.json
+# - Runs post-deploy validation
 python3 tools/full_custom_song_pipeline.py \
-    --download-beat-saver-song <MAP_ID> \
-    --target startmeup \
-    --pcm16 \
-    --no-pad \
-    --convert-to-v3 \
-    --deploy \
-    --generate-config \
-    --deploy-config
+  --download-beat-saver-song <MAP_ID> \
+  --target <slot_name> \
+  --deploy-full
 ```
 
 **Parameters explained:**
 - `<MAP_ID>` — the BeatSaver map key (e.g. `1d6c7c2`). Find it on [BeatSaver.com](https://beatsaver.com) — it's the short hash in the URL (e.g. `beatsaver.com/maps/1d6c7c2`)
-- `--target startmeup` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
-- `--pcm16` — use PCM16 audio encoding instead of Vorbis (better quality, more compatible)
-- `--no-pad` — skip audio padding (faster, smaller bundles)
-- `--convert-to-v3` — convert beatmaps from V2 to V3 format (required for Beat Saber on PS4)
-- `--deploy` — upload the resulting bundle to PS4 via FTP
-- `--generate-config` — create/update the redirects config file
-- `--deploy-config` — upload the config to PS4
+- `--target <slot_name>` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
+- `--deploy-full` — **Complete orchestration in ONE command**: song bundle + pack mode bundles + merged catalog + redirects.json + post-deploy validation
+
+> **v0.5314+ safe defaults (no flags needed):** PCM16 lossless audio + full-length (no padding truncation) + beatmap mode mapping (OneSaber/NoArrows/90Degree auto-generated to fill gaps) + V2→V3 conversion are all **default ON**. The old explicit flags (`--pcm16`, `--no-pad`, `--convert-to-v3`, `--enable-beatmap-mode-mapping`) are still accepted as no-op compat flags. To opt out: `--hevag`/`--vorbis` (codec), `--pad-fsb5` (**DANGER** — truncates audio to 12MB, produces partial songs), `--disable-beatmap-mode-mapping` (Standard only), `--no-convert-to-v3` (leave V2).
 
 **Example — download "Espresso" by Sabrina Carpenter and replace Start Me Up:**
 
@@ -360,15 +391,16 @@ python3 tools/full_custom_song_pipeline.py \
 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song 1d6c7c2 \
     --target startmeup \
-    --pcm16 --no-pad --convert-to-v3 \
-    --deploy --generate-config --deploy-config
+    --deploy-full
 ```
 
 **After the command completes:**
-1. The bundle is built and deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_v3`
-2. The redirect config is updated and deployed
-3. Restart Beat Saber on your PS4
-4. Navigate to the target song in the game's song pack — your custom song will play!
+1. The bundle is built and deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle`
+2. Pack mode bundles + merged catalog are deployed
+3. The redirect config is updated and deployed
+4. Post-deploy validation runs
+5. Restart Beat Saber on your PS4
+6. Navigate to the target song in the game's song pack — your custom song will play with all 4 modes available!
 
 ---
 
@@ -381,16 +413,17 @@ python3 tools/full_custom_song_pipeline.py \
 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song <MAP_ID> \
     --target startmeup \
-    --pcm16 --no-pad --convert-to-v3 --deploy
+    --deploy
 ```
 
 The pipeline automatically:
 1. Downloads the song ZIP from BeatSaver API
 2. Extracts the audio (WAV/OGG) and beatmap `.dat` files
-3. Converts audio to FSB5 format (PS4-compatible)
-4. Converts beatmaps from V2 to V3 format
-5. Packages everything into an AssetBundle
-6. Deploys to PS4 via FTP
+3. Converts audio to FSB5 format (PS4-compatible, PCM16 lossless by default)
+4. Converts beatmaps from V2 to V3 format (default ON)
+5. Auto-detects beatmap modes and generates missing OneSaber/NoArrows/90Degree variants (default ON)
+6. Packages everything into an AssetBundle
+7. Deploys to PS4 via FTP
 
 ### 6.2 Use a local song directory
 
@@ -400,7 +433,7 @@ If you already have a custom song folder with audio + beatmap files:
 python3 tools/full_custom_song_pipeline.py \
     --song-dir /path/to/song/folder \
     --target startmeup \
-    --pcm16 --no-pad --convert-to-v3 --deploy
+    --deploy
 ```
 
 The song folder should contain:
@@ -424,13 +457,21 @@ The pipeline (`tools/full_custom_song_pipeline.py`) performs these steps:
 
 | Flag | Description |
 |------|-------------|
-| `--vorbis` | Use Vorbis audio encoding instead of PCM16 (smaller files, may be slower) |
-| `--pcm16` | Use PCM16 audio encoding (recommended, better compatibility) |
-| `--no-pad` | Skip 12MB audio padding (reduces bundle size) |
+| `--vorbis` | Use Vorbis audio encoding instead of PCM16 (smaller files, may be slower) — opposes the PCM16 default |
+| `--hevag` | Use HEVAG audio encoding (Sony proprietary, usually blocked) — opposes the PCM16 default |
+| `--pcm16` | Use PCM16 audio encoding (**default** — lossless, best compatibility; kept as compat no-op) |
+| `--no-pad` | Skip 12MB audio padding (**default** — keeps full-length audio; kept as compat no-op) |
+| `--pad-fsb5` | **Restore** the old 12MB truncating padding (**DANGER**: produces partial/truncated songs) |
 | `--preserve-metadata` | Keep original song metadata (audio length, etc.) |
-| `--convert-to-v3` | Convert V2 beatmaps to V3 format (required for PS4) |
-| `--add-mode-characteristics` | Add gameplay mode characteristics (OneSaber, 90Degree, etc.) |
+| `--convert-to-v3` | Convert V2 beatmaps to V3 format (**default** — required for PS4; kept as compat no-op) |
+| `--no-convert-to-v3` | Leave V2 beatmaps unconverted (opposes the default) |
+| `--disable-beatmap-mode-mapping` | Standard-only bundle (opposes the default mode mapping) |
+| `--skip-mode-generation` | Keep mode mapping but don't generate missing mode beatmaps |
+| `--one-saber-min-gap <s>` | Min beats between same-cell arrowed notes (OneSaber generator, default 0.25) |
+| `--rotation-cycle-beats <b>` | Beats per 90-degree rotation flip (90Degree generator, default 8.0) |
 | `--enable-modes` | Comma-separated list of modes to enable (e.g. `OneSaber,90Degree`) |
+| `--features-only` | Apply + deploy `--set-feature` changes to features.json only, then exit (no song/plugin processing) |
+| `--set-feature key=value` | Set a runtime feature flag in features.json (use with `--features-only` or `--deploy-plugin`) |
 | `--ignore-non-standard-beatmaps` | Skip non-standard difficulty beatmaps |
 | `--target <name>` | PS4 song slot to replace (see [Available Song Slots](#available-song-slots-targets)) |
 | `--output <path>` | Custom output path for the built bundle |
@@ -494,11 +535,11 @@ cp /tmp/ps4_log.txt "/workspace/.ai_memory/experiment_logs/ps4_log_$(date +%Y%m%
 === BS Deluxe v0.80 started ===           # Plugin header + version
 v0.80 — dynamic redirect config (...)
 loaded 32 redirects from config
-  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle
 open:/data/GoldHEN/AFR/CUSA12878/bs_log.txt
 [MEMINJ] Initialized                     # Memory injection module ready
 ...
-open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3   # Redirect fired!
+open:/archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle   # Redirect fired!
 [MEMINJ] Scanning...                     # Memory injection triggered
 [MEMINJ] Found klass 0x... via pattern   # BeatmapLevelSO class found
 [MEMINJ] Found 1 candidates with klass   # Objects located
@@ -656,7 +697,7 @@ class TestMyFeature:
 |-----------|--------|-------------|
 | M1: Song Replacement | ✅ Complete | Any song slot replaced with custom audio + beatmaps |
 | M2: Song Metadata | ✅ Complete | Custom song names and artists displayed in-game (single-artist packs) |
-| M3: Mode Selector | 🟡 In Progress | OneSaber/90Degree support via IL2CPP hook (labels show "Standard") |
+| M3: Mode Selector | ✅ Complete | OneSaber/90Degree/NoArrows mode selector support via catalog-redirect + pack-bundle preview-set injection (4 modes × 5 difficulties for all DLC packs, generalized in v0.5319+) |
 | M4: Note Colors | ⏳ Planned | Custom left/right saber colors per song |
 | M5: Multi-Artist Packs | 🔬 Researching | Artist replacement for multi-artist packs without global blanking |
 

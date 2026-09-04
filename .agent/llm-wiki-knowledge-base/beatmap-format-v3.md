@@ -173,6 +173,24 @@ Same structure as colorNotes but without color (c) or direction (d):
 ## Other Arrays
 - `spawnRotations` + `spawnRotationsData`: Stage rotation events (empty in template)
 
+## Omitted Fields Default to Zero (V3/V4 spec)
+
+V3 and V4 JSON beatmaps are **dense** — any field may be omitted, and readers must
+treat the omission as the documented default (usually `0`). This is not just for
+deduplicated data arrays; it applies to the per-object entries themselves:
+
+- `colorNotes`: `b` may be omitted (defaults beat 0), `i` may be omitted (defaults 0).
+- `colorNotesData` entries: `x`, `y`, `c`, `d` may ALL be omitted (each defaults 0).
+- `obstacles` / `obstaclesData` / `basicBeatmapEvents`: `b` may be omitted (defaults 0).
+- Real BeatSaver sources found in the wild (e.g. "Take Me to the Beach") ship
+  V3 notes with `y` (and occasionally `b`) omitted entirely.
+
+**Consequence (pipeline bug, fixed v0.5316):** the OneSaber/90Degree mode
+generators used direct indexing (`n["y"]`, `n["b"]`) → `KeyError` on such maps.
+All generator field reads must use `.get("y", 0)`-style defaults for V3, exactly
+like the V2 branch already did. See `tests/test_mode_generators.py`
+`test_v3_omitted_position_fields_default_to_zero`.
+
 ## V2 vs V3 Key Differences
 
 | Aspect | V2 (BeatSaver) | V3 (PS4) |

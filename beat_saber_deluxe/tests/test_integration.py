@@ -32,6 +32,9 @@ from full_custom_song_pipeline import (
     _load_local_song_metadata,
     manage_redirect_config,
     manage_song_metadata,
+    detect_song_modes,
+    build_mode_mapping,
+    GAME_CHARACTERISTIC_MODES,
     DIFFICULTIES,
 )
 
@@ -140,7 +143,7 @@ class TestV2ToV3Conversion:
         assert len(v3['basicBeatmapEvents']) == 2
         evt = v3['basicBeatmapEvents'][0]
         assert 'b' in evt  # beat time
-        assert 't' in evt  # type
+        assert 'et' in evt  # type
         assert 'i' in evt  # value
 
     def test_is_v2_detection(self, v2_beatmap, v3_beatmap):
@@ -294,6 +297,161 @@ class TestRedirectConfigManagement:
         assert len(result['redirects']) == 0
 
 
+class TestPackBundleRedirectConsistency:
+    """Test the pack bundle + catalog redirect pair consistency (Exp 180 crash fix)."""
+
+    PACK_CONFIG = {
+        'title': {'id': 'CUSA12878'},
+        'paths': {'afr_base': '/data/GoldHEN/AFR', 'afr_target_suffix': '_v3'},
+        'pack_bundle': {
+            'bundle_key': 'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle',
+            'patched_bundle': 'startmeup_pack_modes.bundle',
+            'catalog_key': 'aa/catalog.json',
+            'patched_catalog': 'catalog_startmeup_modes.json',
+        },
+    }
+
+    def test_get_pack_bundle_redirects_returns_pair(self):
+        """The pack bundle redirect always comes with the catalog redirect."""
+        from full_custom_song_pipeline import _get_pack_bundle_redirects
+        pair = _get_pack_bundle_redirects(self.PACK_CONFIG)
+        assert pair == {
+            'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle': 'startmeup_pack_modes.bundle',
+            'aa/catalog.json': 'catalog_startmeup_modes.json',
+        }
+
+    def test_get_pack_bundle_redirects_empty_without_config(self):
+        """No pack_bundle config -> no forced redirects."""
+        from full_custom_song_pipeline import _get_pack_bundle_redirects
+        config = {'title': {'id': 'CUSA12878'}, 'paths': {}}
+        assert _get_pack_bundle_redirects(config) == {}
+
+    def test_ensure_pack_bundle_redirects_adds_missing_pair(self):
+        """Regenerated config that lost the pack/catalog pair gets both restored."""
+        from full_custom_song_pipeline import _ensure_pack_bundle_redirects
+        data = {'redirects': {'BeatmapLevelsData/startmeup': 'startmeup_v3'}}
+        changed = _ensure_pack_bundle_redirects(data, self.PACK_CONFIG)
+        assert changed == 2
+        assert data['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
+        assert data['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
+
+    def test_ensure_pack_bundle_redirects_fixes_stale_pack_target(self):
+        """A stale pack target (e.g. rollingstones_pack_patched.bundle) is overwritten."""
+        from full_custom_song_pipeline import _ensure_pack_bundle_redirects
+        data = {'redirects': {
+            'BeatmapLevelsData/startmeup': 'startmeup_v3',
+            'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c': 'rollingstones_pack_patched.bundle',
+        }}
+        changed = _ensure_pack_bundle_redirects(data, self.PACK_CONFIG)
+        # 1 stale key removed + 2 canonical entries added/updated
+        assert changed == 3
+        assert data['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
+        assert data['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
+        assert 'rollingstones_pack_patched.bundle' not in data['redirects'].values()
+
+    def test_manage_redirect_config_never_drops_pack_pair(self, tmp_dir, monkeypatch):
+        """manage_redirect_config must ALWAYS keep the pack bundle + catalog pair."""
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._get_redirect_config_path',
+            lambda project_root=None: os.path.join(tmp_dir, 'redirects.json')
+        )
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._deploy_redirect_to_ps4',
+            lambda config: None
+        )
+        result = manage_redirect_config(
+            self.PACK_CONFIG, target_name='startmeup', generate=True, deploy=False
+        )
+        assert result['redirects']['BeatmapLevelsData/startmeup'] == 'startmeup_v3'
+        assert result['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
+        assert result['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
+
+    def test_load_config_defaults_include_pack_modes(self):
+        """Default config carries the generalized pack_modes settings; the legacy
+        single-pack pack_bundle prototype is gone (superseded by pack_modes)."""
+        from full_custom_song_pipeline import load_config
+        cfg = load_config('/nonexistent/config.json')
+        assert 'pack_bundle' not in cfg, "legacy single-pack prototype removed from defaults"
+        assert cfg['pack_modes']['patched_catalog'] == 'catalog_pack_modes.json'
+        assert len(cfg['mass_deploy']['slots']) == 38
+
+
+class TestDeployedBundleNaming:
+    """Song redirect VALUES must match the exact deployed bundle filename (Exp 186).
+
+    The game opens the redirect VALUE verbatim and open() is case-sensitive, so a
+    value like `Crystallized_v3` silently keeps serving the stale build while the
+    fresh bundle sits on the PS4 as `crystallized_v3.bundle`.
+    """
+
+    MASS_CFG = {
+        'title': {'id': 'CUSA12878'},
+        'paths': {'afr_base': '/data/GoldHEN/AFR', 'afr_target_suffix': '_v3.bundle'},
+        'mass_deploy': {'slots': ['startmeup', 'crystallized', 'cyclehit',
+                                  'Oxytocin', 'AllTheGoodGirlsGoToHell']},
+    }
+
+    def test_deployed_bundle_name_uses_slot_casing(self):
+        """Deployed name uses the canonical slot casing from mass_deploy.slots."""
+        from full_custom_song_pipeline import _deployed_bundle_name
+        assert _deployed_bundle_name('Crystallized', self.MASS_CFG) == 'crystallized_v3.bundle'
+        assert _deployed_bundle_name('crystallized', self.MASS_CFG) == 'crystallized_v3.bundle'
+        assert _deployed_bundle_name('Oxytocin', self.MASS_CFG) == 'Oxytocin_v3.bundle'
+        assert _deployed_bundle_name('startmeup', self.MASS_CFG) == 'startmeup_v3.bundle'
+
+    def test_deployed_bundle_name_default_suffix(self):
+        """Falls back to _v3.bundle when no suffix is configured."""
+        from full_custom_song_pipeline import _deployed_bundle_name
+        cfg = {'paths': {}}
+        assert _deployed_bundle_name('startmeup', cfg) == 'startmeup_v3.bundle'
+
+    def test_ensure_mass_song_redirects_fixes_stale_values(self):
+        """Stale pre-.bundle values are healed to the deployed filename."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {
+            'BeatmapLevelsData/startmeup': 'startmeup_v3',
+            'BeatmapLevelsData/Crystallized': 'Crystallized_v3',
+        }}
+        changed = _ensure_mass_song_redirects(data, self.MASS_CFG)
+        assert changed >= 2
+        assert data['redirects']['BeatmapLevelsData/startmeup'] == 'startmeup_v3.bundle'
+        assert data['redirects']['BeatmapLevelsData/Crystallized'] == 'crystallized_v3.bundle'
+
+    def test_ensure_mass_song_redirects_adds_missing_slots(self):
+        """Slots missing from the config get added with the correct value."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {}}
+        changed = _ensure_mass_song_redirects(data, self.MASS_CFG)
+        assert changed == len(self.MASS_CFG['mass_deploy']['slots'])
+        for slot in self.MASS_CFG['mass_deploy']['slots']:
+            key = f"BeatmapLevelsData/{slot}"
+            assert data['redirects'][key] == f"{slot}_v3.bundle"
+
+    def test_manage_redirect_config_heals_stale_values(self, tmp_dir, monkeypatch):
+        """manage_redirect_config writes exact deployed filenames as values."""
+        from full_custom_song_pipeline import manage_redirect_config
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._get_redirect_config_path',
+            lambda project_root=None: os.path.join(tmp_dir, 'redirects.json')
+        )
+        monkeypatch.setattr(
+            'full_custom_song_pipeline._deploy_redirect_to_ps4',
+            lambda config: None
+        )
+        result = manage_redirect_config(
+            self.MASS_CFG, target_name='crystallized', generate=True, deploy=False
+        )
+        assert result['redirects']['BeatmapLevelsData/crystallized'] == 'crystallized_v3.bundle'
+
+    def test_no_slots_no_change(self):
+        """No mass_deploy.slots -> no forced song redirects."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {'BeatmapLevelsData/startmeup': 'startmeup_v3'}}
+        changed = _ensure_mass_song_redirects(data, {'paths': {}})
+        assert changed == 0
+        assert data['redirects']['BeatmapLevelsData/startmeup'] == 'startmeup_v3'
+
+
 class TestSongMetadataManagement:
     """Test song metadata generation without FTP deployment."""
 
@@ -436,3 +594,117 @@ class TestConfigLoading:
         config = load_config(config_path)
         assert config['ps4']['ip'] == '10.0.0.1'
         assert config['title']['id'] == 'CUSA99999'
+
+
+# ======================================================================
+# Beatmap Mode Mapping Integration
+# ======================================================================
+class TestBeatmapModeMappingIntegration:
+    """Integration test for detect→build→apply mode mapping chain."""
+
+    def test_detect_build_chain(self, tmp_dir):
+        """Full detect→build cycle with multi-mode song directory."""
+        # Create Standard beatmaps (bare .dat files)
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            data = {"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                    "obstacles": [], "sliders": [], "burstSliders": [],
+                    "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                    "rotationEvents": [], "basicEventTypesWithKeywords": {"d": []},
+                    "useNormalEventsAsCompatibleEvents": True}
+            with open(os.path.join(tmp_dir, f"{diff}.dat"), 'w') as f:
+                json.dump(data, f)
+
+        # Create OneSaber files (2 difficulties)
+        for diff in ['Expert', 'ExpertPlus']:
+            data = {"version": "3.2.0", "colorNotes": [{"b": 0, "x": 0, "y": 2, "a": 0, "c": 0, "d": 1}],
+                    "bombNotes": [], "obstacles": [], "sliders": [], "burstSliders": [],
+                    "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                    "rotationEvents": [], "basicEventTypesWithKeywords": {"d": []},
+                    "useNormalEventsAsCompatibleEvents": True}
+            with open(os.path.join(tmp_dir, f"{diff}OneSaber.dat"), 'w') as f:
+                json.dump(data, f)
+
+        # Create 360Degree files (1 difficulty) — must be ignored on PS4
+        with open(os.path.join(tmp_dir, "Normal360Degree.dat"), 'w') as f:
+            json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                       "obstacles": [], "sliders": [], "burstSliders": [],
+                       "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                       "rotationEvents": [], "basicEventTypesWithKeywords": {"d": []},
+                       "useNormalEventsAsCompatibleEvents": True}, f)
+
+        # Step 1: Detect
+        modes = detect_song_modes(tmp_dir)
+        assert 'Standard' in modes
+        assert len(modes['Standard']) == 5
+        assert 'OneSaber' in modes
+        assert modes['OneSaber'] == ['Expert', 'ExpertPlus']
+        assert '360Degree' not in modes
+        assert 'NoArrows' not in modes
+        assert '90Degree' not in modes
+
+        # Step 2: Build mapping (default fallback)
+        enabled = build_mode_mapping(modes)
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)  # all 4 resolved
+
+        # Step 3: Build mapping with custom fallback
+        enabled_custom = build_mode_mapping(modes, fallback_mode_map=["90Degree=Standard"])
+        assert enabled_custom == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_no_standard_edge_case(self, tmp_dir):
+        """Song directory with only non-Standard mode files."""
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+
+        modes = detect_song_modes(tmp_dir)
+        assert 'OneSaber' in modes
+        assert 'Standard' not in modes
+
+        # Even without Standard files, all 4 modes resolve via fallback
+        enabled = build_mode_mapping(modes)
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)
+
+    def test_single_difficulty_mode(self, tmp_dir):
+        """OneSaber with only ExpertPlus file."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                           "obstacles": [], "sliders": [], "burstSliders": [],
+                           "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                           "rotationEvents": [],
+                           "basicEventTypesWithKeywords": {"d": []},
+                           "useNormalEventsAsCompatibleEvents": True}, f)
+        with open(os.path.join(tmp_dir, "ExpertPlusOneSaber.dat"), 'w') as f:
+            json.dump({}, f)
+
+        modes = detect_song_modes(tmp_dir)
+        assert modes['OneSaber'] == ['ExpertPlus']
+        enabled = build_mode_mapping(modes)
+        assert 'OneSaber' in enabled
+
+    def test_all_modes_detected_integration(self, tmp_dir):
+        """Song with files for all 4 supported modes (360Degree excluded)."""
+        for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+            with open(os.path.join(tmp_dir, f"{diff}Standard.dat"), 'w') as f:
+                json.dump({"version": "3.2.0", "colorNotes": [], "bombNotes": [],
+                           "obstacles": [], "sliders": [], "burstSliders": [],
+                           "basicBeatmapEvents": [], "bpmEvents": [{"b": 0, "m": 120}],
+                           "rotationEvents": [],
+                           "basicEventTypesWithKeywords": {"d": []},
+                           "useNormalEventsAsCompatibleEvents": True}, f)
+        for mode in ['OneSaber', 'NoArrows']:
+            for diff in ['Easy', 'Normal', 'Hard', 'Expert', 'ExpertPlus']:
+                with open(os.path.join(tmp_dir, f"{diff}{mode}.dat"), 'w') as f:
+                    json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Expert90Degree.dat"), 'w') as f:
+            json.dump({}, f)
+        with open(os.path.join(tmp_dir, "Expert360Degree.dat"), 'w') as f:
+            json.dump({}, f)
+
+        modes = detect_song_modes(tmp_dir)
+        assert set(modes.keys()) == {'Standard', 'OneSaber', 'NoArrows', '90Degree'}
+        assert modes['Standard'] == list(DIFFICULTIES)
+        assert modes['OneSaber'] == list(DIFFICULTIES)
+        assert modes['NoArrows'] == list(DIFFICULTIES)
+
+        enabled = build_mode_mapping(modes)
+        assert enabled == list(GAME_CHARACTERISTIC_MODES)

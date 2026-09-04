@@ -1,0 +1,364 @@
+{
+  "entries": [
+    {
+      "pack": "billieeilish",
+      "packBundle": "billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
+      "patchedBundle": "billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
+      "size": 6422555,
+      "crc": 3691215397,
+      "catalogBundleName": "f346c02fc33213552312491d3aca68f7",
+      "patched_slots": 10
+    },
+    {
+      "pack": "britneyspears",
+      "packBundle": "britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle",
+      "patchedBundle": "britneyspears_pack_modes_assets_all_18d2741e11e15c97493346b2797ea847.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/britneyspears_pack_modes_assets_all_18d2741e11e15c97493346b2797ea847.bundle",
+      "size": 8413241,
+      "crc": 3795629990,
+      "catalogBundleName": "a88f6a8ba31a1f1624a9b326f0d8501c",
+      "patched_slots": 11
+    },
+    {
+      "pack": "bts",
+      "packBundle": "bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle",
+      "patchedBundle": "bts_pack_modes_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/bts_pack_modes_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle",
+      "size": 9676644,
+      "crc": 4088905315,
+      "catalogBundleName": "5044031d62cf96461cae758fb6eae723",
+      "patched_slots": 12
+    },
+    {
+      "pack": "camellia",
+      "packBundle": "camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle",
+      "patchedBundle": "camellia_pack_modes_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/camellia_pack_modes_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle",
+      "size": 5188388,
+      "crc": 808520009,
+      "catalogBundleName": "2edf6d9b81f40b537f174c3080eea3c9",
+      "patched_slots": 6
+    },
+    {
+      "pack": "daftpunk",
+      "packBundle": "daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle",
+      "patchedBundle": "daftpunk_pack_modes_assets_all_9855164048e362e6d374087b9b96851c.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/daftpunk_pack_modes_assets_all_9855164048e362e6d374087b9b96851c.bundle",
+      "size": 7388550,
+      "crc": 1981084229,
+      "catalogBundleName": "d6bbea7489ebe73f59a2cdb6098af746",
+      "patched_slots": 10
+    },
+    {
+      "pack": "debug",
+      "packBundle": "debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle",
+      "patchedBundle": "debug_pack_modes_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/debug_pack_modes_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle",
+      "size": 1613635,
+      "crc": 3769927523,
+      "catalogBundleName": "3d83895d158dc6b06437f968829bbd92",
+      "patched_slots": 3
+    },
+    {
+      "pack": "edm",
+      "packBundle": "edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle",
+      "patchedBundle": "edm_pack_modes_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/edm_pack_modes_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle",
+      "size": 7796506,
+      "crc": 2030483456,
+      "catalogBundleName": "5df44c4664ff49a385f2e43edf00c4a7",
+      "patched_slots": 10
+    },
+    {
+      "pack": "extras",
+      "packBundle": "extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle",
+      "patchedBundle": "extras_pack_modes_assets_all_299af14275d67d8d416f07563fc24e0a.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/extras_pack_modes_assets_all_299af14275d67d8d416f07563fc24e0a.bundle",
+      "size": 7022750,
+      "crc": 1326085829,
+      "catalogBundleName": "279c4f12c30f2f1a107f67875ede6c75",
+      "patched_slots": 9
+    },
+    {
+      "pack": "falloutboy",
+      "packBundle": "falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle",
+      "patchedBundle": "falloutboy_pack_modes_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/falloutboy_pack_modes_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle",
+      "size": 6534964,
+      "crc": 1015306796,
+      "catalogBundleName": "4ce70a4d52370dd920625d63743dc5b7",
+      "patched_slots": 8
+    },
+    {
+      "pack": "greenday",
+      "packBundle": "greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle",
+      "patchedBundle": "greenday_pack_modes_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/greenday_pack_modes_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle",
+      "size": 4989213,
+      "crc": 879292283,
+      "catalogBundleName": "eded39c84718279000c7025b013e321e",
+      "patched_slots": 6
+    },
+    {
+      "pack": "hiphop",
+      "packBundle": "hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle",
+      "patchedBundle": "hiphop_pack_modes_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/hiphop_pack_modes_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle",
+      "size": 6886705,
+      "crc": 1662260529,
+      "catalogBundleName": "c364d5a125871b283e1a8257a4d43ae8",
+      "patched_slots": 9
+    },
+    {
+      "pack": "imaginedragons",
+      "packBundle": "imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle",
+      "patchedBundle": "imaginedragons_pack_modes_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/imaginedragons_pack_modes_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle",
+      "size": 8586649,
+      "crc": 1214334105,
+      "catalogBundleName": "b77c9ee22b2abb31f720c15b37e171cf",
+      "patched_slots": 12
+    },
+    {
+      "pack": "interscope",
+      "packBundle": "interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle",
+      "patchedBundle": "interscope_pack_modes_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/interscope_pack_modes_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle",
+      "size": 5552959,
+      "crc": 4201834460,
+      "catalogBundleName": "54229b72fd0a2529d263b1d39409bcee",
+      "patched_slots": 7
+    },
+    {
+      "pack": "ladygaga",
+      "packBundle": "ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle",
+      "patchedBundle": "ladygaga_pack_modes_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ladygaga_pack_modes_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle",
+      "size": 7459016,
+      "crc": 3749967368,
+      "catalogBundleName": "e0883af80b8e8c0bcb5425ccda735879",
+      "patched_slots": 10
+    },
+    {
+      "pack": "linkinpark",
+      "packBundle": "linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle",
+      "patchedBundle": "linkinpark_pack_modes_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/linkinpark_pack_modes_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle",
+      "size": 9188619,
+      "crc": 3535150354,
+      "catalogBundleName": "340ea9bed7ed750e560f2518230ae342",
+      "patched_slots": 11
+    },
+    {
+      "pack": "linkinpark2",
+      "packBundle": "linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle",
+      "patchedBundle": "linkinpark2_pack_modes_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/linkinpark2_pack_modes_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle",
+      "size": 5848400,
+      "crc": 2104822936,
+      "catalogBundleName": "0da2802ed07a1e782f152a34cadda9bc",
+      "patched_slots": 8
+    },
+    {
+      "pack": "lizzo",
+      "packBundle": "lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle",
+      "patchedBundle": "lizzo_pack_modes_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/lizzo_pack_modes_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle",
+      "size": 6893745,
+      "crc": 3526914570,
+      "catalogBundleName": "0092fb8fb92ea09b9665fceaf1a42d0e",
+      "patched_slots": 9
+    },
+    {
+      "pack": "metallica",
+      "packBundle": "metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle",
+      "patchedBundle": "metallica_pack_modes_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/metallica_pack_modes_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle",
+      "size": 11503758,
+      "crc": 134516113,
+      "catalogBundleName": "3f7e9cd7a118c648e107ec508b70b369",
+      "patched_slots": 17
+    },
+    {
+      "pack": "monstercat",
+      "packBundle": "monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle",
+      "patchedBundle": "monstercat_pack_modes_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/monstercat_pack_modes_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle",
+      "size": 7593135,
+      "crc": 551344998,
+      "catalogBundleName": "52ab666fa14a79666c0ba7ef56db837d",
+      "patched_slots": 10
+    },
+    {
+      "pack": "monstercatvol2",
+      "packBundle": "monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle",
+      "patchedBundle": "monstercatvol2_pack_modes_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/monstercatvol2_pack_modes_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle",
+      "size": 9386082,
+      "crc": 2373022132,
+      "catalogBundleName": "4d5cacf97abe012ff06416a484560b09",
+      "patched_slots": 12
+    },
+    {
+      "pack": "ostvol1",
+      "packBundle": "ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle",
+      "patchedBundle": "ostvol1_pack_modes_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol1_pack_modes_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle",
+      "size": 8782169,
+      "crc": 3148627818,
+      "catalogBundleName": "d63a38388bea065febea86e63a449536",
+      "patched_slots": 10
+    },
+    {
+      "pack": "ostvol2",
+      "packBundle": "ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle",
+      "patchedBundle": "ostvol2_pack_modes_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol2_pack_modes_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle",
+      "size": 4043226,
+      "crc": 1663865647,
+      "catalogBundleName": "6cba3bf3b5e1699ce02b8b60cba303b1",
+      "patched_slots": 5
+    },
+    {
+      "pack": "ostvol3",
+      "packBundle": "ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle",
+      "patchedBundle": "ostvol3_pack_modes_assets_all_9dbecd664115a79f917a565963a09b93.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol3_pack_modes_assets_all_9dbecd664115a79f917a565963a09b93.bundle",
+      "size": 5665482,
+      "crc": 4046407279,
+      "catalogBundleName": "9bfda9dde2a6d037ed3b48f61fc2c3ca",
+      "patched_slots": 6
+    },
+    {
+      "pack": "ostvol4",
+      "packBundle": "ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle",
+      "patchedBundle": "ostvol4_pack_modes_assets_all_223981efa5bc43e83c3926f8d141b466.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol4_pack_modes_assets_all_223981efa5bc43e83c3926f8d141b466.bundle",
+      "size": 3819965,
+      "crc": 1038321858,
+      "catalogBundleName": "f078e423ec7e32bb3974ada6ac6b7311",
+      "patched_slots": 4
+    },
+    {
+      "pack": "ostvol5",
+      "packBundle": "ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle",
+      "patchedBundle": "ostvol5_pack_modes_assets_all_c328930031222b8bdb2fb492b04cff21.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol5_pack_modes_assets_all_c328930031222b8bdb2fb492b04cff21.bundle",
+      "size": 5085662,
+      "crc": 1056871259,
+      "catalogBundleName": "cdc32923d2c8e6a7524cd01583ec7165",
+      "patched_slots": 6
+    },
+    {
+      "pack": "ostvol6",
+      "packBundle": "ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle",
+      "patchedBundle": "ostvol6_pack_modes_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol6_pack_modes_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle",
+      "size": 4708025,
+      "crc": 1354457501,
+      "catalogBundleName": "53c020e3118f7ee604c6ad8efc7591ee",
+      "patched_slots": 5
+    },
+    {
+      "pack": "ostvol7",
+      "packBundle": "ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle",
+      "patchedBundle": "ostvol7_pack_modes_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/ostvol7_pack_modes_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle",
+      "size": 4740454,
+      "crc": 353396718,
+      "catalogBundleName": "b190d18a1d0143d1411f1471c8c1bfeb",
+      "patched_slots": 5
+    },
+    {
+      "pack": "panicatthedisco",
+      "packBundle": "panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle",
+      "patchedBundle": "panicatthedisco_pack_modes_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/panicatthedisco_pack_modes_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle",
+      "size": 7501381,
+      "crc": 79092813,
+      "catalogBundleName": "e0f26cc3a31e14f7f649b83a66f31453",
+      "patched_slots": 10
+    },
+    {
+      "pack": "queen",
+      "packBundle": "queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle",
+      "patchedBundle": "queen_pack_modes_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/queen_pack_modes_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle",
+      "size": 7854234,
+      "crc": 3129336048,
+      "catalogBundleName": "39465e78430f4873441beda234a8b6ea",
+      "patched_slots": 11
+    },
+    {
+      "pack": "rocketleague",
+      "packBundle": "rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle",
+      "patchedBundle": "rocketleague_pack_modes_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/rocketleague_pack_modes_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle",
+      "size": 6454845,
+      "crc": 2288779507,
+      "catalogBundleName": "1fc8742d1cb4529f460062a783d7130a",
+      "patched_slots": 6
+    },
+    {
+      "pack": "rockmixtape",
+      "packBundle": "rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle",
+      "patchedBundle": "rockmixtape_pack_modes_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/rockmixtape_pack_modes_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle",
+      "size": 5923277,
+      "crc": 1428526120,
+      "catalogBundleName": "5260cb6dbde0fe4c78fd89955037d8ff",
+      "patched_slots": 8
+    },
+    {
+      "pack": "shockdrop",
+      "packBundle": "shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle",
+      "patchedBundle": "shockdrop_pack_modes_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/shockdrop_pack_modes_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle",
+      "size": 3300262,
+      "crc": 1330697078,
+      "catalogBundleName": "532e925e5fa665bbf32f85acaa82253f",
+      "patched_slots": 3
+    },
+    {
+      "pack": "skrillex",
+      "packBundle": "skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle",
+      "patchedBundle": "skrillex_pack_modes_assets_all_940d7944e80112156c32d45e559610f8.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/skrillex_pack_modes_assets_all_940d7944e80112156c32d45e559610f8.bundle",
+      "size": 6441431,
+      "crc": 1743136572,
+      "catalogBundleName": "e37730d5b87cb5ab2aeda7c5965aff27",
+      "patched_slots": 8
+    },
+    {
+      "pack": "therollingstones",
+      "packBundle": "therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle",
+      "patchedBundle": "therollingstones_pack_modes_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/therollingstones_pack_modes_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle",
+      "size": 7906184,
+      "crc": 3803925175,
+      "catalogBundleName": "51dc790300eb3d900786837beb3ac335",
+      "patched_slots": 11
+    },
+    {
+      "pack": "theweeknd",
+      "packBundle": "theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle",
+      "patchedBundle": "theweeknd_pack_modes_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/theweeknd_pack_modes_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle",
+      "size": 8556003,
+      "crc": 1392943520,
+      "catalogBundleName": "12142c8f40c475a0c37570bc05452d48",
+      "patched_slots": 12
+    },
+    {
+      "pack": "timbaland",
+      "packBundle": "timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle",
+      "patchedBundle": "timbaland_pack_modes_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle",
+      "local_path": "/workspace/beat_saber_deluxe/pack_modes_bundles/timbaland_pack_modes_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle",
+      "size": 3411047,
+      "crc": 762003684,
+      "catalogBundleName": "da8279aa3da4d78113cd611c58435eb1",
+      "patched_slots": 5
+    }
+  ]
+}
