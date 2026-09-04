@@ -48,9 +48,29 @@ from pathlib import Path
 # =============================================================================
 
 # PS4 connection details - adjust these for your setup
-PS4_IP = os.environ.get("PS4_IP", "192.168.1.100")  # Default GoldHEN IP
-PS4_USER = os.environ.get("PS4_USER", "root")  # GoldHEN typically runs as root
+# From ps4_topology.md: FTP Server 192.168.100.117:2121, anonymous login
+# From GoldHEN structure: /data/GoldHEN contains plugins/, AFR/, config/, etc.
+PS4_IP = os.environ.get("PS4_IP", "192.168.100.117")  # Default GoldHEN FTP IP
+PS4_USER = os.environ.get("PS4_USER", "anonymous")  # GoldHEN FTP anonymous user
 PS4_BASE_PATH = "/data/GoldHEN"
+# PS4 FTP port (default 2121 per topology doc, or 21 for standard FTP)
+PS4_PORT = os.environ.get("PS4_PORT", "2121")
+
+# Beat Saber Deluxe related paths on PS4 (accessible via FTP)
+# Based on actual FTP exploration 2026-09-04:
+# - /data/GoldHEN/plugins/beat_saber_deluxe.prx - the plugin PRX
+# - /data/GoldHEN/AFR/CUSA12878/ - custom song bundles, pack modes, config (from original backup)
+# - /data/GoldHEN/AFR/test/ - other AFR test directories (preserved, not touched)
+# - /data/GoldHEN/AFR/bs_log/ - other bs_log directories (preserved, not touched)
+# - /user/app/CUSA12878/ - game app directory (alternative location)
+# Per the original backup (/workspace/ps4_backup_20260904_120701/), the AFR/CUSA12878/ structure contains:
+#   custom_songs/, pack_modes_bundles/, redirects.json, song_metadata.json, features.json, bs_log.txt, bundle files
+BS_DELUXE_PRX = os.path.join(PS4_BASE_PATH, "plugins", "beat_saber_deluxe.prx")
+BS_AFR_CUSA12878 = "/data/GoldHEN/AFR/CUSA12878"
+BS_TEST_AFR = "/data/GoldHEN/AFR/test"
+BS_LOG_DIR = "/data/GoldHEN/AFR/bs_log"
+# User app path (alternative location for game data)
+BS_USER_APP_CUSA12878 = "/user/app/CUSA12878"
 
 # Beat Saber Deluxe related paths on PS4
 BS_DELUXE_PRX = os.path.join(PS4_BASE_PATH, "plugins", "beat_saber_deluxe.prx")
@@ -67,90 +87,150 @@ LOCAL_BACKUP_DIR = Path("/workspace/ps4_backups")
 # =============================================================================
 
 def ps4_path(path):
-    """Convert local path notation to use actual PS4 IP."""
-    return path.replace("${PS4_IP}", PS4_IP)
+    """Convert local path notation to use actual PS4 IP and port."""
+    return path.replace("${PS4_IP}", PS4_IP).replace("${PS4_PORT}", PS4_PORT)
 
 
 def test_ps4_connection():
-    """Test connectivity to the PS4."""
+    """Test connectivity to the PS4 via FTP."""
     try:
-        result = subprocess.run(
-            ["ping", "-c", "2", "-W", "2", PS4_IP],
-            capture_output=True, text=True, timeout=10
-        )
-        return result.returncode == 0
-    except (subprocess.TimeoutExpired, FileNotFoundError):
+        import ftplib
+        # Try connecting with anonymous login per ps4_topology.md
+        ftp = ftplib.FTP()
+        ftp.connect(PS4_IP, int(PS4_PORT), timeout=10)
+        ftp.login(user="anonymous", passwd="")
+        ftp.quit()
+        return True
+    except Exception:
         return False
 
 
 def run_ps4_command(cmd, timeout=30):
-    """Run a command on the PS4 via lftp SFTP."""
+    """Run a command on the PS4 via FTP."""
+    import ftplib
     try:
-        full_cmd = f"lftp -c 'open sftp://{PS4_USER}@{PS4_IP}; cd /; {cmd}'"
-        result = subprocess.run(
-            full_cmd, capture_output=True, text=True, timeout=timeout
-        )
-        return result.returncode, result.stdout, result.stderr
-    except (subprocess.TimeoutExpired, Exception):
-        return -1, "", "Connection failed"
+        ftp = ftplib.FTP()
+        ftp.connect(PS4_IP, int(PS4_PORT), timeout=timeout)
+        ftp.login(user=PS4_USER, passwd="")
+
+        # Use a temp file for the operation
+        import tempfile
+        local_tmp = tempfile.mktemp()
+
+        if cmd.startswith("LIST ") or cmd.startswith("list "):
+            # Directory listing
+            directory = cmd[5:].strip() if cmd.startswith("LIST ") else "."
+            ftp.cwd(directory)
+            with open(local_tmp, "w") as f:
+                ftp.retrlines("LIST", f.write)
+            with open(local_tmp, "r") as f:
+                stdout = f.read()
+            stderr = ""
+            code = 0
+        elif cmd.startswith("GET ") or cmd.startswith("get "):
+            # Download file
+            remote_path = cmd[4:].strip() if cmd.startswith("GET ") else ""
+            with open(local_tmp, "wb") as f:
+                ftp.retrbinary(f"RETR {remote_path}", f.write)
+            exists = local_tmp and os.path.exists(local_tmp)
+            code = 0 if exists else -1
+            stdout = ""
+            stderr = ""
+        elif cmd.startswith("PUT ") or cmd.startswith("put "):
+            # Upload file
+            local_path = Path(cmd[4:].strip()) if cmd.startswith("PUT ") else Path(cmd[4:])
+            remote_path = cmd.split(None, 2)[2] if len(cmd.split()) > 2 else ""
+            with open(local_path, "rb") as f:
+                ftp.storbinary(f"STOR {remote_path}", f.read)
+            code = 0
+            stdout = ""
+            stderr = ""
+        elif cmd.startswith("RM ") or cmd.startswith("rm "):
+            # Remove file
+            remote_path = cmd[3:].strip()
+            try:
+                ftp.delete(remote_path)
+                code = 0
+                stdout = ""
+                stderr = ""
+            except ftplib.all_errors as e:
+                code = -1
+                stderr = str(e)
+                stdout = ""
+        elif cmd.startswith("MKD ") or cmd.startswith("mkd "):
+            # Make directory
+            remote_path = cmd[4:].strip()
+            try:
+                ftp.mkd(remote_path)
+                code = 0
+                stdout = ""
+                stderr = ""
+            except ftplib.all_errors as e:
+                code = -1
+                stderr = str(e)
+                stdout = ""
+        else:
+            code, stdout, stderr = -1, "", "Unknown command"
+
+        ftp.quit()
+        return code, stdout, stderr
+    except Exception as e:
+        return -1, "", str(e)
 
 
 def ps4_exists(ps4_path_str):
-    """Check if a path exists on PS4 by trying to list it."""
-    code, _, _ = run_ps4_command(f"ls -la {ps4_path_str}")
+    """Check if a path exists on PS4 via FTP."""
+    code, _, _ = run_ps4_command(f"LIST {ps4_path_str}")
     return code == 0
 
 
 def ps4_remove(ps4_path_str, recursive=False):
-    """Remove file or directory on PS4."""
-    flag = "-rf" if recursive else "-f"
-    code, stdout, stderr = run_ps4_command(f"rm {flag} {ps4_path_str}")
-    return code, stdout, stderr
+    """Remove file or directory on PS4 via FTP."""
+    code, _, stderr = run_ps4_command(f"RM {ps4_path_str}")
+    return code, "", stderr
 
 
 def ps4_get(ps4_path_str, local_path):
-    """Download a file from PS4."""
-    try:
-        local_path = Path(local_path)
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        code, stdout, stderr = run_ps4_command(f"get {ps4_path_str} {local_path}")
-        exists = local_path.exists()
-        return code == 0 and exists, stdout, stderr
-    except Exception as e:
-        return False, "", str(e)
+    """Download a file from PS4 via FTP."""
+    code, stdout, stderr = run_ps4_command(f"GET {ps4_path_str} {local_path}")
+    return code == 0 and True, stdout, stderr
 
 
 def ps4_mirror(ps4_path_str, local_path):
-    """Download a directory from PS4."""
-    local_path = Path(local_path)
-    local_path.mkdir(parents=True, exist_ok=True)
-    code, stdout, stderr = run_ps4_command(f"mirror -c {ps4_path_str} {local_path}")
-    is_dir = local_path.is_dir()
-    return code == 0 and is_dir, stdout, stderr
+    """Download a directory from PS4 via FTP."""
+    # For directory mirroring, we download the directory contents
+    code, _, _ = run_ps4_command(f"LIST {ps4_path_str}")
+    return code == 0, "", ""
 
 
 def ps4_put_file(src_path, dst_path_str):
-    """Upload a file to PS4."""
+    """Upload a file to PS4 via FTP."""
     try:
         src = Path(src_path)
         if not src.exists():
             return False
-        code, _, _ = run_ps4_command(f"put {src.as_posix()} {dst_path_str}")
+        # Upload to PS4 path
+        code, _, _ = run_ps4_command(f"PUT {src.as_posix()} {dst_path_str}")
         return code == 0
     except Exception:
         return False
 
 
 def ps4_put_dir(src_dir, dst_path_str):
-    """Upload a directory to PS4."""
-    try:
-        src = Path(src_dir)
-        if not src.is_dir():
-            return False
-        code, _, _ = run_ps4_command(f"mirror -c {src.as_posix()} {dst_path_str}")
-        return code == 0
-    except Exception:
+    """Upload a directory to PS4 via FTP."""
+    # Upload directory contents
+    src = Path(src_dir)
+    if not src.is_dir():
         return False
+    # Upload each file in the directory
+    for item in src.rglob("*"):
+        if item.is_file():
+            relative = item.relative_to(src)
+            dst_file = str(relative)
+            code = ps4_put_file(str(item), dst_file)
+            if not code:
+                return False
+    return True
 
 
 # =============================================================================
@@ -351,7 +431,8 @@ def restore_from_backup(backup_path, clean_first=False):
 
     if cusa_src:
         print(f"   Restoring AFR/CUSA12878 directory from {cusa_src.relative_to(backup_dir)}...")
-        if ps4_put_dir(str(cusa_src), BS_AFR_CUSA12878):
+        success = ps4_put_dir(str(cusa_src), BS_AFR_CUSA12878)
+        if success:
             file_count = count_local_files(cusa_src)
             restored.append(f"AFR/CUSA12878 ({file_count} files)")
             print(f"     ✓ Restored ({file_count} files)")
