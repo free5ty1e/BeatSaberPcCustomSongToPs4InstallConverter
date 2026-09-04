@@ -486,3 +486,21 @@ metadata:
 
 **Tests:** 571/571 pass (pipeline v0.5328)
 
+
+### Experiment 207: Unified --deploy-full Flag for Complete Orchestration (2026-09-03)
+
+**Date:** 2026-09-03
+
+**What was attempted:** User complained that the separate `build_deploy_all38.py` script was confusing and that individual song deployments should be completely self-contained. The old architecture had two separate workflows: (1) per-song `--deploy` which only deployed the song bundle, and (2) `build_deploy_all38.py` which built everything locally then did a one-shot deploy of all bundles + catalog + redirects. The problem was that the consolidated script used LOCAL CACHED SOURCES (from `chromeo_backout/`) which were old V4→V3 reconstructions without the bug fixes, while `--download-beat-saver-song` downloaded FRESH from BeatSaver.
+
+**Solution implemented:** Added `--deploy-full` flag to `full_custom_song_pipeline.py` that handles complete orchestration internally:
+- Sets implied flags: `--deploy`, `--deploy-config`, `--generate-config`, `--deploy-pack-modes`
+- The existing pipeline flow already handles the correct order: pack bundles + catalog → redirects.json → validation (Exp 180 rule)
+- Works with both `--download-beat-saver-song` and `--song-dir`
+
+**Documentation updated:** All 5 music pack docs (.md) and scripts (.sh) now use `--deploy-full` instead of `--deploy`. Scripts rewritten to show each command is now complete and self-contained (handles song bundle + pack mode bundles + catalog + redirects + validation in one command).
+
+**Tests:** 571/571 pass (pipeline v0.5328)
+
+**Next steps:** User can now run a single command per song and get full orchestration. The Charli XCX / 1999 song should now work correctly with `--deploy-full` using the downloaded BeatSaver beatmaps (not local cached sources).
+

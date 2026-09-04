@@ -60,7 +60,7 @@ using a single pipeline command. A comment above each command identifies the son
 # Genre: Synth-pop / R&B
 # BPM: 171
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8553     --target BabyOneMoreTime     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8553     --target BabyOneMoreTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -74,7 +74,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8553  
 # Genre: Pop / Tropical House
 # BPM: 96
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1672a     --target Circus     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1672a     --target Circus     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -88,7 +88,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1672a 
 # Genre: K-Pop / Dance / Comedy
 # BPM: 132
 # Difficulties: 3/5 (Normal, Hard, Expert) [Ranked]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 141     --target GimmeMore     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 141     --target GimmeMore     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -102,7 +102,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 141   
 # Genre: Pop Rock / Arena Rock
 # BPM: 125
 # Difficulties: 5/5 (Easy through Expert+) [100k Contest version]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1fef     --target ImASlave4U     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1fef     --target ImASlave4U     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -116,7 +116,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1fef  
 # Genre: Progressive Pop / Rock
 # BPM: 180
 # Difficulties: 5/5 (Easy through Expert+) [Ranked, greatyazer]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 570     --target MeAgainstTheMusic     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 570     --target MeAgainstTheMusic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -130,7 +130,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 570   
 # Genre: Hip Hop / Rap
 # BPM: 148
 # Difficulties: 5/5 (Easy through Expert+) [Ryger, highest rated 0.959]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 46d4     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 46d4     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -139,12 +139,12 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 46d4  
 # Artist: Robyn
 # Album: Body Talk (Remixes)
 # Year: 2010
-# BeatSaver MAP_ID: (varies - check latest)
-# BeatSaver Link: https://beatsaver.com/maps/ (search "Dancing On My Own Robyn")
+# BeatSaver MAP_ID: 189d
+# BeatSaver Link: https://beatsaver.com/maps/189d
 # Genre: Electropop / Dance
 # BPM: 128
 # Difficulties: 2/5 (Hard, Expert) [constroyr]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song <MAP_ID>     --target Overprotected     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 189d     --target Overprotected     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -153,12 +153,12 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song <MAP_I
 # Artist: Dua Lipa
 # Album: Future Nostalgia
 # Year: 2020
-# BeatSaver MAP_ID: (varies - check latest)
-# BeatSaver Link: https://beatsaver.com/maps/ (search "Levitating Dua Lipa")
+# BeatSaver MAP_ID: 12355
+# BeatSaver Link: https://beatsaver.com/maps/12355
 # Genre: Disco-pop / Dance-pop
 # BPM: 103
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song <MAP_ID>     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy
+# Difficulties: 4/5 (Normal, Hard, Expert, Expert+) [yomama]
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 12355     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -172,7 +172,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song <MAP_I
 # Genre: Pop / Dance
 # BPM: 98
 # Difficulties: 5/5 (Easy through Expert+) [Most upvoted 7,791]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6cc2     --target TillTheWorldEnds     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6cc2     --target TillTheWorldEnds     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -186,7 +186,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6cc2  
 # Genre: Dance-pop / Electropop
 # BPM: 143
 # Difficulties: 5/5 (Easy through Expert+) [Emir]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21540     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21540     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -200,5 +200,5 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21540 
 # Genre: Electropop / Dance-pop
 # BPM: 140
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 12bd8     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 12bd8     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

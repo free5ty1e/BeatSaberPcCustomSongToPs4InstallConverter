@@ -333,20 +333,24 @@ This is the fastest way to get a custom song onto your PS4. Run this single comm
 ```bash
 cd /workspace/beat_saber_deluxe
 
+# Complete end-to-end deployment in ONE command:
+# - Downloads song from BeatSaver
+# - Converts to V3.2.0 (V2→V3 auto-conversion)
+# - Generates all 4 modes (Standard, OneSaber, NoArrows, 90Degree)
+# - Builds song bundle with PCM16 lossless audio
+# - Builds/deploys pack mode bundles + merged catalog
+# - Deploys song bundle, pack bundles, catalog, redirects.json
+# - Runs post-deploy validation
 python3 tools/full_custom_song_pipeline.py \
-    --download-beat-saver-song <MAP_ID> \
-    --target startmeup \
-    --deploy \
-    --generate-config \
-    --deploy-config
+  --download-beat-saver-song <MAP_ID> \
+  --target <slot_name> \
+  --deploy-full
 ```
 
 **Parameters explained:**
 - `<MAP_ID>` — the BeatSaver map key (e.g. `1d6c7c2`). Find it on [BeatSaver.com](https://beatsaver.com) — it's the short hash in the URL (e.g. `beatsaver.com/maps/1d6c7c2`)
-- `--target startmeup` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
-- `--deploy` — upload the resulting bundle to PS4 via FTP
-- `--generate-config` — create/update the redirects config file
-- `--deploy-config` — upload the config to PS4
+- `--target <slot_name>` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
+- `--deploy-full` — **Complete orchestration in ONE command**: song bundle + pack mode bundles + merged catalog + redirects.json + post-deploy validation
 
 > **v0.5314+ safe defaults (no flags needed):** PCM16 lossless audio + full-length (no padding truncation) + beatmap mode mapping (OneSaber/NoArrows/90Degree auto-generated to fill gaps) + V2→V3 conversion are all **default ON**. The old explicit flags (`--pcm16`, `--no-pad`, `--convert-to-v3`, `--enable-beatmap-mode-mapping`) are still accepted as no-op compat flags. To opt out: `--hevag`/`--vorbis` (codec), `--pad-fsb5` (**DANGER** — truncates audio to 12MB, produces partial songs), `--disable-beatmap-mode-mapping` (Standard only), `--no-convert-to-v3` (leave V2).
 
@@ -356,14 +360,16 @@ python3 tools/full_custom_song_pipeline.py \
 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song 1d6c7c2 \
     --target startmeup \
-    --deploy --generate-config --deploy-config
+    --deploy-full
 ```
 
 **After the command completes:**
 1. The bundle is built and deployed to `/data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle`
-2. The redirect config is updated and deployed
-3. Restart Beat Saber on your PS4
-4. Navigate to the target song in the game's song pack — your custom song will play!
+2. Pack mode bundles + merged catalog are deployed
+3. The redirect config is updated and deployed
+4. Post-deploy validation runs
+5. Restart Beat Saber on your PS4
+6. Navigate to the target song in the game's song pack — your custom song will play with all 4 modes available!
 
 ---
 

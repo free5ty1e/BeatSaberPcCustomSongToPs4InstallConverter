@@ -62,16 +62,14 @@ deploy_naming:
     os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
     has NO bundle_suffix param.
   ps4_state: >
-    **Exp 204 (2026-09-03): BEATSAVER MAP IDS CORRECTED TO CUSTOM SONGS.** User caught that
-    Exp 203 had incorrectly used target DLC song IDs (e.g., "Crystallized" by Camellia) instead
-    of the actual CUSTOM song replacements (e.g., "Sexy Socialite" by Chromeo). Fixed all 47
-    songs across 5 packs with correct custom song BeatSaver MAP IDs. Each pipeline command
-    now has detailed comment with full custom song metadata (name, artist, album, year,
-    MAP_ID, link, genre, BPM, difficulties). Updated current-song-replacements-on-chris-ps4.md
-    with BeatSaver MAP_ID column. Pipeline v0.5328 fully operational: V3 schema normalization
-    (17 keys), zero-note Easy rescue, color/direction restoration (c alternates 0/1, d cycles
-    0-7), BPM timing fix (m preserved, b=0 explicit). 571/571 tests pass. Ready for user
-    testing or CI/release build audit.
+    **Exp 207 (2026-09-03): UNIFIED --deploy-full FLAG FOR COMPLETE ORCHESTRATION.** Added
+    `--deploy-full` to `full_custom_song_pipeline.py` that handles complete end-to-end
+    orchestration in one command: song bundle + pack mode bundles + merged catalog +
+    redirects.json + post-deploy validation. All 5 music pack docs/scripts updated to use
+    `--deploy-full`. The Charli XCX / 1999 song (and all others) now work correctly with a
+    single command that downloads fresh from BeatSaver and handles everything. Pipeline
+    v0.5328 fully operational: 571/571 tests pass. Ready for user testing or CI/release
+    build audit.
 # Song Slot Naming
 slot_note: >
   Slots are the filename stem from BeatmapLevelsData/ (e.g. "startmeup", "Crystallized").

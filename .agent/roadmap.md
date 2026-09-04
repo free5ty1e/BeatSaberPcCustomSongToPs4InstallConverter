@@ -220,12 +220,13 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] Boot clean; stock song OK; RS + lizzo + billieeilish customs play No Arrows fine; OneSaber-blue + full-audio untested this round.
 - [x] **Chromeo crash root-caused (v0.5328):** reconstructed V4→V3 maps were minimal-schema (8 vs 17 required keys) + zero-note Easy maps in 3 slots → CE-34878-0 at gameplay load. Fixed with `normalize_v3_schema()` at both injection points + empty-difficulty donor rescue. 571/571 tests.
 
-### Completed (Exp 202-204)
+### Completed (Exp 202-207)
 - [x] **Britney Spears pack replacement (Exp 202):** All 11 songs replaced with custom BeatSaver songs using `--download-beat-saver-song` pipeline, each with 4 selectable modes.
 - [x] **All 5 music pack documentation complete (Exp 203):** Self-contained .md docs and .sh scripts for all 5 packs (Britney Spears, Rolling Stones, Lizzo, Billie Eilish, Camelia/Chromeo) with verified BeatSaver MAP IDs. Total 47 songs across 5 packs.
 - [x] **Chromeo bugfixes in v0.5328:** V3 schema normalization (17 keys), zero-note Easy rescue, color/direction restoration (c alternates 0/1, d cycles 0-7), BPM timing fix (m preserved, b=0 explicit).
 - [x] **BeatSaver MAP IDs corrected to use CUSTOM songs (Exp 204):** Fixed all documentation to use the actual custom song replacements' BeatSaver MAP IDs (the songs we're installing), not the target DLC song names. Added BeatSaver MAP_ID column to current-song-replacements-on-chris-ps4.md. Each pipeline command now has detailed comment with full custom song metadata (name, artist, album, year, MAP_ID, link, genre, BPM, difficulties).
+- [x] **Unified --deploy-full flag (Exp 207):** Added `--deploy-full` to pipeline that handles complete orchestration in one command: song bundle + pack mode bundles + merged catalog + redirects.json + post-deploy validation. All docs/scripts updated to use `--deploy-full`.
 
 ### Next (M9 — Generalization)
-- [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy.
+- [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy with `--deploy-full`.
 - [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).

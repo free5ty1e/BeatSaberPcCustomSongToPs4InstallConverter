@@ -53,7 +53,7 @@ song_metadata.json
 # Genre: J-Pop / Rock
 # BPM: 114
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4a901     --target AllTheGoodGirlsGoToHell     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4a901     --target AllTheGoodGirlsGoToHell     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 2. bad guy → Odo (Ado)
 # Custom Song: Odo
@@ -65,7 +65,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4a901 
 # Genre: J-Pop / Rock
 # BPM: 128
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1dbb9     --target BadGuy     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1dbb9     --target BadGuy     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 3. bellyache → ATTITUDE (IVE)
 # Custom Song: ATTITUDE
@@ -77,7 +77,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1dbb9 
 # Genre: K-Pop / Pop
 # BPM: 118
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 44218     --target Bellyache     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 44218     --target Bellyache     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 4. bury a friend → Baddie (IVE)
 # Custom Song: Baddie
@@ -89,7 +89,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 44218 
 # Genre: K-Pop / Pop
 # BPM: 160
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 36ab4     --target BuryAFriend     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 36ab4     --target BuryAFriend     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 5. happier than ever → Cosmic (Red Velvet)
 # Custom Song: Cosmic
@@ -101,7 +101,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 36ab4 
 # Genre: K-Pop / R&B Pop
 # BPM: 106
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3e192     --target HappierThanEver     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3e192     --target HappierThanEver     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 6. nda → Duvet (Bôa)
 # Custom Song: Duvet
@@ -113,7 +113,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3e192 
 # Genre: Alternative Rock / Indie
 # BPM: 186
 # Difficulties: 5/5 (Easy through Expert+) [Noodle walls]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4b107     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4b107     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 7. therefore i am → Who's Laughing Now (Ava Max)
 # Custom Song: Who's Laughing Now
@@ -125,7 +125,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4b107 
 # Genre: Dance Pop / Electropop
 # BPM: 92
 # Difficulties: 5/5 (Easy through Expert+) [Ranked]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song f91e     --target ThereforeIAm     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song f91e     --target ThereforeIAm     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 8. 2 be loved (am i ready) → Yes I'm A Mess (AJR)
 # Custom Song: Yes I'm A Mess
@@ -137,7 +137,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song f91e  
 # Genre: Indie Pop / Alternative
 # BPM: 184
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target 2BeLoved     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target 2BeLoved     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 9. about damn time → The Middle (Jimmy Eat World)
 # Custom Song: The Middle
@@ -149,7 +149,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9 
 # Genre: Alternative Rock / Emo
 # BPM: 162
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13     --target AboutDamnTime     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13     --target AboutDamnTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 10. cuz i love you → Bring It On (Giga-P)
 # Custom Song: Bring It On
@@ -161,5 +161,5 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13 
 # Genre: Vocaloid / Electronic
 # BPM: 160
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

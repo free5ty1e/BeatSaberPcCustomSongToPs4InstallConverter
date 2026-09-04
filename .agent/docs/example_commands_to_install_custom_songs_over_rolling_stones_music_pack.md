@@ -54,7 +54,7 @@ song_metadata.json
 # Genre: Electronic / Drum & Bass
 # BPM: 128
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song c213     --target Angry     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song c213     --target Angry     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 2. Bite My Head Off → Escaping the Ruins (MDK / Gareth Coker)
 # Custom Song: Escaping the Ruins
@@ -66,7 +66,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song c213  
 # Genre: Orchestral / Video Game Music
 # BPM: 160
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8c2a     --target BiteMyHeadOff     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8c2a     --target BiteMyHeadOff     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 3. Can't You Hear Me Knocking → Spicy (aespa)
 # Custom Song: Spicy
@@ -78,7 +78,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8c2a  
 # Genre: K-Pop / Pop
 # BPM: 115
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 32c7a     --target CantYouHearMeKnocking     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 32c7a     --target CantYouHearMeKnocking     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 4. Gimme Shelter → Yes I'm A Mess (AJR)
 # Custom Song: Yes I'm A Mess
@@ -90,7 +90,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 32c7a 
 # Genre: Indie Pop / Alternative
 # BPM: 184
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target GimmeShelter     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target GimmeShelter     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 5. Satisfaction → Dreams Come True (aespa)
 # Custom Song: Dreams Come True
@@ -102,7 +102,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9 
 # Genre: K-Pop / Pop
 # BPM: 99
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f     --target Satisfaction     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f     --target Satisfaction     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 6. Live by the Sword → Take Me to the Beach (Imagine Dragons feat. Ado)
 # Custom Song: Take Me to the Beach
@@ -114,7 +114,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f 
 # Genre: Pop Rock / Alternative
 # BPM: 105
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 42a0a     --target LiveByTheSword     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 42a0a     --target LiveByTheSword     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 7. Mess it Up → Powersnake (Brothers of Metal)
 # Custom Song: Powersnake
@@ -126,7 +126,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 42a0a 
 # Genre: Power Metal / Symphonic Metal
 # BPM: 175
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 15db5     --target MessItUp     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 15db5     --target MessItUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 8. Paint It Black → Time Lapse (TheFatRat)
 # Custom Song: Time Lapse
@@ -138,7 +138,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 15db5 
 # Genre: Electronic / Glitch Hop
 # BPM: 127
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a909     --target PaintItBlack     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a909     --target PaintItBlack     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 9. Sugar Soaker → Venom of Venus (Powerwolf)
 # Custom Song: Venom of Venus
@@ -150,7 +150,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a909  
 # Genre: Power Metal / Heavy Metal
 # BPM: 164
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song b7aa     --target SugarSoaker     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song b7aa     --target SugarSoaker     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 10. Sympathy For The Devil → LIT (Polyphia)
 # Custom Song: LIT
@@ -162,7 +162,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song b7aa  
 # Genre: Progressive Metal / Math Rock
 # BPM: 99
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1b457     --target SympathyForTheDevil     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1b457     --target SympathyForTheDevil     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 11. Whole Wide World → VOLUPTE (Tare)
 # Custom Song: VOLUPTE
@@ -174,5 +174,5 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1b457 
 # Genre: Electronic / Bass Music
 # BPM: 128
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a692     --target WholeWideWorld     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a692     --target WholeWideWorld     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

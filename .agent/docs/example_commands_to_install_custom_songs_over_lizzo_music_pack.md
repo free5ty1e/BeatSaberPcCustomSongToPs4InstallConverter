@@ -52,7 +52,7 @@ song_metadata.json
 # Genre: Indie Pop / Alternative
 # BPM: 184
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target 2BeLoved     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target 2BeLoved     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 2. About Damn Time → The Middle (Jimmy Eat World)
 # Custom Song: The Middle
@@ -64,7 +64,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9 
 # Genre: Alternative Rock / Emo
 # BPM: 162
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13     --target AboutDamnTime     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13     --target AboutDamnTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 3. Cuz I Love You → Bring It On (Giga-P)
 # Custom Song: Bring It On
@@ -76,7 +76,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13 
 # Genre: Vocaloid / Electronic
 # BPM: 160
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 4. Everybody's Gay → Queencard ((G)I-DLE)
 # Custom Song: Queencard
@@ -88,7 +88,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475  
 # Genre: K-Pop / Pop
 # BPM: 130
 # Difficulties: 5/5 (Easy through Expert+) [Ranked]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 40a53     --target EverybodysGay     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 40a53     --target EverybodysGay     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 5. Good As Hell → Do You Wanna Taste It (Wig Wam)
 # Custom Song: Do You Wanna Taste It
@@ -100,7 +100,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 40a53 
 # Genre: Glam Rock / Hard Rock
 # BPM: 184
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 212c5     --target GoodAsHell     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 212c5     --target GoodAsHell     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 6. Juice → Blame (Calvin Harris feat. John Newman)
 # Custom Song: Blame
@@ -112,7 +112,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 212c5 
 # Genre: EDM / Pop
 # BPM: 128
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5758     --target Juice     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5758     --target Juice     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 7. Tempo → Bruises (Fox Stevenson)
 # Custom Song: Bruises
@@ -125,7 +125,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5758  
 # BPM: 174
 # Difficulties: 5/5 (Easy through Expert+) + 90/360
 # Note: Previously had desync issues; may need lapped audio handling
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song ae3c     --target Tempo     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song ae3c     --target Tempo     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 8. Truth Hurts → Genie In A Bottle (DisasterTheory)
 # Custom Song: Genie In A Bottle
@@ -137,7 +137,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song ae3c  
 # Genre: Electronic / Dubstep
 # BPM: 177
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 50a08     --target TruthHurts     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 50a08     --target TruthHurts     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 9. Worship → Best Day Of My Life (American Authors)
 # Custom Song: Best Day Of My Life
@@ -149,5 +149,5 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 50a08 
 # Genre: Indie Pop / Folk Pop
 # BPM: 100
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 86e9     --target Worship     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 86e9     --target Worship     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

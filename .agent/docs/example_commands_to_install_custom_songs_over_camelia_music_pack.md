@@ -49,7 +49,7 @@ song_metadata.json
 # Genre: Funk / Disco / Electronic
 # BPM: 142
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 2. CycleHit → Jealous (I Ain't With It) (Chromeo)
 # Custom Song: Jealous (I Ain't With It)
@@ -61,7 +61,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f  
 # Genre: Funk / Disco / Electronic
 # BPM: 129
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 3. ExitThisEarthsAtomosphere → 'Roni Got Me Stressed Out (Chromeo)
 # Custom Song: 'Roni Got Me Stressed Out
@@ -73,7 +73,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd 
 # Genre: Funk / Disco / Electronic
 # BPM: 117
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 4. Ghost → Green Light (Chromeo Remix) (Lorde, Chromeo)
 # Custom Song: Green Light (Chromeo Remix)
@@ -85,7 +85,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba 
 # Genre: Electropop / Remix
 # BPM: 121
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 5. LightItUp → 1999 (Charli XCX & Troye Sivan)
 # Custom Song: 1999
@@ -97,7 +97,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5  
 # Genre: Pop / Synth-pop
 # BPM: 124
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 6. WhatTheCat → FANCY (TWICE)
 # Custom Song: FANCY
@@ -109,5 +109,5 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352  
 # Genre: K-Pop / Pop
 # BPM: 132
 # Difficulties: 5/5 (Easy through Expert+) [Normal, Hard, Expert, Expert+]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 47f3     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 47f3     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

@@ -3665,6 +3665,14 @@ Examples:
                         help='Skip the automatic post-deploy PS4 validation that runs whenever '
                              'any --deploy option is used')
 
+    # Full orchestration flag (self-contained end-to-end deploy)
+    parser.add_argument('--deploy-full', action='store_true',
+                        help='Complete end-to-end deployment: build song bundle with all modes, '
+                             'build pack mode bundles + merged catalog (if configured), deploy '
+                             'song bundle + pack bundles + catalog, regenerate redirects.json, '
+                             'run post-deploy validation. All in one command. Works with '
+                             '--download-beat-saver-song or --song-dir.')
+
     # BeatSaver song download
     parser.add_argument('--download-beat-saver-song', default=None, metavar='MAP_ID',
                         help='Download a song from BeatSaver by map key (e.g. "1d6c7c2") '
@@ -3691,6 +3699,14 @@ Examples:
                              'reprocessing a song or rebuilding the plugin.')
 
     args = parser.parse_args()
+
+    # --deploy-full implies all deployment flags for complete orchestration
+    if args.deploy_full:
+        args.deploy = True
+        args.deploy_config = True
+        args.generate_config = True
+        args.deploy_pack_modes = True
+        args.no_verify_ps4 = False  # ensure validation runs
 
     # Load PS4 config first
     config = load_config(args.config)
@@ -4094,6 +4110,12 @@ Examples:
         verify_ps4_deployment(deploy_cfg)
     elif args.verify_ps4:
         verify_ps4_deployment(deploy_cfg)
+
+    # -----------------------------------------------------------------------
+    # Step 9d: --deploy-full note (handled by flags set at arg parse time)
+    # -----------------------------------------------------------------------
+    if args.deploy_full:
+        log.info("✅ --deploy-full orchestration complete (flags: deploy, deploy-config, generate-config, deploy-pack-modes)")
 
     # -----------------------------------------------------------------------
     # Step 10: Feature flags
