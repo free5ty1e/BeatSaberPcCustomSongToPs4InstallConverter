@@ -31,6 +31,8 @@ metadata:
 ## Tooling & Workflow
 - [[toolchain-and-build|PS4 Toolchain & Build System]] — OpenOrbis toolchain, make, create-fself
 - [[development-workflow|Development Workflow]] — Deploy cycle, log analysis, FTP, experiment iteration
+- [[pipeline-deploy-full-orchestration|Pipeline Deploy Full Orchestration (`--deploy-full`)]] — Complete end-to-end orchestration in one command (song bundle + pack mode bundles + catalog + redirects + validation)
+- [[pipeline-deploy-flags|Pipeline Deploy Flags]] — All deploy-related flags reference and hierarchy
 
 ## Audio — Working Format
 - [[ps4-fsb5-pcm16-format|PS4 FSB5 PCM16 Format]] — ✅ **WORKING** — Recommended audio format (codec=2, lossless, no padding required)

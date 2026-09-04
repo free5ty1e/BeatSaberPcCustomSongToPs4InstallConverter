@@ -504,3 +504,31 @@ metadata:
 
 **Next steps:** User can now run a single command per song and get full orchestration. The Charli XCX / 1999 song should now work correctly with `--deploy-full` using the downloaded BeatSaver beatmaps (not local cached sources).
 
+
+### Experiment 208: LLM Wiki Knowledge Base Updated with --deploy-full Documentation (2026-09-03)
+
+**Date:** 2026-09-03
+
+**What was attempted:** Updated the LLM Wiki knowledge base to document the new `--deploy-full` orchestration flag and all related deploy flags.
+
+**Files created/updated:**
+1. **New: `pipeline-deploy-full-orchestration.md`** — Complete documentation of `--deploy-full` flag including:
+   - What it does in each phase (song bundle → pack bundles + catalog → song deploy + redirects → validation)
+   - Implied flags (`--deploy`, `--deploy-config`, `--generate-config`, `--deploy-pack-modes`, `--no-verify-ps4=false`)
+   - Works with both `--download-beat-saver-song` and `--song-dir`
+   - Why it replaces `build_deploy_all38.py` (fresh BeatSaver downloads vs local cached sources)
+   - Architecture leveraging existing pipeline flow (Exp 180 rule)
+   - Config requirements for pack modes
+   - Usage examples
+
+2. **New: `pipeline-deploy-flags.md`** — Complete reference of all deploy-related flags:
+   - Complete flag table with purposes and implications
+   - Flag hierarchy diagram
+   - Primary workflow flags table
+   - Config requirements for pack modes
+   - Validation flags table
+
+3. **Updated: `index.md`** — Added links to both new pages in the Tooling & Workflow section
+
+**Why this matters:** The knowledge base now documents the unified `--deploy-full` workflow that replaces the confusing two-script architecture. Users can now understand the complete orchestration from a single flag.
+
