@@ -79,6 +79,37 @@ The pipeline can target **any** song present in the game's dump — if the song 
 ## 11. Developer Information
 See [docs/developer-info.md](docs/developer-info.md) for build, test, and release procedures.
 
+## 12. Backup Utility
+The `backup-beat-saber-deluxe-files.py` script provides backup, clean, and restore functionality for Beat Saber Deluxe files on PS4.
+
+- **Backup**: `./backup-beat-saber-deluxe-files.py backup` — Creates a datetime-stamped backup zip of all BS Deluxe files from PS4
+- **Clean PS4**: `./backup-beat-saber-deluxe-files.py backup --clean-ps4` — Backs up then clears all BS Deluxe files for fresh deployment
+- **Restore**: `./backup-beat-saber-deluxe-files.py restore <path>` — Restores files from a backup zip/directory to PS4
+- **Local mode**: Add `--local` flag for testing without PS4 connectivity
+
+Usage examples:
+```bash
+# Backup current PS4 state
+./backup-beat-saber-deluxe-files.py backup
+
+# Backup and clean PS4 for fresh deployment
+./backup-beat-saber-deluxe-files.py backup --clean-ps4
+
+# Restore from a backup
+./backup-beat-saber-deluxe-files.py restore /path/to/backup.zip
+
+# Clean PS4 first, then restore
+./backup-beat-saber-deluxe-files.py restore /path/to/backup.zip --clean-ps4
+
+# List backup contents
+./backup-beat-saber-deluxe-files.py list /path/to/backup.zip
+
+# Run in local mode (no PS4 required)
+./backup-beat-saber-deluxe-files.py backup --local
+```
+
+Full documentation: [backup-documentation.md](./backup-documentation.md)
+
 ## 12. License & Credits
 
 ## 1. Devcontainer Setup
