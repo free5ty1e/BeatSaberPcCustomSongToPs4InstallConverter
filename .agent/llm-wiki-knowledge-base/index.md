@@ -59,6 +59,9 @@ metadata:
 - [[memory-injection-addressables-bypass|Memory Injection — Addressables Bypass]] — 🔴 **DEAD END** (v0.66–v0.8024): Patch BeatmapLevelSO in RAM. 14+ versions, 0 strings found across all memory regions. Preserved for historical reference.
 - [[camellia-pack-replacement|Camellia Pack Replacement]] — First full pack replacement (6 songs). PCM16 requirement confirmed, metadata behavior documented, required flags established.
 
+## PS4 System & Filesystem
+- [[ps4-zero-byte-system-files|PS4 0-Byte System Files]] — 0-byte files in /user/app/CUSA12878/ are normal mount points, NOT corrupted game files. Custom .bundle files there cause "data corrupted" error.
+
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip
 - [[unitypy-serialization|save_typetree vs set_raw_data]] — set_raw_data causes serialization bugs for 3/5 objects
