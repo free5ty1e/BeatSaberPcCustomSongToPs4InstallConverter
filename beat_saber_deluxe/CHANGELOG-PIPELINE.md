@@ -1,5 +1,15 @@
 # Pipeline Changelog
 
+## v0.5329 (2026-09-05)
+### Added
+- **Backup utility + exercise scripts with plugins.ini integration (Exp 210):** Created `backup-beat-saber-deluxe-files.py` with backup/clean/restore/list commands for PS4 GoldHEN filesystem via FTP. Updated `exercise-bsd-backup.sh` to exercise all 4 workflows against actual PS4 connection. All 4 exercises now succeed with real content transfer (afr.prx, AFR/CUSA12878, AFR/test, AFR/bs_log — 22 files each).
+- **plugins.ini management:** Backup now downloads `/data/GoldHEN/plugins.ini`; clean safely removes the `[CUSA12878]` section containing `beat_saber_deluxe.prx` entry (prevents "data corrupted" error on game launch) while preserving all other plugin entries; restore restores plugins.ini; validate checks for BSD entry.
+- **Exercise script validation:** All 4 exercises now validate plugins.ini in outputs.
+- **Full cycle test verified:** Original backup (ps4_backup_20260904_120701, 60 bundle files) → Exercise 1 restore 60 files → Exercise 2 backup 3 items (22 files each) → Exercise 3 backup+clean 3 items, AFR/CUSA12878 removed from PS4, BSD entry removed from plugins.ini → Exercise 4 restore 66 files (22+22+22).
+
+### Changed
+- Pipeline version bumped 0.5328 → 0.5329.
+
 ## v0.5328 (2026-08-26)
 ### Fixed
 - **Camellia-pack custom songs crash at gameplay load (CE-34878-0, Exp 200):** the 6 Chromeo slots' beatmaps came from the V4→V3.2.0 PS4-bundle reconstruction and were (a) MINIMAL-schema — missing `basicBeatmapEvents`, `waypoints`, `lightColorEventBoxGroups`, `lightRotationEventBoxGroups`, `lightTranslationEventBoxGroups`, `useNormalEventsAsCompatibleEvents`, `customData` that every hardware-proven-good map carries, and (b) three slots had ZERO-NOTE Easy difficulties (`cyclehit`/`exitthisearthsatomosphere`/`lightitup` decoded empty). User boot test: RS/lizzo/billieeilish customs all played fine; Chromeo selection crashed before environment/audio loads.

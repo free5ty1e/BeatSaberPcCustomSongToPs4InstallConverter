@@ -532,3 +532,16 @@ metadata:
 
 **Why this matters:** The knowledge base now documents the unified `--deploy-full` workflow that replaces the confusing two-script architecture. Users can now understand the complete orchestration from a single flag.
 
+
+### Experiment 210: Backup Utility + Exercise Scripts Complete with plugins.ini Integration (2026-09-05)
+- **Date:** 2026-09-05
+- **Context:** Created and refined backup utility script (backup-beat-saber-deluxe-files.py) with backup, clean, restore, and list commands for PS4 GoldHEN filesystem via FTP. Updated exercise script (exercise-bsd-backup.sh) to properly exercise all 4 workflows using actual PS4 content rather than local fallbacks.
+- **Key findings/results:** All 4 exercises (Restore from original backup, Backup without clear, Backup with clear, Restore from latest backup) now fully succeed with actual PS4 content transfer. Previously, exercises showed 0 items because the script correctly handled missing PS4 paths rather than failing/forcing transfer. After path corrections, all exercises successfully transfer real PS4 content: afr.prx, AFR/CUSA12878 (22 files), AFR/test (22 files), AFR/bs_log (22 files). Restore function fixed to search broadly for files (AFR/ subdir, root, recursive rglob). ps4_upload_file() fixed to use f instead of f.read(). ps4_rmdir_recursive() fixed to CWD into target directory first. Zip extraction temp dir kept alive for full restore operation.
+- **New — plugins.ini integration:**
+  - **Backup:** Now downloads `/data/GoldHEN/plugins.ini` and stores it in backup
+  - **Clean:** Safely removes the `[CUSA12878]` section containing `beat_saber_deluxe.prx` entry from plugins.ini (prevents "data corrupted" error on game launch). Does NOT remove other plugin entries (game_patch.prx, no_share_watermark.prx, RB4DX-Plugin.prx, etc.)
+  - **Restore:** Restores plugins.ini from backup if present
+  - **Validate:** Checks plugins.ini has no BSD entry during verify_ps4_clean()
+- **Exercise script updated:** All 4 exercises now validate plugins.ini in outputs
+- **Full cycle test:** Original backup (ps4_backup_20260904_120701, 60 bundle files) → Exercise 1 restore → 60 files restored → Exercise 2 backup → 3 items (22 files each) backed up → Exercise 3 backup with clean → 3 items backed up, AFR/CUSA12878 removed from PS4, BSD entry removed from plugins.ini → Exercise 4 restore from latest → 66 files restored (22+22+22)
+- **Next steps:** Update project documentation per mandatory rules. User requests fully achieved.

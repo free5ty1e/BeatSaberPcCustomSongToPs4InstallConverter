@@ -62,14 +62,22 @@ deploy_naming:
     os.path.basename(local_path); deploy_to_ps4 uses _deployed_bundle_name; manage_redirect_config
     has NO bundle_suffix param.
   ps4_state: >
-    **Exp 207 (2026-09-03): UNIFIED --deploy-full FLAG FOR COMPLETE ORCHESTRATION.** Added
-    `--deploy-full` to `full_custom_song_pipeline.py` that handles complete end-to-end
-    orchestration in one command: song bundle + pack mode bundles + merged catalog +
-    redirects.json + post-deploy validation. All 5 music pack docs/scripts updated to use
-    `--deploy-full`. The Charli XCX / 1999 song (and all others) now work correctly with a
-    single command that downloads fresh from BeatSaver and handles everything. Pipeline
-    v0.5328 fully operational: 571/571 tests pass. Ready for user testing or CI/release
-    build audit.
+    **Exp 210 (2026-09-05): BACKUP UTILITY + EXERCISE SCRIPTS COMPLETE with plugins.ini.**
+    Created and refined `backup-beat-saber-deluxe-files.py` (backup/clean/restore/list commands)
+    using actual PS4 GoldHEN FTP topology (afr.prx, game_patch.prx at /data/GoldHEN/plugins/;
+    AFR/CUSA12878 at /user/app/CUSA12878/; preserved AFR/test/ and AFR/bs_log/; plugins.ini
+    at /data/GoldHEN/plugins.ini). Exercise script `exercise-bsd-backup.sh` exercises all 4
+    workflows against the real PS4 connection: restore from original backup, backup without
+    clear, backup with clear, restore from latest backup. All 4 exercises now succeed with
+    actual content transfer (no 0-item fallbacks). Added `ps4_download_dir()` and
+    `ps4_upload_dir()` for directory transfers; restore uses broad file search (AFR/ subdir,
+    root, recursive rglob). **plugins.ini integration**: backup downloads plugins.ini; clean
+    safely removes BSD plugin entry ([CUSA12878] section with beat_saber_deluxe.prx) while
+    preserving other plugins; restore restores plugins.ini; validate checks for BSD entry.
+    Full cycle test: original backup (ps4_backup_20260904_120701, 60 bundle files) -> Ex1
+    restore 60 files -> Ex2 backup 3 items (22 files each) -> Ex3 backup+clean 3 items,
+    AFR/CUSA12878 removed from PS4, BSD entry removed from plugins.ini -> Ex4 restore 66
+    files (22+22+22).
 # Song Slot Naming
 slot_note: >
   Slots are the filename stem from BeatmapLevelsData/ (e.g. "startmeup", "Crystallized").

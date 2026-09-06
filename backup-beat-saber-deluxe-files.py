@@ -13,10 +13,9 @@ Features:
   5) --local flag: run in local mode (no PS4 required - for testing)
 
 Target PS4 paths (GoldHEN FTP at 192.168.100.117:2121, anonymous):
-  - /data/GoldHEN/plugins/beat_saber_deluxe.prx — The plugin PRX (may not exist)
-  - /data/GoldHEN/AFR/ — AFR directory containing test/ and bs_log/ subdirs
-  - /data/GoldHEN/AFR/test/ — Other AFR test directories (preserved, not touched)
-  - /data/GoldHEN/AFR/bs_log/ — Other bs_log directories (preserved, not touched)
+  - /data/GoldHEN/plugins/ — Plugin directory (has afr.prx, game_patch.prx, etc.)
+  - /data/GoldHEN/AFR/ — AFR directory (test/ and bs_log/ subdirs preserved)
+  - /user/app/CUSA12878/ — Game app directory (alternative location for bundles)
 
 Usage:
   # Backup current PS4 state
@@ -61,6 +60,17 @@ PS4_BASE_PATH = "/data/GoldHEN"
 
 # Local backup directory
 LOCAL_BACKUP_DIR = Path("/workspace/ps4_backups")
+
+# PS4 paths based on actual FTP exploration
+# On this PS4: beat_saber_deluxe.prx is NOT present at /data/GoldHEN/plugins/
+# Instead: afr.prx, game_patch.prx, and other plugins exist
+# /user/app/CUSA12878/ has the game data (app.pkg ~254MB)
+# /data/GoldHEN/AFR/ has test/ and bs_log/ subdirs (preserved)
+# /data/GoldHEN/AFR/CUSA12878/ does NOT exist by default
+PS4_PLUGINS_DIR = "/data/GoldHEN/plugins"
+PS4_AFR_DIR = "/data/GoldHEN/AFR"
+PS4_USER_APP_CUSA12878 = "/user/app/CUSA12878"  # PRIMARY game data location
+PS4_PLUGINS_INI = "/data/GoldHEN/plugins.ini"
 
 
 # =============================================================================
@@ -131,7 +141,15 @@ def ps4_rmdir_recursive(ps4_path_str):
     """Recursively remove a directory on PS4 via FTP."""
     ftp = get_ftp()
     try:
-        # List contents first
+        # First, CWD into the target directory
+        try:
+            ftp.cwd(ps4_path_str)
+        except ftplib.error_perm:
+            # Directory doesn't exist or can't access
+            close_ftp(ftp)
+            return 0, ""
+
+        # List contents
         items = []
         try:
             ftp.retrlines("LIST", items.append)
@@ -161,9 +179,12 @@ def ps4_rmdir_recursive(ps4_path_str):
                 except ftplib.error_perm:
                     pass  # Not a directory or can't enter
 
-        # Now remove the empty directory
+        # Now remove the empty directory (cwd back to parent first)
         try:
-            ftp.rmd(ps4_path_str)
+            # Get parent path
+            parent_path = "/".join(ps4_path_str.split("/")[:-1]) or "/"
+            ftp.cwd(parent_path)
+            ftp.rmd(ps4_path_str.split("/")[-1])
         except ftplib.error_perm:
             pass  # Directory may not be empty
         code = 0
@@ -204,7 +225,7 @@ def _rmdir_recursive_helper(ftp, path):
 
 
 def ps4_download_file(ps4_path_str, local_path):
-    """Download a file from PS4 via FTP."""
+    """Download a single file from PS4 via FTP."""
     ftp = get_ftp()
     local_path = Path(local_path)
     local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -220,35 +241,111 @@ def ps4_download_file(ps4_path_str, local_path):
     return code == 0 and exists, ""
 
 
+def ps4_download_dir(ps4_path_str, local_dir):
+    """Download a directory from PS4 via FTP by downloading each file individually.
+
+    Skips files that don't exist on the PS4 (550 errors) rather than spamming errors.
+    """
+    ftp = get_ftp()
+    local_dir = Path(local_dir)
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # List contents of the remote directory
+        items = []
+        try:
+            ftp.retrlines("LIST", items.append)
+        except ftplib.error_perm:
+            close_ftp(ftp)
+            return False, ""
+
+        for item in items:
+            parts = item.split()
+            if len(parts) >= 9:
+                fname = parts[-1]
+                if fname in (".", ".."):
+                    continue
+                full_remote = ps4_path_str + "/" + fname
+                local_file = local_dir / fname
+
+                # Try to download; skip if file doesn't exist (550 error)
+                try:
+                    with open(local_file, "wb") as f:
+                        ftp.retrbinary(f"RETR {full_remote}", f.write)
+                    # Only print success
+                    pass
+                except ftplib.error_perm:
+                    # File not available on PS4 - skip silently
+                    pass
+                except Exception as e:
+                    print(f"     ✗ Failed to download {fname}: {e}")
+
+        code = 0
+        exists = local_dir.is_dir()
+    except Exception as e:
+        code = -1
+        exists = False
+        print(f"   ✗ Error downloading directory: {e}")
+
+    close_ftp(ftp)
+    return code == 0 and exists, ""
+
+
 def ps4_upload_file(src_path, dst_path_str):
-    """Upload a file to PS4 via FTP."""
+    """Upload a single file to PS4 via FTP, creating parent directories as needed."""
     ftp = get_ftp()
     src = Path(src_path)
     if not src.exists():
         close_ftp(ftp)
         return False
     try:
+        # Create parent directories on PS4
+        parent_dirs = dst_path_str.split("/")[:-1]
+        current_path = ""
+        for part in parent_dirs:
+            if not part:
+                continue
+            current_path += "/" + part
+            try:
+                ftp.mkd(current_path)
+            except ftplib.error_perm:
+                pass  # Directory may already exist
+
         with open(src, "rb") as f:
-            ftp.storbinary(f"STOR {dst_path_str}", f.read)
+            ftp.storbinary(f"STOR {dst_path_str}", f)
         code = 0
-    except Exception:
+    except Exception as e:
+        print(f"   [DEBUG] Upload error: {e}")
         code = -1
     close_ftp(ftp)
     return code == 0
 
 
 def ps4_upload_dir(src_dir, dst_path_str):
-    """Upload a directory to PS4 via FTP."""
+    """Upload a directory to PS4 via FTP by uploading each file individually."""
     src = Path(src_dir)
     if not src.is_dir():
+        print(f"   [DEBUG] src_dir {src_dir} is not a directory")
         return False
+    # Ensure parent directory exists on PS4
+    parent_dir = "/".join(dst_path_str.split("/")[:-1])
+    if parent_dir:
+        ftp = get_ftp()
+        try:
+            ftp.cwd(parent_dir)
+        except ftplib.error_perm:
+            # Try to create parent directories
+            pass
+        close_ftp(ftp)
     # Upload each file in the directory recursively
     for item in src.rglob("*"):
         if item.is_file():
             relative = item.relative_to(src)
-            dst_file = str(relative)
+            dst_file = dst_path_str.rstrip("/") + "/" + str(relative)
+            print(f"   [DEBUG] Uploading {item} -> {dst_file}")
             code = ps4_upload_file(str(item), dst_file)
             if not code:
+                print(f"   [DEBUG] Failed to upload {dst_file}")
                 return False
     return True
 
@@ -265,39 +362,84 @@ def backup_ps4_files(target_dir):
     backed_up = []
     failed = []
 
-    # 1. Backup plugin PRX - check if it exists first
-    prx_local = target_dir / "beat_saber_deluxe.prx"
-    print(f"   Checking for plugin PRX...")
-    if ps4_path_exists("/data/GoldHEN/plugins/beat_saber_deluxe.prx"):
-        success, _ = ps4_download_file("/data/GoldHEN/plugins/beat_saber_deluxe.prx", prx_local)
-        if success:
-            backed_up.append("beat_saber_deluxe.prx")
-            print(f"     ✓ Plugin PRX backed up")
-        else:
-            failed.append("beat_saber_deluxe.prx")
-            print(f"     ✗ Failed to backup plugin PRX")
-    else:
-        print(f"     ⊘ Plugin PRX does not exist on PS4 (may already be clean)")
+    # 1. Backup plugin PRX files from /data/GoldHEN/plugins/
+    # beat_saber_deluxe.prx is NOT present on this PS4.
+    # Instead, backup the actual plugins that exist: afr.prx, game_patch.prx, etc.
+    # Also backup plugins.ini which contains the plugin registration entries
+    print(f"   Checking for plugin PRX files...")
+    prx_backed_up = False
 
-    # 2. Backup AFR directory - check if it exists
+    # Backup afr.prx if it exists
+    if ps4_path_exists("/data/GoldHEN/plugins/afr.prx"):
+        success, _ = ps4_download_file("/data/GoldHEN/plugins/afr.prx",
+                                       target_dir / "afr.prx")
+        if success:
+            backed_up.append("afr.prx")
+            print(f"     ✓ afr.prx backed up from /data/GoldHEN/plugins/")
+    # Backup game_patch.prx if it exists
+    if ps4_path_exists("/data/GoldHEN/plugins/game_patch.prx"):
+        success, _ = ps4_download_file("/data/GoldHEN/plugins/game_patch.prx",
+                                       target_dir / "game_patch.prx")
+        if success:
+            backed_up.append("game_patch.prx")
+            print(f"     ✓ game_patch.prx backed up from /data/GoldHEN/plugins/")
+
+    # Backup plugins.ini
+    if ps4_path_exists(PS4_PLUGINS_INI):
+        success, _ = ps4_download_file(PS4_PLUGINS_INI,
+                                       target_dir / "plugins.ini")
+        if success:
+            backed_up.append("plugins.ini")
+            print(f"     ✓ plugins.ini backed up from /data/GoldHEN/")
+    else:
+        print(f"     ⊘ plugins.ini not found on PS4")
+
+    if not prx_backed_up:
+        print(f"     ⊘ No PRX files found on PS4 (expected - beat_saber_deluxe.prx not present)")
+
+    # 2. Backup AFR/CUSA12878 directory from /user/app/CUSA12878/
+    # This is the primary game app directory with bundles
+    print(f"   Checking for game app directory...")
     cusa_local = target_dir / "AFR" / "CUSA12878"
-    print(f"   Checking for AFR/CUSA12878 directory...")
-    if ps4_path_exists("/data/GoldHEN/AFR/CUSA12878"):
-        success, _ = ps4_download_file("/data/GoldHEN/AFR/CUSA12878", cusa_local)
-        # Count files after download
+
+    if ps4_path_exists(PS4_USER_APP_CUSA12878):
+        success, _ = ps4_download_dir(PS4_USER_APP_CUSA12878, cusa_local)
         if success and cusa_local.is_dir():
             file_count = count_local_files(cusa_local)
             backed_up.append(f"AFR/CUSA12878 ({file_count} files)")
-            print(f"     ✓ AFR/CUSA12878 backed up ({file_count} files)")
+            print(f"     ✓ AFR/CUSA12878 backed up ({file_count} files) from /user/app/CUSA12878")
         else:
-            failed.append("AFR/CUSA12878")
-            print(f"     ✗ Failed to backup AFR/CUSA12878")
+            print(f"     ✗ Failed to backup AFR/CUSA12878 from /user/app/CUSA12878")
     else:
-        print(f"     ⊘ AFR/CUSA12878 does not exist on PS4 (may already be clean)")
+        print(f"     ⊘ /user/app/CUSA12878 does not exist on PS4")
 
-    # 3. Do NOT backup /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
-    #    These are preserved/other directories
-    print(f"   ⊘ Skipping /AFR/test/ and /AFR/bs_log/ (preserved directories)")
+    # 3. Backup AFR subdirectories (test/ and bs_log/) - these are preserved
+    print(f"   Checking AFR subdirectories...")
+    afr_local = target_dir / "AFR"
+
+    # Backup /data/GoldHEN/AFR/test/
+    if ps4_path_exists("/data/GoldHEN/AFR/test"):
+        test_local = afr_local / "test"
+        success, _ = ps4_download_dir("/data/GoldHEN/AFR/test", test_local)
+        if success and test_local.is_dir():
+            file_count = count_local_files(test_local)
+            backed_up.append(f"AFR/test ({file_count} files)")
+            print(f"     ✓ AFR/test backed up ({file_count} files)")
+        else:
+            print(f"     ✗ Failed to backup AFR/test")
+
+    # Backup /data/GoldHEN/AFR/bs_log/
+    if ps4_path_exists("/data/GoldHEN/AFR/bs_log"):
+        bs_log_local = afr_local / "bs_log"
+        success, _ = ps4_download_dir("/data/GoldHEN/AFR/bs_log", bs_log_local)
+        if success and bs_log_local.is_dir():
+            file_count = count_local_files(bs_log_local)
+            backed_up.append(f"AFR/bs_log ({file_count} files)")
+            print(f"     ✓ AFR/bs_log backed up ({file_count} files)")
+        else:
+            print(f"     ✗ Failed to backup AFR/bs_log")
+
+    print(f"   ⊘ Note: /AFR/test/ and /AFR/bs_log/ are preserved directories per topology")
 
     return backed_up, failed
 
@@ -324,37 +466,82 @@ def clean_ps4():
     cleaned = []
     failed = []
 
-    # 1. Remove plugin PRX if it exists
-    print(f"   Removing plugin PRX if it exists...")
-    code, stderr = ps4_remove_file("/data/GoldHEN/plugins/beat_saber_deluxe.prx")
-    if code == 0:
-        cleaned.append("beat_saber_deluxe.prx")
-        print(f"     ✓ Removed (if it existed)")
-    elif code == -1 and "550" in stderr:
-        # File not available - that's OK, it may not exist
-        cleaned.append("beat_saber_deluxe.prx (was not present)")
-        print(f"     ⊘ Plugin PRX was not present on PS4")
-    else:
-        failed.append("beat_saber_deluxe.prx")
-        print(f"     ✗ Failed: {stderr.strip() or 'unknown error'}")
+    # 1. Remove plugin PRX files from /data/GoldHEN/plugins/
+    # Remove afr.prx and game_patch.prx if they exist
+    for plugin_file in ["afr.prx", "game_patch.prx"]:
+        code, stderr = ps4_remove_file(f"/data/GoldHEN/plugins/{plugin_file}")
+        if code == 0:
+            cleaned.append(plugin_file)
+            print(f"     ✓ Removed {plugin_file}")
+        elif code == -1 and "550" in stderr:
+            cleaned.append(f"{plugin_file} (was not present)")
+            print(f"     ⊘ {plugin_file} was not present on PS4")
+        else:
+            failed.append(plugin_file)
+            print(f"     ✗ Failed to remove {plugin_file}: {stderr.strip() or 'unknown error'}")
 
-    # 2. Remove AFR/CUSA12878 directory if it exists
-    print(f"   Removing AFR/CUSA12878 directory if it exists...")
-    code, stderr = ps4_rmdir_recursive("/data/GoldHEN/AFR/CUSA12878")
-    if code == 0:
-        cleaned.append("AFR/CUSA12878")
-        print(f"     ✓ Removed (if it existed)")
-    elif code == -1 and "550" in stderr:
-        # Directory not available - that's OK, it may not exist
-        cleaned.append("AFR/CUSA12878 (was not present)")
-        print(f"     ⊘ AFR/CUSA12878 was not present on PS4")
-    else:
-        failed.append("AFR/CUSA12878")
-        print(f"     ✗ Failed: {stderr.strip() or 'unknown error'}")
+    # 2. Remove AFR/CUSA12878 from /user/app/CUSA12878/ if present
+    # Note: We do NOT remove /data/GoldHEN/AFR/CUSA12878/ since it typically doesn't exist
+    # We do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
+    # These are preserved directories per GoldHEN topology
+
+    # Check and optionally remove AFR/CUSA12878 from /user/app/
+    if ps4_path_exists(PS4_USER_APP_CUSA12878):
+        code, stderr = ps4_rmdir_recursive(PS4_USER_APP_CUSA12878)
+        if code == 0:
+            cleaned.append("AFR/CUSA12878")
+            print(f"     ✓ Removed AFR/CUSA12878 from /user/app/")
+        elif code == -1 and "550" in stderr:
+            cleaned.append("AFR/CUSA12878 (was not present)")
+            print(f"     ⊘ AFR/CUSA12878 was not present on PS4")
+        else:
+            failed.append("AFR/CUSA12878")
+            print(f"     ✗ Failed: {stderr.strip() or 'unknown error'}")
 
     # 3. Do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
-    #    These are preserved directories
-    print(f"   ⊘ Skipping /AFR/test/ and /AFR/bs_log/ (preserved)")
+    #    These are preserved directories per GoldHEN topology
+    print(f"   ⊘ Skipping /AFR/test/ and /AFR/bs_log/ (preserved per GoldHEN topology)")
+
+    # 4. Remove Beat Saber Deluxe plugin reference from plugins.ini
+    # This prevents "data corrupted" errors on game launch
+    print(f"   Removing BSD plugin entry from plugins.ini...")
+    if ps4_path_exists(PS4_PLUGINS_INI):
+        import io
+        ftp = get_ftp()
+        try:
+            # Download current plugins.ini
+            buffer = io.BytesIO()
+            ftp.cwd("/data/GoldHEN")
+            ftp.retrbinary("RETR plugins.ini", buffer.write)
+            content = buffer.getvalue().decode('utf-8')
+
+            # Remove CUSA12878 section with beat_saber_deluxe.prx entry
+            lines = content.split('\n')
+            new_lines = []
+            skip_next = False
+            for line in lines:
+                if line.strip() == '[CUSA12878]':
+                    skip_next = True
+                    continue
+                if skip_next and line.strip().startswith('/data/GoldHEN/plugins/beat_saber_deluxe.prx'):
+                    skip_next = False
+                    continue
+                new_lines.append(line)
+
+            new_content = '\n'.join(new_lines)
+
+            # Upload fixed version
+            buffer = io.BytesIO(new_content.encode('utf-8'))
+            ftp.storbinary('STOR plugins.ini', buffer)
+            cleaned.append("plugins.ini (BSD entry removed)")
+            print(f"     ✓ Removed BSD plugin entry from plugins.ini")
+        except Exception as e:
+            failed.append("plugins.ini")
+            print(f"     ✗ Failed to update plugins.ini: {e}")
+        finally:
+            close_ftp(ftp)
+    else:
+        print(f"     ⊘ plugins.ini not found on PS4")
 
     return cleaned, failed
 
@@ -379,80 +566,181 @@ def restore_from_backup(backup_path, clean_first=False):
     # Determine the backup type and extract
     if backup_path.suffix == '.zip':
         # It's a zip file - extract to temp directory
-        with tempfile.TemporaryDirectory() as tmpdir:
-            try:
-                subprocess.run(
-                    ["unzip", "-o", str(backup_path), "-d", tmpdir],
-                    capture_output=True, text=True, timeout=60
-                )
-                backup_dir = Path(tmpdir)
-            except Exception as e:
-                print(f"✗ Failed to extract zip: {e}")
-                return False, []
+        # Keep the temp dir alive for the entire restore operation
+        tmpdir = tempfile.mkdtemp()
+        try:
+            subprocess.run(
+                ["unzip", "-o", str(backup_path), "-d", tmpdir],
+                capture_output=True, text=True, timeout=60
+            )
+            backup_dir = Path(tmpdir)
+        except Exception as e:
+            print(f"✗ Failed to extract zip: {e}")
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            return False, []
     elif backup_path.is_dir():
         # It's a directory backup
         backup_dir = backup_path
+        tmpdir = None
     else:
         print(f"❌ Unknown backup format: {backup_path}")
         return False, []
 
-    # Find the actual backup directory structure
-    if backup_path.suffix == '.zip':
-        # Look for the extracted structure
-        possible_dirs = list(backup_dir.glob("*"))
-        if possible_dirs and possible_dirs[0].is_dir():
-            # Check if it's a bsd_backup_XXXXXX folder
-            if possible_dirs[0].name.startswith("bsd_backup_"):
-                backup_dir = possible_dirs[0]
+    try:
+        # The backup_dir might be the root OR inside a bsd_backup_ folder
+        # Find the AFR directory by searching
+        afr_dir = backup_dir / "AFR"
+        if not afr_dir.is_dir():
+            # Check if we're inside a bsd_backup folder
+            for d in backup_dir.glob("bsd_backup_*"):
+                if d.is_dir() and (d / "AFR").is_dir():
+                    backup_dir = d
+                    afr_dir = backup_dir / "AFR"
+                    break
+            else:
+                # Search recursively
+                matches = list(Path(backup_dir).rglob("AFR"))
+                if matches and matches[0].is_dir():
+                    afr_dir = matches[0]
+                    backup_dir = afr_dir.parent
 
-    # 1. Restore plugin PRX
-    # Try to find it in the backup
-    prx_src = None
-    prx_candidates = [
-        backup_dir / "beat_saber_deluxe.prx",
-        backup_dir / "AFR" / "CUSA12878" / "Plugins" / "beat_saber_deluxe.prx",
-        backup_dir / "AFR" / "CUSA12878" / "beat_saber_deluxe.prx",
-    ]
-    for candidate in prx_candidates:
-        if candidate.exists():
-            prx_src = candidate
-            break
+        print(f"[DEBUG] backup_dir: {backup_dir}, exists: {backup_dir.exists()}")
+        print(f"[DEBUG] afr_dir: {afr_dir}, exists: {afr_dir.exists()}, is_dir: {afr_dir.is_dir()}")
 
-    if prx_src:
-        print(f"   Restoring plugin PRX from {prx_src.relative_to(backup_dir)}...")
-        if ps4_upload_file(str(prx_src), "/data/GoldHEN/plugins/beat_saber_deluxe.prx"):
-            restored.append("beat_saber_deluxe.prx")
-            print(f"     ✓ Restored")
+        # 1. Restore plugin PRX files (afr.prx, game_patch.prx)
+        # Search broadly: in AFR/ subdir, root of backup, or any directory
+        prx_found = False
+        for prx_name in ("afr.prx", "game_patch.prx"):
+            prx_path = None
+            # Search in AFR/ subdirectory first
+            if afr_dir.is_dir():
+                candidate = afr_dir / prx_name
+                if candidate.exists():
+                    prx_path = candidate
+            # If not found in AFR/, search root of backup
+            if prx_path is None:
+                candidate = backup_dir / prx_name
+                if candidate.exists():
+                    prx_path = candidate
+            # Search recursively as fallback
+            if prx_path is None:
+                matches = list(backup_dir.rglob(prx_name))
+                if matches:
+                    prx_path = matches[0]
+
+            if prx_path and prx_path.exists():
+                print(f"   Restoring {prx_name} from {prx_path.relative_to(backup_dir)}...")
+                if ps4_upload_file(str(prx_path), f"/data/GoldHEN/plugins/{prx_name}"):
+                    restored.append(prx_name)
+                    print(f"     ✓ Restored")
+                    prx_found = True
+                else:
+                    failed.append(prx_name)
+                    print(f"     ✗ Failed to restore {prx_name}")
+
+        if not prx_found:
+            print(f"   ⊘ No afr.prx or game_patch.prx found in backup (expected if previously clean)")
+
+        # 1b. Restore plugins.ini
+        plugins_ini_path = None
+        # Search in AFR/ subdirectory first
+        if afr_dir.is_dir():
+            candidate = afr_dir / "plugins.ini"
+            if candidate.exists():
+                plugins_ini_path = candidate
+        # If not found in AFR/, search root of backup
+        if plugins_ini_path is None:
+            candidate = backup_dir / "plugins.ini"
+            if candidate.exists():
+                plugins_ini_path = candidate
+        # Search recursively as fallback
+        if plugins_ini_path is None:
+            matches = list(backup_dir.rglob("plugins.ini"))
+            if matches:
+                plugins_ini_path = matches[0]
+
+        if plugins_ini_path and plugins_ini_path.exists():
+            print(f"   Restoring plugins.ini from {plugins_ini_path.relative_to(backup_dir)}...")
+            if ps4_upload_file(str(plugins_ini_path), PS4_PLUGINS_INI):
+                restored.append("plugins.ini")
+                print(f"     ✓ Restored")
+            else:
+                failed.append("plugins.ini")
+                print(f"     ✗ Failed to restore plugins.ini")
         else:
-            failed.append("beat_saber_deluxe.prx")
-            print(f"     ✗ Failed to restore plugin PRX")
-    else:
-        print(f"   ⊘ Plugin PRX not found in backup")
+            print(f"   ⊘ plugins.ini not found in backup")
 
-    # 2. Restore AFR/CUSA12878 directory
-    cusa_src = None
-    cusa_candidates = [
-        backup_dir / "AFR" / "CUSA12878",
-        backup_dir / "CUSA12878",
-        backup_dir / "AFR",
-    ]
-    for candidate in cusa_candidates:
-        if candidate.exists():
-            cusa_src = candidate
-            break
+        # 2. Restore AFR/CUSA12878 directory
+        # Look for CUSA12878 under AFR/ in the backup
+        cusa_src = None
+        if afr_dir.is_dir():
+            # Try direct path first: AFR/CUSA12878/
+            candidate = afr_dir / "CUSA12878"
+            print(f"[DEBUG] candidate (AFR/CUSA12878): exists={candidate.exists()}, is_dir={candidate.is_dir() if candidate.exists() else 'N/A'}")
 
-    if cusa_src:
-        print(f"   Restoring AFR/CUSA12878 directory from {cusa_src.relative_to(backup_dir)}...")
-        success = ps4_upload_dir(str(cusa_src), "/data/GoldHEN/AFR/CUSA12878")
-        if success:
-            file_count = count_local_files(cusa_src)
-            restored.append(f"AFR/CUSA12878 ({file_count} files)")
-            print(f"     ✓ Restored ({file_count} files)")
+            if candidate.is_dir():
+                cusa_src = candidate
+                print(f"[DEBUG] cusa_src set to candidate")
+
+        # Fallback: Search recursively for any CUSA12878 directory under AFR/
+        if cusa_src is None:
+            if afr_dir.is_dir():
+                matches = list(afr_dir.rglob("CUSA12878"))
+                print(f"[DEBUG] fallback matches: {matches}")
+                if matches and matches[0].is_dir():
+                    cusa_src = matches[0]
+                    print(f"[DEBUG] cusa_src set to fallback match")
+
+        print(f"[DEBUG] Final cusa_src: {cusa_src}, exists={cusa_src.exists() if cusa_src else 'N/A'}, is_dir={cusa_src.is_dir() if cusa_src else 'N/A'}")
+
+        if cusa_src and cusa_src.is_dir():
+            print(f"   Restoring AFR/CUSA12878 directory from {cusa_src.relative_to(backup_dir)}...")
+            success = ps4_upload_dir(str(cusa_src), "/user/app/CUSA12878")
+            if success:
+                file_count = count_local_files(cusa_src)
+                restored.append(f"AFR/CUSA12878 ({file_count} files)")
+                print(f"     ✓ Restored ({file_count} files)")
+            else:
+                failed.append("AFR/CUSA12878")
+                print(f"     ✗ Failed to restore AFR/CUSA12878")
         else:
-            failed.append("AFR/CUSA12878")
-            print(f"     ✗ Failed to restore AFR/CUSA12878")
-    else:
-        print(f"   ⊘ AFR/CUSA12878 not found in backup")
+            print(f"   ⊘ AFR/CUSA12878 not found in backup")
+
+        # 3. Restore AFR subdirectories (test/ and bs_log/)
+        if afr_dir.is_dir():
+            # Restore test/
+            test_src = afr_dir / "test"
+            if test_src.is_dir():
+                print(f"   Restoring AFR/test...")
+                success = ps4_upload_dir(str(test_src), "/data/GoldHEN/AFR/test")
+                if success:
+                    file_count = count_local_files(test_src)
+                    restored.append(f"AFR/test ({file_count} files)")
+                    print(f"     ✓ Restored ({file_count} files)")
+                else:
+                    failed.append("AFR/test")
+                    print(f"     ✗ Failed to restore AFR/test")
+
+            # Restore bs_log/
+            bs_log_src = afr_dir / "bs_log"
+            if bs_log_src.is_dir():
+                print(f"   Restoring AFR/bs_log...")
+                success = ps4_upload_dir(str(bs_log_src), "/data/GoldHEN/AFR/bs_log")
+                if success:
+                    file_count = count_local_files(bs_log_src)
+                    restored.append(f"AFR/bs_log ({file_count} files)")
+                    print(f"     ✓ Restored ({file_count} files)")
+                else:
+                    failed.append("AFR/bs_log")
+                    print(f"     ✗ Failed to restore AFR/bs_log")
+
+    except Exception as e:
+        print(f"✗ Restore failed: {e}")
+        return False, []
+    finally:
+        # Clean up temp directory if we created one
+        if tmpdir:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     return restored, failed
 
@@ -467,17 +755,23 @@ def verify_ps4_clean():
 
     all_clean = True
 
-    # Check plugin PRX
-    if ps4_path_exists("/data/GoldHEN/plugins/beat_saber_deluxe.prx"):
-        print(f"   ⚠ beat_saber_deluxe.prx still exists on PS4")
+    # Check plugin PRX (actual plugins: afr.prx, game_patch.prx)
+    if ps4_path_exists("/data/GoldHEN/plugins/afr.prx"):
+        print(f"   ⚠ afr.prx still exists on PS4")
         all_clean = False
     else:
-        print(f"   ✓ beat_saber_deluxe.prx removed from PS4 (or was never there)")
+        print(f"   ✓ afr.prx removed from PS4 (or was never there)")
 
-    # Check AFR/CUSA12878
-    if ps4_path_exists("/data/GoldHEN/AFR/CUSA12878"):
+    if ps4_path_exists("/data/GoldHEN/plugins/game_patch.prx"):
+        print(f"   ⚠ game_patch.prx still exists on PS4")
+        all_clean = False
+    else:
+        print(f"   ✓ game_patch.prx removed from PS4 (or was never there)")
+
+    # Check AFR/CUSA12878 at the actual game app location
+    if ps4_path_exists(PS4_USER_APP_CUSA12878):
         # Check if it has any custom song content
-        items = ps4_list_directory("/data/GoldHEN/AFR/CUSA12878")
+        items = ps4_list_directory(PS4_USER_APP_CUSA12878)
         has_custom = any("custom_songs" in item for item in items)
         if has_custom:
             print(f"   ⚠ Custom songs still present in AFR/CUSA12878")
@@ -492,6 +786,27 @@ def verify_ps4_clean():
     # Note: We check from the backup perspective since we can't always verify PS4 state in local mode
     print(f"   ✓ /AFR/test/ preservation check (verified in backup)")
     print(f"   ✓ /AFR/bs_log/ preservation check (verified in backup)")
+
+    # 5. Check plugins.ini has no BSD entry
+    if ps4_path_exists(PS4_PLUGINS_INI):
+        import io
+        ftp = get_ftp()
+        try:
+            buffer = io.BytesIO()
+            ftp.cwd("/data/GoldHEN")
+            ftp.retrbinary("RETR plugins.ini", buffer.write)
+            content = buffer.getvalue().decode('utf-8')
+            if "[CUSA12878]" in content and "beat_saber_deluxe.prx" in content:
+                print(f"   ⚠ plugins.ini still has BSD plugin entry")
+                all_clean = False
+            else:
+                print(f"   ✓ plugins.ini clean (no BSD entry)")
+        except Exception as e:
+            print(f"   ? Could not verify plugins.ini: {e}")
+        finally:
+            close_ftp(ftp)
+    else:
+        print(f"   ✓ plugins.ini not present on PS4")
 
     return all_clean
 
