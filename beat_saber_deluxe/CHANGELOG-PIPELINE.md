@@ -1,5 +1,16 @@
 # Pipeline Changelog
 
+## v0.5330 (2026-09-07)
+### Added
+- **Backup utility now manages the LOCAL pipeline state cache files** (`song_metadata.json`, `redirects.json`, `catalog_pack_modes.json` at the project root). Previously a PS4 `--clean-ps4` cleared the console but left these local caches, so the next single-song deploy re-read the previous full loadout and re-deployed all old bundles. `backup-beat-saber-deluxe-files.py` now:
+  - **Backup:** copies these files into the backup under `pipeline_state/`.
+  - **Clean:** calls `clear_local_pipeline_state()` to remove them so the pipeline treats the PS4 as fresh (a single custom-song install no longer drags in the full 38-song set).
+  - **Restore:** calls `restore_local_pipeline_state()` to put the files back so future pipeline ops understand what was restored.
+- **Audit note:** the other local files (`*_2pack.json`, `*_onepack.json`, `*_test_*.json`, `catalog_test.json`, `mass_bundles/*.bundle`) are NOT loaded by the pipeline deployment flow, so they don't force a full redeploy. `mass_bundles/` bundles are only uploaded via explicit `--deploy-mass-bundles`.
+
+### Changed
+- Pipeline version bumped 0.5329 → 0.5330.
+
 ## v0.5329 (2026-09-05)
 ### Added
 - **Backup utility + exercise scripts with plugins.ini integration (Exp 210):** Created `backup-beat-saber-deluxe-files.py` with backup/clean/restore/list commands for PS4 GoldHEN filesystem via FTP. Updated `exercise-bsd-backup.sh` to exercise all 4 workflows against actual PS4 connection. All 4 exercises now succeed with real content transfer (afr.prx, AFR/CUSA12878, AFR/test, AFR/bs_log — 22 files each).

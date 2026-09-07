@@ -61,6 +61,17 @@ PS4_BASE_PATH = "/data/GoldHEN"
 # Local backup directory
 LOCAL_BACKUP_DIR = Path("/workspace/ps4_backups")
 
+# Local workspace pipeline state files that the pipeline reads/deploys on a
+# fresh PS4.  These MUST be captured in a backup and cleared when a PS4 clean
+# leaves the console with no BSD content, so a single-song test deploy does NOT
+# get forced back to the previous full loadout.  Restore puts them back so the
+# pipeline understands what was restored.
+PIPELINE_STATE_FILES = [
+    "/workspace/beat_saber_deluxe/song_metadata.json",
+    "/workspace/beat_saber_deluxe/redirects.json",
+    "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
+]
+
 # PS4 paths based on actual FTP exploration
 # On this PS4: beat_saber_deluxe.prx is NOT present at /data/GoldHEN/plugins/
 # Instead: afr.prx, game_patch.prx, and other plugins exist
@@ -71,6 +82,28 @@ PS4_PLUGINS_DIR = "/data/GoldHEN/plugins"
 PS4_AFR_DIR = "/data/GoldHEN/AFR"
 PS4_USER_APP_CUSA12878 = "/user/app/CUSA12878"  # PRIMARY game data location
 PS4_PLUGINS_INI = "/data/GoldHEN/plugins.ini"
+
+# CRITICAL: Base game files that MUST NEVER be deleted by clean operations
+# These are the stock PS4 game installation files
+PROTECTED_BASE_GAME_FILES = {
+    "app.pkg",      # v1.00 launcher shell (~254MB)
+    "app.pbm",      # Content info manifest (~774B)
+    "app.json",     # Package metadata (~258B)
+    "app.xml",      # PlayGo status (~279B)
+}
+
+# System mount points that appear as 0-byte files (normal PS4 behavior, never delete)
+PROTECTED_SYSTEM_MOUNTPOINTS = {
+    "system", "usb", "hostapp", "SceSysAvControl.elf", "eap_user", "data",
+    "update", "system_data", "host", "preinst", "eap_vsh", "safemode.elf",
+    "user", "mnt", "system_ex", "mini-syscore.elf", "app_tmp", "preinst2",
+    "adm", "hdd", "dev", "system_tmp"
+}
+
+# Directories that are part of the base game and should be preserved (but custom content inside removed)
+BASE_GAME_DIRECTORIES = {
+    "Plugins", "custom_songs", "pack_modes_bundles", "sce_sys"
+}
 
 
 # =============================================================================
@@ -439,9 +472,77 @@ def backup_ps4_files(target_dir):
         else:
             print(f"     ✗ Failed to backup AFR/bs_log")
 
+    # 4. Backup the local pipeline state files (song_metadata.json, redirects.json, catalog)
+    #    These are the LOCAL cache files in /workspace/beat_saber_deluxe/ that the pipeline
+    #    reads/deploys.  Capturing them in the backup lets a RESTORE put them back so the
+    #    pipeline understands what content was restored.  They are stored under
+    #    pipeline_state/ in the backup so they don't collide with actual PS4 files.
+    print(f"   Checking local pipeline state files...")
+    pipeline_state_dir = target_dir / "pipeline_state"
+    pipeline_state_dir.mkdir(parents=True, exist_ok=True)
+    state_saved = []
+    for f in PIPELINE_STATE_FILES:
+        fp = Path(f)
+        if fp.is_file():
+            try:
+                shutil.copy2(fp, pipeline_state_dir / fp.name)
+                state_saved.append(fp.name)
+                print(f"     ✓ {fp.name} backed up from workspace")
+            except Exception as e:
+                failed.append(fp.name)
+                print(f"     ✗ Failed to backup {fp.name}: {e}")
+        else:
+            print(f"     ⊘ {fp.name} not present in workspace (skipped)")
+    if state_saved:
+        backed_up.append(f"pipeline_state ({len(state_saved)} files: {', '.join(state_saved)})")
+
     print(f"   ⊘ Note: /AFR/test/ and /AFR/bs_log/ are preserved directories per topology")
 
     return backed_up, failed
+
+
+def clear_local_pipeline_state():
+    """Remove ALL local pipeline state cache files so the pipeline treats the PS4 as fresh.
+
+    Called after a PS4 --clean-ps4 operation so a single-song test deploy does NOT
+    get forced back to the previous full loadout (the caches record what was deployed).
+    """
+    print(f"   Clearing local pipeline state cache files (so pipeline treats PS4 as fresh)...")
+    cleared = []
+    for f in PIPELINE_STATE_FILES:
+        fp = Path(f)
+        if fp.is_file():
+            try:
+                fp.unlink()
+                cleared.append(fp.name)
+                print(f"     ✓ Cleared local {fp.name}")
+            except Exception as e:
+                print(f"     ✗ Failed to clear {fp.name}: {e}")
+        else:
+            print(f"     ⊘ {fp.name} already absent")
+    return cleared
+
+
+def restore_local_pipeline_state(source_dir):
+    """Restore pipeline state files from a backup's pipeline_state/ back into the workspace.
+
+    Called by restore so future pipeline operations understand what was restored to the PS4.
+    """
+    src = Path(source_dir) / "pipeline_state"
+    if not src.is_dir():
+        print(f"     ⊘ No pipeline_state/ found in backup (nothing to restore locally)")
+        return []
+    restored = []
+    for f in src.iterdir():
+        if f.is_file():
+            dst = Path("/workspace/beat_saber_deluxe") / f.name
+            try:
+                shutil.copy2(f, dst)
+                restored.append(f.name)
+                print(f"     ✓ Restored local {f.name} from backup")
+            except Exception as e:
+                print(f"     ✗ Failed to restore {f.name}: {e}")
+    return restored
 
 
 def count_local_files(directory):
@@ -480,23 +581,70 @@ def clean_ps4():
             failed.append(plugin_file)
             print(f"     ✗ Failed to remove {plugin_file}: {stderr.strip() or 'unknown error'}")
 
-    # 2. Remove AFR/CUSA12878 from /user/app/CUSA12878/ if present
+    # 2. Remove ONLY custom content from /user/app/CUSA12878/ - SURGICAL CLEAN
     # Note: We do NOT remove /data/GoldHEN/AFR/CUSA12878/ since it typically doesn't exist
     # We do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
     # These are preserved directories per GoldHEN topology
+    # CRITICAL: We must PRESERVE the base game installation (app.pkg, app.json, app.pbm, app.xml)
+    # and system mount points (0-byte files). Only remove CUSTOM content we deployed.
 
-    # Check and optionally remove AFR/CUSA12878 from /user/app/
     if ps4_path_exists(PS4_USER_APP_CUSA12878):
-        code, stderr = ps4_rmdir_recursive(PS4_USER_APP_CUSA12878)
-        if code == 0:
-            cleaned.append("AFR/CUSA12878")
-            print(f"     ✓ Removed AFR/CUSA12878 from /user/app/")
-        elif code == -1 and "550" in stderr:
-            cleaned.append("AFR/CUSA12878 (was not present)")
-            print(f"     ⊘ AFR/CUSA12878 was not present on PS4")
+        print(f"     Surgical clean of /user/app/CUSA12878/ - removing only custom content...")
+
+        # List of known custom content patterns to remove
+        custom_patterns = [
+            ("custom_songs", "*.bundle"),
+            ("pack_modes_bundles", "*.bundle"),
+            ("Plugins", "*.prx"),
+            (".", "*_v3.bundle"),
+            (".", "*_custom_v3.bundle"),
+            (".", "catalog_pack_modes.json"),
+            (".", "redirects.json"),
+            (".", "song_metadata.json"),
+            (".", "features.json"),
+            (".", "bs_log.txt"),
+        ]
+
+        removed_count = 0
+        for subdir, pattern in custom_patterns:
+            target_path = f"{PS4_USER_APP_CUSA12878}/{subdir}" if subdir != "." else PS4_USER_APP_CUSA12878
+            if ps4_path_exists(target_path):
+                ftp = get_ftp()
+                try:
+                    ftp.cwd(target_path)
+                    files = []
+                    ftp.retrlines("LIST", files.append)
+                    for f in files:
+                        parts = f.split()
+                        if len(parts) >= 9:
+                            fname = parts[-1]
+                            if fname in (".", ".."):
+                                continue
+                            # CRITICAL SAFEGUARD: Never delete protected base game files or system mount points
+                            if fname in PROTECTED_BASE_GAME_FILES or fname in PROTECTED_SYSTEM_MOUNTPOINTS:
+                                print(f"       ⊘ Protected: {fname} (base game file or system mount point)")
+                                continue
+                            # Check if file matches our custom content patterns
+                            import fnmatch
+                            if fnmatch.fnmatch(fname, pattern):
+                                full_path = f"{target_path}/{fname}"
+                                try:
+                                    ftp.delete(full_path)
+                                    print(f"       ✓ Removed custom: {fname}")
+                                    removed_count += 1
+                                except ftplib.error_perm as e:
+                                    print(f"       ✗ Failed to remove {fname}: {e}")
+                except Exception as e:
+                    print(f"       ✗ Error accessing {target_path}: {e}")
+                finally:
+                    close_ftp(ftp)
+
+        if removed_count > 0:
+            cleaned.append(f"AFR/CUSA12878 custom content ({removed_count} files)")
+            print(f"     ✓ Removed {removed_count} custom files from /user/app/CUSA12878/")
         else:
-            failed.append("AFR/CUSA12878")
-            print(f"     ✗ Failed: {stderr.strip() or 'unknown error'}")
+            cleaned.append("AFR/CUSA12878 (no custom content found)")
+            print(f"     ⊘ No custom content found in /user/app/CUSA12878/")
 
     # 3. Do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
     #    These are preserved directories per GoldHEN topology
@@ -543,6 +691,17 @@ def clean_ps4():
     else:
         print(f"     ⊘ plugins.ini not found on PS4")
 
+    # 5. Clear the LOCAL pipeline state cache files so the pipeline treats the PS4
+    #    as fresh.  Without this, a subsequent single-song deploy reads
+    #    song_metadata.json / redirects.json and re-deploys the entire previous
+    #    loadout even though the console is clean.
+    cleared = clear_local_pipeline_state()
+    if cleared:
+        cleaned.append(f"local pipeline state cache ({len(cleared)} files: {', '.join(cleared)})")
+        print(f"     ✓ Cleared local pipeline state cache")
+    else:
+        print(f"     ⊘ No local pipeline state cache to clear")
+
     return cleaned, failed
 
 
@@ -587,6 +746,12 @@ def restore_from_backup(backup_path, clean_first=False):
         return False, []
 
     try:
+        # Pipeline state files live alongside AFR at the backup's origin root.
+        # That root is the ORIGINAL target_dir used by backup_ps4_files()
+        # (the dir containing AFR/ and pipeline_state/).  Capture it here so we
+        # can restore local state even though tmpdir is cleaned in `finally`.
+        pipeline_state_root = backup_dir
+
         # The backup_dir might be the root OR inside a bsd_backup_ folder
         # Find the AFR directory by searching
         afr_dir = backup_dir / "AFR"
@@ -734,6 +899,13 @@ def restore_from_backup(backup_path, clean_first=False):
                     failed.append("AFR/bs_log")
                     print(f"     ✗ Failed to restore AFR/bs_log")
 
+        # After restoring PS4 content, restore the LOCAL pipeline state files from
+        # the backup so future pipeline operations understand what was restored.
+        # Done INSIDE the try so pipeline_state is still readable before tmpdir cleanup.
+        locally_restored = restore_local_pipeline_state(pipeline_state_root)
+        if locally_restored:
+            restored.append(f"local pipeline state ({', '.join(locally_restored)})")
+
     except Exception as e:
         print(f"✗ Restore failed: {e}")
         return False, []
@@ -787,7 +959,23 @@ def verify_ps4_clean():
     print(f"   ✓ /AFR/test/ preservation check (verified in backup)")
     print(f"   ✓ /AFR/bs_log/ preservation check (verified in backup)")
 
-    # 5. Check plugins.ini has no BSD entry
+    # 5. CRITICAL: Verify base game files still exist (they must NEVER be deleted)
+    print(f"   Verifying base game installation integrity...")
+    items = ps4_list_directory(PS4_USER_APP_CUSA12878)
+    missing_base_files = []
+    for base_file in PROTECTED_BASE_GAME_FILES:
+        found = any(base_file in item for item in items)
+        if not found:
+            missing_base_files.append(base_file)
+
+    if missing_base_files:
+        print(f"   ❌ CRITICAL: Base game files MISSING: {', '.join(missing_base_files)}")
+        print(f"   ❌ THIS SHOULD NEVER HAPPEN - clean operation must preserve base game files!")
+        all_clean = False
+    else:
+        print(f"   ✓ Base game files present: {', '.join(PROTECTED_BASE_GAME_FILES)}")
+
+    # 6. Check plugins.ini has no BSD entry
     if ps4_path_exists(PS4_PLUGINS_INI):
         import io
         ftp = get_ftp()

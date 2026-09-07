@@ -61,6 +61,7 @@ metadata:
 
 ## PS4 System & Filesystem
 - [[ps4-zero-byte-system-files|PS4 0-Byte System Files]] — 0-byte files in /user/app/CUSA12878/ are normal mount points, NOT corrupted game files. Custom .bundle files there cause "data corrupted" error.
+- [[backup-script-catastrophic-clean-bug|Backup Script Catastrophic Clean Bug]] — Critical bug where clean operation deleted base game files (app.pkg, app.json, etc.) causing "data corrupted" error. Fixed with surgical clean + protected file lists.
 
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip
