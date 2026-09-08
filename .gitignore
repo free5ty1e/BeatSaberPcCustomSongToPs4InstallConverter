@@ -30,6 +30,9 @@ beat_saber_deluxe/build/
 beat_saber_deluxe/custom_songs/
 beat_saber_deluxe/obj/
 beat_saber_deluxe/ps4_config.json
+beat_saber_deluxe/src/*.o
+beat_saber_deluxe/src/*.elf
+beat_saber_deluxe/src/*.oelf
 investigation/
 ps4_dump/
 rb4dx_installer/
@@ -40,3 +43,4 @@ temp/
 *.bundle
 beat_saber_deluxe/.coverage
 song_metadata.json
+ps4_backups/
