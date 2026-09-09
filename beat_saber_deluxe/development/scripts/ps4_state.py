@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+"""
+ps4_state.py — Inspect the current Beat Saber Deluxe state on the PS4.
+
+Lists every BSD-related file currently on the PS4 (plugins.ini + its contents,
+game-dir bundles/config json, plugin .prx) and prints a human-readable summary
+conclusion: clean-slate, or "X custom songs, Y redirects, Z modified music packs".
+
+Uses lftp for a familiar, consistent interaction. Exits 0 on success.
+
+Usage:
+    python3 beat_saber_deluxe/development/scripts/ps4_state.py
+"""
+
+import subprocess
+import sys
+
+PS4_HOST = "192.168.100.117"
+PS4_PORT = 2121
+USER = "anonymous"
+PASS = ""
+
+GAME_DIR = "/user/app/CUSA12878"
+PLUGINS_INI = "/data/GoldHEN/plugins.ini"
+PLUGINS_DIR = "/data/GoldHEN/plugins"
+
+
+def run_lftp(*cmds):
+    """Run one or more lftp -e commands and return combined stdout."""
+    joined = "; ".join(cmds) + ("; quit" if cmds else "quit")
+    result = subprocess.run(
+        ["lftp", "-u", f"{USER},{PASS}", "-p", str(PS4_PORT), PS4_HOST,
+         "-e", joined],
+        capture_output=True, text=True, timeout=60)
+    return result.stdout, result.returncode
+
+
+def list_dir(path):
+    out, _ = run_lftp(f"ls {path}")
+    names = []
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 9:
+            names.append((parts[0], parts[4], ' '.join(parts[8:])))
+    return names
+
+
+def cat_remote(path):
+    out, rc = run_lftp(f"cat {path}")
+    return out if rc == 0 else None
+
+
+def is_custom_bundle(name):
+    """A custom song/pack bundle or BSD config json we deploy."""
+    n = name.lower()
+    if name.startswith('.'):
+        return False
+    if n.endswith('.bundle'):
+        # Exclude the base game app.pkg (not in this dir anyway); include every
+        # *_v3.bundle, *_pack_modes_*.bundle, *_custom.bundle.
+        return True
+    if n in ('redirects.json', 'song_metadata.json', 'features.json',
+             'catalog_pack_modes.json', 'catalog_startmeup_modes.json',
+             'catalog_test.json', 'startmeup_pack_modes.bundle'):
+        return True
+    return False
+
+
+def main():
+    print("=" * 62)
+    print("Beat Saber Deluxe — PS4 State")
+    print("=" * 62)
+
+    # 1. Try to reach the PS4
+    host = PS4_HOST
+    out, rc = run_lftp("ls /")
+    if rc != 0:
+        print("❌  Could not reach the PS4 (is it on + jailbroken + FTP up?)")
+        print("    lftp cmd example:")
+        print(f'    lftp -u {USER}, -p {PS4_PORT} {host} -e "ls; quit"')
+        return 2
+
+    print(f"✅  PS4 reachable ({host}:{PS4_PORT})")
+    print()
+
+    # 2. plugins.ini + plugin .prx
+    print("--- plugins.ini ---")
+    ini = cat_remote(PLUGINS_INI)
+    if ini is None:
+        print("⚠️   plugins.ini not found / could not read")
+        plug_entries = []
+    else:
+        print(ini.rstrip())
+        plug_entries = [l.strip() for l in ini.splitlines()
+                        if l.strip().startswith('/data/GoldHEN/plugins')
+                        and not l.strip().startswith('#')]
+    print()
+
+    print("--- GoldHEN plugins dir ---")
+    plist = list_dir(PLUGINS_DIR)
+    bsd_prx = [f for f in plist if f[2] == 'beat_saber_deluxe.prx']
+    has_plugin = False
+    for perm, size, name in plist:
+        if name in ('.', '..'):
+            continue
+        marker = "  ◄ BSD plugin" if name == 'beat_saber_deluxe.prx' else ""
+        print(f"  {perm} {size:>10}  {name}{marker}")
+        if name == 'beat_saber_deluxe.prx':
+            has_plugin = True
+    print()
+
+    # Is the plugin registered in plugins.ini under [CUSA12878]?
+    ini_registered = any('beat_saber_deluxe.prx' in e for e in plug_entries)
+
+    # 3. Game dir: custom bundles + config json
+    print("--- /user/app/CUSA12878 (game dir) ---")
+    glist = list_dir(GAME_DIR)
+    custom_bundles = []
+    config_jsons = []
+    for perm, size, name in glist:
+        if name in ('.', '..'):
+            continue
+        is_custom = is_custom_bundle(name)
+        tag = ""
+        if is_custom:
+            if name.endswith('.bundle'):
+                custom_bundles.append(name)
+                tag = "  ◄ custom bundle"
+            else:
+                config_jsons.append(name)
+                tag = "  ◄ BSD config"
+        print(f"  {perm} {size:>10}  {name}{tag}")
+    print()
+
+    # 4. Summarize
+    print("=" * 62)
+    print("SUMMARY")
+    print("=" * 62)
+
+    # Parse redirects.json for song count if present
+    redirect_count = None
+    redirect_names = []
+    if 'redirects.json' in config_jsons:
+        red = cat_remote(f"{GAME_DIR}/redirects.json")
+        if red is not None:
+            import json
+            try:
+                data = json.loads(red)
+                redirects = data.get('redirects', {})
+                redirect_count = len(redirects)
+                # song redirects = BeatmapLevelsData/* keys; other keys = pack/catalog
+                redirect_names = sorted(
+                    k.split('/', 1)[-1] for k in redirects
+                    if k.startswith('BeatmapLevelsData/'))
+            except Exception:
+                pass
+
+    # Separate custom song bundles from pack-mode bundles
+    song_bundles = [b for b in custom_bundles
+                    if b.endswith('_v3.bundle') or '_custom.bundle' in b]
+    pack_bundles = [b for b in custom_bundles if '_pack_modes_assets_all_' in b]
+
+    if not custom_bundles and not config_jsons and not has_plugin and not ini_registered:
+        print("🧹  PS4 is in CLEAN SLATE state for Beat Saber Deluxe.")
+        print("    No custom songs, no redirects, no modified music packs, no plugin.")
+    else:
+        msg = "🎵  Beat Saber Deluxe currently installed with"
+        detail = []
+        if song_bundles:
+            detail.append(f"{len(song_bundles)} custom songs")
+        else:
+            detail.append("0 custom songs")
+        detail.append(f"{redirect_count if redirect_count is not None else 0} redirects")
+        if pack_bundles:
+            detail.append(f"{len(pack_bundles)} modified music packs")
+        else:
+            detail.append("0 modified music packs")
+        print(msg + ", ".join(detail) + ".")
+
+        if song_bundles:
+            print("\n  Custom songs:")
+            for b in sorted(song_bundles):
+                print(f"    - {b}")
+        if redirect_names:
+            print("\n  Redirects (BeatmapLevelsData/):")
+            for r in sorted(redirect_names):
+                print(f"    - {r}")
+        if pack_bundles:
+            print("\n  Modified music packs:")
+            for b in sorted(pack_bundles):
+                print(f"    - {b}")
+        if has_plugin or ini_registered:
+            print("\n  Plugin:")
+            if ini_registered:
+                print("    - beat_saber_deluxe.prx registered in plugins.ini [CUSA12878]")
+            if has_plugin:
+                print("    - beat_saber_deluxe.prx present in /data/GoldHEN/plugins/")
+    print()
+    print("=" * 62)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

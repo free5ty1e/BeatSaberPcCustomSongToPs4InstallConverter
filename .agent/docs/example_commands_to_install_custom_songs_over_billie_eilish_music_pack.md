@@ -3,8 +3,50 @@
 This document provides step-by-step, self-contained pipeline commands to replace all 10 songs
 in the official Billie Eilish DLC music pack with custom community songs from BeatSaver.
 
-Pipeline: v0.5328 — fully automated, no manual song_metadata.json editing required.
+Pipeline: v0.5331 — fully automated, no manual song_metadata.json editing required.
 All custom songs deploy with 4 selectable modes (Standard, OneSaber, NoArrows, 90Degree).
+
+## How `--deploy-full` works (self-contained, one song at a time)
+
+Each command below is **fully self-contained**. Run them **one at a time** — after each one,
+boot the game and verify that song + its whole pack works before moving to the next. Each
+`--download-beat-saver-song <MAP> --target <slot> --deploy-full` command:
+- downloads the custom song from BeatSaver and converts to V3.2.0 with all 4 modes,
+- deploys ONLY that song's bundle,
+- resolves the song's DLC pack (via `beat_saber_song_ids.json`) and deploys ONLY that pack's
+  mode bundle + a matching single-pack `catalog_pack_modes.json`,
+- builds + deploys the GoldHEN plugin **and** ensures the `plugins.ini` `[CUSA12878]` entry,
+- deploys `features.json` (runtime feature flags),
+- regenerates `redirects.json` scoped to just that song + pack pair,
+- runs post-deploy validation.
+
+It does **NOT** deploy the other packs or other songs. On a clean PS4, run these commands one
+at a time and test after each.
+
+## Pre-Deploy PS4 State Check
+
+Before running any command, verify the **current state of the PS4**. The scripts and
+commands below start with this check automatically:
+
+```bash
+python3 /workspace/beat_saber_deluxe/development/scripts/ps4_state.py
+```
+
+The script reports a **conclusion**, e.g.:
+
+- `🧹  PS4 is in CLEAN SLATE state for Beat Saber Deluxe.` — no custom songs, no redirects,
+  no modified music packs, no plugin.
+- `🎵  Beat Saber Deluxe currently installed with X custom songs, Y redirects, and Z modified
+  music packs.` — followed by a human-readable list of the custom songs, redirects
+  (`BeatmapLevelsData/...`), modified music packs (`*_pack_modes_assets_all_*.bundle`), and the
+  plugin (`beat_saber_deluxe.prx` in `/data/GoldHEN/plugins/` + its `plugins.ini` `[CUSA12878]`
+  entry).
+
+In the `.sh` scripts this runs before the deployment loop and pauses with
+**"Press Enter to continue"** so you can review the current PS4 state before proceeding.
+
+```
+
 
 ## Target: Billie Eilish Official DLC Pack
 

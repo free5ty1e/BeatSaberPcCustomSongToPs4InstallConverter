@@ -32,6 +32,7 @@ metadata:
 - [[toolchain-and-build|PS4 Toolchain & Build System]] — OpenOrbis toolchain, make, create-fself
 - [[development-workflow|Development Workflow]] — Deploy cycle, log analysis, FTP, experiment iteration
 - [[pipeline-deploy-full-orchestration|Pipeline Deploy Full Orchestration (`--deploy-full`)]] — Complete end-to-end orchestration in one command (song bundle + pack mode bundles + catalog + redirects + validation)
+- [[pipeline-single-song-deploy|Self-Contained Single-Song Deploy (`--deploy-full`, v0.5331)]] — Diagnosed + fixed: single-song deploys were re-deploying all configured packs. Now scopes pack/catalog/redirects to just the target song + its pack, and also deploys plugin + plugins.ini + features.json.
 - [[pipeline-deploy-flags|Pipeline Deploy Flags]] — All deploy-related flags reference and hierarchy
 
 ## Audio — Working Format

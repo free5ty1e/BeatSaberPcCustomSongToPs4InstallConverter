@@ -17,11 +17,13 @@ metadata:
 | `--deploy-config` | Deploy local `redirects.json` to PS4 | `--deploy-full` |
 | `--generate-config` | Update `redirects.json` config with current target | `--deploy-full` |
 | `--deploy-pack-modes` | Build-if-missing + deploy pack mode bundles + merged catalog | `--deploy-full` |
+| `--deploy-plugin` | Build + deploy the GoldHEN plugin and ensure `plugins.ini` entry | `--deploy-full` |
+| `--deploy-features` | Deploy `features.json` (runtime feature flags) to PS4 | `--deploy-full` |
 | `--verify-ps4` | Run post-deploy PS4 validation | `--deploy-full` (sets `--no-verify-ps4=false`) |
 | `--no-verify-ps4` | Skip automatic post-deploy validation | — |
 | `--sync-config` | Download config from PS4, merge, save, redeploy | — |
 | `--enforce-config` | Use local `redirects.json` as truth and deploy to PS4 | — |
-| `--deploy-full` | **Complete orchestration** (song + packs + catalog + redirects + validation) | — |
+| `--deploy-full` | **Self-contained single-song orchestration** (one song + its pack + catalog + plugin + plugins.ini + features + redirects + validation) | — |
 | `--deploy-plugin` | Build + deploy plugin PRX | — |
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) | — |
 | `--features-only` | Apply + deploy `--set-feature` changes only | — |

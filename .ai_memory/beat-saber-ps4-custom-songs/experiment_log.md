@@ -555,3 +555,27 @@ metadata:
 - **Version:** Pipeline v0.5329 → v0.5330. Backup script updated (plugins.ini + pipeline_state + surgical clean).
 - **Recovery note:** the base-game files (`app.pkg` etc.) are NOT in the backup and must be reinstalled to restore a launchable Beat Saber; DLC (`patch.pkg`), save data, and licenses are intact.
 - **Next steps:** reinstall base game on the PS4; then run `backup-beat-saber-deluxe-files.py backup --clean-ps4` to get a clean-slate console + cleared local cache, then run the single-song pipeline test.
+
+### Experiment 212: Self-Contained Single-Song `--deploy-full` (v0.5331, 2026-09-08)
+- **Date:** 2026-09-08
+- **Context:** User tried to install ONE custom song over one Billie Eilish target (`--download-beat-saver-song 4a901 --target AllTheGoodGirlsGoToHell --deploy-full`) on a clean PS4, and the pipeline **re-deployed all the other packs** (therollingstones, lizzo, camellia) + 43 redirects, then failed validation ("Redirect targets missing" for 38 songs). User wanted a fully functional, idempotent deployment that replaces just the indicated target slot — deploying plugin, plugins.ini entry, features.json, the song, its pack, and scoped redirects. Also wanted every example doc updated to one-song-at-a-time.
+- **Root cause:** Two full-fleet behaviors fired unconditionally on single-song deploys: (1) Step 9a called `deploy_pack_bundle()`/`deploy_pack_modes()` with no pack filter -> `_get_pack_modes_entries()` iterated ALL 4 `pack_modes.packs`; (2) `_ensure_mass_song_redirects()` regenerated the entire 38-slot `mass_deploy` redirect set -> 43-entry redirects.json referencing bundles absent on a clean PS4. Both correct for full-fleet, wrong for targeted single-song.
+- **Fix (pipeline v0.5331):**
+  - New `_resolve_target_pack(config, target)` maps `--target` slot -> DLC pack via `beat_saber_song_ids.json` albums.
+  - Threaded optional `packs` filter through `_get_pack_modes_entries`, `_get_pack_modes_redirects`, `_get_pack_bundle_redirects`, `_ensure_pack_bundle_redirects`, `_regenerate_merged_catalog`, `_ensure_pack_mode_bundles`, `deploy_pack_modes`, `deploy_pack_bundle`, `_get_remote_pack_paths`; and `slots` filter through `_ensure_mass_song_redirects`; both through `manage_redirect_config`.
+  - Song path now resolves the pack and scopes pack-bundle deploy + catalog regen + redirect generation to just that song + pack. Full-fleet behavior preserved with no `--target`.
+  - `--deploy-full` now also implies `--deploy-plugin` (build+deploy plugin + ensure plugins.ini `[CUSA12878]` entry) and `--deploy-features` (deploy features.json). New `--deploy-features` flag.
+- **Result:** Single `--deploy-full` for one song deploys ONLY that song + its pack bundle + matching single-pack catalog + plugin + plugins.ini + features.json + scoped redirects + validation. Does NOT touch other packs/songs.
+- **Tests:** 578/578 pass (571 + 7 new in `TestSingleSongScoping`: _resolve_target_pack pack/case-insensitive/unknown/none, entries scoped, entries all-packs, redirects scoped).
+- **Docs updated:** all 5 music-pack example .md (v0.5331, self-contained one-at-a-time block) + .sh (header describing plugin/plugins.ini/features), KB pages `pipeline-deploy-full-orchestration.md` + `pipeline-deploy-flags.md` + new `pipeline-single-song-deploy.md` + `index.md`, README (beat_saber_deluxe + root), project_summary.md, context.yml.
+- **Version:** Pipeline v0.5331. Plugin v0.8040 unchanged.
+- **Next steps:** PS4 was verified blank-slate; user can now run the `example_*` commands one at a time to rebuild custom songs and test each pack in-game.
+
+### Experiment 213: Pre-Deploy PS4 State Validation (2026-09-08)
+- **Date:** 2026-09-08
+- **Context:** User wanted every `example_*.*` music-pack doc (.md + .sh) to show validation commands that inspect the current PS4 BSD state before proceeding — using lftp to list plugins.ini (and its contents), every json/config/bundle, with a human-readable conclusion ("clean slate" or "X custom songs, Y redirects, Z modified music packs" + lists) and a press-Enter prompt to review before deployment.
+- **What was added:** New dev script `beat_saber_deluxe/development/scripts/ps4_state.py` that reaches the PS4 via lftp, lists `plugins.ini` + its entries, the `/data/GoldHEN/plugins/` dir (marks `beat_saber_deluxe.prx`), and `/user/app/CUSA12878/` (marks custom `*_v3.bundle`/`*_custom.bundle`/`*_pack_modes_*.bundle` and BSD config jsons like `redirects.json`/`catalog_pack_modes.json`/`song_metadata.json`/`features.json`), then prints a conclusion. Correctly excludes base-game files (app.pkg/app.json/app.pbm/app.xml) and system mount points.
+- **Wired into all 10 example files:** all 5 `.sh` get a PRE-DEPLOY CHECK block (runs ps4_state.py + "Press Enter to continue") and all 5 `.md` get a "Pre-Deploy PS4 State Check" section documenting it.
+- **Testing:** ps4_state.py run live against the PS4 (clean slate — reports correct clean-slate conclusion). `bash -n` on all 5 .sh pass. The press-Enter flow verified with a piped Enter. Classification logic (song vs pack bundles vs base-game) verified against real backup filenames.
+- **Status:** ✅ DONE, PS4 currently in clean-slate state.
+- **Next steps:** user runs the example commands one at a time, reviewing PS4 state before each.

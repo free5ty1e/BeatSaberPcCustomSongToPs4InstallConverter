@@ -381,7 +381,7 @@ python3 tools/full_custom_song_pipeline.py \
 **Parameters explained:**
 - `<MAP_ID>` — the BeatSaver map key (e.g. `1d6c7c2`). Find it on [BeatSaver.com](https://beatsaver.com) — it's the short hash in the URL (e.g. `beatsaver.com/maps/1d6c7c2`)
 - `--target <slot_name>` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
-- `--deploy-full` — **Complete orchestration in ONE command**: song bundle + pack mode bundles + merged catalog + redirects.json + post-deploy validation
+- `--deploy-full` — **Self-contained SINGLE-SONG orchestration in ONE command**: deploys only the target song + its music-pack mode bundle + matching catalog + plugin + `plugins.ini` entry + `features.json` + divert-scoped redirects + post-deploy validation. Run one command at a time and test in-game after each (it does NOT deploy the other packs/songs).
 
 > **v0.5314+ safe defaults (no flags needed):** PCM16 lossless audio + full-length (no padding truncation) + beatmap mode mapping (OneSaber/NoArrows/90Degree auto-generated to fill gaps) + V2→V3 conversion are all **default ON**. The old explicit flags (`--pcm16`, `--no-pad`, `--convert-to-v3`, `--enable-beatmap-mode-mapping`) are still accepted as no-op compat flags. To opt out: `--hevag`/`--vorbis` (codec), `--pad-fsb5` (**DANGER** — truncates audio to 12MB, produces partial songs), `--disable-beatmap-mode-mapping` (Standard only), `--no-convert-to-v3` (leave V2).
 

@@ -8,44 +8,40 @@ metadata:
 # Pipeline Deploy Full Orchestration (`--deploy-full`)
 
 **Added in:** v0.5328 (Exp 207, 2026-09-03)
+**Single-song scoping:** v0.5331 (Exp 211, 2026-09-08)
 
 ## Overview
 
-The `--deploy-full` flag provides **complete end-to-end orchestration in a single command**. It replaced the previous two-workflow architecture where users had to run:
-1. Per-song `--deploy` (only song bundle)
-2. Separate `build_deploy_all38.py` script (pack bundles + catalog + redirects)
+The `--deploy-full` flag provides **complete end-to-end orchestration in a single command**.
+Starting v0.5331, when used with a `--target` song it performs a **self-contained, idempotent
+SINGLE-SONG deploy** — it deploys ONLY that one song + its music pack, never the other packs.
+This is the recommended way to (re)build custom songs one at a time and test in-game after each.
 
-## What `--deploy-full` Does (All In One Command)
+## What `--deploy-full` Does (Self-Contained, Single Song)
 
-When you run:
+When you run (e.g. replacing one Billie Eilish song):
 ```bash
 python3 tools/full_custom_song_pipeline.py \
   --download-beat-saver-song <MAP_ID> \
-  --target <slot_name> \
+  --target AllTheGoodGirlsGoToHell \
   --deploy-full
 ```
 
-The pipeline performs **all** of these steps in the correct order (following Exp 180 rule: pack bundles + catalog BEFORE redirects.json):
+The pipeline:
+1. Resolves the target's DLC pack via `beat_saber_song_ids.json` (`_resolve_target_pack`,
+   e.g. `AllTheGoodGirlsGoToHell` → `billieeilish`) so everything below is scoped to just that pack.
+2. Downloads the song fresh from BeatSaver, converts to V3.2.0 with all 4 modes, builds a PCM16 bundle.
+3. **Deploys ONLY the song bundle.**
+4. Deploys ONLY that song's **pack-mode bundle** + a matching **single-pack** `catalog_pack_modes.json`
+   (so the catalog's CRC/size always match the redirected bundle — Exp 180 rule).
+5. Builds + deploys the GoldHEN plugin and ensures the `plugins.ini` `[CUSA12878]` entry.
+6. Deploys `features.json` (runtime feature flags).
+7. Regenerates `redirects.json` scoped to just that song + its pack pair.
+8. Runs post-deploy validation.
 
-### Phase 1: Song Bundle Build
-1. Downloads song from BeatSaver (fresh every time — not local cached sources)
-2. Converts to V3.2.0 (V2→V3 auto-conversion)
-3. Generates all 4 modes (Standard, OneSaber, NoArrows, 90Degree)
-4. Builds song bundle with PCM16 lossless audio
-5. Saves bundle locally
-
-### Phase 2: Pack Mode Bundles + Merged Catalog
-6. **Builds** pack mode bundles for all configured packs (if `pack_modes.packs` in config)
-7. **Regenerates** merged catalog (`catalog_pack_modes.json`) from origin catalog
-8. **Deploys** pack mode bundles + merged catalog to PS4
-
-### Phase 3: Song Bundle + Redirects
-9. **Deploys** song bundle to PS4
-10. **Generates/updates** `redirects.json` (includes song entry + pack mode bundle entries + catalog entry)
-11. **Deploys** `redirects.json` to PS4
-
-### Phase 4: Validation
-12. **Runs post-deploy validation** (redirects match, all targets exist, pack+catalog pair present, sizes match)
+> It does **NOT** touch the other configured packs (e.g. deploying one Billie Eilish song no
+> longer re-deploys therollingstones/lizzo/camellia or the other 9 songs). On a clean PS4, run
+> these one command at a time and test each song's pack in-game before the next.
 
 ## Implied Flags
 
@@ -54,6 +50,8 @@ The pipeline performs **all** of these steps in the correct order (following Exp
 - `--deploy-config` — deploy local `redirects.json` to PS4
 - `--generate-config` — update `redirects.json` with current target
 - `--deploy-pack-modes` — build-if-missing + deploy pack mode bundles + merged catalog
+- `--deploy-plugin` — build + deploy the GoldHEN plugin and ensure the `plugins.ini` entry
+- `--deploy-features` — deploy `features.json` (runtime feature flags)
 - `--no-verify-ps4=false` — ensure validation runs (cannot be skipped)
 
 ## Works With Both Input Methods

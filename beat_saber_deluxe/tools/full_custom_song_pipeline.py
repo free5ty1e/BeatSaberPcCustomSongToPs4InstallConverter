@@ -925,7 +925,8 @@ def _deployed_bundle_name(slot: str, config: dict) -> str:
     suffix = config.get('paths', {}).get('afr_target_suffix', '_v3.bundle')
     return f"{canonical}{suffix}"
 
-def _ensure_mass_song_redirects(redirect_data: dict, config: dict) -> int:
+def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
+                                slots: list | None = None) -> int:
     """
     (Re)generate the per-song redirect entries so every VALUE points at the
     exact deployed bundle filename (canonical slot casing + afr_target_suffix).
@@ -934,16 +935,21 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict) -> int:
     `BeatmapLevelsData/Crystallized`) while fixing their VALUES, adds any slot
     missing from the config, and removes stale pre-`.bundle` entries
     (e.g. value `Crystallized_v3` while the deployed file is
-    `crystallized_v3.bundle`). Returns the number of entries changed.
+    `crystallized_v3.bundle`). `slots` optionally limits which slots are ensured
+    (default: all configured slots). Returns the number of entries changed.
     """
     md = config.get('mass_deploy', {}) or {}
-    slots = md.get('slots', [])
-    if not slots:
+    configured = md.get('slots', [])
+    if not configured:
         return 0
+    if slots is not None:
+        configured = [s for s in configured if s in slots]
+        if not configured:
+            return 0
     redirects = redirect_data.setdefault('redirects', {})
     changed = 0
 
-    for slot in slots:
+    for slot in configured:
         key = f"BeatmapLevelsData/{slot}"
         value = _deployed_bundle_name(slot, config)
         # Reuse an existing key whose basename matches this slot (case-insensitive),
@@ -965,7 +971,7 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict) -> int:
             redirects[key] = value
             changed += 1
     if changed:
-        log.info(f"  🎵 Ensured {len(slots)} song redirects point at deployed bundles ({changed} entries updated)")
+        log.info(f"  🎵 Ensured {len(configured)} song redirects point at deployed bundles ({changed} entries updated)")
     return changed
 
 def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
@@ -2416,7 +2422,7 @@ def _deploy_redirect_to_ps4(config: dict):
 # pipeline ALWAYS (re)inserts both entries together and refuses to produce a
 # config that has one without the other.
 
-def _get_pack_bundle_redirects(config: dict) -> dict:
+def _get_pack_bundle_redirects(config: dict, packs: list | None = None) -> dict:
     """
     Return the mandatory pack bundle + catalog redirect pairs from config.
 
@@ -2436,10 +2442,11 @@ def _get_pack_bundle_redirects(config: dict) -> dict:
         redirects[pb['bundle_key']] = pb['patched_bundle']
         if pb.get('catalog_key') and pb.get('patched_catalog'):
             redirects[pb['catalog_key']] = pb['patched_catalog']
-    redirects.update(_get_pack_modes_redirects(config))
+    redirects.update(_get_pack_modes_redirects(config, packs=packs))
     return redirects
 
-def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
+def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict,
+                                  packs: list | None = None) -> int:
     """
     Ensure the pack bundle + catalog redirect pair is present in redirect_data.
 
@@ -2449,7 +2456,7 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
     no longer in the config. Returns the number of redirects inserted/updated.
     """
     redirects = redirect_data.setdefault('redirects', {})
-    pair = _get_pack_bundle_redirects(config)
+    pair = _get_pack_bundle_redirects(config, packs=packs)
     if not pair:
         return 0
     changed = 0
@@ -2506,8 +2513,11 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict) -> int:
         log.info(f"  🧩 Ensured pack bundle + catalog redirect pair ({changed} entries updated)")
     return changed
 
-def _get_remote_pack_paths(config: dict) -> list:
-    """Return list of (local_path, remote_name) for the patched pack bundles + catalogs."""
+def _get_remote_pack_paths(config: dict, packs: list | None = None) -> list:
+    """Return list of (local_path, remote_name) for the patched pack bundles + catalogs.
+
+    `packs` optionally limits which pack_modes pack(s) are included (default: all).
+    """
     pb = config.get('pack_bundle', {}) or {}
     out = []
     if pb.get('patched_bundle_local') and pb.get('patched_bundle'):
@@ -2515,13 +2525,15 @@ def _get_remote_pack_paths(config: dict) -> list:
     if pb.get('patched_catalog_local') and pb.get('patched_catalog'):
         out.append((pb['patched_catalog_local'], pb['patched_catalog']))
     # Generalized pack_modes bundles + shared merged catalog.
-    for e in _get_pack_modes_entries(config):
-        if os.path.isfile(e['local_path']):
-            out.append((e['local_path'], e['patched_bundle']))
-    pm = config.get('pack_modes', {}) or {}
-    if (pm.get('patched_catalog_local') and pm.get('patched_catalog')
-            and os.path.isfile(pm['patched_catalog_local'])):
-        out.append((pm['patched_catalog_local'], pm['patched_catalog']))
+    entries = _get_pack_modes_entries(config, packs=packs)
+    if entries:
+        for e in entries:
+            if os.path.isfile(e['local_path']):
+                out.append((e['local_path'], e['patched_bundle']))
+        pm = config.get('pack_modes', {}) or {}
+        if (pm.get('patched_catalog_local') and pm.get('patched_catalog')
+                and os.path.isfile(pm['patched_catalog_local'])):
+            out.append((pm['patched_catalog_local'], pm['patched_catalog']))
     return out
 
 def _load_pack_albums(config: dict) -> dict:
@@ -2537,22 +2549,27 @@ def _load_pack_albums(config: dict) -> dict:
     except Exception:
         return {}
 
-def _get_pack_modes_entries(config: dict) -> list:
+def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     """
     Deterministic list of pack_modes entries derived from config + song_ids.json.
 
     Each entry: {pack, bundle_key (original pack bundle asset path),
     patched_bundle (AFR filename), local_path}. No build happens here — the
     patched filename is derived deterministically from the original one.
+    `packs` optionally limits which pack(s) to return (default: all configured).
     """
     pm = config.get('pack_modes', {}) or {}
-    packs = pm.get('packs') or []
-    if not packs:
+    configured = pm.get('packs') or []
+    if not configured:
         return []
+    if packs is not None:
+        configured = [p for p in configured if p in packs]
+        if not configured:
+            return []
     albums = _load_pack_albums(config)
     build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
     entries = []
-    for pack in packs:
+    for pack in configured:
         album = albums.get(pack)
         if not album or not album.get('packBundle'):
             continue
@@ -2566,17 +2583,39 @@ def _get_pack_modes_entries(config: dict) -> list:
         })
     return entries
 
-def _get_pack_modes_redirects(config: dict) -> dict:
+def _resolve_target_pack(config: dict, target_name: str) -> str | None:
+    """
+    Resolve which DLC pack a given song slot belongs to, using beat_saber_song_ids.json.
+
+    `target_name` is the slot (e.g. `AllTheGoodGirlsGoToHell`). Returns the album's
+    `pack` key (e.g. `billieeilish`) or None if the song isn't found / config missing.
+    This lets a single-song deploy scope pack-mode bundles + redirects to just the
+    song's pack instead of re-deploying every configured pack.
+    """
+    if not target_name:
+        return None
+    albums = _load_pack_albums(config)
+    t = target_name.lower()
+    for album in albums.values():
+        for s in album.get('songs', []):
+            if s.get('songID', '').lower() == t:
+                return album.get('pack')
+    return None
+
+
+def _get_pack_modes_redirects(config: dict, packs: list | None = None) -> dict:
     """
     Redirects for every pack_modes pack whose patched bundle exists locally.
 
-    The shared catalog redirect is only included when >=1 patched bundle exists
-    AND the merged catalog exists locally — the pipeline never points a redirect
-    at a file that is not ready to deploy (Exp 180 crash rule).
+    `packs` optionally limits which pack(s) to include. The shared catalog redirect
+    is only included when >=1 patched bundle exists AND the merged catalog exists
+    locally — the pipeline never points a redirect at a file that is not ready to
+    deploy (Exp 180 crash rule).
     """
     pm = config.get('pack_modes', {}) or {}
     redirects = {}
-    present = [e for e in _get_pack_modes_entries(config) if os.path.isfile(e['local_path'])]
+    present = [e for e in _get_pack_modes_entries(config, packs=packs)
+               if os.path.isfile(e['local_path'])]
     for e in present:
         redirects[e['bundle_key']] = e['patched_bundle']
     if present:
@@ -2586,7 +2625,7 @@ def _get_pack_modes_redirects(config: dict) -> dict:
             redirects[pm['catalog_key']] = pm['patched_catalog']
     return redirects
 
-def _regenerate_merged_catalog(config: dict) -> int:
+def _regenerate_merged_catalog(config: dict, packs: list | None = None) -> int:
     """
     Regenerate catalog_pack_modes.json from the ORIGIN catalog, updating entries
     for EXACTLY the current redirect set (configured packs whose patched bundle
@@ -2596,6 +2635,7 @@ def _regenerate_merged_catalog(config: dict) -> int:
     original bundle would then fail CRC validation against the updated catalog
     entry at boot) and must never omit a pack that IS being redirected (its
     patched bundle would then fail CRC validation against the original entry).
+    `packs` optionally limits which pack(s) the merged catalog covers (default: all).
     """
     pm = config.get('pack_modes', {}) or {}
     dump_dir = pm.get('dump_dir')
@@ -2607,7 +2647,8 @@ def _regenerate_merged_catalog(config: dict) -> int:
         return 0
     build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
     manifest = {e['patchedBundle']: e for e in pack_modes_builder.load_manifest(build_dir)}
-    present = [e for e in _get_pack_modes_entries(config) if os.path.isfile(e['local_path'])]
+    present = [e for e in _get_pack_modes_entries(config, packs=packs)
+               if os.path.isfile(e['local_path'])]
     to_update = []
     for e in present:
         m = manifest.get(e['patched_bundle'])
@@ -2654,24 +2695,34 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
         log.info(f"  ✅ Pack mode bundles already built ({len(entries)} pack(s))")
     # The merged catalog must always match the CURRENT redirect set (regenerated
     # from origin each time so entries for untouched packs stay byte-identical).
-    _regenerate_merged_catalog(config)
+    _regenerate_merged_catalog(config, packs=configured)
     return built
 
-def deploy_pack_modes(config: dict) -> bool:
+def _resolve_configured_packs(config: dict, packs: list | None) -> list:
+    """Return the pack list to operate on: `packs` if given else all configured."""
+    pm = config.get('pack_modes', {}) or {}
+    configured = pm.get('packs') or []
+    if packs is not None:
+        return [p for p in configured if p in packs]
+    return list(configured)
+
+def deploy_pack_modes(config: dict, packs: list | None = None) -> bool:
     """
     Build-if-missing and deploy the generalized pack_modes bundles + merged catalog.
 
-    Deploys the FULL redirect set (all configured packs with built bundles) so the
-    deployed merged catalog always matches the deployed redirects. Returns True if
-    all uploads OK.
+    `packs` optionally limits deployment to specific pack(s); default deploys the
+    FULL configured set. Deploys the redirect set (the given packs with built
+    bundles) so the deployed merged catalog always matches the deployed redirects.
+    Returns True if all uploads OK.
     """
     pm = config.get('pack_modes', {}) or {}
     if not pm.get('packs'):
         log.warning("  ⚠️  pack_modes not configured — nothing to deploy")
         return False
-    _ensure_pack_mode_bundles(config)
+    _ensure_pack_mode_bundles(config, packs=packs)
     pairs = [(e['local_path'], e['patched_bundle'])
-             for e in _get_pack_modes_entries(config) if os.path.isfile(e['local_path'])]
+             for e in _get_pack_modes_entries(config, packs=packs)
+             if os.path.isfile(e['local_path'])]
     if pm.get('patched_catalog_local') and pm.get('patched_catalog'):
         pairs.append((pm['patched_catalog_local'], pm['patched_catalog']))
     if not pairs:
@@ -2715,26 +2766,29 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
     return False
 
-def deploy_pack_bundle(config: dict) -> bool:
+def deploy_pack_bundle(config: dict, packs: list | None = None) -> bool:
     """
     Deploy the patched pack bundle + patched catalog.json to the PS4.
 
     Also builds (if missing) and deploys the generalized pack_modes bundles +
-    merged catalog when pack_modes.packs is configured. Both file sets must be
+    merged catalog when pack_modes.packs is configured. `packs` optionally limits
+    which pack(s) to deploy (default: all configured). Both file sets must be
     uploaded BEFORE redirects.json references them, otherwise the game would 404
     on the redirected path. Returns True if all uploads OK.
     """
     log.info("📦 Deploying patched pack bundle + catalog to PS4...")
     ok = True
-    pairs = _get_remote_pack_paths(config)
+    pairs = _get_remote_pack_paths(config, packs=packs)
     if pairs:
         for local_path, remote_name in pairs:
             ok = _deploy_file_to_ps4(config, local_path, remote_name) and ok
+    elif packs is not None:
+        log.info(f"  ℹ️  No pack_bundle / pack_modes entries for requested pack(s): {packs}")
     else:
         log.warning("  ⚠️  No pack_bundle / pack_modes configured — nothing to deploy")
         ok = False
     if config.get('pack_modes', {}).get('packs'):
-        ok = deploy_pack_modes(config) and ok
+        ok = deploy_pack_modes(config, packs=packs) and ok
     return ok
 
 def deploy_mass_bundles(config: dict) -> bool:
@@ -3018,6 +3072,8 @@ def manage_redirect_config(
     deploy: bool = False,
     sync: bool = False,
     enforce_local: bool = False,
+    packs: list | None = None,
+    slots: list | None = None,
 ):
     """
     Manage the redirects.json configuration file.
@@ -3030,6 +3086,9 @@ def manage_redirect_config(
 
     When called without any mode flags, auto-generates if local file is missing
     or if a deploy/sync is happening.
+
+    `packs`/`slots` optionally scope the pack-and-song redirects to a subset
+    (single-song deploy); default (None) keeps all configured packs/slots.
 
     Song redirect VALUES always point at the exact deployed bundle filename
     (canonical slot casing + afr_target_suffix), so the game never loads a stale
@@ -3088,13 +3147,13 @@ def manage_redirect_config(
     # ALWAYS keep the per-song redirects pointing at the exact deployed bundle
     # filenames (canonical slot casing + afr_target_suffix). This heals stale
     # pre-.bundle values and stale key casing after any config operation.
-    _ensure_mass_song_redirects(redirect_data, config)
+    _ensure_mass_song_redirects(redirect_data, config, slots=slots)
 
     # ALWAYS keep the pack bundle + catalog redirect pair consistent (Exp 180):
     # a config with a pack bundle redirect but no catalog redirect (or with a
     # stale pack target) crashes the game at startup. This runs on every save so
     # the pair can never be silently dropped by regeneration, sync, or enforce.
-    _ensure_pack_bundle_redirects(redirect_data, config)
+    _ensure_pack_bundle_redirects(redirect_data, config, packs=packs)
 
     # Save updated config locally
     os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
@@ -3607,7 +3666,9 @@ Examples:
                              'This is now the default; flag kept for backward compatibility. '
                              'Use --hevag or --vorbis to opt out.')
     parser.add_argument('--deploy-plugin', action='store_true',
-                        help='Build and deploy the GoldHEN plugin to PS4')
+                        help='Build and deploy the GoldHEN plugin to PS4 (and ensure plugins.ini entry)')
+    parser.add_argument('--deploy-features', action='store_true',
+                        help='Deploy the local features.json to the PS4 (runtime feature flags)')
     parser.add_argument('--debug-logging', action='store_true',
                         help='Build plugin with verbose logging (VERBOSE_LOG define). '
                              'Only meaningful with --deploy-plugin.')
@@ -3700,13 +3761,19 @@ Examples:
 
     args = parser.parse_args()
 
-    # --deploy-full implies all deployment flags for complete orchestration
+    # --deploy-full implies all deployment flags for complete orchestration.
+    # A fully self-contained deploy builds+deploys the plugin, ensures the
+    # plugins.ini entry, deploys features.json, and (in the song path) deploys a
+    # mutually-consistent set of song bundle + that song's pack-mode bundle +
+    # matching catalog + redirects scoped to the requested single song.
     if args.deploy_full:
         args.deploy = True
         args.deploy_config = True
         args.generate_config = True
         args.deploy_pack_modes = True
-        args.no_verify_ps4 = False  # ensure validation runs
+        args.deploy_plugin = True       # build + deploy plugin + ensure plugins.ini
+        args.deploy_features = True     # deploy features.json
+        args.no_verify_ps4 = False      # ensure validation runs
 
     # Load PS4 config first
     config = load_config(args.config)
@@ -4086,8 +4153,24 @@ Examples:
     # -----------------------------------------------------------------------
     should_generate = args.generate_config or args.deploy_config or args.sync_config or args.deploy
     should_deploy = args.deploy_config or args.sync_config or args.enforce_config or args.deploy
+
+    # Single-song deploy scoping: resolve which pack the requested target slot
+    # belongs to, and scope the pack-mode bundle deploy + catalog + redirects to
+    # exactly that pack (and just that song slot). This keeps a `--deploy-full`
+    # single-song install surgical — it deploys ONLY the target song + its music
+    # pack, instead of re-deploying every configured pack. Full-fleet behavior
+    # (all packs) is preserved when no target song is being processed.
+    deploy_packs = None
+    deploy_slots = None
+    if args.target:
+        target_pack = _resolve_target_pack(config, args.target)
+        if target_pack:
+            deploy_packs = [target_pack]
+            log.info(f"ℹ️  Single-song deploy: scoping to pack '{target_pack}' for target '{args.target}'")
+        deploy_slots = [args.target.split('/')[-1]]
+
     if should_deploy:
-        deploy_pack_bundle(deploy_cfg)
+        deploy_pack_bundle(deploy_cfg, packs=deploy_packs)
 
     # -----------------------------------------------------------------------
     # Step 9: Manage redirect config (redirects.json)
@@ -4101,6 +4184,8 @@ Examples:
             deploy=should_deploy,
             sync=args.sync_config,
             enforce_local=args.enforce_config,
+            packs=deploy_packs,
+            slots=deploy_slots,
         )
 
     # Step 9c: Post-deploy validation (self-validating pipeline, Exp 180).
@@ -4122,6 +4207,14 @@ Examples:
     # -----------------------------------------------------------------------
     if args.set_feature:
         apply_feature_flags(args.set_feature, config)
+    elif args.deploy_features:
+        # Deploy the local features.json (runtime feature flags) so the plugin
+        # picks up the correct feature set. Ensures the file exists on the PS4.
+        if os.path.isfile(_get_local_features_path()):
+            _deploy_features_to_ps4(config)
+            log.info("  ✅ features.json deployed to PS4")
+        else:
+            log.warning("  ⚠️  Local features.json not found — skipping feature deploy")
 
     # -----------------------------------------------------------------------
     # Step 11: Song metadata (song_metadata.json)

@@ -36,6 +36,7 @@ from full_custom_song_pipeline import (
     _get_pack_bundle_redirects,
     _get_remote_pack_paths,
     _ensure_pack_mode_bundles,
+    _resolve_target_pack,
 )
 
 
@@ -687,3 +688,53 @@ class TestPackModesRealArtifacts:
         for pack in cfg['pack_modes']['packs']:
             e = man_by_pack[pack]
             assert merged_entries[e['catalogBundleName']] == (e['crc'], e['size'])
+
+
+# ---------------------------------------------------------------------------
+# Single-song deploy scoping (Exp 211+)
+# ---------------------------------------------------------------------------
+
+class TestSingleSongScoping:
+    """Verify a single-song deploy resolves its pack and scopes pack-mode
+    bundles + redirects to exactly that pack/slot instead of all configured."""
+
+    def test_resolve_target_pack_returns_pack(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        assert _resolve_target_pack(cfg, 'demopacka_demo_song_a') == 'demopacka'
+        assert _resolve_target_pack(cfg, 'demopackb_demo_song_b') == 'demopackb'
+
+    def test_resolve_target_pack_case_insensitive(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        assert _resolve_target_pack(cfg, 'DEMOPACKA_demo_song_a') == 'demopacka'
+
+    def test_resolve_target_pack_unknown_returns_none(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        assert _resolve_target_pack(cfg, 'nosuchsong') is None
+
+    def test_resolve_target_pack_none_target(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        assert _resolve_target_pack(cfg, None) is None
+
+    def test_entries_scoped_to_single_pack(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        entries = _get_pack_modes_entries(cfg, packs=['demopacka'])
+        assert len(entries) == 1
+        assert entries[0]['pack'] == 'demopacka'
+
+    def test_entries_all_packs_when_no_filter(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        entries = _get_pack_modes_entries(cfg)
+        assert {e['pack'] for e in entries} == {'demopacka', 'demopackb'}
+
+    def test_redirects_scoped_to_single_pack(self, tmp_path):
+        cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        build_dir = cfg['pack_modes']['build_dir']
+        os.makedirs(build_dir, exist_ok=True)
+        open(os.path.join(build_dir, patched_bundle_name(_RS)), 'w').close()
+        open(os.path.join(build_dir, patched_bundle_name(_BILLIE)), 'w').close()
+        red_all = _get_pack_modes_redirects(cfg)
+        red_one = _get_pack_modes_redirects(cfg, packs=['demopacka'])
+        assert red_all and _RS in red_all
+        assert _BILLIE in red_all
+        assert _RS in red_one
+        assert _BILLIE not in red_one

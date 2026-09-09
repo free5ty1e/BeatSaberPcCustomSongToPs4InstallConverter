@@ -1,5 +1,19 @@
 # Pipeline Changelog
 
+## v0.5331 (2026-09-08)
+### Added
+- **Self-contained single-song `--deploy-full`.** The core deployment function now (for a single `--target` song from BeatSaver) redeploys a mutually-consistent single-song set:
+  - deploys ONLY the target song's bundle,
+  - deploys ONLY that song's music-pack mode bundle (`_resolve_target_pack` maps `--target` → pack via `beat_saber_song_ids.json`) + a matching single-pack merged catalog,
+  - builds + deploys the GoldHEN plugin **and** ensures the `plugins.ini` entry (this is now implied by `--deploy-full` / new `--deploy-plugin`),
+  - deploys `features.json` (new implied `--deploy-features` / explicit flag),
+  - generates redirects scoped to just that song + pack pair (new `packs`/`slots` filters threaded through `_get_pack_modes_entries`, `_get_pack_modes_redirects`, `_get_pack_bundle_redirects`, `_ensure_pack_bundle_redirects`, `_ensure_mass_song_redirects`, `_regenerate_merged_catalog`, `deploy_pack_modes`, `deploy_pack_bundle`, `_get_remote_pack_paths`, `manage_redirect_config`).
+- **Root cause of "it deploys all the other packs":** the old single-song path called `deploy_pack_bundle()`/`manage_redirect_config()` with no pack scope, which re-deployed ALL 4 configured packs + 43 redirects on every song. Now a `--target` scopes deployment to that song's pack and that song slot, so only the target song's content is touched. Full-fleet behavior (all packs) is preserved when no `--target` is used.
+- **New flag `--deploy-features`** (implied by `--deploy-full`): deploy the local `features.json` to the PS4.
+
+### Changed
+- `--deploy-full` now also implies `--deploy-plugin` + `--deploy-features` (plugin build + upload + plugins.ini entry + features.json deploy). Plugin version unchanged.
+
 ## v0.5330 (2026-09-07)
 ### Added
 - **Backup utility now manages the LOCAL pipeline state cache files** (`song_metadata.json`, `redirects.json`, `catalog_pack_modes.json` at the project root). Previously a PS4 `--clean-ps4` cleared the console but left these local caches, so the next single-song deploy re-read the previous full loadout and re-deployed all old bundles. `backup-beat-saber-deluxe-files.py` now:

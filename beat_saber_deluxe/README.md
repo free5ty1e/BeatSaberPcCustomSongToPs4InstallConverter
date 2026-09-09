@@ -1,4 +1,4 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8040 / v0.5328)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8040 / v0.5331)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
@@ -75,11 +75,13 @@ python3 tools/full_custom_song_pipeline.py \
 | `--artist NAME` | Override artist/song-author name for metadata injection |
 | `--download-beat-saver-song <id>` | Download map directly from BeatSaver using map ID (primary workflow) |
 | `--target` | Target slot (e.g. `startmeup`, `Oxytocin`, `2BeLoved`) |
-| `--deploy-full` | **Complete orchestration**: song bundle + pack mode bundles + merged catalog + redirects.json + validation (primary workflow) |
+| `--deploy-full` | **Self-contained single-song orchestration** (one song + its pack + catalog + plugin + plugins.ini + features + redirects + validation) — the primary workflow. Run one command at a time and test in-game after each. See `example_commands_to_install_custom_songs_over_*_music_pack.md`. |
 | `--deploy` | Upload bundle to PS4 via FTP |
 | `--deploy-config` | Deploy local `redirects.json` to PS4 |
 | `--generate-config` | Update `redirects.json` config with current target |
 | `--deploy-pack-modes` | Build-if-missing + deploy pack mode bundles + merged catalog |
+| `--deploy-plugin` | Build + deploy the GoldHEN plugin and ensure the `plugins.ini` entry |
+| `--deploy-features` | Deploy `features.json` (runtime feature flags) to PS4 |
 | `--verify-ps4` | Run post-deploy PS4 validation (redirects match, targets exist, pack+catalog pair) |
 | `--no-verify-ps4` | Skip automatic post-deploy validation |
 | `--deploy-plugin` | Build + deploy plugin PRX |
