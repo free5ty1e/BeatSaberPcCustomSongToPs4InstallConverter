@@ -598,6 +598,7 @@ def clean_ps4():
             ("Plugins", "*.prx"),
             (".", "*_v3.bundle"),
             (".", "*_custom_v3.bundle"),
+            (".", "*_pack_modes_assets_all_*.bundle"),
             (".", "catalog_pack_modes.json"),
             (".", "redirects.json"),
             (".", "song_metadata.json"),

@@ -23,6 +23,26 @@ boot the game and verify that song + its whole pack works before moving to the n
 It does **NOT** deploy the other packs or other songs. On a clean PS4, run these commands one
 at a time and test after each.
 
+## Optional: Clean PS4 for a Fresh Clean-Slate State
+
+If you want to start from a completely clean PS4 (no custom songs, no redirects,
+no modified packs, no plugin entry), run the backup script with `--clean-ps4`:
+
+```bash
+python3 /workspace/backup-beat-saber-deluxe-files.py backup --clean-ps4
+```
+
+This will:
+1. **Backup** the current PS4 state (plugins.ini, AFR/CUSA12878, AFR/test/, AFR/bs_log/, local pipeline caches) to a timestamped zip in `/workspace/ps4_backups/`
+2. **Surgically clean** `/user/app/CUSA12878/` — removes only custom bundles (`*_v3.bundle`, `*_custom_v3.bundle`, `pack_modes_bundles/*.bundle`, `Plugins/*.prx`, config jsons) while preserving base game files (`app.pkg`, `app.json`, `app.pbm`, `app.xml`) and system mount points
+3. **Remove** the BSD plugin entry from `plugins.ini` `[CUSA12878]` section (prevents "data corrupted" on game launch)
+4. **Clear** local pipeline state caches (`song_metadata.json`, `redirects.json`, `catalog_pack_modes.json`) so the pipeline treats the PS4 as fresh
+
+After this runs, `ps4_state.py` will report:
+```
+🧹  PS4 is in CLEAN SLATE state for Beat Saber Deluxe.
+```
+
 ## Pre-Deploy PS4 State Check
 
 Before running any command, verify the **current state of the PS4**. The scripts and

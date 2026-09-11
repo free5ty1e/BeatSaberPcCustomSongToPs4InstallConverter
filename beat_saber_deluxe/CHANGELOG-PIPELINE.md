@@ -1,5 +1,16 @@
 # Pipeline Changelog
 
+## v0.5333 (2026-09-10)
+### Fixed
+- **Post-deploy validation was checking ALL 4 configured packs instead of just the single deployed pack (Exp 214 follow-up).** After the Exp 214 fix for `--download-beat-saver-song` ordering, a fresh single-song `--deploy-full` run correctly deployed only the billieeilish pack, but `verify_ps4_deployment()` still iterated all 4 `pack_modes.packs` and reported spurious "MISSING" / "BROKEN" errors for the 3 undeployed packs.
+- Fixed `verify_ps4_deployment()` to accept and thread the `packs` filter through all internal helpers (`_get_remote_pack_paths`, `_get_pack_bundle_redirects`, `_get_pack_modes_entries`), so validation scopes to exactly the deployed pack(s). Also fixed size-check priority to prefer fresh `custom_songs/` builds over stale `mass_bundles/` for song bundles.
+- Validation now correctly PASSES for a clean single-song deploy.
+
+## v0.5332 (2026-09-08)
+### Fixed
+- **`--deploy-full --download-beat-saver-song <id> --target <slot>` silently failed to download/convert the song (Exp 214).** Root cause: the BeatSaver auto-download that populates `args.song_dir` ran *after* the `plugin-only` early-exit guard inside `main()`. A `--deploy-full` run sets `deploy_plugin=True`, so the guard `if args.deploy_plugin and not args.song_dir:` fired with `song_dir` still `None`, routed the whole run through "plugin-only mode" — which attempted to `put` a never-built `beat_saber_deluxe.prx` (the mangled `/wat_saber_deluxe.prx`  "No such file or directory" error) and regenerated all 43 unscoped redirects with `target_name=None` — then `sys.exit(0)` before ever downloading the song or building/converting anything.
+- Moved the `--download-beat-saver-song` → `args.song_dir` resolution to the top of `main()` (immediately after config load, before the `features-only` / `plugin-only` / deploy-only / toggle early-exit guards), so a single-song `--deploy-full` now correctly reaches the song-processing path (audio convert → beatmaps → mode generation → BeatmapLevelSO metadata → bundle → build+deploy plugin → scoped single-pack deploy). Added regression tests (`TestDeployFullDownloadsSong`) guarding the ordering invariant.
+
 ## v0.5331 (2026-09-08)
 ### Added
 - **Self-contained single-song `--deploy-full`.** The core deployment function now (for a single `--target` song from BeatSaver) redeploys a mutually-consistent single-song set:

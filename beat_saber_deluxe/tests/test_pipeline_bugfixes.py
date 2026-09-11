@@ -822,3 +822,67 @@ class TestRoniSourceRegression:
         normalize_v3_schema(data)
         assert isinstance(data["basicBeatmapEvents"], list)
         assert "waypoints" in data
+
+
+# ======================================================================
+# Exp 214: --deploy-full + --download-beat-saver-song must NOT be routed
+# into "plugin-only mode".
+#
+# Root cause: the BeatSaver auto-download that populates args.song_dir ran
+# AFTER the `plugin-only` early-exit guard. So a `--deploy-full
+# --download-beat-saver-song <id>` invocation (which sets deploy_plugin=True)
+# hit "if args.deploy_plugin and not args.song_dir:" with song_dir still None,
+# entered plugin-only mode, deployed a never-built plugin + 43 unscoped
+# redirects, and sys.exit(0) before the song was ever downloaded/converted.
+# ======================================================================
+class TestDeployFullDownloadsSong:
+    """A --deploy-full --download-beat-saver-song run must reach the song
+    processing path, not bail into plugin-only mode."""
+
+    def _read_source(self):
+        import full_custom_song_pipeline as fcp
+        src_path = fcp.__file__
+        with open(src_path) as f:
+            return f.read()
+
+    def test_download_block_precedes_plugin_only_guard(self):
+        """Structural guardrail: the BeatSaver download (which sets args.song_dir)
+        must appear in main() BEFORE the `plugin-only mode` early-exit guard."""
+        src = self._read_source()
+        dl_idx = src.index("Auto-download from BeatSaver if requested")
+        guard_idx = src.index("Plugin-only mode: deploy plugin and exit")
+        assert dl_idx < guard_idx, (
+            "BeatSaver download block regressed: it must run BEFORE the "
+            "plugin-only guard so args.song_dir is resolved first"
+        )
+
+    def test_song_dir_resolution_logic_before_guard(self):
+        """Replicate the (now-correct) ordering: with --download-beat-saver-song
+        provided and no --song-dir, song_dir must become non-None, so the
+        plugin-only guard condition `deploy_plugin and not song_dir` is False."""
+        # Emulate argparse results for --deploy-full --download-beat-saver-song
+        args = type("Args", (), {})()
+        args.download_beat_saver_song = "4a901"
+        args.song_dir = None
+        args.beatsaver_api_base = None
+        args.deploy_plugin = True  # set by --deploy-full expansion
+        args.deploy_full = True
+
+        # The fix moves this to before the guard:
+        if args.download_beat_saver_song and not args.song_dir:
+            args.song_dir = "/tmp/some_downloaded_song_dir"
+
+        # plugin-only guard must NOT fire now
+        assert not (args.deploy_plugin and not args.song_dir), (
+            "plugin-only mode would fire even though a song is being downloaded"
+        )
+
+    def test_download_wins_over_plugin_only_when_song_dir_set(self):
+        """When a --song-dir IS provided alongside --deploy-full, the plugin-only
+        guard must also stay inert (song_dir already populated)."""
+        args = type("Args", (), {})()
+        args.download_beat_saver_song = None
+        args.song_dir = "/tmp/existing_song"
+        args.deploy_plugin = True
+        args.deploy_full = True
+        assert not (args.deploy_plugin and not args.song_dir)

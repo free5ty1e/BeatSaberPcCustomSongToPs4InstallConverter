@@ -10,6 +10,10 @@ builds/deploys the plugin + plugins.ini entry + features.json,
 regenerates redirects.json scoped to that song, and runs post-deploy
 validation. All in ONE command.
 
+# Optional: Clean PS4 for a fresh clean-slate state
+# Uncomment the next line if you want to start from a completely clean PS4
+# python3 /workspace/backup-beat-saber-deluxe-files.py backup --clean-ps4
+
 cd /workspace/beat_saber_deluxe
 
 echo ""

@@ -33,6 +33,7 @@ metadata:
 - [[development-workflow|Development Workflow]] — Deploy cycle, log analysis, FTP, experiment iteration
 - [[pipeline-deploy-full-orchestration|Pipeline Deploy Full Orchestration (`--deploy-full`)]] — Complete end-to-end orchestration in one command (song bundle + pack mode bundles + catalog + redirects + validation)
 - [[pipeline-single-song-deploy|Self-Contained Single-Song Deploy (`--deploy-full`, v0.5331)]] — Diagnosed + fixed: single-song deploys were re-deploying all configured packs. Now scopes pack/catalog/redirects to just the target song + its pack, and also deploys plugin + plugins.ini + features.json.
+- [[pipeline-deploy-full-download-guard-ordering|`--deploy-full --download-beat-saver-song` guard ordering (v0.5332)]] — Root cause: song conversion was silently skipped because the BeatSaver download ran AFTER main()'s plugin-only early-exit guard; fixed by resolving `song_dir` before all guards.
 - [[pipeline-deploy-flags|Pipeline Deploy Flags]] — All deploy-related flags reference and hierarchy
 
 ## Audio — Working Format

@@ -2867,7 +2867,7 @@ def _list_remote_dir(config: dict) -> dict:
             continue
     return files
 
-def verify_ps4_deployment(config: dict) -> bool:
+def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
     """
     Validate what actually ended up on the PS4 after a deploy.
 
@@ -2875,8 +2875,8 @@ def verify_ps4_deployment(config: dict) -> bool:
       1. PS4 is reachable and the AFR title dir is listable.
       2. The deployed redirects.json matches the local redirects.json (keys+values).
       3. Every redirect target filename exists on the PS4 (no 404s at boot).
-      4. The patched pack bundle + patched catalog exist on the PS4.
-      5. The pack bundle + catalog redirect PAIR is present (the Exp 180 crash fix).
+      4. The patched pack bundle + patched catalog exist on the PS4 (scoped to `packs`).
+      5. The pack bundle + catalog redirect PAIR is present (the Exp 180 crash fix, scoped).
       6. Redirect target file sizes on the PS4 match the local files (full transfer).
 
     Returns True if all checks pass.
@@ -2947,7 +2947,7 @@ def verify_ps4_deployment(config: dict) -> bool:
         log.info(f"  ✅ All {len(local_data.get('redirects', {}))} redirect targets exist on PS4")
 
     # 4. Pack bundle + catalog files exist on PS4 (single-pack pair + pack_modes)
-    remote_names = {name for local, name in _get_remote_pack_paths(config)}
+    remote_names = {name for local, name in _get_remote_pack_paths(config, packs=packs)}
     for name in sorted(remote_names):
         if name in remote_files:
             log.info(f"  ✅ {name} on PS4 ({remote_files[name]:,} bytes)")
@@ -2959,7 +2959,7 @@ def verify_ps4_deployment(config: dict) -> bool:
     # Covers the single-pack pair AND every configured pack_modes pack, plus the
     # shared aa/catalog.json redirect (single-pack catalog OR merged catalog).
     redirects = local_data.get('redirects', {})
-    expected = _get_pack_bundle_redirects(config)
+    expected = _get_pack_bundle_redirects(config, packs=packs)
     broken = []
     for key, val in expected.items():
         if redirects.get(key) != val:
@@ -2977,10 +2977,25 @@ def verify_ps4_deployment(config: dict) -> bool:
     size_mismatch = []
     _mass_dir = (config.get('mass_deploy', {}) or {}).get(
         'bundle_dir', '/workspace/beat_saber_deluxe/mass_bundles')
+    _custom_dir = (config.get('paths', {}) or {}).get(
+        'output_dir', '/workspace/beat_saber_deluxe/custom_songs')
     for val in local_data.get('redirects', {}).values():
-        # Guess local source: pack bundle/catalog, mass_bundles, or AFR staging
-        for cand in [os.path.join(PROJECT_ROOT, val),
-                     os.path.join(_mass_dir, val)]:
+        # Guess local source: pack bundle/catalog, custom_songs (fresh single-song builds),
+        # mass_bundles (legacy full-fleet), or AFR staging.
+        # Priority: custom_songs > mass_bundles for song bundles; project root for pack bundles/catalogs.
+        is_song_bundle = val.endswith('_v3.bundle')
+        if is_song_bundle:
+            candidates = [
+                os.path.join(_custom_dir, val.replace('_v3.bundle', '_custom.bundle')),
+                os.path.join(_mass_dir, val),
+                os.path.join(PROJECT_ROOT, val),
+            ]
+        else:
+            candidates = [
+                os.path.join(PROJECT_ROOT, val),
+                os.path.join(_mass_dir, val),
+            ]
+        for cand in candidates:
             if os.path.isfile(cand):
                 local_size = os.path.getsize(cand)
                 remote_size = remote_files.get(val)
@@ -3037,7 +3052,7 @@ def verify_ps4_deployment(config: dict) -> bool:
                         else:
                             log.info(f"  ✅ Deployed {pm['patched_catalog']} md5 matches local build ({local_md5})")
                     # Verify each configured pack's catalog entry carries the patched CRC/size.
-                    entries = _get_pack_modes_entries(config)
+                    entries = _get_pack_modes_entries(config, packs=packs)
                     manifest = {e['packBundle']: e for e in pm_b.load_manifest(pm['build_dir'])}
                     checks = []
                     for e in entries:
@@ -3781,6 +3796,20 @@ Examples:
     cfg_title = config.get('title', {})
     cfg_paths = config.get('paths', {})
 
+    # Auto-download from BeatSaver if requested. This MUST run BEFORE the
+    # plugin-only / deploy-only / toggle early-exit guards below, otherwise a
+    # `--deploy-full --download-beat-saver-song <id> --target <slot>` invocation
+    # (which sets deploy_plugin=True) is mis-routed into "plugin-only mode"
+    # because args.song_dir is still None at the guard, and the song is never
+    # downloaded or processed (Exp 214 root-cause fix).
+    if args.download_beat_saver_song and not args.song_dir:
+        log.info("Downloading song from BeatSaver...")
+        extracted_dir = download_beat_saver_song(args.download_beat_saver_song,
+                                                  api_base=args.beatsaver_api_base)
+        args.song_dir = extracted_dir
+    elif args.download_beat_saver_song and args.song_dir:
+        log.info(f"Using local song directory: {args.song_dir} (ignoring --download-beat-saver-song)")
+
     # Features-only mode: change feature flags and exit (no song, no plugin, no redirects)
     if args.features_only:
         if not args.set_feature:
@@ -3863,15 +3892,6 @@ Examples:
         disable_plugin(config)
         log.info("Plugin disabled. Restart the game or press PS+Triangle to reload plugins.")
         sys.exit(0)
-
-    # Auto-download from BeatSaver if requested (sets args.song_dir before the dir check)
-    if args.download_beat_saver_song and not args.song_dir:
-        log.info("Downloading song from BeatSaver...")
-        extracted_dir = download_beat_saver_song(args.download_beat_saver_song,
-                                                  api_base=args.beatsaver_api_base)
-        args.song_dir = extracted_dir
-    elif args.download_beat_saver_song and args.song_dir:
-        log.info(f"Using local song directory: {args.song_dir} (ignoring --download-beat-saver-song)")
 
     # --song-dir is required for song processing
     if not args.song_dir:
@@ -4192,9 +4212,9 @@ Examples:
     # Runs automatically whenever any --deploy option was used, unless
     # --no-verify-ps4 is passed. Reports PASS/FAIL for every check.
     if should_deploy and not args.no_verify_ps4:
-        verify_ps4_deployment(deploy_cfg)
+        verify_ps4_deployment(deploy_cfg, packs=deploy_packs)
     elif args.verify_ps4:
-        verify_ps4_deployment(deploy_cfg)
+        verify_ps4_deployment(deploy_cfg, packs=deploy_packs)
 
     # -----------------------------------------------------------------------
     # Step 9d: --deploy-full note (handled by flags set at arg parse time)
