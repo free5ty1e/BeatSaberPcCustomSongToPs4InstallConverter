@@ -3,8 +3,9 @@
 ps4_state.py — Inspect the current Beat Saber Deluxe state on the PS4.
 
 Lists every BSD-related file currently on the PS4 (plugins.ini + its contents,
-game-dir bundles/config json, plugin .prx) and prints a human-readable summary
-conclusion: clean-slate, or "X custom songs, Y redirects, Z modified music packs".
+AFR directory bundles/config json, plugin .prx) and prints a human-readable
+summary conclusion: clean-slate, or "X custom songs, Y redirects, Z modified
+music packs".
 
 Uses lftp for a familiar, consistent interaction. Exits 0 on success.
 
@@ -14,6 +15,7 @@ Usage:
 
 import subprocess
 import sys
+import json
 
 PS4_HOST = "192.168.100.117"
 PS4_PORT = 2121
@@ -21,6 +23,7 @@ USER = "anonymous"
 PASS = ""
 
 GAME_DIR = "/user/app/CUSA12878"
+AFR_DIR = "/data/GoldHEN/AFR/CUSA12878"
 PLUGINS_INI = "/data/GoldHEN/plugins.ini"
 PLUGINS_DIR = "/data/GoldHEN/plugins"
 
@@ -56,8 +59,7 @@ def is_custom_bundle(name):
     if name.startswith('.'):
         return False
     if n.endswith('.bundle'):
-        # Exclude the base game app.pkg (not in this dir anyway); include every
-        # *_v3.bundle, *_pack_modes_*.bundle, *_custom.bundle.
+        # Include every *_v3.bundle, *_pack_modes_*.bundle, *_custom.bundle.
         return True
     if n in ('redirects.json', 'song_metadata.json', 'features.json',
              'catalog_pack_modes.json', 'catalog_startmeup_modes.json',
@@ -98,7 +100,6 @@ def main():
 
     print("--- GoldHEN plugins dir ---")
     plist = list_dir(PLUGINS_DIR)
-    bsd_prx = [f for f in plist if f[2] == 'beat_saber_deluxe.prx']
     has_plugin = False
     for perm, size, name in plist:
         if name in ('.', '..'):
@@ -112,12 +113,12 @@ def main():
     # Is the plugin registered in plugins.ini under [CUSA12878]?
     ini_registered = any('beat_saber_deluxe.prx' in e for e in plug_entries)
 
-    # 3. Game dir: custom bundles + config json
-    print("--- /user/app/CUSA12878 (game dir) ---")
-    glist = list_dir(GAME_DIR)
+    # 3. AFR directory: custom bundles + config json (this is where the plugin reads from)
+    print(f"--- {AFR_DIR} (AFR dir — plugin reads from here) ---")
+    afr_list = list_dir(AFR_DIR)
     custom_bundles = []
     config_jsons = []
-    for perm, size, name in glist:
+    for perm, size, name in afr_list:
         if name in ('.', '..'):
             continue
         is_custom = is_custom_bundle(name)
@@ -132,7 +133,22 @@ def main():
         print(f"  {perm} {size:>10}  {name}{tag}")
     print()
 
-    # 4. Summarize
+    # 4. Also check game dir for base game files (should be clean)
+    print(f"--- {GAME_DIR} (game dir — base game only) ---")
+    glist = list_dir(GAME_DIR)
+    for perm, size, name in glist:
+        if name in ('.', '..'):
+            continue
+        # Only show base game files, not custom content
+        if name in ('app.pkg', 'app.pbm', 'app.pbm.backup', 'app.json', 'app.xml'):
+            print(f"  {perm} {size:>10}  {name}")
+        elif is_custom_bundle(name):
+            print(f"  {perm} {size:>10}  {name}  ◄ STALE CUSTOM CONTENT (should be in AFR dir)")
+        else:
+            print(f"  {perm} {size:>10}  {name}")
+    print()
+
+    # 5. Summarize
     print("=" * 62)
     print("SUMMARY")
     print("=" * 62)
@@ -141,9 +157,8 @@ def main():
     redirect_count = None
     redirect_names = []
     if 'redirects.json' in config_jsons:
-        red = cat_remote(f"{GAME_DIR}/redirects.json")
+        red = cat_remote(f"{AFR_DIR}/redirects.json")
         if red is not None:
-            import json
             try:
                 data = json.loads(red)
                 redirects = data.get('redirects', {})

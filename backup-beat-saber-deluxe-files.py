@@ -581,9 +581,73 @@ def clean_ps4():
             failed.append(plugin_file)
             print(f"     ✗ Failed to remove {plugin_file}: {stderr.strip() or 'unknown error'}")
 
-    # 2. Remove ONLY custom content from /user/app/CUSA12878/ - SURGICAL CLEAN
-    # Note: We do NOT remove /data/GoldHEN/AFR/CUSA12878/ since it typically doesn't exist
-    # We do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
+    # 2. Remove ONLY custom content from /data/GoldHEN/AFR/CUSA12878/ (AFR dir) - SURGICAL CLEAN
+    # This is where the plugin reads redirects.json, features.json, song_metadata.json,
+    # and where custom bundles + patched pack bundles are deployed.
+    # Note: We do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
+    # These are preserved directories per GoldHEN topology.
+    # CRITICAL: We must PRESERVE the base game installation (app.pkg, app.json, app.pbm, app.xml)
+    # and system mount points (0-byte files). Only remove CUSTOM content we deployed.
+
+    PS4_AFR_CUSA12878 = "/data/GoldHEN/AFR/CUSA12878"
+    if ps4_path_exists(PS4_AFR_CUSA12878):
+        print(f"     Surgical clean of {PS4_AFR_CUSA12878}/ - removing only custom content...")
+
+        # List of known custom content patterns to remove from AFR dir
+        afr_custom_patterns = [
+            (".", "*_v3.bundle"),
+            (".", "*_custom_v3.bundle"),
+            (".", "*_pack_modes_assets_all_*.bundle"),
+            (".", "catalog_pack_modes.json"),
+            (".", "redirects.json"),
+            (".", "song_metadata.json"),
+            (".", "features.json"),
+            (".", "bs_log.txt"),
+        ]
+
+        afr_removed_count = 0
+        for subdir, pattern in afr_custom_patterns:
+            target_path = f"{PS4_AFR_CUSA12878}/{subdir}" if subdir != "." else PS4_AFR_CUSA12878
+            if ps4_path_exists(target_path):
+                ftp = get_ftp()
+                try:
+                    ftp.cwd(target_path)
+                    files = []
+                    ftp.retrlines("LIST", files.append)
+                    for f in files:
+                        parts = f.split()
+                        if len(parts) >= 9:
+                            fname = parts[-1]
+                            if fname in (".", ".."):
+                                continue
+                            # CRITICAL SAFEGUARD: Never delete protected base game files or system mount points
+                            if fname in PROTECTED_BASE_GAME_FILES or fname in PROTECTED_SYSTEM_MOUNTPOINTS:
+                                print(f"       ⊘ Protected: {fname} (base game file or system mount point)")
+                                continue
+                            # Check if file matches our custom content patterns
+                            import fnmatch
+                            if fnmatch.fnmatch(fname, pattern):
+                                full_path = f"{target_path}/{fname}"
+                                try:
+                                    ftp.delete(full_path)
+                                    print(f"       ✓ Removed custom: {fname}")
+                                    afr_removed_count += 1
+                                except ftplib.error_perm as e:
+                                    print(f"       ✗ Failed to remove {fname}: {e}")
+                except Exception as e:
+                    print(f"       ✗ Error accessing {target_path}: {e}")
+                finally:
+                    close_ftp(ftp)
+
+        if afr_removed_count > 0:
+            cleaned.append(f"AFR/CUSA12878 custom content ({afr_removed_count} files)")
+            print(f"     ✓ Removed {afr_removed_count} custom files from {PS4_AFR_CUSA12878}/")
+        else:
+            cleaned.append(f"AFR/CUSA12878 (no custom content found)")
+            print(f"     ⊘ No custom content found in {PS4_AFR_CUSA12878}/")
+
+    # 3. Remove ONLY custom content from /user/app/CUSA12878/ (game dir) - SURGICAL CLEAN
+    # Note: We do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
     # These are preserved directories per GoldHEN topology
     # CRITICAL: We must PRESERVE the base game installation (app.pkg, app.json, app.pbm, app.xml)
     # and system mount points (0-byte files). Only remove CUSTOM content we deployed.
@@ -647,11 +711,11 @@ def clean_ps4():
             cleaned.append("AFR/CUSA12878 (no custom content found)")
             print(f"     ⊘ No custom content found in /user/app/CUSA12878/")
 
-    # 3. Do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
+    # 5. Do NOT remove /data/GoldHEN/AFR/test/ or /data/GoldHEN/AFR/bs_log/
     #    These are preserved directories per GoldHEN topology
     print(f"   ⊘ Skipping /AFR/test/ and /AFR/bs_log/ (preserved per GoldHEN topology)")
 
-    # 4. Remove Beat Saber Deluxe plugin reference from plugins.ini
+    # 6. Remove Beat Saber Deluxe plugin reference from plugins.ini
     # This prevents "data corrupted" errors on game launch
     print(f"   Removing BSD plugin entry from plugins.ini...")
     if ps4_path_exists(PS4_PLUGINS_INI):

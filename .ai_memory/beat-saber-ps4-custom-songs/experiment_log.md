@@ -606,3 +606,22 @@ metadata:
 - **Result:** Clean slate now fully verified — `🧹 PS4 is in CLEAN SLATE state for Beat Saber Deluxe. No custom songs, no redirects, no modified music packs, no plugin.`
 - **Version:** Pipeline remains v0.5333 (backup script fix, not pipeline).
 - **Tests:** 581/581 pass.
+
+### Experiment 215: Pipeline Default AFR Path Fix + ps4_state.py Update (2026-09-11)
+- **Date:** 2026-09-11
+- **Context:** After the afr_base fix, user reported the song still wasn't working in-game. Root cause: the pipeline's default config already had the correct `afr_base: "/data/GoldHEN/AFR"`, but the user's local `ps4_config.json` had the old wrong value `/user/app`. The deploy was happening to the wrong location (game dir instead of AFR dir) while the plugin reads from `/data/GoldHEN/AFR/CUSA12878/`. Also, `ps4_state.py` was only checking the game dir, not the AFR dir.
+- **Fixes:**
+  1. Pipeline default config already correct — user's local config file was stale. The `--generate-config` flag now produces the correct default.
+  2. Updated `ps4_state.py` to check the AFR directory (`/data/GoldHEN/AFR/CUSA12878/`) where the plugin actually reads from, plus the game dir for base game files. Now shows accurate state including redirects/songs/packs.
+- **Verified:** All 7 BSD files now correctly deployed to `/data/GoldHEN/AFR/CUSA12878/` and `ps4_state.py` reports accurate state (1 custom song, 3 redirects, 1 modified pack, plugin).
+- **Tests:** 581/581 pass.
+
+### Experiment 215 (continued): Backup Script AFR Clean + Full End-to-End Fix (2026-09-11)
+- **Date:** 2026-09-11
+- **Context:** The backup script's `clean_ps4()` only cleaned `/user/app/CUSA12878/` (game dir) but the plugin reads from `/data/GoldHEN/AFR/CUSA12878/`. After the afr_base fix, files were deployed to AFR but clean didn't touch AFR, leaving stale state.
+- **Fixes:**
+  1. Updated `backup-beat-saber-deluxe-files.py` `clean_ps4()` to also surgically clean `/data/GoldHEN/AFR/CUSA12878/` (removing `*_v3.bundle`, `*_custom_v3.bundle`, `*_pack_modes_assets_all_*.bundle`, config jsons) while preserving `/AFR/test/` and `/AFR/bs_log/`.
+  2. `ps4_state.py` now checks AFR directory for accurate state reporting (custom songs, redirects, modified packs) + game dir for base game files.
+- **Verified end-to-end:** Clean slate → fresh deploy → validation PASSED → ps4_state.py reports accurate state (1 custom song, 3 redirects, 1 modified pack, plugin registered).
+- **Tests:** 581/581 pass.
+- **Pipeline version:** v0.5333 (unchanged — config defaults were already correct).
