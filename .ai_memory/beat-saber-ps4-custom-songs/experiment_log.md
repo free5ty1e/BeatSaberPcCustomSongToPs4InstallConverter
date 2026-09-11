@@ -597,3 +597,12 @@ metadata:
 - **Result:** Clean single-song deploy now validates GREEN (🎉 Post-deploy validation PASSED) with 1 song, 3 redirects, 1 modified pack, plugin registered, features.json + song_metadata.json deployed.
 - **Version:** Pipeline v0.5332 → v0.5333. Plugin unchanged (v0.8040).
 - **Tests:** 581/581 pass.
+
+### Experiment 214 (addendum): backup --clean-ps4 now removes beat_saber_deluxe.prx (2026-09-11)
+- **Date:** 2026-09-11
+- **Context:** After the validation fix, user ran `backup --clean-ps4` but `ps4_state.py` still showed `beat_saber_deluxe.prx present in /data/GoldHEN/plugins/` — the clean was incomplete.
+- **Root cause:** `clean_ps4()` in `backup-beat-saber-deluxe-files.py` only removed `afr.prx` and `game_patch.prx` from the plugins directory. It never removed the actual `beat_saber_deluxe.prx` file (only the plugins.ini entry was cleaned).
+- **Fix:** Added `"beat_saber_deluxe.prx"` to the plugin removal list in `clean_ps4()`.
+- **Result:** Clean slate now fully verified — `🧹 PS4 is in CLEAN SLATE state for Beat Saber Deluxe. No custom songs, no redirects, no modified music packs, no plugin.`
+- **Version:** Pipeline remains v0.5333 (backup script fix, not pipeline).
+- **Tests:** 581/581 pass.

@@ -568,8 +568,8 @@ def clean_ps4():
     failed = []
 
     # 1. Remove plugin PRX files from /data/GoldHEN/plugins/
-    # Remove afr.prx and game_patch.prx if they exist
-    for plugin_file in ["afr.prx", "game_patch.prx"]:
+    # Remove beat_saber_deluxe.prx (our plugin) + afr.prx and game_patch.prx if they exist
+    for plugin_file in ["beat_saber_deluxe.prx", "afr.prx", "game_patch.prx"]:
         code, stderr = ps4_remove_file(f"/data/GoldHEN/plugins/{plugin_file}")
         if code == 0:
             cleaned.append(plugin_file)
