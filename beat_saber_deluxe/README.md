@@ -1,4 +1,4 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8040 / v0.5331)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8041 / v0.5333)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
@@ -8,22 +8,28 @@ This document covers pipeline-specific details. See the **[main README](../READM
 
 `tools/full_custom_song_pipeline.py` is the main entry point.
 
-### Quick Start: Download from BeatSaver + Full Deploy (Recommended)
+### Quick Start: Clean Slate + Single Song Deploy (Recommended)
 
 ```bash
-# Complete end-to-end deployment in ONE command:
+# 1. OPTIONAL: Clean PS4 to a truly blank slate (removes all BSD files, plugins.ini entry, local caches)
+python3 /workspace/backup-beat-saber-deluxe-files.py backup --clean-ps4
+
+# 2. Complete end-to-end deployment in ONE command (self-contained single-song):
 # - Downloads song from BeatSaver
 # - Converts to V3.2.0 (V2→V3 auto-conversion)
 # - Generates all 4 modes (Standard, OneSaber, NoArrows, 90Degree)
 # - Builds song bundle with PCM16 lossless audio
-# - Builds/deploys pack mode bundles + merged catalog
-# - Deploys song bundle, pack bundles, catalog, redirects.json
+# - Builds/deploys pack mode bundles + merged catalog for the target's DLC pack
+# - Deploys song bundle, pack bundles, catalog, redirects.json, features.json, song_metadata.json
+# - Builds/deploys plugin + ensures plugins.ini entry
 # - Runs post-deploy validation
 python3 tools/full_custom_song_pipeline.py \
   --download-beat-saver-song <MAP_ID> \
   --target <slot_name> \
   --deploy-full
 ```
+
+**After each `--deploy-full` run, boot the game and verify the song + its whole pack works before moving to the next song.**
 
 ### Build Only (No Deploy)
 
@@ -62,6 +68,10 @@ python3 tools/full_custom_song_pipeline.py \
 # Build plugin with verbose PS4 logging for development
 python3 tools/full_custom_song_pipeline.py \
   --deploy-plugin --debug-logging
+
+# Deploy features.json only (toggle runtime flags without song/plugin processing)
+python3 tools/full_custom_song_pipeline.py \
+  --features-only --set-feature enable_custom_song_replacements=false
 ```
 
 ## Pipeline Flags
@@ -120,6 +130,31 @@ python3 tools/full_custom_song_pipeline.py --disable-plugin
 ```
 
 Both work standalone (no `--song-dir` needed). After toggling, restart the game or press PS+Triangle to reload plugins.
+
+## Backup & Clean Slate (v0.5333+)
+
+The backup utility manages both PS4 and local state for true clean-slate testing:
+
+```bash
+# Backup current PS4 state + local caches, then surgically clean PS4 for fresh deployment
+# - Removes all BSD bundles, config jsons from AFR dir
+# - Removes BSD plugin from plugins.ini + plugins directory
+# - Clears local pipeline caches (song_metadata.json, redirects.json, catalog_pack_modes.json)
+# - Saves timestamped backup to /workspace/ps4_backups/
+python3 /workspace/backup-beat-saber-deluxe-files.py backup --clean-ps4
+
+# Restore from a backup
+python3 /workspace/backup-beat-saber-deluxe-files.py restore /workspace/ps4_backups/bsd_backup_<timestamp>.zip
+
+# List backup contents
+python3 /workspace/backup-beat-saber-deluxe-files.py list /workspace/ps4_backups/bsd_backup_<timestamp>.zip
+```
+
+After `--clean-ps4`, `python3 development/scripts/ps4_state.py` reports:
+```
+🧹  PS4 is in CLEAN SLATE state for Beat Saber Deluxe.
+    No custom songs, no redirects, no modified music packs, no plugin.
+```
 
 ## Beatmap Mode Mapping — STABLE (v0.5314+ Default)
 

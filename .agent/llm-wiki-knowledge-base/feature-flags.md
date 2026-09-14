@@ -22,6 +22,8 @@ Since v0.5314, `features.json` holds EXACTLY the runtime flags the v0.8040 plugi
 
 `enable_beatmap_mode_mapping` was **REMOVED** from `features.json` / `DEFAULT_FEATURES` in v0.5314: the v0.8040 plugin never parsed it. Mode mapping is a **build-time pipeline feature** (baked into the bundle at build time), toggled by the pipeline CLI flags below — not a runtime plugin toggle. Keeping it in `features.json` implied a runtime knob that didn't exist.
 
+**NOTE:** The index.md still references `enable_beatmap_mode_mapping` in the feature flags entry — this is a documentation bug; the flag was removed and does not exist in `features.json` or the plugin.
+
 ## Flags
 
 | Flag | Default (missing file) | Purpose |

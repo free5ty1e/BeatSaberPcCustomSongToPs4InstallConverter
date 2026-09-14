@@ -2,6 +2,8 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
+**Plugin v0.8041 | Pipeline v0.5333** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation.
+
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
 [Demo Video](https://www.youtube.com/watch?v=J835HDdB-7g)
@@ -31,7 +33,7 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 > **⚠️ Current limitations:**
 > - **Single-artist packs only** — Song metadata modification works perfectly for single-artist packs (Rolling Stones, Billie Eilish, Lizzo). Multi-artist packs would incorrectly blank all artist names. Currently only single-artist packs are targeted.
 > - **Artist line is blank** — For single-artist packs, the artist line in the song list is intentionally blanked. The custom song name and artist are combined on the song name line (e.g., "Espresso / Sabrina Carpenter").
-> - **Deploy via per-song pipeline** — the old `deploy_all.sh` is OUTDATED (hardcoded 13 Rolling Stones slots, no mode mapping). Use `tools/full_custom_song_pipeline.py --song-dir <dir> --target <slot> --deploy --generate-config --deploy-config` per song, or `deploy_all38.sh` for a full 38-slot mass deploy (bundles must be built first into `/tmp/opencode/mass_build/`).
+> - **Deploy via self-contained `--deploy-full`** — The primary workflow is single-song-at-a-time. Run `python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> --target <slot> --deploy-full` one at a time, testing after each. For clean slate: `python3 /workspace/backup-beat-saber-deluxe-files.py backup --clean-ps4` first.
 
 ## Available Song Slots (Default Targets)
 
@@ -180,6 +182,12 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 |------|---------|-------------|
 | `enable_custom_song_replacements` | `false` | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs |
 | `enable_song_metadata_modification` | `false` | Gates song metadata modification — when ON, hooks MoveNext() to replace song names/artists in the UI |
+
+> **All runtime features MUST be gated behind feature flags in `features.json`.** No hardcoded behavior in the plugin. When adding a new feature:
+> 1. Add a `enable_<feature_name>` key to `features.json` and `DEFAULT_FEATURES` in the pipeline
+> 2. Add a `g_feature_<feature_name>` global in `main.cpp`
+> 3. Gate the feature code behind `if (g_feature_<feature_name>)`
+> 4. Defaults to `false` when absent
 
 ### Example `features.json`
 
@@ -364,13 +372,17 @@ This is the fastest way to get a custom song onto your PS4. Run this single comm
 ```bash
 cd /workspace/beat_saber_deluxe
 
-# Complete end-to-end deployment in ONE command:
+# OPTIONAL: Clean PS4 to a truly blank slate first
+python3 /workspace/backup-beat-saber-deluxe-files.py backup --clean-ps4
+
+# Complete end-to-end deployment in ONE command (self-contained single-song):
 # - Downloads song from BeatSaver
 # - Converts to V3.2.0 (V2→V3 auto-conversion)
 # - Generates all 4 modes (Standard, OneSaber, NoArrows, 90Degree)
 # - Builds song bundle with PCM16 lossless audio
-# - Builds/deploys pack mode bundles + merged catalog
-# - Deploys song bundle, pack bundles, catalog, redirects.json
+# - Builds/deploys pack mode bundles + merged catalog for the target's DLC pack
+# - Deploys song bundle, pack bundles, catalog, redirects.json, features.json, song_metadata.json
+# - Builds/deploys plugin + ensures plugins.ini entry
 # - Runs post-deploy validation
 python3 tools/full_custom_song_pipeline.py \
   --download-beat-saver-song <MAP_ID> \
@@ -381,7 +393,7 @@ python3 tools/full_custom_song_pipeline.py \
 **Parameters explained:**
 - `<MAP_ID>` — the BeatSaver map key (e.g. `1d6c7c2`). Find it on [BeatSaver.com](https://beatsaver.com) — it's the short hash in the URL (e.g. `beatsaver.com/maps/1d6c7c2`)
 - `--target <slot_name>` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
-- `--deploy-full` — **Self-contained SINGLE-SONG orchestration in ONE command**: deploys only the target song + its music-pack mode bundle + matching catalog + plugin + `plugins.ini` entry + `features.json` + divert-scoped redirects + post-deploy validation. Run one command at a time and test in-game after each (it does NOT deploy the other packs/songs).
+- `--deploy-full` — **Self-contained SINGLE-SONG orchestration in ONE command**: deploys only the target song + its music-pack mode bundle + matching catalog + plugin + `plugins.ini` entry + `features.json` + scoped redirects + post-deploy validation. Run one command at a time and test in-game after each (it does NOT deploy the other packs/songs).
 
 > **v0.5314+ safe defaults (no flags needed):** PCM16 lossless audio + full-length (no padding truncation) + beatmap mode mapping (OneSaber/NoArrows/90Degree auto-generated to fill gaps) + V2→V3 conversion are all **default ON**. The old explicit flags (`--pcm16`, `--no-pad`, `--convert-to-v3`, `--enable-beatmap-mode-mapping`) are still accepted as no-op compat flags. To opt out: `--hevag`/`--vorbis` (codec), `--pad-fsb5` (**DANGER** — truncates audio to 12MB, produces partial songs), `--disable-beatmap-mode-mapping` (Standard only), `--no-convert-to-v3` (leave V2).
 
