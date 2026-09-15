@@ -206,13 +206,19 @@ def walk_blob(blob):
         return None
 
 
-def build_modes_blob(orig_blob, info):
+def build_modes_blob(orig_blob, info, enable_modes: list = None):
     """
     Return (new_blob, changed_bool). Preserves existing preview sets byte-for-byte,
     extends any target-mode set shipping with < TARGET_DIFFS difficulties to
     exactly 5 (padding with Standard's preview records), and appends missing
     target modes (cloned from Standard).
+
+    If `enable_modes` is provided, only those modes (plus Standard) will be added.
+    This allows partial pack deployments where only some songs get extra modes.
     """
+    if enable_modes is None:
+        enable_modes = TARGET_MODES  # default: all 4 modes
+
     sets_off = info['setsOff']
     head = orig_blob[:sets_off]
     content_rating = orig_blob[info['contentRatingOff']:info['contentRatingOff'] + 4]
@@ -271,14 +277,13 @@ def build_modes_blob(orig_blob, info):
             diffs = bytes(diffs) + bytes(pad[:needed * DIFF_BYTES])
             dc = TARGET_DIFFS
         final.append({'pathID': pid, 'fileID': s['fileID'], 'diffs': diffs, 'diffCount': dc})
-    # New mode entries MUST use their OWN characteristic pathID (CHAR_PATH_IDS[mode]),
-    # even when that pathID has no BeatmapData asset in the pack. Hardware-validated
-    # (Exp 198/199): the working RS bundle (all 11 songs playable in all 4 modes) uses
-    # distinct pathIDs per set; pointing every set at Standard's pathID instead
-    # (v0.5325) crashes the game at menu init with CE-34878-0 — four preview sets
-    # sharing one PPtr is rejected when the song-select UI builds its mode list.
-    # Reference: development/reference_bundles/therollingstones_WORKING_v0.5324era_aug20.bundle
+
+    # Only add modes that are in enable_modes (plus Standard which is always included)
     for mode in TARGET_MODES:
+        if mode == "Standard":
+            continue
+        if mode not in enable_modes:
+            continue
         pid = CHAR_PATH_IDS[mode]
         if pid in existing:
             continue
@@ -575,11 +580,19 @@ def patched_bundle_name(original_bundle_name):
     return os.path.basename(original_bundle_name).replace('_assets_all_', '_modes_assets_all_')
 
 
-def patch_pack_bundle(song_ids_data, album, dump_dir, out_dir):
+def patch_pack_bundle(song_ids_data, album, dump_dir, out_dir, enable_modes: list = None,
+                      target_slots: list = None):
     """
     Patch one pack album. Returns a result dict or None.
     result keys: pack, packBundle (original name), patchedBundle (name),
                  local_path, size, crc, catalogBundleName, patched_slots.
+
+    If `enable_modes` is provided, only those modes (plus Standard) will be
+    enabled in the pack bundle. This is used for partial pack deployments
+    where only some songs in the pack are custom and should show extra modes.
+
+    If `target_slots` is provided, only patch BeatmapLevelSOs for those specific
+    song slots. This allows surgical patching of only custom songs in the pack.
     """
     pack = album['pack']
     if 'packBundle' not in album or 'catalogBundleName' not in album:
@@ -608,6 +621,9 @@ def patch_pack_bundle(song_ids_data, album, dump_dir, out_dir):
     for song in album['songs']:
         if 'patchPathID' not in song:
             continue
+        # If target_slots is provided, only patch those specific slots
+        if target_slots is not None and song['songID'] not in target_slots:
+            continue
         obj = cab_obj.objects.get(song['patchPathID'])
         if obj is None:
             continue
@@ -615,7 +631,7 @@ def patch_pack_bundle(song_ids_data, album, dump_dir, out_dir):
         info = walk_blob(blob)
         if info is None or info['levelID'] != song['songID']:
             continue
-        new_blob, changed = build_modes_blob(blob, info)
+        new_blob, changed = build_modes_blob(blob, info, enable_modes=enable_modes)
         if not changed:
             continue
         patches.append((obj.byte_start, obj.byte_size, new_blob))
@@ -675,13 +691,15 @@ def _save_manifest(out_dir, results):
 
 
 def build_pack_mode_bundles(song_ids_path=SONG_IDS_PATH, dump_dir=None, out_dir=None,
-                            packs=None):
+                            packs=None, enable_modes: list = None, target_slots: list = None):
     """
     Build patched pack bundles for the selected packs. Returns list of result dicts.
 
     packs=None -> all albums in song_ids.json that have patch data.
     out_dir=None -> <project_root>/pack_modes_bundles.
     dump_dir=None -> <project_root>/ps4_dump/CUSA12878-patch.
+    enable_modes=None -> all 4 modes (Standard, OneSaber, NoArrows, 90Degree).
+    target_slots=None -> patch all songs in the pack (for partial deploy, specify only custom song slots).
     """
     if out_dir is None:
         out_dir = os.path.join(PROJECT_ROOT, "pack_modes_bundles")
@@ -693,7 +711,7 @@ def build_pack_mode_bundles(song_ids_path=SONG_IDS_PATH, dump_dir=None, out_dir=
     for album in data['albums']:
         if packs and album['pack'] not in packs:
             continue
-        result = patch_pack_bundle(data, album, dump_dir, out_dir)
+        result = patch_pack_bundle(data, album, dump_dir, out_dir, enable_modes=enable_modes, target_slots=target_slots)
         if result:
             results.append(result)
     _save_manifest(out_dir, results)
@@ -725,12 +743,15 @@ def main():
     write = '--write' in args
     packs = None
     dump_dir = None
+    enable_modes = None
     if '--packs' in args:
         packs = [p.strip() for p in args[args.index('--packs') + 1].split(',')]
     if '--dump-dir' in args:
         dump_dir = args[args.index('--dump-dir') + 1]
+    if '--enable-modes' in args:
+        enable_modes = [m.strip() for m in args[args.index('--enable-modes') + 1].split(',')]
 
-    results = build_pack_mode_bundles(packs=packs, dump_dir=dump_dir)
+    results = build_pack_mode_bundles(packs=packs, dump_dir=dump_dir, enable_modes=enable_modes)
     print(f"Packs patched: {len(results)}")
     for r in results:
         print(f"  {r['pack']:20s} {r['patchedBundle']} ({r['size']:,} B, crc={r['crc']}) "

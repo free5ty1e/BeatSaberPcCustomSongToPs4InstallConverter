@@ -1,8 +1,14 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8041 / v0.5333)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8041 / v0.5334)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
 This document covers pipeline-specific details. See the **[main README](../README.md)** for project overview, requirements, and quick start.
+
+## v0.5334 Highlights
+
+- **Surgical pack bundle patching:** Single-song `--deploy-full` now only patches the target song's preview array in the pack bundle (stock songs keep Standard only) — no crashes on partial pack deploys
+- **`enable_beatmap_mode_mapping` runtime feature flag** (in `features.json`): Gates visibility of extra mode sets — OFF = all songs show Standard only (safe for partial deploys); ON = custom songs show 4 modes
+- **`--clear-target-song <SLOT>`**: Revert a single custom song slot to stock without a full PS4 clean slate
 
 ## Pipeline
 

@@ -1,5 +1,40 @@
 #!/bin/bash
 # Full custom song installation over Shock Drop music pack using pipeline automation
+
+# 
+# ⚠️ NEW: Partial Pack Deployment Safety (v0.5334+)
+#
+# Problem: When deploying custom songs one at a time, the pack bundle previously
+# added extra mode buttons (OneSaber, NoArrows, 90Degree) for ALL songs in the
+# pack — even unmodified stock songs. Selecting a stock song and trying to play
+# a non-Standard mode would crash the game.
+#
+# Solution (automatic in --deploy-full):
+# 1. Surgical pack bundle patching: The pipeline now builds the pack bundle with
+#    extra modes ONLY for the custom song(s) being deployed. Stock songs in the
+#    same pack keep only Standard mode.
+# 2. Runtime feature flag enable_beatmap_mode_mapping (in features.json): Gates
+#    visibility of extra mode sets in the mode selector UI.
+#    - OFF (safe default for partial deploys): All songs show only Standard mode.
+#    - ON (when pack is complete): Custom songs show all 4 modes; stock songs show
+#      only Standard.
+#
+# Recommended workflow for partial pack deploys:
+#   # Option A: Keep feature flag OFF until pack is complete (safest)
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_beatmap_mode_mapping=false
+#   # ... deploy songs one at a time ...
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_beatmap_mode_mapping=true
+#
+#   # Option B: Let automatic surgical patching handle it (default in v0.5334+)
+#   # Each --deploy-full only adds extra modes for THAT song in the pack bundle
+#   python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> --target <SLOT> --pcm16 --no-pad --convert-to-v3 --deploy-full
+#
+# 🔧 NEW: Clear Target Song (--clear-target-song)
+# Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
+#   python3 tools/full_custom_song_pipeline.py --clear-target-song <SLOT_NAME>
+# This removes: custom song bundle, redirect entry, song/artist metadata, deploys updated configs.
+
+
 #
 # This script deploys each of the 3 Shock Drop pack songs using the
 # per-song pipeline with --deploy-full flag. Each command is complete

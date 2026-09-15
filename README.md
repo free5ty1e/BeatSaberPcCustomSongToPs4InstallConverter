@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-**Plugin v0.8041 | Pipeline v0.5333** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation.
+**Plugin v0.8041 | Pipeline v0.5334** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**.
 
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
@@ -170,6 +170,8 @@ Edit `beat_saber_deluxe/ps4_config.json` with your PS4's IP address:
 
 Replace `192.168.100.117` with your PS4's IP address. The default FTP port for GoldHEN is `2121`.
 
+> **Note:** The pipeline now uses `/data/GoldHEN/AFR/CUSA12878/` as the AFR base directory (where custom bundles and configs are deployed). This is configured in `ps4_config.json` under `paths.afr_base`.
+
 ---
 
 ## Feature Flags
@@ -182,6 +184,7 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 |------|---------|-------------|
 | `enable_custom_song_replacements` | `false` | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs |
 | `enable_song_metadata_modification` | `false` | Gates song metadata modification — when ON, hooks MoveNext() to replace song names/artists in the UI |
+| `enable_beatmap_mode_mapping` | `false` | Gates visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle preview arrays — when OFF, all songs show only Standard; when ON, custom songs with patched mode sets show all 4 modes |
 
 > **All runtime features MUST be gated behind feature flags in `features.json`.** No hardcoded behavior in the plugin. When adding a new feature:
 > 1. Add a `enable_<feature_name>` key to `features.json` and `DEFAULT_FEATURES` in the pipeline
@@ -194,7 +197,8 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 ```json
 {
   "enable_custom_song_replacements": true,
-  "enable_song_metadata_modification": false
+  "enable_song_metadata_modification": true,
+  "enable_beatmap_mode_mapping": true
 }
 ```
 

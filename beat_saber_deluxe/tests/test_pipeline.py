@@ -735,15 +735,18 @@ class TestDefaultConvertToV3:
 # Features Config Loading / Saving
 # ======================================================================
 class TestDefaultFeaturesRuntimeOnly:
-    """features.json must hold ONLY runtime plugin flags (read at startup on PS4).
-    Build-time pipeline features (e.g. mode mapping) are CLI options, not runtime flags."""
+    """features.json holds runtime plugin flags (read at startup on PS4).
+    Since v0.5334, enable_beatmap_mode_mapping is a runtime flag that gates
+    the mode selector UI visibility, allowing partial pack deployments."""
 
-    def test_mode_mapping_is_not_a_runtime_flag(self):
-        assert 'enable_beatmap_mode_mapping' not in DEFAULT_FEATURES
+    def test_mode_mapping_is_now_a_runtime_flag(self):
+        assert 'enable_beatmap_mode_mapping' in DEFAULT_FEATURES
+        assert DEFAULT_FEATURES['enable_beatmap_mode_mapping'] is True
 
     def test_runtime_flags_present(self):
         assert DEFAULT_FEATURES['enable_custom_song_replacements'] is True
         assert DEFAULT_FEATURES['enable_song_metadata_modification'] is True
+        assert DEFAULT_FEATURES['enable_beatmap_mode_mapping'] is True
 
 
 class TestLoadLocalFeatures:

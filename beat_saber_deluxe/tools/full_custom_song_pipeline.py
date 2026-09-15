@@ -2662,11 +2662,15 @@ def _regenerate_merged_catalog(config: dict, packs: list | None = None) -> int:
     return n
 
 def _ensure_pack_mode_bundles(config: dict, force: bool = False,
-                              packs: list | None = None) -> int:
+                              packs: list | None = None, enable_modes: list = None,
+                              target_slots: list = None) -> int:
     """
     Build patched pack bundles + merged catalog for any configured pack whose
     bundle is missing locally (or all with force=True). `packs` optionally
-    limits which packs to (re)build. Returns number of bundles built.
+    limits which packs to (re)build. `enable_modes` optionally limits which
+    gameplay modes to enable (default: all 4). `target_slots` optionally
+    limits which song slots to patch in each pack (for partial deployments).
+    Returns number of bundles built.
     """
     pm = config.get('pack_modes', {}) or {}
     configured = pm.get('packs') or []
@@ -2687,7 +2691,7 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
         build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
         log.info(f"🔨 Building pack mode bundles for {len(missing)} pack(s): {', '.join(missing)}")
         results = pack_modes_builder.build_pack_mode_bundles(
-            song_ids_path=song_ids, dump_dir=dump_dir, out_dir=build_dir, packs=missing)
+            song_ids_path=song_ids, dump_dir=dump_dir, out_dir=build_dir, packs=missing, enable_modes=enable_modes, target_slots=target_slots)
         for r in results:
             log.info(f"    ✓ {r['pack']}: {r['patchedBundle']} ({r['size']:,} B, crc={r['crc']})")
         built = len(results)
@@ -2706,20 +2710,22 @@ def _resolve_configured_packs(config: dict, packs: list | None) -> list:
         return [p for p in configured if p in packs]
     return list(configured)
 
-def deploy_pack_modes(config: dict, packs: list | None = None) -> bool:
+def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None) -> bool:
     """
     Build-if-missing and deploy the generalized pack_modes bundles + merged catalog.
 
     `packs` optionally limits deployment to specific pack(s); default deploys the
-    FULL configured set. Deploys the redirect set (the given packs with built
-    bundles) so the deployed merged catalog always matches the deployed redirects.
-    Returns True if all uploads OK.
+    FULL configured set. `enable_modes` optionally limits which gameplay modes to
+    enable in the pack bundle (default: all 4). `target_slots` optionally limits
+    which song slots to patch in each pack (for partial deployments).
+    Deploys the redirect set (the given packs with built bundles) so the deployed
+    merged catalog always matches the deployed redirects. Returns True if all uploads OK.
     """
     pm = config.get('pack_modes', {}) or {}
     if not pm.get('packs'):
         log.warning("  ⚠️  pack_modes not configured — nothing to deploy")
         return False
-    _ensure_pack_mode_bundles(config, packs=packs)
+    _ensure_pack_mode_bundles(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots)
     pairs = [(e['local_path'], e['patched_bundle'])
              for e in _get_pack_modes_entries(config, packs=packs)
              if os.path.isfile(e['local_path'])]
@@ -2766,15 +2772,17 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
     return False
 
-def deploy_pack_bundle(config: dict, packs: list | None = None) -> bool:
+def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None) -> bool:
     """
     Deploy the patched pack bundle + patched catalog.json to the PS4.
 
     Also builds (if missing) and deploys the generalized pack_modes bundles +
     merged catalog when pack_modes.packs is configured. `packs` optionally limits
-    which pack(s) to deploy (default: all configured). Both file sets must be
-    uploaded BEFORE redirects.json references them, otherwise the game would 404
-    on the redirected path. Returns True if all uploads OK.
+    which pack(s) to deploy (default: all configured). `enable_modes` optionally
+    limits which gameplay modes to enable in the pack bundle (default: all 4).
+    `target_slots` optionally limits which song slots to patch in each pack.
+    Both file sets must be uploaded BEFORE redirects.json references them,
+    otherwise the game would 404 on the redirected path. Returns True if all uploads OK.
     """
     log.info("📦 Deploying patched pack bundle + catalog to PS4...")
     ok = True
@@ -2788,7 +2796,7 @@ def deploy_pack_bundle(config: dict, packs: list | None = None) -> bool:
         log.warning("  ⚠️  No pack_bundle / pack_modes configured — nothing to deploy")
         ok = False
     if config.get('pack_modes', {}).get('packs'):
-        ok = deploy_pack_modes(config, packs=packs) and ok
+        ok = deploy_pack_modes(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots) and ok
     return ok
 
 def deploy_mass_bundles(config: dict) -> bool:
@@ -3191,12 +3199,15 @@ def manage_redirect_config(
 
 FEATURES_FILENAME = "features.json"
 # Runtime feature flags read by the plugin at startup from features.json on PS4.
-# NOTE (v0.5314): enable_beatmap_mode_mapping was REMOVED — beatmap mode mapping is a
-# build-time pipeline feature (default ON, oppose with --disable-beatmap-mode-mapping),
-# baked into the bundle, not a runtime plugin toggle.
+# NOTE (v0.5334): enable_beatmap_mode_mapping is NOW a runtime feature flag.
+# The pipeline builds mode sets into bundles by default, but the plugin
+# will only ENABLE the mode selector UI when this flag is true.
+# This allows partial pack deployments (some songs custom, some stock) to
+# coexist without crashes — stock songs won't show extra mode buttons.
 DEFAULT_FEATURES = {
     "enable_custom_song_replacements": True,
     "enable_song_metadata_modification": True,
+    "enable_beatmap_mode_mapping": True,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -3556,6 +3567,147 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None,
     return extract_dir
 
 
+def clear_target_song(config: dict, slot_name: str):
+    """
+    Remove a custom song override and revert the slot to its stock state.
+
+    This:
+    1. Removes the custom song bundle from PS4 AFR directory
+    2. Removes the redirect entry from redirects.json
+    3. Removes the song metadata entries from song_metadata.json
+    4. Removes the artist metadata entries from song_metadata.json
+    5. Deploys updated redirects.json and song_metadata.json to PS4
+
+    Note: Does NOT modify the pack bundle - that's managed separately.
+    """
+    import tempfile
+    import subprocess as sp
+
+    log.info(f"🧹 Clearing custom song override for slot: {slot_name}")
+
+    cfg_ps4 = config.get('ps4', {})
+    cfg_title = config.get('title', {})
+    cfg_paths = config.get('paths', {})
+
+    host = cfg_ps4.get('ip', '192.168.100.117')
+    port = cfg_ps4.get('ftp_port', 2121)
+    user = cfg_ps4.get('ftp_user', 'anonymous')
+    password = cfg_ps4.get('ftp_password', '')
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    suffix = cfg_paths.get('afr_target_suffix', '_v3.bundle')
+
+    # 1. Remove custom song bundle from PS4
+    bundle_name = f"{slot_name}{suffix}"
+    remote_path = f"{afr_base}/{title_id}/{bundle_name}"
+    log.info(f"  Removing {bundle_name} from PS4...")
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"rm {remote_path}; quit"]
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info(f"  ✅ Removed {bundle_name} from PS4")
+    else:
+        log.warning(f"  ⚠️  Could not remove {bundle_name} from PS4 (may not exist): {result.stderr}")
+
+    # 2. Remove redirect entry from redirects.json
+    local_redirect_path = _get_redirect_config_path()
+    redirect_data = _load_local_redirects(local_redirect_path)
+    redirects = redirect_data.get('redirects', {})
+
+    # Find and remove the redirect key (handles both with and without prefix)
+    key_to_remove = None
+    for key in list(redirects.keys()):
+        if key == f"BeatmapLevelsData/{slot_name}" or key.lower() == f"BeatmapLevelsData/{slot_name}".lower():
+            key_to_remove = key
+            break
+        # Also check if the slot name appears at the end of the key
+        if key.startswith('BeatmapLevelsData/') and key[len('BeatmapLevelsData/'):].lower() == slot_name.lower():
+            key_to_remove = key
+            break
+
+    if key_to_remove:
+        del redirects[key_to_remove]
+        log.info(f"  Removed redirect: {key_to_remove}")
+    else:
+        log.info(f"  No redirect found for {slot_name}")
+
+    # Save updated redirects.json locally
+    with open(local_redirect_path, 'w') as f:
+        json.dump(redirect_data, f, indent=2)
+        f.write('\n')
+    log.info(f"  ✅ Updated local redirects.json")
+
+    # 3. Remove song metadata entries
+    local_metadata_path = _get_song_metadata_path()
+    metadata = _load_local_song_metadata(local_metadata_path)
+
+    # We need to find the exact song name and author from song_ids.json
+    song_details = _load_song_details()
+    exact_song_name = slot_name
+    original_author = None
+
+    if slot_name in song_details:
+        exact_song_name = song_details[slot_name]['songName']
+        original_author = song_details[slot_name]['songAuthorName']
+        log.info(f"  Resolved '{slot_name}' -> songName='{exact_song_name}', author='{original_author}'")
+    else:
+        # Try case-insensitive match
+        lower = slot_name.lower()
+        for s_id, details in song_details.items():
+            if s_id.lower() == lower or details['songName'].lower() == lower:
+                exact_song_name = details['songName']
+                original_author = details['songAuthorName']
+                log.info(f"  Resolved '{slot_name}' -> songName='{exact_song_name}', author='{original_author}'")
+                break
+
+    # Remove from song_names
+    if exact_song_name in metadata.get('song_names', {}):
+        del metadata['song_names'][exact_song_name]
+        log.info(f"  Removed song metadata: '{exact_song_name}'")
+
+    # Remove from song_artists (blank out the original author)
+    if original_author and original_author in metadata.get('song_artists', {}):
+        del metadata['song_artists'][original_author]
+        log.info(f"  Removed artist metadata: '{original_author}'")
+    # Also try removing by exact song name
+    if exact_song_name in metadata.get('song_artists', {}):
+        del metadata['song_artists'][exact_song_name]
+        log.info(f"  Removed artist metadata: '{exact_song_name}'")
+
+    # Save updated song_metadata.json locally
+    with open(local_metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+        f.write('\n')
+    log.info(f"  ✅ Updated local song_metadata.json")
+
+    # 4. Deploy updated configs to PS4
+    log.info("  Deploying updated configs to PS4...")
+
+    # Deploy redirects.json
+    remote_redirect_path = _get_remote_redirect_path(config)
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_redirect_path} -o {remote_redirect_path}; quit"]
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info(f"  ✅ redirects.json deployed to PS4")
+    else:
+        log.warning(f"  ⚠️  Failed to deploy redirects.json: {result.stderr}")
+
+    # Deploy song_metadata.json
+    remote_metadata_path = _get_remote_song_metadata_path(config)
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"put {local_metadata_path} -o {remote_metadata_path}; quit"]
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0:
+        log.info(f"  ✅ song_metadata.json deployed to PS4")
+    else:
+        log.warning(f"  ⚠️  Failed to deploy song_metadata.json: {result.stderr}")
+
+    log.info(f"✅ Slot '{slot_name}' reverted to stock state")
+
+
 # ============================================================================
 # Main
 # ============================================================================
@@ -3703,6 +3855,12 @@ Examples:
     parser.add_argument('--disable-plugin', action='store_true',
                         help='Disable the Beat Saber Deluxe plugin on PS4 '
                              '(comment out .prx entry in plugins.ini — play original songs)')
+
+    # Clear target song: revert a custom song slot back to stock
+    parser.add_argument('--clear-target-song', default=None, metavar='SLOT',
+                        help='Remove custom song override for the given slot (e.g. "AllTheGoodGirlsGoToHell"). '
+                             'Removes the song bundle from AFR, removes its redirect, cleans up song_metadata.json. '
+                             'The slot reverts to the original game song with its original beatmaps only.')
 
     # Redirect config management flags
     parser.add_argument('--generate-config', action='store_true',
@@ -3891,6 +4049,14 @@ Examples:
     if args.disable_plugin:
         disable_plugin(config)
         log.info("Plugin disabled. Restart the game or press PS+Triangle to reload plugins.")
+        sys.exit(0)
+
+    # Clear target song: revert a custom song slot back to stock
+    if args.clear_target_song:
+        if not args.song_dir:
+            # Allow running without --song-dir for clear operation
+            pass
+        clear_target_song(config, args.clear_target_song)
         sys.exit(0)
 
     # --song-dir is required for song processing
@@ -4182,6 +4348,7 @@ Examples:
     # (all packs) is preserved when no target song is being processed.
     deploy_packs = None
     deploy_slots = None
+    deploy_enable_modes = None
     if args.target:
         target_pack = _resolve_target_pack(config, args.target)
         if target_pack:
@@ -4189,8 +4356,20 @@ Examples:
             log.info(f"ℹ️  Single-song deploy: scoping to pack '{target_pack}' for target '{args.target}'")
         deploy_slots = [args.target.split('/')[-1]]
 
+        # Determine which modes to enable for this pack bundle.
+        # We only want to add extra modes for the custom song(s) being deployed,
+        # not for the stock songs that remain unmodified. This prevents crashes
+        # when selecting an unmodified song and trying to play a non-Standard mode.
+        # The pack bundle is patched to include extra mode sets ONLY for the
+        # custom songs that have been deployed. The plugin's feature flag
+        # enable_beatmap_mode_mapping gates whether these mode sets are visible.
+        if mode_map_enabled:
+            # Use the modes we detected/generated for this specific custom song
+            deploy_enable_modes = [m for m in mode_map_enabled_modes if m != "Standard"]
+            log.info(f"  Pack bundle will enable extra modes for custom songs: {deploy_enable_modes}")
+
     if should_deploy:
-        deploy_pack_bundle(deploy_cfg, packs=deploy_packs)
+        deploy_pack_bundle(deploy_cfg, packs=deploy_packs, enable_modes=deploy_enable_modes, target_slots=deploy_slots)
 
     # -----------------------------------------------------------------------
     # Step 9: Manage redirect config (redirects.json)

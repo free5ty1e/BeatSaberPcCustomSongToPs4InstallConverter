@@ -1,5 +1,22 @@
 # Pipeline Changelog
 
+## v0.5334 (2026-09-14)
+### Added
+- **Surgical pack bundle patching for single-song deploys:** `--deploy-full` now passes `enable_modes` (non-Standard modes for the custom song) and `target_slots` (only the target song slot) to the pack bundle builder. The pack bundle is built with extra preview mode sets ONLY for the custom song being deployed. Stock songs in the same pack keep only Standard — no crashes when selecting non-Standard modes on unmodified songs.
+- **Runtime feature flag `enable_beatmap_mode_mapping`** (in `features.json`): Gates visibility of extra mode sets in the mode selector UI. OFF (default when missing) = all songs show only Standard (safe for partial deploys). ON = custom songs with patched mode sets show all 4 modes; stock songs show only Standard.
+- **`--clear-target-song <SLOT>` parameter:** Reverts a single custom song slot to its stock state without a full PS4 clean slate. Removes the custom song bundle from PS4 AFR, the redirect entry from `redirects.json`, and the song/artist metadata from `song_metadata.json`. Deploys updated configs to PS4. Useful for testing different custom songs in the same slot, debugging, or partial rollback.
+- **Pipeline version bump** to v0.5334.
+
+### Changed
+- `build_pack_mode_bundles.py`: `build_modes_blob()`, `patch_pack_bundle()`, and `build_pack_mode_bundles()` now accept `enable_modes` and `target_slots` parameters.
+- `full_custom_song_pipeline.py`: Single-song deploy scoping now threads `enable_modes` and `target_slots` through `deploy_pack_bundle()` → `deploy_pack_modes()` → `_ensure_pack_mode_bundles()`.
+- `DEFAULT_FEATURES` now includes `enable_beatmap_mode_mapping: true` (default ON in pipeline, default OFF in plugin when file missing — safe for partial deploys).
+
+### Tests
+- Updated `TestDefaultFeaturesRuntimeOnly` to expect the new flag.
+- Updated `TestFeatureFlagGating` to verify the plugin parses the new flag.
+- All 581 tests pass.
+
 ## v0.5333 (2026-09-10)
 ### Fixed
 - **Post-deploy validation was checking ALL 4 configured packs instead of just the single deployed pack (Exp 214 follow-up).** After the Exp 214 fix for `--download-beat-saver-song` ordering, a fresh single-song `--deploy-full` run correctly deployed only the billieeilish pack, but `verify_ps4_deployment()` still iterated all 4 `pack_modes.packs` and reported spurious "MISSING" / "BROKEN" errors for the 3 undeployed packs.

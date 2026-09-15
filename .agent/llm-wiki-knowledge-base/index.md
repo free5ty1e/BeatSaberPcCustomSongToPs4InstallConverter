@@ -15,6 +15,7 @@ metadata:
 - [[ps4-memory-layout-for-module-scanning|PS4 Memory Layout for Module Scanning]] — Where modules (~2GB) and IL2CPP heap (~8-16GB) live, bounds check lessons
 - [[ps4-il2cpp-metadata-loading|PS4 IL2CPP Metadata Loading]] — Class name strings live in global-metadata.dat, NOT in compiled module PRX
 - [[feature-flags|Feature Flags]] — `features.json` configuration: `enable_custom_song_replacements`, `enable_song_metadata_modification`, `enable_beatmap_mode_mapping`
+- [[partial-pack-deployment-and-clear-target|Partial Pack Deployment & Clear Target Song]] — Surgical pack bundle patching for single-song deploys, `enable_beatmap_mode_mapping` runtime flag, `--clear-target-song` parameter
 
 ## AssetBundle & Unity Serialization
 - [[assetbundle-structure|AssetBundle Structure]] — Unity SerializedFile format, object table, TextAsset

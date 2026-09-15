@@ -11,18 +11,18 @@ The Beat Saber Deluxe plugin uses a `features.json` configuration file located i
 
 ## `features.json` Structure
 
-Since v0.5314, `features.json` holds EXACTLY the runtime flags the v0.8040 plugin reads at startup (via `load_features()` in `main.cpp`):
+Since v0.5334, `features.json` holds the runtime flags the v0.8041 plugin reads at startup (via `load_features()` in `main.cpp`):
 
 ```json
 {
   "enable_custom_song_replacements": true,
-  "enable_song_metadata_modification": true
+  "enable_song_metadata_modification": true,
+  "enable_beatmap_mode_mapping": true
 }
 ```
 
-`enable_beatmap_mode_mapping` was **REMOVED** from `features.json` / `DEFAULT_FEATURES` in v0.5314: the v0.8040 plugin never parsed it. Mode mapping is a **build-time pipeline feature** (baked into the bundle at build time), toggled by the pipeline CLI flags below — not a runtime plugin toggle. Keeping it in `features.json` implied a runtime knob that didn't exist.
-
-**NOTE:** The index.md still references `enable_beatmap_mode_mapping` in the feature flags entry — this is a documentation bug; the flag was removed and does not exist in `features.json` or the plugin.
+**v0.5314–v0.5333:** `enable_beatmap_mode_mapping` was absent (mode mapping was build-time only).
+**Since v0.5334:** `enable_beatmap_mode_mapping` is a **runtime feature flag** that gates the visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundles. This enables partial pack deployments where only some songs are custom — stock songs won't show extra mode buttons, preventing crashes.
 
 ## Flags
 
@@ -30,6 +30,7 @@ Since v0.5314, `features.json` holds EXACTLY the runtime flags the v0.8040 plugi
 |------|----------------------|---------|
 | `enable_custom_song_replacements` | `false` | Gates all song redirects in `open_hook`. When OFF, no bundle redirects fire — game plays original songs. |
 | `enable_song_metadata_modification` | `false` | Gates song name/artist metadata replacement (MoveNext hook + `song_metadata.json` + TMP_Text replacement). ON in production. |
+| `enable_beatmap_mode_mapping` | `false` | Gates visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle preview arrays. When OFF, stock songs show only Standard; custom songs with their own mode sets show only Standard. When ON, custom songs with patched mode sets show all enabled modes. |
 
 ## Build-Time Defaults (pipeline v0.5314+, all DEFAULT ON)
 
@@ -63,6 +64,9 @@ The legacy `--set-feature` usage via `--deploy-plugin` still works (sets flags a
 ```bash
 # Disable custom songs (play originals without rebooting):
 python3 tools/full_custom_song_pipeline.py --deploy-plugin --set-feature enable_custom_song_replacements=false
+
+# Disable mode mapping UI (partial pack deploy safety):
+python3 tools/full_custom_song_pipeline.py --deploy-plugin --set-feature enable_beatmap_mode_mapping=false
 ```
 
 ## Implementation Rules
@@ -72,9 +76,10 @@ python3 tools/full_custom_song_pipeline.py --deploy-plugin --set-feature enable_
 4. **Reloading:** Plugin reads this file at `module_start` (startup). Restart the game to apply configuration changes.
 
 ## Plugin Source
-- `main.cpp`: Reads `features.json` via `load_features()`, stores in `g_feature_custom_song_replacements`, `g_feature_song_metadata_modification` globals
-- Gates: `open_hook` redirect logic, MoveNext metadata replacement
+- `main.cpp`: Reads `features.json` via `load_features()`, stores in `g_feature_custom_song_replacements`, `g_feature_song_metadata_modification`, `g_feature_beatmap_mode_mapping` globals
+- Gates: `open_hook` redirect logic, MoveNext metadata replacement, pack bundle mode set visibility
 
 ## See Also
 - [[procedural-mode-generators]] — the build-time mode generators baked into bundles by default
 - [[pipeline-plugin-toggle-cli-flags]] — CLI flag architecture
+- [[pipeline-afr-base-fix-clean-slate]] — AFR base path fix and clean slate workflow

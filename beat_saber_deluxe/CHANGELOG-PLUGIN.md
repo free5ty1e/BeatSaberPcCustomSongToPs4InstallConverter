@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8042] — 2026-09-14
+### Added
+- **Runtime feature flag `enable_beatmap_mode_mapping`** — parsed from `features.json` at startup, stored in `g_feature_beatmap_mode_mapping`. Gates the visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle `_previewDifficultyBeatmapSets`. When OFF (default when missing), all songs show only Standard mode — safe for partial pack deployments where only some songs are custom. When ON, custom songs with patched mode sets show all 4 modes; stock songs (unpatched) show only Standard. This prevents crashes when selecting non-Standard modes on unmodified songs.
+- **Plugin version bump** to v0.8042.
+
 ## [v0.8040 (RE-RESTORED to a8a06f0)] — 2026-08-18
 ### Reverted
 - **Startup-crash fix (Exp 193):** after Exp 192 a different model regressed `src/main.cpp` (commits `311c6ff` v0.8049, `9326177`/`a47918e` v0.8050 360Degree purge, `e18921b` re-enabled RAM mode injection) → `cb2ed1a` instant crash at startup with NO plugin notification. Chris's manual revert to v0.8040 (`298bbd2`) still crashed (corrupted, non-baseline source).

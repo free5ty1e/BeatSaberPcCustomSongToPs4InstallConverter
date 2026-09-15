@@ -775,16 +775,18 @@ class TestFeatureFlagGating:
         assert gate_pos < redirect_loop_pos, \
             "Feature flag check must come BEFORE the redirect loop in open_hook"
 
-    def test_no_beatmap_mode_mapping_flag_exists(self):
-        """There is currently NO feature flag for beatmap mode mapping / pack redirects."""
+    def test_beatmap_mode_mapping_flag_now_exists(self):
+        """Since v0.5334, enable_beatmap_mode_mapping is a runtime feature flag
+        that gates the visibility of extra mode sets in pack bundles.
+        This allows partial pack deployments (some songs custom, some stock)
+        without crashes when selecting non-Standard modes on stock songs."""
         main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")
         with open(main_cpp) as f:
             code = f.read()
-        # This should be True — we're documenting that the flag doesn't exist yet
-        assert "g_feature_beatmap_mode_mapping" not in code, \
-            "beatmap_mode_mapping flag exists (unexpected)"
-        assert "enable_beatmap_mode_mapping" not in code, \
-            "enable_beatmap_mode_mapping flag exists (unexpected)"
+        assert "g_feature_beatmap_mode_mapping" in code, \
+            "g_feature_beatmap_mode_mapping flag should exist in plugin"
+        assert "enable_beatmap_mode_mapping" in code, \
+            "enable_beatmap_mode_mapping flag should be parsed from features.json"
 
 
 # ─── Tier 8: Config generation consistency ───────────────────────────────────
