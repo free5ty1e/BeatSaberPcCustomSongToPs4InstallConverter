@@ -935,19 +935,51 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
     `BeatmapLevelsData/Crystallized`) while fixing their VALUES, adds any slot
     missing from the config, and removes stale pre-`.bundle` entries
     (e.g. value `Crystallized_v3` while the deployed file is
-    `crystallized_v3.bundle`). `slots` optionally limits which slots are ensured
-    (default: all configured slots). Returns the number of entries changed.
+    `crystallized_v3.bundle`).
+
+    If `slots` is provided, ONLY those slots will have redirects - all other
+    song redirects are removed. This allows single-song scoped deploys to not
+    carry stale redirects from previous full-fleet deploys.
+
+    `slots` optionally limits which slots are ensured (default: all configured slots).
+    Returns the number of entries changed.
     """
     md = config.get('mass_deploy', {}) or {}
-    configured = md.get('slots', [])
-    if not configured:
+    all_configured = md.get('slots', [])
+    if not all_configured:
         return 0
+
+    # If slots is provided, only keep those slots; otherwise use all configured
     if slots is not None:
-        configured = [s for s in configured if s in slots]
+        configured = [s for s in all_configured if s in slots]
         if not configured:
-            return 0
+            # Remove all song redirects when slots list is empty (stock state)
+            redirects = redirect_data.setdefault('redirects', {})
+            removed = 0
+            for k in list(redirects):
+                if k.startswith('BeatmapLevelsData/'):
+                    log.info(f"  🧹 Removed song redirect (no slots in scope): {k} -> {redirects[k]}")
+                    del redirects[k]
+                    removed += 1
+            if removed:
+                log.info(f"  🎵 Removed {removed} song redirects (empty slot scope)")
+            return removed
+    else:
+        configured = all_configured
+
     redirects = redirect_data.setdefault('redirects', {})
     changed = 0
+
+    # When slots is provided, remove redirects for slots NOT in the scope
+    if slots is not None:
+        scoped = set(slots)
+        for k in list(redirects):
+            if k.startswith('BeatmapLevelsData/'):
+                slot = k[len('BeatmapLevelsData/'):]
+                if slot not in scoped:
+                    log.info(f"  🧹 Removed song redirect (out of scope): {k} -> {redirects[k]}")
+                    del redirects[k]
+                    changed += 1
 
     for slot in configured:
         key = f"BeatmapLevelsData/{slot}"
@@ -2670,6 +2702,8 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     limits which packs to (re)build. `enable_modes` optionally limits which
     gameplay modes to enable (default: all 4). `target_slots` optionally
     limits which song slots to patch in each pack (for partial deployments).
+    When `target_slots` is provided, we ALWAYS force rebuild from the original
+    dump to ensure only those slots get extra modes (stock songs stay Standard-only).
     Returns number of bundles built.
     """
     pm = config.get('pack_modes', {}) or {}
@@ -2680,7 +2714,12 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     if packs is not None:
         configured = [p for p in configured if p in packs]
     entries = [e for e in _get_pack_modes_entries(config) if e['pack'] in configured]
-    missing = [e['pack'] for e in entries if force or not os.path.isfile(e['local_path'])]
+
+    # When target_slots is provided, we need to force rebuild to ensure
+    # surgical patching — only those slots get extra modes.
+    must_rebuild = target_slots is not None and len(target_slots) > 0
+    missing = [e['pack'] for e in entries if force or must_rebuild or not os.path.isfile(e['local_path'])]
+
     built = 0
     if missing:
         dump_dir = pm.get('dump_dir')
@@ -3576,9 +3615,13 @@ def clear_target_song(config: dict, slot_name: str):
     2. Removes the redirect entry from redirects.json
     3. Removes the song metadata entries from song_metadata.json
     4. Removes the artist metadata entries from song_metadata.json
-    5. Deploys updated redirects.json and song_metadata.json to PS4
+    5. Rebuilds and redeploys the pack bundle if this was the last custom song in the pack
+    6. Deploys updated configs to PS4
 
-    Note: Does NOT modify the pack bundle - that's managed separately.
+    If this was the only custom song in the pack, the pack bundle is rebuilt
+    from the original dump (no extra modes for any song) and redeployed.
+    If other custom songs remain in the pack, the pack bundle is rebuilt
+    with only those remaining custom songs getting extra modes.
     """
     import tempfile
     import subprocess as sp
@@ -3612,8 +3655,18 @@ def clear_target_song(config: dict, slot_name: str):
         log.warning(f"  ⚠️  Could not remove {bundle_name} from PS4 (may not exist): {result.stderr}")
 
     # 2. Remove redirect entry from redirects.json
+    # Download current redirects.json from PS4 first (local may be stale)
     local_redirect_path = _get_redirect_config_path()
-    redirect_data = _load_local_redirects(local_redirect_path)
+    remote_redirect_path = _get_remote_redirect_path(config)
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"get {remote_redirect_path} -o {local_redirect_path}; quit"]
+    result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode == 0 and os.path.exists(local_redirect_path):
+        redirect_data = _load_local_redirects(local_redirect_path)
+        log.info(f"  Downloaded current redirects.json from PS4")
+    else:
+        redirect_data = _load_local_redirects(local_redirect_path)
+        log.warning(f"  Could not download redirects.json from PS4, using local")
     redirects = redirect_data.get('redirects', {})
 
     # Find and remove the redirect key (handles both with and without prefix)
@@ -3682,7 +3735,36 @@ def clear_target_song(config: dict, slot_name: str):
         f.write('\n')
     log.info(f"  ✅ Updated local song_metadata.json")
 
-    # 4. Deploy updated configs to PS4
+    # 4. Check if we need to rebuild the pack bundle
+    # This slot belongs to a pack - check if there are other custom songs in the same pack
+    target_pack = _resolve_target_pack(config, slot_name)
+    pack_needs_rebuild = False
+    rebuild_slots = None
+
+    if target_pack:
+        # Check if there are other custom song redirects for this pack
+        other_custom_in_pack = False
+        remaining_slots = []
+        for key in redirects:
+            if key.startswith('BeatmapLevelsData/'):
+                other_slot = key[len('BeatmapLevelsData/'):]
+                other_pack = _resolve_target_pack(config, other_slot)
+                if other_pack == target_pack:
+                    other_custom_in_pack = True
+                    remaining_slots.append(other_slot)
+
+        if not other_custom_in_pack:
+            # This was the last custom song in the pack - rebuild pack bundle from original dump
+            pack_needs_rebuild = True
+            rebuild_slots = []  # Empty = no extra modes for any song (stock state)
+            log.info(f"  ℹ️  No other custom songs in pack '{target_pack}' — rebuilding pack bundle from original dump (stock state)")
+        else:
+            # Other custom songs exist - rebuild pack bundle with target_slots for remaining custom songs
+            log.info(f"  ℹ️  Other custom songs in pack '{target_pack}': {remaining_slots} — rebuilding pack bundle for these slots only")
+            pack_needs_rebuild = True
+            rebuild_slots = remaining_slots
+
+    # 5. Deploy updated configs to PS4
     log.info("  Deploying updated configs to PS4...")
 
     # Deploy redirects.json
@@ -3704,6 +3786,27 @@ def clear_target_song(config: dict, slot_name: str):
         log.info(f"  ✅ song_metadata.json deployed to PS4")
     else:
         log.warning(f"  ⚠️  Failed to deploy song_metadata.json: {result.stderr}")
+
+    # 6. Rebuild and deploy pack bundle if needed
+    if pack_needs_rebuild and target_pack:
+        log.info(f"  🔨 Rebuilding pack bundle for '{target_pack}' from original dump...")
+        deploy_cfg = {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths,
+                      'pack_bundle': config.get('pack_bundle', {}),
+                      'pack_modes': config.get('pack_modes', {}),
+                      'mass_deploy': config.get('mass_deploy', {})}
+
+        deploy_pack_bundle(deploy_cfg, packs=[target_pack], enable_modes=None, target_slots=rebuild_slots)
+        # Also deploy redirects again to pick up pack bundle changes
+        manage_redirect_config(
+            config,
+            target_name=None,
+            generate=True,
+            deploy=True,
+            sync=False,
+            enforce_local=False,
+            packs=[target_pack],
+            slots=rebuild_slots,
+        )
 
     log.info(f"✅ Slot '{slot_name}' reverted to stock state")
 

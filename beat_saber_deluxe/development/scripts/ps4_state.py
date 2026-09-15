@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
-ps4_state.py — Inspect the current Beat Saber Deluxe state on the PS4.
+ps4_state.py — Inspect the current Beat Saber Deluxe state on the PS4 AND local pipeline cache.
 
 Lists every BSD-related file currently on the PS4 (plugins.ini + its contents,
 AFR directory bundles/config json, plugin .prx) and prints a human-readable
 summary conclusion: clean-slate, or "X custom songs, Y redirects, Z modified
 music packs".
+
+Also shows local pipeline cache files (song_metadata.json, redirects.json, catalog_pack_modes.json)
+which affect what the pipeline thinks is deployed on PS4.
 
 Uses lftp for a familiar, consistent interaction. Exits 0 on success.
 
@@ -16,6 +19,7 @@ Usage:
 import subprocess
 import sys
 import json
+import os
 
 PS4_HOST = "192.168.100.117"
 PS4_PORT = 2121
@@ -210,6 +214,42 @@ def main():
                 print("    - beat_saber_deluxe.prx registered in plugins.ini [CUSA12878]")
             if has_plugin:
                 print("    - beat_saber_deluxe.prx present in /data/GoldHEN/plugins/")
+    print()
+    print("=" * 62)
+
+    # 6. Local pipeline cache files (affect what pipeline thinks is deployed)
+    print()
+    print("--- Local Pipeline Cache (affects pipeline behavior) ---")
+    local_cache_files = {
+        "song_metadata.json": "/workspace/beat_saber_deluxe/song_metadata.json",
+        "redirects.json": "/workspace/beat_saber_deluxe/redirects.json",
+        "catalog_pack_modes.json": "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
+    }
+    cache_present = []
+    for name, path in local_cache_files.items():
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+                if name == "redirects.json":
+                    redirects = data.get('redirects', {})
+                    print(f"  ✅ {name} ({len(data.get('redirects', {}))} redirects)")
+                elif name == "song_metadata.json":
+                    names = len(data.get('song_names', {}))
+                    artists = len(data.get('song_artists', {}))
+                    print(f"  ✅ {name} ({names} song names, {artists} artist entries)")
+                elif name == "catalog_pack_modes.json":
+                    # Count entries - catalog is an object with m_EntryDataString etc
+                    print(f"  ✅ {name} (present)")
+                cache_present.append(name)
+            except Exception as e:
+                print(f"  ⚠️  {name} (parse error: {e})")
+        else:
+            print(f"  ❌ {name} (missing)")
+
+    if not cache_present:
+        print("  (no local pipeline cache files)")
+
     print()
     print("=" * 62)
     return 0
