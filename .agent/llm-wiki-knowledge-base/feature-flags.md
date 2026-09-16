@@ -11,7 +11,7 @@ The Beat Saber Deluxe plugin uses a `features.json` configuration file located i
 
 ## `features.json` Structure
 
-Since v0.5334, `features.json` holds the runtime flags the v0.8041 plugin reads at startup (via `load_features()` in `main.cpp`):
+Since v0.5334, `features.json` holds the runtime flags the v0.8042 plugin reads at startup (via `load_features()` in `main.cpp`):
 
 ```json
 {

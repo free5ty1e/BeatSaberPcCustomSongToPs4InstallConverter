@@ -15,7 +15,7 @@ When deploying custom songs one at a time (single-song `--deploy-full`), the pip
 
 ### 1. Runtime Feature Flag: `enable_beatmap_mode_mapping`
 
-**Plugin v0.8041+** reads `enable_beatmap_mode_mapping` from `features.json` at startup. This flag gates whether the extra mode sets in pack bundles are visible in the mode selector UI.
+**Plugin v0.8042+** reads `enable_beatmap_mode_mapping` from `features.json` at startup. This flag gates whether the extra mode sets in pack bundles are visible in the mode selector UI.
 
 - **OFF (default when missing):** Extra mode sets in pack bundles are hidden. ALL songs (custom and stock) show only Standard mode. Safe for partial deployments.
 - **ON:** Custom songs with their own patched mode sets show all 4 modes. Stock songs (whose BeatmapLevelSOs still only have Standard in their preview arrays) also only show Standard.
@@ -134,8 +134,8 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song 1dbb9 --ta
 
 - `beat_saber_deluxe/tools/build_pack_mode_bundles.py` — `patch_pack_bundle()` with `target_slots` parameter
 - `beat_saber_deluxe/tools/full_custom_song_pipeline.py` — `--clear-target-song` parameter, single-song deploy scoping
-- `beat_saber_deluxe/src/main.cpp` — `g_feature_beatmap_mode_mapping` feature flag gate
-- `beat_saber_deluxe/CHANGELOG-PIPELINE.md` — v0.5334 entry
+- `beat_saber_deluxe/src/main.cpp` — `g_feature_beatmap_mode_mapping` feature flag gate (v0.8042)
+- `beat_saber_deluxe/CHANGELOG-PIPELINE.md` — v0.5334, v0.5335, v0.5336 entries
 
 ---
 

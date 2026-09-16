@@ -1,7 +1,6 @@
 #!/bin/bash
 # Full custom song installation over Camelia (Chromeo) music pack using pipeline automation
-
-# 
+#
 # ⚠️ NEW: Partial Pack Deployment Safety (v0.5334+)
 #
 # Problem: When deploying custom songs one at a time, the pack bundle previously
@@ -33,17 +32,16 @@
 # Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
 #   python3 tools/full_custom_song_pipeline.py --clear-target-song <SLOT_NAME>
 # This removes: custom song bundle, redirect entry, song/artist metadata, deploys updated configs.
-
-
+#
 #
 # This script deploys each of the 6 Camelia pack songs using the
 # per-song pipeline with --deploy-full flag. Each command is complete
 # and self-contained - it downloads the custom song from BeatSaver,
 # converts to V3.2.0, generates all 4 modes, deploys the song bundle,
 # resolves the song's DLC pack and deploys ONLY that one pack + song,
-builds/deploys the plugin + plugins.ini entry + features.json,
-regenerates redirects.json scoped to that song, and runs post-deploy
-validation. All in ONE command.
+# builds/deploys the plugin + plugins.ini entry + features.json,
+# regenerates redirects.json scoped to that song, and runs post-deploy
+# validation. All in ONE command.
 
 # Optional: Clean PS4 for a fresh clean-slate state
 # Uncomment the next line if you want to start from a completely clean PS4

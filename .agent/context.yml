@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8040"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — RESTORED stable baseline a8a06f0 (v0.8050/v0.8051 crashed at startup Exp 176; re-corrupted by Gemini regressions post-Exp-192, RE-RESTORED 2026-08-18 Exp 193)
-pipeline_version: "0.5333" # in beat_saber_deluxe/VERSION - Exp 214 validation scoping fix + download guard ordering: single-song --deploy-full now fully working end-to-end with green validation
+plugin_version: "0.8042"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8042 adds enable_beatmap_mode_mapping feature flag support (reads from features.json at runtime)
+pipeline_version: "0.5336" # in beat_saber_deluxe/VERSION - Exp 214+ fixes: single-song --deploy-full end-to-end working; second song no longer overwrites first; clear-target-song works correctly; all 30 example scripts verified; 581 tests pass
 
 # Platform Constraints
 target_platform: PS4

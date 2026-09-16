@@ -41,9 +41,9 @@
 # and self-contained - it downloads the custom song from BeatSaver,
 # converts to V3.2.0, generates all 4 modes, deploys the song bundle,
 # resolves the song's DLC pack and deploys ONLY that one pack + song,
-builds/deploys the plugin + plugins.ini entry + features.json,
-regenerates redirects.json scoped to that song, and runs post-deploy
-validation. All in ONE command.
+# builds/deploys the plugin + plugins.ini entry + features.json,
+# regenerates redirects.json scoped to that song, and runs post-deploy
+# validation. All in ONE command.
 
 # Optional: Clean PS4 for a fresh clean-slate state
 # Uncomment the next line if you want to start from a completely clean PS4

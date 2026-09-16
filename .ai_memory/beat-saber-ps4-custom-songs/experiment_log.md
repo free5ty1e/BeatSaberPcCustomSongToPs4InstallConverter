@@ -625,3 +625,34 @@ metadata:
 - **Verified end-to-end:** Clean slate → fresh deploy → validation PASSED → ps4_state.py reports accurate state (1 custom song, 3 redirects, 1 modified pack, plugin registered).
 - **Tests:** 581/581 pass.
 - **Pipeline version:** v0.5333 (unchanged — config defaults were already correct).
+
+### Experiment 216: Multi-Song Incremental Deploy + --clear-target-song Fixes (2026-09-15)
+
+**Date:** 2026-09-15
+
+**Context:** User deployed two Billie Eilish replacement songs sequentially and discovered critical bugs:
+1. **Second song overwrites first** — Deploying a second song to the same pack caused the first custom song's bundle and redirect to disappear.
+2. **Artist name restored for entire pack on clear** — `--clear-target-song` restored artist metadata even when other custom songs remained in the pack.
+3. **--clear-target-song crash** — UnboundLocalError: `other_custom_in_pack` not initialized before conditional blocks.
+4. **Pack bundle not incrementally patched** — Each deploy rebuilt the pack bundle from the original dump instead of downloading the existing patched bundle from PS4.
+
+**Root causes found:**
+1. `deploy_slots` only included the new target song, not existing custom songs in the pack. Redirects for prior songs were not regenerated.
+2. Artist metadata restore logic didn't check if other customs remained in the pack.
+3. Variable initialization order bug in `--clear-target-song` handler.
+4. `deploy_pack_bundle()` always used original dump as base, not the existing PS4 patched bundle.
+
+**Fixes applied (pipeline v0.5334 → v0.5336):**
+- **v0.5334:** Surgical pack bundle patching (`enable_modes` + `target_slots`), new `enable_beatmap_mode_mapping` feature flag, `--clear-target-song` parameter.
+- **v0.5335:** Incremental pack bundle patching — download existing PS4 patched bundle before each deploy. `--clear-target-song` only restores artist metadata when NO custom songs remain in the pack.
+- **v0.5336:** Fixed `deploy_slots` to include ALL existing custom songs in target pack (by downloading current `redirects.json` from PS4). Fixed `other_custom_in_pack` initialization in `--clear-target-song`.
+
+**Plugin update (v0.8042):** Added `enable_beatmap_mode_mapping` runtime feature flag gating visibility of extra mode sets in the mode selector UI. When OFF (safe default for partial deploys): all songs show only Standard. When ON: custom songs with patched mode sets show all 4 modes; stock songs show only Standard.
+
+**Example scripts updated:** All 30 `.sh` scripts fixed for syntax errors (comment lines `builds/deploys`, `regenerates`, `validation.` missing `#` prefix). All 30 scripts now run correctly, show PS4 state, and wait for user confirmation at "Press Enter to continue" prompt.
+
+**Tests:** 581/581 pass.
+
+**Version:** Pipeline v0.5336, Plugin v0.8042.
+
+**Status:** ✅ **COMPLETE.** Multi-song incremental deploy verified on PS4 hardware. Clear-target-song works correctly. All 30 example scripts run and prompt properly.

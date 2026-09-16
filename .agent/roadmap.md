@@ -227,6 +227,20 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] **BeatSaver MAP IDs corrected to use CUSTOM songs (Exp 204):** Fixed all documentation to use the actual custom song replacements' BeatSaver MAP IDs (the songs we're installing), not the target DLC song names. Added BeatSaver MAP_ID column to current-song-replacements-on-chris-ps4.md. Each pipeline command now has detailed comment with full custom song metadata (name, artist, album, year, MAP_ID, link, genre, BPM, difficulties).
 - [x] **Unified --deploy-full flag (Exp 207):** Added `--deploy-full` to pipeline that handles complete orchestration in one command: song bundle + pack mode bundles + merged catalog + redirects.json + post-deploy validation. All docs/scripts updated to use `--deploy-full`.
 
+### Completed (Exp 212-216) — Single-Song Scoping + Multi-Song Incremental Deploy
+- [x] **Self-contained single-song `--deploy-full` (v0.5331, Exp 212):** Single-song deploy scopes to just the target song + its pack, deploys plugin + plugins.ini + features.json. Does NOT touch other packs.
+- [x] **Pre-deploy PS4 state check (v0.5331, Exp 213):** `ps4_state.py` shows accurate PS4 state before each deploy, prompts for user confirmation.
+- [x] **Download guard ordering fix (v0.5332, Exp 214):** `--download-beat-saver-song` resolution moved before early-exit guards so `--deploy-full` reaches song path.
+- [x] **Validation scoping fix (v0.5333, Exp 214 follow-up):** `verify_ps4_deployment()` accepts `packs` filter and threads it through all helpers.
+- [x] **AFR base path fix + clean slate (v0.5333, Exp 215):** Pipeline default config correct; backup script cleans AFR dir; `ps4_state.py` checks AFR dir.
+- [x] **Multi-song incremental deploy + clear-target-song (v0.5334-v0.5336, Exp 216):**
+  - **Second song overwrites first (v0.5336):** `deploy_slots` now downloads current `redirects.json` from PS4 to discover ALL existing custom songs in target pack, includes them in deployment scope.
+  - **Artist name restored for entire pack on clear (v0.5335):** `--clear-target-song` only restores artist metadata when NO custom songs remain in the pack.
+  - **`--clear-target-song` UnboundLocalError (v0.5335):** Fixed `other_custom_in_pack` initialization before conditional blocks.
+  - **Pack bundle not incrementally patched (v0.5335):** `deploy_pack_bundle()` now downloads existing PS4 patched bundle before each deploy for incremental patching.
+  - **Plugin v0.8042:** Added `enable_beatmap_mode_mapping` runtime feature flag gating visibility of extra mode sets.
+  - **All 30 example scripts** fixed for syntax errors and verified running with PS4 state check + user confirmation prompt.
+
 ### Next (M9 — Generalization)
 - [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy with `--deploy-full`.
 - [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).
