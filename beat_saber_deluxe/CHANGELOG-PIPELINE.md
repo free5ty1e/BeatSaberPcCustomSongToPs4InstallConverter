@@ -1,5 +1,25 @@
 # Pipeline Changelog
 
+## v0.5336 (2026-09-15)
+### Fixed
+- **Second song deployment obliterates first custom song** — When deploying a second song to the same music pack, the first custom song's bundle and redirect were being removed because `deploy_slots` only included the new target. Fixed by downloading the current `redirects.json` from PS4 before each deploy to discover ALL existing custom songs in the target pack, then including them in `deploy_slots` so their redirects and pack bundle modifications are preserved.
+- **Incremental pack bundle patching refined** — The pack bundle is now correctly downloaded from PS4 before each new song deploy, ensuring incremental patching preserves all previously-deployed custom songs' mode sets.
+
+### Changed
+- Single-song deploy now queries PS4 for existing redirects in the target pack before building/deploying, ensuring all existing custom songs in that pack are included in the deployment scope.
+
+## v0.5335 (2026-09-14)
+### Fixed
+- **Artist name restored for entire pack when clearing single song** — `--clear-target-song` now only restores artist metadata when NO custom songs remain in the pack. If other custom songs exist, artist metadata stays blanked (as intended for partial custom packs).
+- **Second song overwrites first song's custom beatmap modes** — Added incremental pack bundle patching: when deploying a song to a pack that already has a patched bundle on PS4, the pipeline now downloads the existing patched bundle and uses it as the base for adding the new song's mode sets. This preserves previously-deployed custom songs' beatmap mode configurations.
+
+### Added
+- `_download_pack_bundle_from_ps4()` helper: downloads the current patched pack bundle from PS4 AFR directory for use as patch base.
+- `deploy_pack_bundle()` now threads the downloaded existing bundle to `build_pack_mode_bundles` for incremental patching.
+
+### Changed
+- `--clear-target-song` logic: artist metadata is only restored when NO custom songs remain in the pack after the clear operation.
+
 ## v0.5334 (2026-09-14)
 ### Added
 - **Surgical pack bundle patching for single-song deploys:** `--deploy-full` now passes `enable_modes` (non-Standard modes for the custom song) and `target_slots` (only the target song slot) to the pack bundle builder. The pack bundle is built with extra preview mode sets ONLY for the custom song being deployed. Stock songs in the same pack keep only Standard — no crashes when selecting non-Standard modes on unmodified songs.

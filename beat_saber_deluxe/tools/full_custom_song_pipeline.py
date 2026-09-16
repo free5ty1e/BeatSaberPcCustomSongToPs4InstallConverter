@@ -35,8 +35,10 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import struct
 import sys
+import tempfile
 
 # ---------------------------------------------------------------------------
 # Path setup
@@ -2811,6 +2813,50 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
     return False
 
+def _download_pack_bundle_from_ps4(config: dict, pack_name: str, local_dir: str) -> str | None:
+    """Download the current patched pack bundle from PS4 for incremental patching.
+    Returns the local path to the downloaded bundle, or None if not found/failed."""
+    import tempfile
+    import subprocess as sp
+    import sys
+
+    ps4_cfg = config.get('ps4', {})
+    cfg_title = config.get('title', {})
+    cfg_paths = config.get('paths', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = cfg_title.get('id', 'CUSA12878')
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+
+    # Find the pack bundle name from the album data
+    # Import patched_bundle_name from build_pack_mode_bundles (same directory)
+    sys.path.insert(0, TOOLS_DIR)
+    from build_pack_mode_bundles import patched_bundle_name
+    pm = config.get('pack_modes', {}) or {}
+    song_ids = pm.get('song_ids_path') or '/workspace/beat_saber_deluxe/beat_saber_song_ids.json'
+    with open(song_ids) as f:
+        data = json.load(f)
+    album = next((a for a in data['albums'] if a['pack'] == pack_name), None)
+    if not album or 'packBundle' not in album:
+        return None
+
+    original_name = album['packBundle']
+    patched_name = patched_bundle_name(original_name)
+    remote_path = f"{afr_base}/{title_id}/{patched_name}"
+    local_path = os.path.join(local_dir, patched_name)
+
+    user_part = f"{user},{password}" if password else f"{user},"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+           "-e", f"get {remote_path} -o {local_path}; quit"]
+    result = sp.run(cmd, capture_output=True, text=True, timeout=60)
+    if result.returncode == 0 and os.path.exists(local_path):
+        log.info(f"  Downloaded existing pack bundle from PS4: {patched_name}")
+        return local_path
+    return None
+
+
 def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None) -> bool:
     """
     Deploy the patched pack bundle + patched catalog.json to the PS4.
@@ -2824,6 +2870,28 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
     otherwise the game would 404 on the redirected path. Returns True if all uploads OK.
     """
     log.info("📦 Deploying patched pack bundle + catalog to PS4...")
+    ok = True
+
+    pm = config.get('pack_modes', {}) or {}
+    configured_packs = pm.get('packs') or []
+    if packs is not None:
+        configured_packs = [p for p in configured_packs if p in packs]
+
+    # For each pack, download existing patched bundle from PS4 if present,
+    # then use it as base for incremental patching
+    for pack in configured_packs:
+        log.info(f"  📦 Processing pack: {pack}")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Try to download existing patched bundle from PS4 for incremental patching
+            existing_bundle = _download_pack_bundle_from_ps4(config, pack, tmpdir)
+            if existing_bundle:
+                log.info(f"  Using existing PS4 pack bundle as base for incremental patching")
+                # Copy to pack_modes_bundles for builder to use as base
+                pm_build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+                os.makedirs(pm_build_dir, exist_ok=True)
+                target_path = os.path.join(pm_build_dir, os.path.basename(existing_bundle))
+                shutil.copy2(existing_bundle, target_path)
+
     ok = True
     pairs = _get_remote_pack_paths(config, packs=packs)
     if pairs:
@@ -3715,36 +3783,16 @@ def clear_target_song(config: dict, slot_name: str):
                 log.info(f"  Resolved '{slot_name}' -> songName='{exact_song_name}', author='{original_author}'")
                 break
 
-    # Remove from song_names
-    if exact_song_name in metadata.get('song_names', {}):
-        del metadata['song_names'][exact_song_name]
-        log.info(f"  Removed song metadata: '{exact_song_name}'")
-
-    # Remove from song_artists (blank out the original author)
-    if original_author and original_author in metadata.get('song_artists', {}):
-        del metadata['song_artists'][original_author]
-        log.info(f"  Removed artist metadata: '{original_author}'")
-    # Also try removing by exact song name
-    if exact_song_name in metadata.get('song_artists', {}):
-        del metadata['song_artists'][exact_song_name]
-        log.info(f"  Removed artist metadata: '{exact_song_name}'")
-
-    # Save updated song_metadata.json locally
-    with open(local_metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
-        f.write('\n')
-    log.info(f"  ✅ Updated local song_metadata.json")
-
-    # 4. Check if we need to rebuild the pack bundle
+    # 4. Check if we need to rebuild the pack bundle (must be done BEFORE artist metadata removal)
     # This slot belongs to a pack - check if there are other custom songs in the same pack
     target_pack = _resolve_target_pack(config, slot_name)
     pack_needs_rebuild = False
     rebuild_slots = None
+    other_custom_in_pack = False
+    remaining_slots = []
 
     if target_pack:
         # Check if there are other custom song redirects for this pack
-        other_custom_in_pack = False
-        remaining_slots = []
         for key in redirects:
             if key.startswith('BeatmapLevelsData/'):
                 other_slot = key[len('BeatmapLevelsData/'):]
@@ -3763,6 +3811,37 @@ def clear_target_song(config: dict, slot_name: str):
             log.info(f"  ℹ️  Other custom songs in pack '{target_pack}': {remaining_slots} — rebuilding pack bundle for these slots only")
             pack_needs_rebuild = True
             rebuild_slots = remaining_slots
+
+    # Save updated song_metadata.json locally (will be modified below)
+    with open(local_metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+        f.write('\n')
+    log.info(f"  ✅ Updated local song_metadata.json")
+
+    # Remove from song_names
+    if exact_song_name in metadata.get('song_names', {}):
+        del metadata['song_names'][exact_song_name]
+        log.info(f"  Removed song metadata: '{exact_song_name}'")
+
+    # Remove from song_artists (blank out the original author)
+    # Only remove artist metadata if this is the LAST custom song in the pack
+    # (when no other custom songs remain, we restore the artist name)
+    if not other_custom_in_pack:
+        if original_author and original_author in metadata.get('song_artists', {}):
+            del metadata['song_artists'][original_author]
+            log.info(f"  Restored artist metadata (last custom song in pack): '{original_author}'")
+        # Also try removing by exact song name
+        if exact_song_name in metadata.get('song_artists', {}):
+            del metadata['song_artists'][exact_song_name]
+            log.info(f"  Restored artist metadata (last custom song in pack): '{exact_song_name}'")
+    else:
+        log.info(f"  Other custom songs remain in pack — keeping artist metadata blanked for pack")
+
+    # Save updated song_metadata.json locally (after artist metadata changes)
+    with open(local_metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+        f.write('\n')
+    log.info(f"  ✅ Updated local song_metadata.json")
 
     # 5. Deploy updated configs to PS4
     log.info("  Deploying updated configs to PS4...")
@@ -4445,10 +4524,10 @@ Examples:
 
     # Single-song deploy scoping: resolve which pack the requested target slot
     # belongs to, and scope the pack-mode bundle deploy + catalog + redirects to
-    # exactly that pack (and just that song slot). This keeps a `--deploy-full`
-    # single-song install surgical — it deploys ONLY the target song + its music
-    # pack, instead of re-deploying every configured pack. Full-fleet behavior
-    # (all packs) is preserved when no target song is being processed.
+    # exactly that pack. This keeps a `--deploy-full` single-song install surgical
+    # — it deploys the target song + its music pack, while preserving existing
+    # custom songs in the same pack. Full-fleet behavior (all packs) is preserved
+    # when no target song is being processed.
     deploy_packs = None
     deploy_slots = None
     deploy_enable_modes = None
@@ -4457,7 +4536,47 @@ Examples:
         if target_pack:
             deploy_packs = [target_pack]
             log.info(f"ℹ️  Single-song deploy: scoping to pack '{target_pack}' for target '{args.target}'")
+
+        # For scoped deployment, we need to include ALL custom songs in this pack
+        # so their redirects and pack bundle modifications are preserved.
+        # Download current redirects.json from PS4 to find existing custom songs in this pack.
         deploy_slots = [args.target.split('/')[-1]]
+        if target_pack:
+            # Download current redirects.json from PS4 to find existing custom songs
+            ps4_cfg = config.get('ps4', {})
+            cfg_title = config.get('title', {})
+            cfg_paths = config.get('paths', {})
+            host = ps4_cfg.get('ip', '192.168.100.117')
+            port = ps4_cfg.get('ftp_port', 2121)
+            user = ps4_cfg.get('ftp_user', 'anonymous')
+            password = ps4_cfg.get('ftp_password', '')
+            afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+            title_id = cfg_title.get('id', 'CUSA12878')
+            remote_redirect_path = f"{afr_base}/{title_id}/redirects.json"
+
+            import tempfile
+            import subprocess as sp
+            with tempfile.TemporaryDirectory() as tmpdir:
+                local_redirect_path = os.path.join(tmpdir, "redirects.json")
+                user_part = f"{user},{password}" if password else f"{user},"
+                cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+                       "-e", f"get {remote_redirect_path} -o {local_redirect_path}; quit"]
+                result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+                if result.returncode == 0 and os.path.exists(local_redirect_path):
+                    try:
+                        with open(local_redirect_path) as f:
+                            ps4_redirects = json.load(f).get('redirects', {})
+                        # Find all custom songs in this pack
+                        for key in ps4_redirects:
+                            if key.startswith('BeatmapLevelsData/'):
+                                slot = key[len('BeatmapLevelsData/'):]
+                                other_pack = _resolve_target_pack(config, slot)
+                                if other_pack == target_pack and slot not in deploy_slots:
+                                    deploy_slots.append(slot)
+                        if len(deploy_slots) > 1:
+                            log.info(f"  Preserving existing custom songs in pack: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
+                    except Exception:
+                        pass  # If download/parse fails, fall back to just the new target
 
         # Determine which modes to enable for this pack bundle.
         # We only want to add extra modes for the custom song(s) being deployed,

@@ -89,6 +89,11 @@ python3 /workspace/beat_saber_deluxe/development/scripts/ps4_state.py
 After the fixes:
 - Clean slate verified: AFR dir empty, game dir clean, plugins.ini clean, local caches clear
 - Fresh deploy: 1 custom song, 1 modified pack (billieeilish), 3 redirects, plugin registered, validation PASSED
+- **Multi-song incremental deploy (v0.5336+):**
+  - First song deploy: 1 custom song, 1 modified pack, 3 redirects
+  - Second song deploy: 2 custom songs, 4 redirects, pack bundle incrementally patched (preserves first song)
+  - Both custom songs retain their 4 mode sets (OneSaber/NoArrows/90Degree)
+  - Validation PASSED
 - All 581 tests pass
 
 ## Key Lessons
