@@ -241,6 +241,9 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
   - **Plugin v0.8042:** Added `enable_beatmap_mode_mapping` runtime feature flag gating visibility of extra mode sets.
   - **All 30 example scripts** fixed for syntax errors and verified running with PS4 state check + user confirmation prompt.
 
+### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
+- [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
+
 ### Next (M9 — Generalization)
 - [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy with `--deploy-full`.
 - [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).

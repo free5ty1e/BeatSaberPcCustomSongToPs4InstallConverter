@@ -618,11 +618,14 @@ def patch_pack_bundle(song_ids_data, album, dump_dir, out_dir, enable_modes: lis
 
     patches = []
     patched_slots = 0
+    # Case-insensitive target slot matching (PS4 redirects may carry different
+    # casing than song_ids.json, e.g. "Crystallized" vs "crystallized")
+    target_slots_lower = {s.lower() for s in target_slots} if target_slots is not None else None
     for song in album['songs']:
         if 'patchPathID' not in song:
             continue
         # If target_slots is provided, only patch those specific slots
-        if target_slots is not None and song['songID'] not in target_slots:
+        if target_slots_lower is not None and song['songID'].lower() not in target_slots_lower:
             continue
         obj = cab_obj.objects.get(song['patchPathID'])
         if obj is None:

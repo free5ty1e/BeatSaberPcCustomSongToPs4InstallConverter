@@ -656,3 +656,43 @@ metadata:
 **Version:** Pipeline v0.5336, Plugin v0.8042.
 
 **Status:** ✅ **COMPLETE.** Multi-song incremental deploy verified on PS4 hardware. Clear-target-song works correctly. All 30 example scripts run and prompt properly.
+
+### Experiment 217: Multi-Pack Deploy Wiped Other Packs' Custom Songs — Cross-Pack Scoping + Case-Sensitivity Fix (2026-09-16)
+
+**Date:** 2026-09-16
+
+**Context:** User ran the Camelia install script after having deployed 2 Billie Eilish custom songs. Result: the BE songs reverted to stock (no redirect, no custom beatmap buttons — only song-list metadata survived, since that lives in the un-scoped `song_metadata.json`), and the freshly deployed Camelia songs showed the same symptom after subsequent deploys. Console log showed the smoking gun on the FIRST song deploy:
+
+```
+🧹 Removed song redirect (no slots in scope): BeatmapLevelsData/Bellyache -> Bellyache_v3.bundle
+🧹 Removed song redirect (no slots in scope): BeatmapLevelsData/BadGuy -> BadGuy_v3.bundle
+🧹 Removed song redirect (no slots in scope): BeatmapLevelsData/Crystallized -> crystallized_v3.bundle
+🎵 Removed 3 song redirects (empty slot scope)
+```
+
+After that first deploy, redirects.json held only 2 entries (catalog + one pack pair), and every subsequent song deploy repeated the pattern (`Removed song redirect (no slots in scope)` for the just-added song on the NEXT song's deploy).
+
+**Root causes (2):**
+
+1. **Case-sensitive slot matching.** `deploy_slots` discovers existing custom songs by downloading the PS4 `redirects.json` and reading keys like `BeatmapLevelsData/Crystallized` (game canonical casing). But the membership test in `_ensure_mass_song_redirects` was `configured = [s for s in all_configured if s in slots]` against `mass_deploy.slots`, which holds **lowercase** names (`crystallized`). `Crystallized in ['crystallized', ...]` → False for every slot → `configured` came back EMPTY → the "empty slot scope" branch deleted ALL song redirects. Same case bug in the builder: `patch_pack_bundle` tested `song['songID'] not in target_slots` (songID `Crystallized` vs slot casing variants), so surgical patching also matched nothing.
+
+2. **Cross-pack slot scoping.** `deploy_slots` was populated only with custom songs from the TARGET pack (filtered via `_resolve_target_pack(slot) == target_pack`). Even with casing fixed, `_ensure_mass_song_redirects` would then treat other packs' song redirects as "out of scope" and delete them — the Camelia script would still have wiped the BE songs.
+
+**Fix (pipeline v0.5337):**
+- `_ensure_mass_song_redirects`: both the configured-slots filter and the out-of-scope removal now compare case-insensitively.
+- `patch_pack_bundle` (builder): `target_slots` matching is case-insensitive.
+- Single-song deploy path: `deploy_slots` now collects ALL `BeatmapLevelsData/` slots found in the PS4 redirects.json (any pack), and `deploy_packs` is extended with every pack owning one of those slots — so a billieeilish deploy also re-deploys camellia's patched pack bundle (downloaded from PS4 as incremental base, preserving its patched slots) and both stay in the merged catalog.
+- `_ensure_pack_bundle_redirects` receives the full pack scope, so another pack's redirect is no longer misclassified as "pack no longer configured" and spuriously removed.
+
+**Hardware verification (v0.5337, clean slate → 4 songs across 2 packs):**
+1. Crystallized deploy → 3 redirects, validation PASSED.
+2. CycleHit deploy → "Preserving existing custom songs: Crystallized", 4 redirects, both Camelia slots have 4 mode sets.
+3. AllTheGoodGirlsGoToHell (DIFFERENT pack) → "Preserving existing packs with custom songs: camellia", 6 redirects; billieeilish bundle re-deployed alongside camellia; catalog CRC/size verified OK for BOTH packs.
+4. ExitThisEarthsAtomosphere deploy → 7 redirects, validation PASSED.
+5. Pack-bundle inspection: Camelia — 4 mode sets on Crystallized/CycleHit/ExitThisEarthsAtomosphere only (Ghost native 2, LightItUp/WhatTheCat stock 1); Billie — 4 sets on AllTheGoodGirlsGoToHell only. Surgical patching intact.
+
+**Tests:** 581/581 pass. (Note: a concurrent background test run raced with the live PS4 deploys over the shared `pack_modes_bundles/` artifacts and reported 2 transient failures; both pass in isolation and in the post-deploy full-suite run.)
+
+**Version:** Pipeline v0.5337. Plugin unchanged (v0.8042).
+
+**Status:** ✅ **FIXED + HARDWARE-VERIFIED.** Multi-pack install scripts no longer break each other. Awaiting user boot test: expect both packs' custom songs (Mirror on BE's AllTheGoodGirlsGoToHell; Sexy Socialite/Jealous/'Roni on Camelia slots) to redirect and show 4 modes on Hard+.

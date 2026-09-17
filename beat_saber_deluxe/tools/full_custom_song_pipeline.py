@@ -953,7 +953,10 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
 
     # If slots is provided, only keep those slots; otherwise use all configured
     if slots is not None:
-        configured = [s for s in all_configured if s in slots]
+        # Case-insensitive matching: slots from PS4 redirects may have different casing
+        # than mass_deploy.slots (e.g., "Crystallized" vs "crystallized")
+        slots_lower = {s.lower(): s for s in slots}
+        configured = [s for s in all_configured if s.lower() in slots_lower]
         if not configured:
             # Remove all song redirects when slots list is empty (stock state)
             redirects = redirect_data.setdefault('redirects', {})
@@ -974,11 +977,11 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
 
     # When slots is provided, remove redirects for slots NOT in the scope
     if slots is not None:
-        scoped = set(slots)
+        scoped = {s.lower() for s in slots}
         for k in list(redirects):
             if k.startswith('BeatmapLevelsData/'):
                 slot = k[len('BeatmapLevelsData/'):]
-                if slot not in scoped:
+                if slot.lower() not in scoped:
                     log.info(f"  🧹 Removed song redirect (out of scope): {k} -> {redirects[k]}")
                     del redirects[k]
                     changed += 1
@@ -4537,46 +4540,58 @@ Examples:
             deploy_packs = [target_pack]
             log.info(f"ℹ️  Single-song deploy: scoping to pack '{target_pack}' for target '{args.target}'")
 
-        # For scoped deployment, we need to include ALL custom songs in this pack
+        # For scoped deployment, we need to include ALL custom songs from ALL packs
         # so their redirects and pack bundle modifications are preserved.
-        # Download current redirects.json from PS4 to find existing custom songs in this pack.
+        # Download current redirects.json from PS4 to find ALL existing custom songs.
         deploy_slots = [args.target.split('/')[-1]]
-        if target_pack:
-            # Download current redirects.json from PS4 to find existing custom songs
-            ps4_cfg = config.get('ps4', {})
-            cfg_title = config.get('title', {})
-            cfg_paths = config.get('paths', {})
-            host = ps4_cfg.get('ip', '192.168.100.117')
-            port = ps4_cfg.get('ftp_port', 2121)
-            user = ps4_cfg.get('ftp_user', 'anonymous')
-            password = ps4_cfg.get('ftp_password', '')
-            afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
-            title_id = cfg_title.get('id', 'CUSA12878')
-            remote_redirect_path = f"{afr_base}/{title_id}/redirects.json"
+        deploy_packs = [target_pack] if target_pack else None
+        # Download current redirects.json from PS4 to find ALL existing custom songs
+        ps4_cfg = config.get('ps4', {})
+        cfg_title = config.get('title', {})
+        cfg_paths = config.get('paths', {})
+        host = ps4_cfg.get('ip', '192.168.100.117')
+        port = ps4_cfg.get('ftp_port', 2121)
+        user = ps4_cfg.get('ftp_user', 'anonymous')
+        password = ps4_cfg.get('ftp_password', '')
+        afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+        title_id = cfg_title.get('id', 'CUSA12878')
+        remote_redirect_path = f"{afr_base}/{title_id}/redirects.json"
 
-            import tempfile
-            import subprocess as sp
-            with tempfile.TemporaryDirectory() as tmpdir:
-                local_redirect_path = os.path.join(tmpdir, "redirects.json")
-                user_part = f"{user},{password}" if password else f"{user},"
-                cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-                       "-e", f"get {remote_redirect_path} -o {local_redirect_path}; quit"]
-                result = sp.run(cmd, capture_output=True, text=True, timeout=30)
-                if result.returncode == 0 and os.path.exists(local_redirect_path):
-                    try:
-                        with open(local_redirect_path) as f:
-                            ps4_redirects = json.load(f).get('redirects', {})
-                        # Find all custom songs in this pack
-                        for key in ps4_redirects:
-                            if key.startswith('BeatmapLevelsData/'):
-                                slot = key[len('BeatmapLevelsData/'):]
-                                other_pack = _resolve_target_pack(config, slot)
-                                if other_pack == target_pack and slot not in deploy_slots:
-                                    deploy_slots.append(slot)
-                        if len(deploy_slots) > 1:
-                            log.info(f"  Preserving existing custom songs in pack: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
-                    except Exception:
-                        pass  # If download/parse fails, fall back to just the new target
+        import tempfile
+        import subprocess as sp
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_redirect_path = os.path.join(tmpdir, "redirects.json")
+            user_part = f"{user},{password}" if password else f"{user},"
+            cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+                   "-e", f"get {remote_redirect_path} -o {local_redirect_path}; quit"]
+            result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0 and os.path.exists(local_redirect_path):
+                try:
+                    with open(local_redirect_path) as f:
+                        ps4_redirects = json.load(f).get('redirects', {})
+                    # Find ALL custom songs (from any pack) and their packs
+                    other_packs = set()
+                    for key in ps4_redirects:
+                        if key.startswith('BeatmapLevelsData/'):
+                            slot = key[len('BeatmapLevelsData/'):]
+                            if slot not in deploy_slots:
+                                deploy_slots.append(slot)
+                            # Also track which pack this slot belongs to
+                            other_pack = _resolve_target_pack(config, slot)
+                            if other_pack and other_pack not in (deploy_packs or []):
+                                other_packs.add(other_pack)
+                    # Include all packs that have existing custom songs
+                    if other_packs:
+                        if deploy_packs is None:
+                            deploy_packs = []
+                        for p in other_packs:
+                            if p not in deploy_packs:
+                                deploy_packs.append(p)
+                        log.info(f"  Preserving existing packs with custom songs: {', '.join(other_packs)}")
+                    if len(deploy_slots) > 1:
+                        log.info(f"  Preserving existing custom songs: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
+                except Exception:
+                    pass  # If download/parse fails, fall back to just the new target
 
         # Determine which modes to enable for this pack bundle.
         # We only want to add extra modes for the custom song(s) being deployed,

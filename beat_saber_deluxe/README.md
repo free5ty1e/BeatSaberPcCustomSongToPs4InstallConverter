@@ -1,8 +1,13 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8042 / v0.5336)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8042 / v0.5337)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
 This document covers pipeline-specific details. See the **[main README](../README.md)** for project overview, requirements, and quick start.
+
+## v0.5337 Highlights
+
+- **Multi-pack deploys preserve every pack's custom songs** — Deploying a song into one music pack no longer removes custom songs previously deployed into OTHER packs. The pipeline downloads the PS4 `redirects.json`, preserves every existing custom song (case-insensitive slot matching), and re-deploys each affected pack's patched bundle incrementally so all packs stay in the merged catalog.
+- **Multi-song incremental deploy within a pack** — Each `--deploy-full` adds the new song while preserving all previously deployed songs in that pack.
 
 ## v0.5336 Highlights
 

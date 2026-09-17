@@ -1,5 +1,15 @@
 # Pipeline Changelog
 
+## v0.5337 (2026-09-16)
+### Fixed
+- **Multi-pack deploys destroyed other packs' custom songs** — Running one pack's install script (e.g. Camelia) removed the custom songs of every OTHER pack (e.g. Billie Eilish) deployed earlier. Two root causes:
+  1. **Cross-pack slot scoping:** `deploy_slots` only collected custom songs from the TARGET pack; `_ensure_mass_song_redirects` then treated all other packs' song redirects as "out of scope" and deleted them. Now `deploy_slots` collects ALL custom songs found in the PS4 `redirects.json` (any pack), and `deploy_packs` is extended with every pack that has existing custom songs — so deploying a billieeilish song preserves and re-deploys camellia's patched bundle too.
+  2. **Case-sensitive slot matching:** slots discovered from PS4 redirects use the game's casing (`Crystallized`) while `mass_deploy.slots` uses lowercase (`crystallized`). The `s in slots` / `songID in target_slots` comparisons matched nothing, so `_ensure_mass_song_redirects` fell into the "empty slot scope" branch and deleted ALL song redirects. Both comparisons are now case-insensitive (`_ensure_mass_song_redirects` in the pipeline, `patch_pack_bundle` in the builder).
+- Also fixed the stale-pack-redirect removal that fired spuriously during multi-pack deploys: `_ensure_pack_bundle_redirects` now receives the full pack scope (target pack + preserved packs), so another pack's redirect is no longer misclassified as "no longer configured".
+
+### Changed
+- Single-song deploy log now reports `Preserving existing packs with custom songs: ...` alongside the preserved song slots, making cross-pack state visible during incremental installs.
+
 ## v0.5336 (2026-09-15)
 ### Fixed
 - **Second song deployment obliterates first custom song** — When deploying a second song to the same music pack, the first custom song's bundle and redirect were being removed because `deploy_slots` only included the new target. Fixed by downloading the current `redirects.json` from PS4 before each deploy to discover ALL existing custom songs in the target pack, then including them in `deploy_slots` so their redirects and pack bundle modifications are preserved.

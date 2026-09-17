@@ -1,14 +1,14 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-09-15
-**Status:** 🟢 **EXP 216 (v0.5336): Complete multi-song incremental `--deploy-full` working.** Fixed critical bugs from sequential single-song deploys:
-1. **Second song overwrites first** (v0.5336): `deploy_slots` now downloads current `redirects.json` from PS4 to discover ALL existing custom songs in target pack, includes them in deployment scope.
-2. **Artist name restored for entire pack on clear** (v0.5335): `--clear-target-song` only restores artist metadata when NO custom songs remain in the pack.
-3. **`--clear-target-song` UnboundLocalError** (v0.5335): Fixed `other_custom_in_pack` initialization before conditional blocks.
-4. **Pack bundle not incrementally patched** (v0.5335): `deploy_pack_bundle()` now downloads existing PS4 patched bundle before each deploy for incremental patching.
+**Last Updated:** 2026-09-16
+**Status:** 🟢 **EXP 217 (v0.5337): Multi-pack install scripts no longer break each other.** Running one pack's install script previously deleted all OTHER packs' custom songs (user's Billie Eilish customs reverted to stock after running the Camelia script). Two root causes fixed:
+1. **Case-sensitive slot matching** — slots discovered from PS4 `redirects.json` use game casing (`Crystallized`) while `mass_deploy.slots` uses lowercase (`crystallized`); membership tests matched nothing, so the "empty slot scope" branch deleted ALL song redirects. All comparisons now case-insensitive (pipeline `_ensure_mass_song_redirects` + builder `patch_pack_bundle`).
+2. **Cross-pack slot scoping** — `deploy_slots` only collected the target pack's songs, so other packs' redirects were "out of scope" and removed. Now collects ALL custom songs from PS4 redirects.json and extends `deploy_packs` with every pack owning one, re-deploying their patched pack bundles incrementally.
 
-**Plugin v0.8042:** Added `enable_beatmap_mode_mapping` runtime feature flag gating visibility of extra mode sets in mode selector UI. OFF (default when missing) = all songs show only Standard (safe for partial deploys). ON = custom songs with patched mode sets show all 4 modes; stock songs show only Standard.
+**Hardware-verified (v0.5337):** clean slate → 4 songs across 2 packs (3 Camelia + 1 BE), 7 redirects, catalog CRC/size OK for both packs, surgical patching confirmed (4 mode sets only on custom slots). 581/581 tests.
 
-**All 30 example scripts** fixed for syntax errors and verified running with PS4 state check + user confirmation prompt. 581 tests pass.
+**Prior (Exp 216, v0.5334-0.5336):** second-song overwrite within a pack, artist restore on clear, `--clear-target-song` crash, incremental pack patching — all fixed and hardware-verified.
+
+**Plugin v0.8042:** `enable_beatmap_mode_mapping` runtime feature flag gates visibility of extra mode sets in mode selector UI.
 - **EXP 192 (v0.5323): OneSaber mode FIXED** — notes were forced to the WRONG (LEFT/red) saber; now RIGHT/blue (2026-08-16). User did real in-headset play: **90° and No-Arrows are fun and working**; OneSaber was broken because `_generate_one_saber` used `_ONE_SABER_COLOR = 0` (LEFT/red) while OneSaber is played with the RIGHT (blue) saber — so every red note was unplayable. **FIXED:** flipped `_ONE_SABER_COLOR = 1` (RIGHT/blue) in `tools/full_custom_song_pipeline.py`; regenerated all 33 buggy red OneSaber `.dat` files from their Standard sources via `development/scripts/regenerate_onesaber_blue.py` (15 already-blue/mapper-authored maps untouched; **0 red OneSaber files remain**). Captured durable knowledge in new KB page [[saber-colors-and-one-saber]] (LEFT=Red, RIGHT=Blue; OneSaber is RIGHT/blue-only). 451/451 tests. **SOURCE `.dat` FIXED — NEXT: rebuild + redeploy the 38 custom-song bundles** so the corrected blue OneSaber notes reach the PS4 (pack bundles are unaffected — pack OneSaber clones Standard, not generated).
 - **EXP 191 (v0.5322) context:** "STILL crashes" was root-caused to the fixed catalog NEVER being deployed (stale broken build on PS4). Deployed fixed catalog (md5 `975bacca…`, 0 invalid) + hardened `--verify-ps4` (check #7 validates deployed catalog dataIndex integrity + md5 + per-pack CRC/size). Removed legacy `pack_bundle` prototype from default config.
 - v0.8040 `open()` hook redirects `aa/catalog.json` (OPEN #58 confirmed in Exp 178)

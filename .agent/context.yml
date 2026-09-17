@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8042"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8042 adds enable_beatmap_mode_mapping feature flag support (reads from features.json at runtime)
-pipeline_version: "0.5336" # in beat_saber_deluxe/VERSION - Exp 214+ fixes: single-song --deploy-full end-to-end working; second song no longer overwrites first; clear-target-song works correctly; all 30 example scripts verified; 581 tests pass
+pipeline_version: "0.5337" # in beat_saber_deluxe/VERSION - Exp 217 fix: multi-pack deploys preserve other packs' custom songs (case-insensitive slot matching + cross-pack scoping). Single-song --deploy-full end-to-end working; incremental pack patching verified on hardware
 
 # Platform Constraints
 target_platform: PS4
