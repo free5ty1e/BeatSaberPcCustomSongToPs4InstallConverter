@@ -33,19 +33,30 @@ Converts every color note to a dot:
 Bombs keep their direction (they aren't cut). Only `_type` 0/1 color notes change.
 
 ### `_generate_one_saber`
-Recolors every color note to the single saber color. **OneSaber is played
-exclusively with the RIGHT (blue) saber** (see [[saber-colors-and-one-saber]]),
-so the forced color is RIGHT/BLUE, never red:
-- V2: `_type = 1`
-- V3: `c = 1` / `a = 1`
-The constant `_ONE_SABER_COLOR = 1` (it was `0`/red before v0.5323 — that bug
-made generated OneSaber maps unplayable because red notes cannot be hit by the
-right saber).
+Recolors every color note to the single saber color AND converts it to a dot
+(Exp 218 — the user-facing OneSaber convention on this setup is **blue dots**;
+arrows read as "still Standard"):
+- Color → RIGHT/BLUE, never red (see [[saber-colors-and-one-saber]]):
+  - V2: `_type = 1`
+  - V3: `c = 1` / `a = 1`
+  - The constant `_ONE_SABER_COLOR = 1` (it was `0`/red before v0.5323 — that bug
+    made generated OneSaber maps unplayable because red notes cannot be hit by the
+    right saber).
+- Direction → dot:
+  - V2: `_cutDirection = 8`
+  - V3: `d = 8`
+- **Bombs pass through untouched** (color 3 is never recolored or dot-converted).
 Then removes notes a single saber cannot hit:
 - **Simultaneous notes** (same beat) — only the first survives.
-- **Same-cell arrowed notes closer than `min_gap` beats** (default 0.25) — later
-  note removed; dots after arrows are kept (a dot has no forced direction).
-CLI: `--one-saber-min-gap` (default `_ONE_SABER_MIN_GAP = 0.25`).
+- The same-cell `min_gap` rule was **removed in Exp 218** (moot once every note
+  is a dot; CLI `--one-saber-min-gap` is accepted but only used for the
+  simultaneous-note ordering edge cases).
+
+**Mapper-authored `<Diff>OneSaber.dat` files are normalized too:** the
+injection path in `add_mode_characteristics()` runs every OneSaber chart
+(including ones the song ships) through `_generate_one_saber()` before writing
+the TextAsset — charts that arrive with mixed colors/directions (e.g. Jealous's
+ExpertOneSaber.dat, dirs 0–8, red notes) deploy as blue dots.
 
 ### `_generate_90_degree`
 - V2 sources are first converted to V3 via `convert_v2_to_v3` (bpm carried into

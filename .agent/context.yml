@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8042"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8042 adds enable_beatmap_mode_mapping feature flag support (reads from features.json at runtime)
-pipeline_version: "0.5337" # in beat_saber_deluxe/VERSION - Exp 217 fix: multi-pack deploys preserve other packs' custom songs (case-insensitive slot matching + cross-pack scoping). Single-song --deploy-full end-to-end working; incremental pack patching verified on hardware
+pipeline_version: "0.5338" # in beat_saber_deluxe/VERSION - Exp 218: song-quality fixes — fill_missing_standard_difficulties() (no stock beatmaps left in missing-diff slots), Info.dat BPM is the authoritative bpmData grid (old max_beat heuristic undershot trailing-tail maps), OneSaber = blue dots (generator + injection normalization). Single-song --deploy-full + multi-pack preservation both working.
 
 # Platform Constraints
 target_platform: PS4

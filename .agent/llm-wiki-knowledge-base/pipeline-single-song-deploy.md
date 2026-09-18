@@ -109,3 +109,25 @@ target slot is added on top.
 across packs (6, "Preserving existing packs with custom songs: camellia") →
 ExitThisEarthsAtomosphere (7). Catalog CRC/size verified matching for BOTH packs; pack-bundle
 inspection confirmed 4 mode sets on exactly the custom slots and stock slots untouched.
+## Song-Quality Invariants (v0.5338, Exp 218)
+
+Every `--deploy-full` now guarantees three content invariants on the deployed
+per-song bundle:
+
+1. **All 5 Standard slots carry custom content.** Maps providing fewer than 5
+   difficulties previously left the STOCK beatmap in unreplaced TextAssets —
+   stock timing over custom audio ("BPM wayyy too slow, notes wayyy too late"
+   on the user's played difficulty). `fill_missing_standard_difficulties()`
+   (Step 5a-0, before mode detection/generation/replacement) clones the map's
+   own closest harder difficulty (else closest easier) into `<Diff>.dat` for
+   each missing difficulty. Never overwrites provided files; never uses mode
+   files (OneSaber/NoArrows/90Degree) as donors (a OneSaber chart cloned into
+   a Standard slot would be all-blue dots).
+2. **bpmData uses Info.dat `_beatsPerMinute` as the beat grid.**
+   `eb = duration × bpm / 60`, extended only if a note lands beyond that grid.
+   The old `max_beat × 60 / audio_duration` heuristic undershot BPM by the
+   trailing-tail fraction of every map with an outro (see
+   [[beatmap-audio-sync]]).
+3. **OneSaber TextAssets are blue dots.** Generated AND mapper-authored charts
+   are normalized through `_generate_one_saber()` at injection (see
+   [[saber-colors-and-one-saber]]); bombs pass through.

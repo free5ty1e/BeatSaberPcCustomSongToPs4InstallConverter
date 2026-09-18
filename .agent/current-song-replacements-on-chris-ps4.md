@@ -61,14 +61,21 @@
 
 ## Camellia Music Pack Replacements (6 songs — Chromeo Expansion)
 
+> **v0.5338 (Exp 218) note:** all six slots now deploy with every Standard
+> difficulty filled from the map's own content (maps providing fewer than 5
+> diffs previously left stock charts in the missing slots — the source maps
+> provide: Sexy Socialite E+ only; Jealous/'Roni Easy+Expert; Green Light E+
+> only; 1999 E/H/Ex/E+; FANCY 4/5), bpmData on the true Info.dat BPM grid, and
+> OneSaber as blue dot notes.
+
 | # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
 |---|---------|-------------|--------|-----|------------------|----------|------------|------|
-| 1 | `Crystallized` | Sexy Socialite | Chromeo | 142 | 6f1f | 5/5 | 1.8s | ✅ |
-| 2 | `CycleHit` | Jealous (I Ain't With It) | Chromeo | 129 | 111fd | 5/5 | 2.1s | ✅ |
-| 3 | `ExitThisEarthsAtomosphere` | 'Roni Got Me Stressed Out | Chromeo | 117 | 115ba | 5/5 | 2.2s | ✅ |
-| 4 | `Ghost` | Green Light (Chromeo Remix) | Lorde, Chromeo | 121 | 37d5 | 5/5 | 1.9s | ✅ |
-| 5 | `LightItUp` | 1999 | Charli XCX & Troye Sivan | 124 | 5352 | 5/5 | 1.9s | ✅ |
-| 6 | `WhatTheCat` | FANCY | TWICE | 132 | 47f3 | 5/5 | 2.3s | ✅ |
+| 1 | `Crystallized` | Sexy Socialite | Chromeo | 142 | 6f1f | 5/5 | 1.8s | ✅ (v0.5338) |
+| 2 | `CycleHit` | Jealous (I Ain't With It) | Chromeo | 129 | 111fd | 5/5 | 2.1s | ✅ (v0.5338) |
+| 3 | `ExitThisEarthsAtomosphere` | 'Roni Got Me Stressed Out | Chromeo | 117 | 115ba | 5/5 | 2.2s | ✅ (v0.5338) |
+| 4 | `Ghost` | Green Light (Chromeo Remix) | Lorde, Chromeo | 121 | 37d5 | 5/5 | 1.9s | ✅ (v0.5338) |
+| 5 | `LightItUp` | 1999 | Charli XCX & Troye Sivan | 124 | 5352 | 5/5 | 1.9s | ✅ (v0.5338) |
+| 6 | `WhatTheCat` | FANCY | TWICE | 132 | 47f3 | 5/5 | 2.3s | ✅ (v0.5338) |
 
 ## Total: 38 Custom Songs Deployed
 

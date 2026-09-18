@@ -361,18 +361,42 @@ def _scan_beatmap_max_beat(song_dir: str) -> float:
     return max_beat
 
 
+def _read_info_bpm(song_dir: str) -> float | None:
+    """Read _beatsPerMinute from Info.dat/info.dat, or None if unavailable."""
+    for fname in ("Info.dat", "info.dat"):
+        info_path = os.path.join(song_dir, fname)
+        if os.path.exists(info_path):
+            try:
+                with open(info_path) as f:
+                    info = json.load(f)
+                bpm = float(info.get("_beatsPerMinute", info.get("beatsPerMinute", 0)) or 0)
+                if bpm > 0:
+                    return bpm
+            except Exception:
+                pass
+    return None
+
+
 def load_bpm_regions(song_dir: str, sample_count: int) -> list:
     """
-    Load BPM region data from BPMInfo.dat (preferred) or compute from beatmap data.
+    Load BPM region data from BPMInfo.dat (preferred) or compute from Info.dat BPM.
 
     The bpmData maps sample ranges to beat ranges. This is CRITICAL for sync:
     the game converts beatmap 'b' values (in beats) to time positions using
     these regions. If eb is in seconds instead of beats, the tempo is halved
     at 120 BPM, causing progressive desync.
 
-    IMPORTANT: Many BeatSaver mappers use a BPM slightly different from Info.dat's
-    _beatsPerMinute when placing notes. We detect this by scanning the beatmap
-    files for the highest _time/b value and using it to compute the effective BPM.
+    The mapper's beat grid IS Info.dat's _beatsPerMinute — notes are placed on
+    that grid by the editor, so beat B of the map falls at B*60/bpm seconds in
+    the audio regardless of how much trailing silence the audio has (Exp 218:
+    the old `max_beat*60/audio_duration` heuristic undershot BPM by the
+    trailing-silence fraction of every map with an outro — 'Roni 112.1 vs the
+    real 117 → notes 9s late by song end, "BPM wayyy too slow").
+
+    The beatmap max-beat scan is kept ONLY as a guard: if a map's last note
+    lands beyond the Info.dat grid (mapper used a different BPM than declared,
+    or BPMInfo.dat's regions end early), extend eb to cover it so high beats
+    still resolve inside the audio.
 
     Returns list of {"si": startSampleIndex, "ei": endSampleIndex,
                      "sb": startBeat, "eb": endBeat} dicts.
@@ -394,26 +418,32 @@ def load_bpm_regions(song_dir: str, sample_count: int) -> list:
                 for r in regions
             ]
 
-    # Scan beatmap files to find the highest beat value (mapper's actual timing)
+    duration = sample_count / SAMPLE_RATE
+
+    # Authoritative grid: Info.dat _beatsPerMinute (the mapper's editor grid).
+    info_bpm = _read_info_bpm(song_dir)
+
+    # Guard: cover any notes placed beyond the declared grid.
     max_beat = _scan_beatmap_max_beat(song_dir)
 
-    # If we found beatmap data, use the max beat to compute the effective BPM
-    duration = sample_count / SAMPLE_RATE
-    if max_beat > 0:
-        # total_beats = the beatmap's last beat value
-        total_beats = max_beat
-        eff_bpm = total_beats * 60.0 / duration
-        log.info(f"  Beatmap-based BPM: {eff_bpm:.1f} (from last beat={total_beats:.1f}, audio={duration:.1f}s)")
+    if info_bpm:
+        total_beats = duration * info_bpm / 60.0
+        if max_beat > total_beats:
+            # Notes exist beyond the Info.dat grid — the mapper's real tempo is
+            # faster than declared. Scale to cover the last note exactly.
+            log.info(f"  Note beyond Info.dat grid (last beat {max_beat:.1f} > "
+                     f"grid {total_beats:.1f}) — extending eb to cover it")
+            total_beats = max_beat
+        log.info(f"  Info.dat BPM grid: {info_bpm} (total_beats={total_beats:.1f}, audio={duration:.1f}s)")
+    elif max_beat > 0:
+        # No Info.dat BPM available — fall back to the beatmap-derived estimate.
+        eff_bpm = max_beat * 60.0 / duration
+        total_beats = duration * eff_bpm / 60.0
+        log.info(f"  Beatmap-based BPM fallback: {eff_bpm:.1f} (from last beat={max_beat:.1f}, audio={duration:.1f}s)")
     else:
-        # Absolute fallback: use Info.dat BPM
-        info_path = os.path.join(song_dir, "Info.dat")
-        bpm = 120.0
-        if os.path.exists(info_path):
-            with open(info_path) as f:
-                info = json.load(f)
-            bpm = float(info.get("_beatsPerMinute", 120.0))
-        total_beats = duration * bpm / 60.0
-        log.info(f"  Info.dat BPM fallback: {bpm} (total_beats={total_beats:.1f})")
+        # Absolute fallback: assume 120 BPM
+        total_beats = duration * 2.0
+        log.info(f"  No BPM data — assuming 120 BPM (total_beats={total_beats:.1f})")
 
     return [{"si": 0, "ei": sample_count, "sb": 0.0, "eb": total_beats}]
 
@@ -1273,6 +1303,14 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
                             # Fix empty bpmEvents (same fallback as replace_beatmaps)
                             if not bm_data.get('bpmEvents'):
                                 bm_data['bpmEvents'] = [{"b": 0, "m": bpm}]
+                            # OneSaber normalization (Exp 218): even mapper-authored
+                            # charts must be blue-only + dots — the user-facing
+                            # OneSaber convention on this setup. Maps that ship
+                            # their own *OneSaber.dat (e.g. Jealous, 'Roni) had
+                            # mixed colors and directional arrows.
+                            if mode == "OneSaber":
+                                bm_data = _generate_one_saber(bm_data)
+                                log.info(f"  {mode}/{diff}: normalized to blue dots")
                             json_bytes = json.dumps(bm_data,
                                                     separators=(',', ':')).encode('utf-8')
                             gz_bytes = gzip.compress(json_bytes)
@@ -1374,11 +1412,13 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
 
     - Recolors every color note to a single saber color (1 / right — OneSaber
       is played exclusively with the right/blue saber).
+    - Converts every note to a DOT (d/_cutDirection = 8). The user-facing
+      OneSaber experience on this setup is dots-only (Exp 218: "one saber
+      mode ... still had arrows on the note boxes" — mapper-authored OneSaber
+      charts and Standard-clone fallbacks both kept directional arrows).
+      Dots also remove the same-cell arrow-collision constraint entirely.
     - Removes notes that are impossible to hit with one saber:
-      * simultaneous notes (one saber can only cut one note per instant), and
-      * arrowed notes closer than ``min_gap`` beats to an earlier note in the
-        same (line, layer) cell (one directional swing cannot clean two
-        arrows in the same cell that quickly).
+      simultaneous notes (one saber can only cut one note per instant).
 
     The input dict is not modified (a deep copy is returned).
     """
@@ -1390,40 +1430,31 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
     v3 = _is_v3_beatmap(out)
 
     def _time(n): return float(n.get("b", 0.0) if v3 else n["_time"])
-    def _line(n): return int(n.get("x", 0) if v3 else n.get("_lineIndex", 0))
-    def _layer(n): return int(n.get("y", 0) if v3 else n.get("_lineLayer", 0))
-    def _dir(n): return int(n.get("d", 0) if v3 else n.get("_cutDirection", 0))
     def _is_bomb(n):
         return (int(n.get("c", 0)) if v3 else int(n.get("_type", 0))) == 3
 
     occupied_times = set()                    # beats already claimed by a kept note
-    last_keep: dict[tuple, tuple] = {}        # (line, layer) -> (time, note)
 
     kept = []
-    for note in sorted(out_notes, key=lambda n: (_time(n), _line(n), _layer(n))):
+    for note in sorted(out_notes, key=_time):
         if _is_bomb(note):
             kept.append(note)
             continue
         t = _time(note)
-        line = _line(note)
-        layer = _layer(note)
         # One saber can only hit one note at a given instant.
         if t in occupied_times:
             continue
-        # Same-cell arrowed notes too close together for a single rebound swing.
-        prev = last_keep.get((line, layer))
-        if prev is not None and t - prev[0] < min_gap:
-            if _dir(prev[1]) != 8 and _dir(note) != 8:
-                continue
-        # Recolor to the single saber color.
+        # Recolor to the single saber color and convert to a DOT (Exp 218:
+        # arrows in generated OneSaber read as "still Standard" to the user).
         if v3:
             note["c"] = _ONE_SABER_COLOR
             note["a"] = _ONE_SABER_COLOR
+            note["d"] = 8
         else:
             note["_type"] = _ONE_SABER_COLOR
+            note["_cutDirection"] = 8
         kept.append(note)
         occupied_times.add(t)
-        last_keep[(line, layer)] = (t, note)
 
     if v3:
         out["colorNotes"] = kept
@@ -1495,6 +1526,83 @@ _MODE_GENERATORS = {
     "OneSaber": _generate_one_saber,
     "90Degree": _generate_90_degree,
 }
+
+
+def fill_missing_standard_difficulties(song_dir: str) -> list[str]:
+    """
+    Materialize a Standard beatmap file for every difficulty the source map
+    does not provide, cloned from the map's own closest difficulty.
+
+    Why (Exp 218): every difficulty slot in the target bundle corresponds to a
+    TextAsset that the pipeline replaces ONLY when a matching source file
+    exists. Missing diffs left the STOCK beatmap in place — timed for the stock
+    song's BPM/grid but played over the CUSTOM audio ("BPM wayyy too slow,
+    notes wayyy too late"). This must run BEFORE mode generation (which gates
+    on a Standard source per diff) and BEFORE beatmap replacement.
+
+    Donor choice: the closest HARDER difficulty (playing up is safer than
+    down); if none, the closest easier one. Never overwrites an existing file.
+
+    Returns list of written file names.
+    """
+    beatmap_files = [f for f in sorted(os.listdir(song_dir))
+                     if f.endswith(('.dat', '.json'))]
+    # Which difficulties does the map provide a Standard source for?
+    have = set()
+    for diff in DIFFICULTIES:
+        if _select_beatmap_file(diff, beatmap_files, ignore_non_standard=True):
+            have.add(diff)
+
+    written = []
+    for idx, diff in enumerate(DIFFICULTIES):
+        if diff in have:
+            continue
+        # Closest harder diff first (Hard missing -> Expert, ExpertPlus);
+        # else closest easier (Easy missing -> Normal).
+        donor_diff = None
+        for j in range(idx + 1, len(DIFFICULTIES)):
+            if DIFFICULTIES[j] in have:
+                donor_diff = DIFFICULTIES[j]
+                break
+        if donor_diff is None:
+            for j in range(idx - 1, -1, -1):
+                if DIFFICULTIES[j] in have:
+                    donor_diff = DIFFICULTIES[j]
+                    break
+        if donor_diff is None:
+            log.warning(f"  No donor difficulty for missing '{diff}' — skipping")
+            continue
+
+        donor_file = _select_beatmap_file(donor_diff, beatmap_files,
+                                          ignore_non_standard=True)
+        if not donor_file and donor_diff in have:
+            # Donor was itself just filled this run — refresh the file list
+            # so the newly written donor file can be selected.
+            beatmap_files = [f for f in sorted(os.listdir(song_dir))
+                             if f.endswith(('.dat', '.json'))]
+            donor_file = _select_beatmap_file(donor_diff, beatmap_files,
+                                              ignore_non_standard=True)
+        if not donor_file:
+            continue
+        src_path = os.path.join(song_dir, donor_file)
+        try:
+            with open(src_path, 'r', encoding='utf-8') as fh:
+                data = json.load(fh)
+        except Exception as e:
+            log.warning(f"  Could not read donor {src_path}: {e}")
+            continue
+
+        out_name = f"{diff}.dat"
+        out_path = os.path.join(song_dir, out_name)
+        if os.path.exists(out_path):
+            continue
+        with open(out_path, 'w', encoding='utf-8') as fh:
+            json.dump(data, fh)
+        written.append(out_name)
+        have.add(diff)
+        log.info(f"  Filled missing difficulty '{diff}' <- cloned from "
+                 f"'{donor_file}' (map provides no {diff} chart)")
+    return written
 
 
 def generate_missing_mode_beatmaps(
@@ -4394,6 +4502,16 @@ Examples:
     mode_map_detected = {}
     mode_map_enabled_modes = ["Standard"]
     generated = []
+
+    # Step 5a-0: Fill missing Standard difficulties FIRST (Exp 218). Maps that
+    # provide fewer than 5 diffs would otherwise leave the STOCK beatmap in the
+    # unreplaced bundle slots — stock timing over custom audio = "notes wayyy
+    # too late / BPM too slow". Clones the map's closest difficulty so every
+    # slot gets content on the custom song's own beat grid.
+    filled = fill_missing_standard_difficulties(args.song_dir)
+    if filled:
+        log.info(f"  Filled missing Standard difficulties: {filled}")
+
     if resolve_mode_mapping(disable_beatmap_mode_mapping=args.disable_beatmap_mode_mapping):
         log.info("  Beatmap mode mapping enabled (default) — auto-detecting modes...")
         mode_map_detected = detect_song_modes(args.song_dir)

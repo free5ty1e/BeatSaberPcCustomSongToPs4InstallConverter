@@ -29,6 +29,16 @@ and a blue note only by the right saber.
   hit by the (only) right saber, so they register as misses and the chart is
   effectively broken.
 
+## OneSaber Notes Are DOTS (user-facing convention, Exp 218)
+
+The user expects OneSaber notes **without cut-direction arrows** ("one saber
+mode ... still had arrows on the note boxes" was filed as a bug). Since
+v0.5338, `_generate_one_saber()` sets `d = 8` / `_cutDirection = 8` on every
+color note in addition to the blue recolor, and the injection path in
+`add_mode_characteristics()` normalizes **mapper-authored** OneSaber charts
+through the generator too (they can arrive with mixed colors and dirs 0–7).
+Bombs pass through untouched.
+
 ## The Pipeline Bug We Hit (and Fixed)
 
 Our procedural OneSaber generator (`_generate_one_saber` in

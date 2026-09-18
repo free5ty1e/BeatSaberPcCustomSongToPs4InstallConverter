@@ -59,12 +59,15 @@ class TestOneSaberGenerator(unittest.TestCase):
         self.assertEqual(len(gen["_notes"]), 1)
 
     def test_drops_close_same_cell_arrowed_notes(self):
+        # Since Exp 218 every OneSaber note becomes a dot, so close same-cell
+        # notes no longer collide at all — both survive (as dots).
         data = {"_version": "2.0.0", "_notes": [
             {"_time": 1.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 1},
             {"_time": 1.125, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 2},
         ]}
         gen = _generate_one_saber(data, min_gap=0.25)
-        self.assertEqual(len(gen["_notes"]), 1)
+        self.assertEqual(len(gen["_notes"]), 2)
+        self.assertTrue(all(n["_cutDirection"] == 8 for n in gen["_notes"]))
 
     def test_keeps_dots_near_arrows(self):
         # A dot after an arrow in the same cell is fine (any swing hits it).
@@ -99,6 +102,36 @@ class TestOneSaberGenerator(unittest.TestCase):
         self.assertTrue(all(n.get("c", 1) == 1 for n in gen["colorNotes"]))
         gen = _generate_no_arrows(data)
         self.assertTrue(all(n["d"] == 8 for n in gen["colorNotes"]))
+
+    def test_notes_become_dots(self):
+        # Exp 218: OneSaber is dots-only on this setup — arrows read as
+        # "still Standard" to the user.
+        data = {"_version": "2.0.0", "_notes": [
+            {"_time": 1.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 0, "_cutDirection": 1},
+            {"_time": 2.0, "_lineIndex": 1, "_lineLayer": 1, "_type": 1, "_cutDirection": 7},
+        ]}
+        gen = _generate_one_saber(data)
+        self.assertTrue(all(n["_cutDirection"] == 8 for n in gen["_notes"]))
+
+    def test_v3_notes_become_dots(self):
+        data = {"version": "3.2.0", "colorNotes": [
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 3},
+            {"b": 2.0, "x": 1, "y": 1, "c": 1, "d": 5},
+        ]}
+        gen = _generate_one_saber(data)
+        self.assertTrue(all(n["d"] == 8 for n in gen["colorNotes"]))
+        self.assertTrue(all(n["c"] == 1 for n in gen["colorNotes"]))
+
+    def test_bombs_kept_as_bombs(self):
+        # Bombs pass through untouched (color 3 must not be recolored).
+        data = {"version": "3.2.0", "colorNotes": [
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1},
+            {"b": 2.0, "x": 1, "y": 1, "c": 3, "d": 0},
+        ]}
+        gen = _generate_one_saber(data)
+        self.assertEqual(len(gen["colorNotes"]), 2)
+        self.assertEqual(gen["colorNotes"][1]["c"], 3)
+        self.assertEqual(gen["colorNotes"][0]["d"], 8)
 
     def test_input_not_mutated(self):
         data = {"_version": "2.0.0", "_notes": [V2_NOTE]}

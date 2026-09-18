@@ -1,10 +1,15 @@
 # Project Summary: Beat Saber PS4 Custom Song Support
-**Last Updated:** 2026-09-16
-**Status:** 🟢 **EXP 217 (v0.5337): Multi-pack install scripts no longer break each other.** Running one pack's install script previously deleted all OTHER packs' custom songs (user's Billie Eilish customs reverted to stock after running the Camelia script). Two root causes fixed:
-1. **Case-sensitive slot matching** — slots discovered from PS4 `redirects.json` use game casing (`Crystallized`) while `mass_deploy.slots` uses lowercase (`crystallized`); membership tests matched nothing, so the "empty slot scope" branch deleted ALL song redirects. All comparisons now case-insensitive (pipeline `_ensure_mass_song_redirects` + builder `patch_pack_bundle`).
-2. **Cross-pack slot scoping** — `deploy_slots` only collected the target pack's songs, so other packs' redirects were "out of scope" and removed. Now collects ALL custom songs from PS4 redirects.json and extends `deploy_packs` with every pack owning one, re-deploying their patched pack bundles incrementally.
+**Last Updated:** 2026-09-17
+**Status:** 🟢 **EXP 218 (v0.5338): Camelia song-quality fixes — partial-difficulty maps, BPM grid, OneSaber dots.** After the Exp 217 multi-pack fix was confirmed working (user installed the full Camelia pack from clean slate with nothing breaking), the user reported the four Chromeo-mapped songs played "wayyy too slow / notes wayyy too late" with arrows in OneSaber, while 1999/FANCY were fine. Three root causes fixed:
+1. **Swiss-cheese difficulty slots** — maps providing fewer than 5 difficulties left STOCK beatmaps in the unreplaced bundle slots (user plays **Hard**; Sexy Socialite/Green Light ship ExpertPlus only, Jealous/'Roni ship Easy+Expert → Hard was stock timing over custom audio). New `fill_missing_standard_difficulties()` clones the map's own closest difficulty into every missing slot before replacement/mode generation.
+2. **v0.52 eff-BPM heuristic undershot every map with a trailing tail** — `max_beat×60/audio_duration` stretched the mapper's grid across trailing silence ('Roni 112.1 vs the true 117 → 9s late by song end). Info.dat `_beatsPerMinute` is now the authoritative grid; the max-beat scan remains only as a beyond-grid guard.
+3. **OneSaber arrows** — the generator kept cut directions, and mapper-authored `*OneSaber.dat` (mixed dirs, red notes) injected verbatim. OneSaber is now blue DOTS: the generator sets d=8 and every OneSaber injection is normalized through `_generate_one_saber()`. Bombs pass through.
 
-**Hardware-verified (v0.5337):** clean slate → 4 songs across 2 packs (3 Camelia + 1 BE), 7 redirects, catalog CRC/size OK for both packs, surgical patching confirmed (4 mode sets only on custom slots). 581/581 tests.
+Verified against all six cached Camelia sources (eb = exact Info.dat grid on all six; Jealous's mapper OneSaber → all-blue dots). 595/595 tests. **Awaiting redeploy + user retest.**
+
+**Prior (Exp 217, v0.5337):** multi-pack install scripts no longer break each other — case-insensitive slot matching + cross-pack deploy scoping; hardware-verified with 4 songs across 2 packs, catalog CRC/size OK for both packs.
+
+**Plugin v0.8042:** `enable_beatmap_mode_mapping` runtime feature flag gates visibility of extra mode sets in mode selector UI.
 
 **Prior (Exp 216, v0.5334-0.5336):** second-song overwrite within a pack, artist restore on clear, `--clear-target-song` crash, incremental pack patching — all fixed and hardware-verified.
 

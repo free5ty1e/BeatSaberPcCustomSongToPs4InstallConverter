@@ -696,3 +696,45 @@ After that first deploy, redirects.json held only 2 entries (catalog + one pack 
 **Version:** Pipeline v0.5337. Plugin unchanged (v0.8042).
 
 **Status:** ✅ **FIXED + HARDWARE-VERIFIED.** Multi-pack install scripts no longer break each other. Awaiting user boot test: expect both packs' custom songs (Mirror on BE's AllTheGoodGirlsGoToHell; Sexy Socialite/Jealous/'Roni on Camelia slots) to redirect and show 4 modes on Hard+.
+
+---
+
+### Experiment 218 — Camelia Song Quality: Stock Beatmaps in Unfilled Slots + Undershot BPM Grid + Arrows in OneSaber
+- **Date:** 2026-09-17
+- **User report (full Camelia pack installed from clean slate, Exp 217 fix confirmed working):** Only "1999" (LightItUp) and "FANCY" (WhatTheCat) play properly. The other four — Sexy Socialite (Crystallized), Jealous (CycleHit), 'Roni (ExitThisEarthsAtomosphere), Green Light (Ghost) — "the bpm is wayyyy too slow, note blocks are coming wayyy too late and slow". Also: "I played one saber mode on these songs and they all still had arrows on the note boxes." User always plays **Hard** and tests **OneSaber**. (Clarified separately: the old red-up-arrows bug is long resolved; OneSaber is expected to be dots-only.)
+- **PS4 log analysis** (`.ai_memory/experiment_logs/v0.5337_camellia_song_quality_issues.txt`, 4966 lines, 6 boot sessions): all six song bundles + both packs redirected cleanly in the final session; no crashes; `beatmap_mode_mapping` plugin flag was OFF (informational only — the mode sets live in the pack bundle regardless). Log archived and cleared on PS4.
+
+**Root cause 1 — Swiss-cheese difficulty slots (the "wayyy too slow / too late" report):**
+The four broken maps provide fewer than 5 difficulties. `replace_beatmaps` only replaces a slot when a matching source file exists:
+| Song | Diffs provided | Slots left STOCK |
+|---|---|---|
+| Sexy Socialite | ExpertPlus | Easy, Normal, **Hard**, Expert |
+| Jealous | Easy, Expert | Normal, **Hard**, ExpertPlus |
+| 'Roni | Easy, Expert | Normal, **Hard**, ExpertPlus |
+| Green Light | ExpertPlus | Easy, Normal, **Hard**, Expert |
+| 1999 ✅ | Easy, Hard, Expert, E+ | Normal |
+| FANCY ✅ | Easy, Normal, Hard, Expert, E+ | — |
+Verified byte-level: deployed `CrystallizedHard.beatmap.gz` == stock (965 notes, maxBeat 680 = stock's 174 BPM grid) over Sexy Socialite's 142 BPM audio — notes land on a grid written for a different song. User plays Hard → all four broken songs were the wrong chart on the wrong grid. 1999/FANCY "worked" because the user's tested diffs were all replaced. Same swiss-cheese pattern in the mode sets: OneSaber/NoArrows/90Degree entries for missing diffs fell back to Standard-ref clones = stock beatmaps.
+**Fix:** new `fill_missing_standard_difficulties()` (pipeline Step 5a-0, runs BEFORE mode detection/generation/replacement): for each missing `<Diff>`, clone the map's own closest harder difficulty (else closest easier) to `<Diff>.dat`. Never overwrites provided files; never uses mode files as donors. Mode generation then covers all 5 diffs automatically.
+
+**Root cause 2 — v0.52 eff-BPM heuristic undershoots every map with a trailing tail:**
+`load_bpm_regions` computed `eff_bpm = max_beat × 60 / audio_duration`. Notes are placed on the Info.dat BPM grid, but this stretches that grid across the FULL audio (including trailing silence/outro) — BPM undershoot by the tail fraction:
+| Song | Mapper BPM | Deployed eff BPM | Error |
+|---|---|---|---|
+| 'Roni | 117 | 112.1 | −4.2% (notes 9s late by end) |
+| Green Light | 121 | 116.4 | −3.8% |
+| FANCY | 132 | 129.3 | −2.0% |
+| Jealous | 129 | 126.5 | −1.9% |
+| Sexy Socialite | 142 | 140.0 | −1.4% |
+| 1999 | 124 | 122.3 | −1.3% |
+Git archaeology: the heuristic shipped in v0.52 (commit 28cbd25) justified by "3-6% progressive desync... mappers use a slightly different effective BPM" — a misdiagnosis from the same days as the empty-`bpmEvents` BPM=60 bug (v0.52c, Exp 103). The v0.52 era songs' desync was the bpmEvents bug, not grid drift.
+**Fix:** Info.dat `_beatsPerMinute` is the authoritative grid: `eb = duration × bpm / 60`. The max-beat scan survives only as a guard — extend `eb` when a note lands beyond the Info.dat grid. All six Camelia maps now deploy at the exact mapper BPM (verified: eb 802.3/490.2/417.3/449.9/395.8/478.7).
+
+**Root cause 3 — OneSaber arrows (user expects dots-only):**
+`_generate_one_saber` recolored blue but kept cut directions; worse, maps that ship their own `<Diff>OneSaber.dat` (Jealous, 'Roni, Sexy Socialite — mixed dirs, red notes) were injected verbatim. **Fix:** the generator now also sets every color note to a dot (`d`/`_cutDirection` = 8; same-cell gap rule removed as moot), and `add_mode_characteristics` normalizes every OneSaber injection through `_generate_one_saber()`. Bombs pass through. Verified on Jealous's real mapper file: 702 notes, dirs {0..8} → all 8 after normalization.
+
+**Pipeline changes (v0.5338):** all three fixes in `tools/full_custom_song_pipeline.py` (+ new `fill_missing_standard_difficulties`, `_read_info_bpm`). No plugin change.
+
+**Tests:** `TestFillMissingStandardDifficulties` (6), `TestCameliaSyncRegression` (2, uses the cached BeatSaver sources), OneSaber dots-only updates (5), BPM grid updates (3). **Full suite: 595/595 pass.**
+
+**Status:** ✅ Code complete + verified against all six cached map sources. **Awaiting redeploy + user retest.** Expected after redeploy of the four broken songs: Hard plays the custom chart at true BPM with notes on-grid through song end; OneSaber shows blue dots only.

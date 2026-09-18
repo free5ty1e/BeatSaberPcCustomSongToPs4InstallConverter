@@ -1,5 +1,21 @@
 # Pipeline Changelog
 
+## v0.5338 (2026-09-17)
+### Fixed
+- **"BPM wayyy too slow, notes wayyy too late" on partial-difficulty maps (Exp 218).** When a BeatSaver map provides fewer than 5 difficulties (e.g. Sexy Socialite/Green Light ship ExpertPlus only; Jealous/'Roni ship Easy+Expert), the pipeline replaced only those slots and left the **stock beatmaps** in the unreplaced difficulty TextAssets — stock timing (the stock song's BPM grid) played over the custom audio. Every difficulty the user selected that the map didn't provide was the wrong chart on the wrong grid. New `fill_missing_standard_difficulties()` (runs before mode detection/generation/replacement) materializes a `<Diff>.dat` for every missing difficulty, cloned from the map's own closest harder (else easier) difficulty — every Standard slot now carries the custom song's own beat grid.
+- **BPM grid: Info.dat `_beatsPerMinute` is now authoritative.** The v0.52 heuristic `eff_bpm = max_beat × 60 / audio_duration` undershot BPM by the trailing-silence fraction of any map whose chart ends before its audio (an outro, an extended lighting tail) — every map with a tail got progressively desynced: 'Roni deployed at 112.1 BPM vs the real 117 (−4.2%, notes 9 s late by song end), Green Light −3.8%, FANCY −2.0%, Jealous −1.9%. The heuristic was a misdiagnosis from the same era as the empty-`bpmEvents` bug (fixed v0.52c): those songs' desync came from BPM=60 fallback, not mapper grid drift. The beatmap max-beat scan is retained only as a guard — `eb` extends past the Info.dat grid only when a note actually lands beyond it (mapper genuinely faster than declared). Six cached Camelia maps verified: bpmData `eb` now equals `duration × BPM / 60` exactly (802.3/490.2/417.3/449.9/395.8/478.7 vs the old 791/486.9/404.1/445.6/390.5/469.0).
+- **OneSaber is now blue DOTS (user-facing convention, Exp 218).** `_generate_one_saber()` converts every note to a dot (`d`/`_cutDirection` = 8) in addition to the blue recolor, and drops the same-cell arrow-gap rule (moot for dots). Mapper-authored `<Diff>OneSaber.dat` charts (Jealous, 'Roni, Sexy Socialite ship their own, with mixed directions and red notes) are normalized through `_generate_one_saber()` at injection time in `add_mode_characteristics()`. Bombs pass through untouched. User report: "I played one saber mode on these songs and they all still had arrows on the note boxes" — arrows made generated OneSaber indistinguishable from Standard and stock-clone fallbacks.
+
+### Changed
+- Missing-difficulty donor order: closest HARDER difficulty first (playing up is safer than down), falling back to closest easier. Never overwrites files the map provides; never uses mode files (OneSaber/NoArrows/90Degree) as donors.
+- `load_bpm_regions()` logs `Info.dat BPM grid: <bpm>` instead of `Beatmap-based BPM`.
+
+### Tests
+- `TestFillMissingStandardDifficulties` (6 tests): fill-from-harder, fill-from-easier, provided-diffs untouched, mode files never donors, empty dir, idempotent rerun.
+- `TestCameliaSyncRegression` (2 tests): every cached Camelia map's `eb` matches the Info.dat grid; 'Roni specifically must NOT regress to 404.1.
+- OneSaber generator tests updated to dots-only (5 new/changed assertions incl. bombs-passthrough).
+- Full suite: 595/595 pass.
+
 ## v0.5337 (2026-09-16)
 ### Fixed
 - **Multi-pack deploys destroyed other packs' custom songs** — Running one pack's install script (e.g. Camelia) removed the custom songs of every OTHER pack (e.g. Billie Eilish) deployed earlier. Two root causes:

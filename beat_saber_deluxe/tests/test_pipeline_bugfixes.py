@@ -101,7 +101,8 @@ class TestInfoDatCaseInsensitive:
         assert regions[0]['eb'] == 150.0
 
     def test_load_bpm_regions_beatmap_overrides_info_dat(self, tmp_dir):
-        """When beatmaps exist, their max beat is used regardless of Info.dat."""
+        """When the map's last note lands beyond the Info.dat grid, eb extends
+        to cover it (mapper's real tempo is faster than declared)."""
         info = {"_beatsPerMinute": 120.0}
         with open(os.path.join(tmp_dir, "Info.dat"), 'w') as f:
             json.dump(info, f)
@@ -110,9 +111,45 @@ class TestInfoDatCaseInsensitive:
         with open(os.path.join(tmp_dir, "Hard.dat"), 'w') as f:
             json.dump(beatmap, f)
 
-        sample_count = 44100 * 60
+        sample_count = 44100 * 60  # 60s audio; 120 BPM grid = 120 beats
         regions = load_bpm_regions(tmp_dir, sample_count)
         assert regions[0]['eb'] == 250.0
+
+    def test_load_bpm_regions_info_bpm_is_authoritative_grid(self, tmp_dir):
+        """Exp 218: Info.dat BPM is the mapper's beat grid. The old
+        max_beat*60/audio heuristic undershot BPM by the trailing-silence
+        fraction (e.g. 'Roni: 112.1 vs the real 117). A map ending at beat
+        100 in 60s of audio is NOT 100 BPM — it's a 120 BPM grid with 10s of
+        trailing silence."""
+        info = {"_beatsPerMinute": 120.0}
+        with open(os.path.join(tmp_dir, "Info.dat"), 'w') as f:
+            json.dump(info, f)
+
+        beatmap = {"_notes": [{"_time": 100.0}]}
+        with open(os.path.join(tmp_dir, "Hard.dat"), 'w') as f:
+            json.dump(beatmap, f)
+
+        sample_count = 44100 * 60  # 60s audio
+        regions = load_bpm_regions(tmp_dir, sample_count)
+        # Grid from Info.dat: 60s * 120/60 = 120 beats (NOT 100)
+        assert regions[0]['eb'] == 120.0
+
+    def test_load_bpm_regions_lowercase_info_dat(self, tmp_dir):
+        """BeatSaver downloads use lowercase info.dat — must be read too."""
+        info = {"_beatsPerMinute": 117.0}
+        with open(os.path.join(tmp_dir, "info.dat"), 'w') as f:
+            json.dump(info, f)
+
+        sample_count = 44100 * 214  # 'Roni: 214s audio
+        regions = load_bpm_regions(tmp_dir, sample_count)
+        # 214s * 117/60 = 417.3 beats (vs 404.1 under the old heuristic)
+        assert abs(regions[0]['eb'] - 214.0 * 117.0 / 60.0) < 0.1
+
+    def test_load_bpm_regions_no_bpm_data_assumes_120(self, tmp_dir):
+        """No Info.dat, no beatmaps — assume 120 BPM."""
+        sample_count = 44100 * 60
+        regions = load_bpm_regions(tmp_dir, sample_count)
+        assert regions[0]['eb'] == 120.0
 
     def test_replace_beatmaps_reads_uppercase_info_dat(self, tmp_dir):
         """replace_beatmaps reads Info.dat (uppercase) for BPM."""
@@ -886,3 +923,126 @@ class TestDeployFullDownloadsSong:
         args.deploy_plugin = True
         args.deploy_full = True
         assert not (args.deploy_plugin and not args.song_dir)
+
+
+# ======================================================================
+# Exp 218: Missing Standard difficulties must be filled from the map's own
+# content — never leave the STOCK beatmap in an unreplaced slot (stock timing
+# over custom audio = "BPM wayyy too slow, notes wayyy too late").
+# ======================================================================
+class TestFillMissingStandardDifficulties:
+    def _write(self, d, name, notes):
+        with open(os.path.join(d, name), 'w') as f:
+            json.dump({"version": "3.2.0", "colorNotes": notes}, f)
+
+    def test_fills_missing_diffs_from_closest_harder(self, tmp_path):
+        """ExpertPlus-only map (Sexy Socialite / Green Light pattern): the four
+        missing diffs are cloned from the closest HARDER difficulty."""
+        from full_custom_song_pipeline import fill_missing_standard_difficulties
+        d = str(tmp_path)
+        note = [{"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1}]
+        self._write(d, "ExpertPlusStandard.dat", note)
+
+        written = fill_missing_standard_difficulties(d)
+        # Easy/Normal/Hard filled from Expert/ExpertPlus chain; Expert from ExpertPlus
+        assert sorted(written) == ["Easy.dat", "Expert.dat", "Hard.dat", "Normal.dat"]
+        for f in ("Easy.dat", "Normal.dat", "Hard.dat", "Expert.dat"):
+            data = json.load(open(os.path.join(d, f)))
+            assert data["colorNotes"] == note, f"{f} must be a clone of the map's own content"
+
+    def test_fills_from_closest_easier_when_no_harder(self, tmp_path):
+        """Easy-only map: Normal/Hard/Expert/ExpertPlus clone from the closest
+        EASIER difficulty (Easy)."""
+        from full_custom_song_pipeline import fill_missing_standard_difficulties
+        d = str(tmp_path)
+        note = [{"b": 2.0, "x": 1, "y": 1, "c": 1, "d": 2}]
+        self._write(d, "Easy.dat", note)
+
+        written = fill_missing_standard_difficulties(d)
+        assert sorted(written) == ["Expert.dat", "ExpertPlus.dat", "Hard.dat", "Normal.dat"]
+        data = json.load(open(os.path.join(d, "ExpertPlus.dat")))
+        assert data["colorNotes"] == note
+
+    def test_does_not_touch_provided_diffs(self, tmp_path):
+        """Map provides Easy+Expert (Jealous pattern): Normal clones from Expert
+        (closest harder), Hard clones from Expert, ExpertPlus clones from Expert.
+        Provided files stay byte-identical."""
+        from full_custom_song_pipeline import fill_missing_standard_difficulties
+        d = str(tmp_path)
+        easy = [{"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 0}]
+        expert = [{"b": 9.0, "x": 2, "y": 2, "c": 1, "d": 6}]
+        self._write(d, "EasyStandard.dat", easy)
+        self._write(d, "ExpertStandard.dat", expert)
+
+        written = fill_missing_standard_difficulties(d)
+        assert sorted(written) == ["ExpertPlus.dat", "Hard.dat", "Normal.dat"]
+        assert json.load(open(os.path.join(d, "EasyStandard.dat")))["colorNotes"] == easy
+        assert json.load(open(os.path.join(d, "ExpertStandard.dat")))["colorNotes"] == expert
+
+    def test_no_mode_files_are_donors(self, tmp_path):
+        """Mode files (OneSaber etc.) must NEVER be chosen as donors — a
+        OneSaber chart cloned to a Standard slot would be all-blue dots."""
+        from full_custom_song_pipeline import fill_missing_standard_difficulties
+        d = str(tmp_path)
+        onesaber = [{"b": 1.0, "x": 0, "y": 0, "c": 1, "d": 8}]
+        self._write(d, "ExpertOneSaber.dat", onesaber)
+
+        written = fill_missing_standard_difficulties(d)
+        assert written == [], "must not fill from a mode-only map"
+        assert not os.path.exists(os.path.join(d, "Hard.dat"))
+
+    def test_empty_map_fills_silently(self, tmp_path):
+        """No beatmap files at all -> nothing written, no exception."""
+        from full_custom_song_pipeline import fill_missing_standard_difficulties
+        d = str(tmp_path)
+        assert fill_missing_standard_difficulties(d) == []
+
+    def test_idempotent_rerun(self, tmp_path):
+        """A second run finds the filled files and writes nothing new."""
+        from full_custom_song_pipeline import fill_missing_standard_difficulties
+        d = str(tmp_path)
+        self._write(d, "ExpertPlus.dat", [{"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1}])
+        first = fill_missing_standard_difficulties(d)
+        assert first
+        assert fill_missing_standard_difficulties(d) == []
+
+
+# ======================================================================
+# Exp 218 regression: the six Camelia maps must deploy with every Standard
+# slot replaced (no stock beatmaps) and the correct Info.dat BPM grid.
+# ======================================================================
+class TestCameliaSyncRegression:
+    CAMELIA_SOURCES = {
+        "SexySocialite": ("/tmp/beatsaver_2epuient/6f1f", 142.0, 339.0, 791.0),
+        "Jealous":       ("/tmp/beatsaver_1qlmfguk/111fd", 129.0, 228.0, 486.9),
+        "Roni":          ("/tmp/beatsaver__1wo758t/115ba", 117.0, 214.0, 404.1),
+        "GreenLight":    ("/tmp/beatsaver_46id3sk2/37d5", 121.0, 223.1, 445.6),
+        "1999":          ("/tmp/beatsaver_15_5g25g/5352", 124.0, 191.5, 390.5),
+        "FANCY":         ("/tmp/beatsaver_2l7_an1y/47f3", 132.0, 217.6, 469.0),
+    }
+
+    def test_bpm_grid_matches_info_dat(self, tmp_path):
+        """For every cached Camelia map, bpmData eb must equal the Info.dat grid
+        (duration*BPM/60), NOT the old beatmap-derived underestimate."""
+        import shutil
+        for name, (src, bpm, dur, max_beat) in self.CAMELIA_SOURCES.items():
+            if not os.path.isdir(src):
+                continue
+            d = tmp_path / name
+            shutil.copytree(src, str(d))
+            sample_count = int(dur * 44100)
+            regions = load_bpm_regions(str(d), sample_count)
+            expected = dur * bpm / 60.0
+            assert abs(regions[0]['eb'] - expected) < 0.5, (
+                f"{name}: eb={regions[0]['eb']:.1f} but Info.dat grid is {expected:.1f}"
+            )
+
+    def test_roni_grid_not_heuristic(self):
+        """'Roni specifically: 214s audio, 117 BPM -> eb 417.3 (not 404.1)."""
+        src, bpm, dur, max_beat = self.CAMELIA_SOURCES["Roni"]
+        if not os.path.isdir(src):
+            pytest.skip("Roni source not cached")
+        regions = load_bpm_regions(src, int(dur * 44100))
+        assert abs(regions[0]['eb'] - 214.0 * 117.0 / 60.0) < 0.5
+        # the old heuristic would have produced 404.1 (112.1 BPM — 4.2% slow)
+        assert abs(regions[0]['eb'] - max_beat) > 5.0

@@ -1,8 +1,14 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8042 / v0.5337)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8042 / v0.5338)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
 This document covers pipeline-specific details. See the **[main README](../README.md)** for project overview, requirements, and quick start.
+
+## v0.5338 Highlights
+
+- **Every difficulty slot gets custom content** — Maps that provide fewer than 5 difficulties (e.g. ExpertPlus-only maps) previously left the STOCK beatmap in the missing slots — stock timing over custom audio ("BPM wayyy too slow, notes wayyy too late"). The pipeline now clones the map's own closest difficulty into every missing slot before replacement, so all 5 Standard diffs and all 3 extra modes carry the custom song's beat grid.
+- **True mapper BPM** — `bpmData` uses Info.dat `_beatsPerMinute` as the authoritative grid (the old last-note×60/audio heuristic undershot any map with a trailing outro by up to 4%+, causing progressive note lateness).
+- **OneSaber = blue dots** — generated AND mapper-authored OneSaber charts deploy as single-saber blue dot notes (arrows were filed as a bug by the user).
 
 ## v0.5337 Highlights
 
