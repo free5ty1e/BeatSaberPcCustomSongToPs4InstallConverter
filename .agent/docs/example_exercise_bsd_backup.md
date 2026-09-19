@@ -15,7 +15,7 @@ This document demonstrates the complete exercise of the `backup-beat-saber-delux
 > python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
 > ```
 > Re-enable with `...enable_plugin=true`. Takes effect on the next game boot.
-> (Global kill switch, plugin v0.8043+; boot toast shows flag status since v0.8044.)
+> (Global kill switch, plugin v0.8043+; boot shows one combined version+status toast since v0.8045: "BS Deluxe v<ver> (ON/OFF) ... (N/3 features ON)".)
 
 ---
 

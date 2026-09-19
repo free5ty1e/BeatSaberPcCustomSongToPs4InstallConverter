@@ -34,14 +34,21 @@ Since v0.5334, `features.json` holds the runtime flags the plugin reads at start
 | `enable_song_metadata_modification` | `false` | Gates song name/artist metadata replacement (MoveNext hook + `song_metadata.json` + TMP_Text replacement). ON in production. |
 | `enable_beatmap_mode_mapping` | `false` | Gates visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle preview arrays. When OFF, stock songs show only Standard; custom songs with their own mode sets show only Standard. When ON, custom songs with patched mode sets show all enabled modes. |
 
-## Startup Notification (plugin v0.8044+)
+## Startup Notification (plugin v0.8045+)
 
-On boot the plugin sends TWO toasts: the version banner, then the flag-status summary:
+On boot the plugin sends **one combined toast** — version + kill-switch state + flag count:
 
-- Kill switch ON: `BSD Plugin enabled` / `<N>/3 feature flags ON`
-- Kill switch OFF: `BSD Plugin DISABLED` / `Official songs only (0/3 flags active)`
+- Kill switch ON: `BS Deluxe v0.8045 (ON)` / `By Chris Primeish` / `(3/3 features ON)`
+- Kill switch OFF: `BS Deluxe v0.8045 (OFF)` / `By Chris Primeish` / `(official songs only)`
 
-So the overall state is visible from the PS4 home screen before launching into any song list.
+Single toast by design (Exp 221): the PS4VR headset switch-over swallows a second
+notification when the headset is already powered on at launch — the v0.8044
+two-toast format was unreliable in exactly the common case.
+
+**Deploy invariant (v0.5340+):** every pipeline deploy merges missing keys from
+`DEFAULT_FEATURES` into the local features.json before upload — a stale file
+written before a flag existed can never ship with that flag silently absent
+(root cause of the user's "2/3 feature flags ON" report).
 
 ## Build-Time Defaults (pipeline v0.5314+, all DEFAULT ON)
 

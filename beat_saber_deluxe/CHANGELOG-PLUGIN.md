@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8045] — 2026-09-19
+### Changed
+- **Single compressed boot notification** (Exp 221): the version banner and the feature-flag status are now ONE toast — `BS Deluxe v0.8045 (ON) / By Chris Primeish / (3/3 features ON)` — because the PS4VR headset switch-over swallows the second toast when the headset is already powered on at launch (user-verified: both toasts appear only when launching with the headset off). Kill switch OFF variant: `BS Deluxe v0.8045 (OFF) / By Chris Primeish / (official songs only)`. The v0.8044 two-toast format is superseded.
+
 ## [v0.8044] — 2026-09-19
 ### Added
 - **Startup feature-flag status notification** — a second toast right after the version banner shows the plugin's overall state and enabled-flag count at a glance:

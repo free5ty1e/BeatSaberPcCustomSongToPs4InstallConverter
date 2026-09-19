@@ -1,5 +1,13 @@
 # Pipeline Changelog
 
+## v0.5340 (2026-09-19)
+### Fixed
+- **Stale features.json deployed with silently-absent flags (Exp 221 — the "2/3 feature flags" report).** `--deploy-full`/`--deploy-features` uploaded the local `features.json` verbatim; a local file written before `enable_beatmap_mode_mapping` existed shipped without it, and the plugin booted with that flag OFF (user saw "2/3 feature flags ON" after clean-slate + two pack script installs). `_deploy_features_to_ps4()` now merges missing keys from `DEFAULT_FEATURES` (explicit values — including explicit false — are never overwritten) and creates the file from defaults when absent; the "skip deploy if local file missing" path is gone.
+### Added
+- **`--skip-plugin-deployment`** — opt out of building + deploying the plugin during `--deploy-full` (e.g. pinning a specific plugin build on the PS4). Default unchanged: every `--deploy-full` builds the LATEST plugin source and installs it (`make clean` + `make -B`, so source changes always reach the PS4).
+- **`ps4_state.py` now reports feature-flag status** — reads the PS4's `features.json` and shows `enable_plugin` (ON/OFF), each of the three flags (flagging MISSING keys that would default false), and the boot notification text the next launch will display.
+- Regression tests: `TestFeaturesMergeOnDeploy` (3 tests — missing-key materialization preserving explicit values, file creation from defaults, `--deploy-full` plugin-deploy wiring with the skip opt-out).
+
 ## v0.5339 (2026-09-18)
 ### Added
 - **Global kill switch support: `enable_plugin`** added to `DEFAULT_FEATURES` (default `true`). `--features-only --set-feature enable_plugin=false` uploads a features.json that makes the plugin (v0.8043+) fully inert on next boot — official songs only, without editing plugins.ini or clearing the AFR dir. `--set-feature enable_plugin=true` re-enables.

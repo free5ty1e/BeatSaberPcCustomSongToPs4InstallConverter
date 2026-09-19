@@ -796,3 +796,20 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **Verification:** v0.8044 built (FSELF magic `4f 15 3d 1d`), strings confirmed both notification branches, deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx`, downloaded-back bytes contain `=== BS Deluxe v0.8044 started ===` + `BSD Plugin enabled`. Test artifacts (`bsd_v8044.prx`, `bsd_new_test.prx`) removed from the plugins dir.
 - **Tests:** 595/595 pass.
 - **Status:** ✅ Deployed. **Awaiting user boot test** — expect two toasts: version banner, then `BSD Plugin enabled / 3/3 feature flags ON` (with the current features.json all three flags are true).
+
+---
+
+### Experiment 221 — Flag-Count Mystery + Plugin-Deploy Enforcement + Compressed Notification + State-Script Flags
+- **Date:** 2026-09-19
+- **User report (4 items):** (1) boot showed "2/3 feature flags ON" after a clean-slate + billie_eilish + camelia script install — expected 3/3; (2) the standard single-song deploy commands should ALWAYS build+install the latest plugin, with a new `--skip-plugin-deployment` opt-out; (3) `ps4_state.py` doesn't report feature-flag status — it should; (4) the second (status) toast from Exp 220 is swallowed when the PS4VR headset is already powered on at launch — compress version+status into ONE toast: `BS Deluxe v0.8044 (ON/OFF)\nBy Chris Primeish\n(N/3 features ON)`.
+
+**Root cause — "2/3 flags" (the real bug):** both local and PS4 `features.json` contained only THREE keys — `enable_beatmap_mode_mapping` was MISSING. The plugin defaults absent keys to false → 2/3. The local file was stale (written by an older `--set-feature` invocation before that flag existed), and `_deploy_features_to_ps4()` uploaded it verbatim — no merge with DEFAULT_FEATURES, and silently skipped the deploy entirely when the file was absent. The packs still worked because mode-button visibility also requires the pack-bundle sets, but the flag itself was OFF. **Fix (v0.5340):** `_deploy_features_to_ps4()` merges missing keys from DEFAULT_FEATURES (explicit values, including explicit false, never overwritten) and creates the file from defaults when absent. Fixed on the PS4: `--features-only --set-feature enable_beatmap_mode_mapping=true` → all 4 keys true, verified by re-download.
+
+**Plugin deploy enforcement (v0.5340):** `--deploy-full` always builds the LATEST plugin source (`build_plugin` runs `make clean` + `make -B`) and installs it; new `--skip-plugin-deployment` flag opts out for pinned-plugin testing. (Note: the user's v0.8044 confusion was timing — their script runs predated my v0.8044 build; the mechanism now guarantees this can't happen.)
+
+**Compressed notification (plugin v0.8045):** single toast — `BS Deluxe v0.8045 (ON)\nBy Chris Primeish\n(3/3 features ON)`; kill-switch-off variant `(OFF) ... (official songs only)`. User's VR-headset finding documented in the KB page: a second toast is unreliable exactly in the common case (headset already on at launch).
+
+**ps4_state.py feature-flag reporting:** new `--- Feature Flags ---` section reads the PS4's features.json and reports enable_plugin ON/OFF, each flag (flagging MISSING keys that default false), and the boot-notification text the next launch will show. Verified against both states: all-on (`(ON) ... (3/3 features ON)`) and kill-switch-off (`(OFF) ... (3/3 features — plugin disabled)`), then restored all-ON.
+
+**Verification:** plugin v0.8045 built (strings-verified: `BS Deluxe %s (ON)`, `(%d/3 features ON)`, `(official songs only)`), deployed, downloaded-back bytes confirmed v0.8045 (FSELF-unpack quirk per Exp 220). README gained a "Startup Notifications" section (flags table also now documents `enable_plugin`). All 69 example files' kill-switch blocks updated to the one-toast format. Tests: **598/598** (3 new: TestFeaturesMergeOnDeploy — missing-key materialization preserving explicit values, file creation from defaults, deploy-full/skip wiring).
+- **Status:** ✅ Deployed (plugin v0.8045 + all-ON flags). **Awaiting boot test:** expect the single toast `BS Deluxe v0.8045 (ON) / (3/3 features ON)` in the headset.

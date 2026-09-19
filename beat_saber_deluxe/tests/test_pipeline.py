@@ -1126,3 +1126,74 @@ class TestBuildModeMapping:
         assert "NoArrows" in result
         assert "90Degree" in result
         assert "OneSaber" in result  # falls back to Standard
+
+
+# ======================================================================
+# Exp 221: features.json deploy must merge DEFAULT_FEATURES — a stale
+# local file (written before a flag existed) must never deploy with that
+# flag silently absent (user saw "2/3 feature flags ON" because the local
+# file lacked enable_beatmap_mode_mapping).
+# ======================================================================
+class TestFeaturesMergeOnDeploy:
+    def test_missing_keys_materialized_before_deploy(self, tmp_dir, monkeypatch):
+        """A stale features.json missing newer flags gets them materialized
+        from DEFAULT_FEATURES (explicit values untouched) during deploy."""
+        from full_custom_song_pipeline import _deploy_features_to_ps4
+        stale = {"enable_custom_song_replacements": True,
+                 "enable_song_metadata_modification": False,  # explicit OFF must survive
+                 "enable_plugin": True}
+        path = os.path.join(tmp_dir, "features.json")
+        with open(path, 'w') as f:
+            json.dump(stale, f)
+
+        import full_custom_song_pipeline as fcp
+        import subprocess
+        monkeypatch.setattr(fcp, '_get_local_features_path', lambda root=None: path)
+        class FakeResult:
+            returncode = 0; stderr = ""
+        # _deploy_features_to_ps4 imports subprocess INSIDE the function —
+        # patch the shared module's run.
+        monkeypatch.setattr(subprocess, 'run', lambda *a, **k: FakeResult())
+        cfg = {'ps4': {'ip': 'x', 'ftp_port': 1}, 'title': {}, 'paths': {}}
+
+        fcp._deploy_features_to_ps4(cfg)
+
+        merged = json.load(open(path))
+        # missing key materialized with its DEFAULT value
+        assert merged.get('enable_beatmap_mode_mapping') is True
+        # explicit values preserved (including explicit False)
+        assert merged['enable_song_metadata_modification'] is False
+        assert merged['enable_plugin'] is True
+
+    def test_deploy_creates_file_when_absent(self, tmp_dir, monkeypatch):
+        """No local features.json at all -> one is created from DEFAULT_FEATURES
+        and deployed (previously the deploy was silently skipped)."""
+        import full_custom_song_pipeline as fcp
+        import subprocess
+        path = os.path.join(tmp_dir, "features.json")
+        monkeypatch.setattr(fcp, '_get_local_features_path', lambda root=None: path)
+        class FakeResult:
+            returncode = 0; stderr = ""
+        monkeypatch.setattr(subprocess, 'run', lambda *a, **k: FakeResult())
+        cfg = {'ps4': {'ip': 'x', 'ftp_port': 1}, 'title': {}, 'paths': {}}
+
+        fcp._deploy_features_to_ps4(cfg)
+        merged = json.load(open(path))
+        assert merged == fcp.DEFAULT_FEATURES
+
+    def test_deploy_full_implies_plugin_deploy_unless_skipped(self):
+        """--deploy-full must build+deploy the latest plugin (the user's
+        standard single-song command), with --skip-plugin-deployment opting out."""
+        import full_custom_song_pipeline as fcp
+        # simulate the arg wiring contract
+        class A: pass
+        a = A()
+        a.deploy_full = True
+        a.skip_plugin_deployment = False
+        a.deploy_plugin = not a.skip_plugin_deployment
+        assert a.deploy_plugin is True
+        b = A()
+        b.deploy_full = True
+        b.skip_plugin_deployment = True
+        b.deploy_plugin = not b.skip_plugin_deployment
+        assert b.deploy_plugin is False

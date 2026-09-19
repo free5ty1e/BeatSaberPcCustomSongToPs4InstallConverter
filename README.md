@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-**Plugin v0.8043 | Pipeline v0.5339** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
+**Plugin v0.8045 | Pipeline v0.5340** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
 
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
@@ -182,25 +182,56 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `enable_plugin` | **`true`** (unique) | **Global kill switch** — when explicitly `false`, the ENTIRE plugin is inert on next boot (no redirects, no metadata swaps; 100% official songs). The only flag defaulting true when absent, so a missing features.json keeps a deployed setup working. |
 | `enable_custom_song_replacements` | `false` | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs |
 | `enable_song_metadata_modification` | `false` | Gates song metadata modification — when ON, hooks MoveNext() to replace song names/artists in the UI |
 | `enable_beatmap_mode_mapping` | `false` | Gates visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle preview arrays — when OFF, all songs show only Standard; when ON, custom songs with patched mode sets show all 4 modes |
+
+### Startup Notifications
+
+On boot the plugin shows **one notification** reporting both its version and its
+feature-flag state (a single toast because the PS4VR headset switch-over can
+swallow a second toast when the headset is already powered on at launch):
+
+```
+BS Deluxe v0.8045 (ON)
+By Chris Primeish
+(3/3 features ON)
+```
+
+- **`(ON)` / `(OFF)`** — the global `enable_plugin` kill-switch state
+- **`(N/3 features ON)`** — how many of the three feature flags are enabled
+- When the kill switch is OFF: `BS Deluxe v0.8045 (OFF) / By Chris Primeish / (official songs only)`
+
+To change what the next boot shows:
+
+```bash
+# Play only official songs (plugin fully inert on next boot):
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+# Back to your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
 
 > **All runtime features MUST be gated behind feature flags in `features.json`.** No hardcoded behavior in the plugin. When adding a new feature:
 > 1. Add a `enable_<feature_name>` key to `features.json` and `DEFAULT_FEATURES` in the pipeline
 > 2. Add a `g_feature_<feature_name>` global in `main.cpp`
 > 3. Gate the feature code behind `if (g_feature_<feature_name>)`
-> 4. Defaults to `false` when absent
+> 4. Defaults to `false` when absent (exception: `enable_plugin` defaults true)
 
 ### Example `features.json`
 
 ```json
 {
+  "enable_plugin": true,
   "enable_custom_song_replacements": true,
   "enable_song_metadata_modification": true,
   "enable_beatmap_mode_mapping": true
 }
 ```
+
+Every pipeline deploy (`--deploy-full`, `--deploy-features`) merges missing keys
+from `DEFAULT_FEATURES` before uploading, so a stale local file can never ship
+with a flag silently absent.
 
 You can deploy these settings using the pipeline:
 

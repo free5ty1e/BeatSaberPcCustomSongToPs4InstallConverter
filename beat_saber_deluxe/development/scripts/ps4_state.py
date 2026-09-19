@@ -217,6 +217,35 @@ def main():
     print()
     print("=" * 62)
 
+    # 5b. Feature flags (runtime plugin behavior — what the plugin will do on
+    # next boot). Read from the PS4's features.json, not any local copy.
+    print()
+    print("--- Feature Flags (PS4 features.json — plugin behavior on next boot) ---")
+    fx = cat_remote(f"{AFR_DIR}/features.json")
+    if fx is None:
+        print("  (features.json not found on PS4 — plugin defaults: all features OFF)")
+    else:
+        try:
+            feats = json.loads(fx)
+            # Absent keys default: enable_plugin=true (kill switch), others false.
+            plugin_on = feats.get("enable_plugin", True)
+            print(f"  Plugin (enable_plugin): {'ON — custom songs active' if plugin_on else 'OFF — official songs only'}")
+            flag_names = ["enable_custom_song_replacements", "enable_song_metadata_modification",
+                          "enable_beatmap_mode_mapping"]
+            for fn in flag_names:
+                if fn not in feats:
+                    print(f"  {fn}: MISSING (defaults false on the plugin)")
+                else:
+                    print(f"  {fn}: {'ON' if feats[fn] else 'OFF'}")
+            n_on = sum(1 for fn in flag_names if feats.get(fn, False))
+            print(f"  → Boot notification will show: "
+                  f"\"BS Deluxe vX ({'ON' if plugin_on else 'OFF'}) ... ({n_on}/3 features "
+                  f"{'ON' if plugin_on else '— plugin disabled'})\"")
+        except Exception as e:
+            print(f"  (failed to parse features.json: {e})")
+    print()
+    print("=" * 62)
+
     # 6. Local pipeline cache files (affect what pipeline thinks is deployed)
     print()
     print("--- Local Pipeline Cache (affects pipeline behavior) ---")

@@ -244,6 +244,12 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 221) — Flag-Count Fix + Plugin-Deploy Enforcement + Compressed Toast
+- [x] **"2/3 flags" root-caused:** stale local features.json missing enable_beatmap_mode_mapping deployed verbatim. Deploys now merge DEFAULT_FEATURES (explicit values preserved; file created from defaults when absent). 3 regression tests.
+- [x] **--deploy-full always builds + deploys the latest plugin** (make clean + make -B); --skip-plugin-deployment opts out.
+- [x] **One combined boot toast** (plugin v0.8045): "BS Deluxe v0.8045 (ON/OFF) / By Chris Primeish / (N/3 features ON | official songs only)" — second toast was swallowed by PS4VR headset switch-over.
+- [x] **ps4_state.py reports feature flags** (enable_plugin + 3 flags + expected boot-toast text; MISSING keys flagged).
+
 ### Completed (Exp 220) — Startup Feature-Flag Status Notification
 - [x] **Boot toast shows flag status (plugin v0.8044):** second notification after the version banner — "BSD Plugin enabled N/3 feature flags ON" or "BSD Plugin DISABLED Official songs only (0/3 flags active)". Deployed + strings-verified. (Deploy lesson: GoldHEN FTPD unpacks FSELF on download — verify .prx uploads by strings, not md5.)
 

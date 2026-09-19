@@ -49,7 +49,7 @@ python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_
 ```
 
 Takes effect on the next game boot (`features.json` is read at plugin startup).
-Requires plugin v0.8043+. On boot, the plugin now also toasts its flag status — "BSD Plugin enabled — N/3 feature flags ON" or "BSD Plugin DISABLED — Official songs only" (v0.8044+).
+Requires plugin v0.8043+. On boot the plugin shows ONE combined toast — "BS Deluxe v<ver> (ON) / By Chris Primeish / (N/3 features ON)" or "BS Deluxe v<ver> (OFF) / By Chris Primeish / (official songs only)" — the (ON/OFF) is the global kill-switch state (single toast because PS4VR headset switch-over can swallow a second toast; v0.8045+).
 
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 

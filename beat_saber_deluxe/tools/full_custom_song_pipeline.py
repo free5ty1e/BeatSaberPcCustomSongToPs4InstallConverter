@@ -3461,7 +3461,13 @@ def _save_local_features(features: dict, local_path: str):
     log.info(f"  Saved {local_path}")
 
 def _deploy_features_to_ps4(config: dict):
-    """Upload the local features.json to PS4 via FTP."""
+    """Upload the local features.json to PS4 via FTP.
+
+    The local file is first merged with DEFAULT_FEATURES so missing keys are
+    materialized — a stale features.json written by an older pipeline (before a
+    flag existed) must not deploy with that flag silently absent (Exp 221: the
+    local file lacked enable_beatmap_mode_mapping → plugin booted 2/3 flags).
+    """
     import subprocess as sp
 
     ps4_cfg = config.get('ps4', {})
@@ -3473,8 +3479,16 @@ def _deploy_features_to_ps4(config: dict):
     remote_path = _get_remote_features_path(config)
 
     if not os.path.exists(local_path):
-        log.warning(f"  ⚠️  Local features.json not found at {local_path}")
-        return
+        log.warning(f"  ⚠️  Local features.json not found at {local_path} — creating from DEFAULT_FEATURES")
+        _save_local_features(DEFAULT_FEATURES.copy(), local_path)
+    else:
+        # Merge missing keys from DEFAULT_FEATURES (never overwrite explicit values).
+        features = _load_local_features(local_path)
+        missing = {k: v for k, v in DEFAULT_FEATURES.items() if k not in features}
+        if missing:
+            features.update(missing)
+            _save_local_features(features, local_path)
+            log.info(f"  Feature defaults materialized: {sorted(missing)}")
 
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
@@ -4128,6 +4142,11 @@ Examples:
                              'Use --hevag or --vorbis to opt out.')
     parser.add_argument('--deploy-plugin', action='store_true',
                         help='Build and deploy the GoldHEN plugin to PS4 (and ensure plugins.ini entry)')
+    parser.add_argument('--skip-plugin-deployment', action='store_true',
+                        help='Skip building + deploying the plugin even in --deploy-full. Use when the '
+                             'PS4 plugin is intentionally pinned (e.g. testing a specific plugin build). '
+                             'Default behavior: every --deploy-full builds the LATEST plugin source and '
+                             'installs it, so source changes always reach the PS4.')
     parser.add_argument('--deploy-features', action='store_true',
                         help='Deploy the local features.json to the PS4 (runtime feature flags)')
     parser.add_argument('--debug-logging', action='store_true',
@@ -4238,7 +4257,10 @@ Examples:
         args.deploy_config = True
         args.generate_config = True
         args.deploy_pack_modes = True
-        args.deploy_plugin = True       # build + deploy plugin + ensure plugins.ini
+        # Build + deploy the LATEST plugin source on every --deploy-full so
+        # plugin changes always reach the PS4 (Exp 221). Opt out with
+        # --skip-plugin-deployment to keep the PS4's current .prx pinned.
+        args.deploy_plugin = not args.skip_plugin_deployment
         args.deploy_features = True     # deploy features.json
         args.no_verify_ps4 = False      # ensure validation runs
 
@@ -4764,12 +4786,12 @@ Examples:
         apply_feature_flags(args.set_feature, config)
     elif args.deploy_features:
         # Deploy the local features.json (runtime feature flags) so the plugin
-        # picks up the correct feature set. Ensures the file exists on the PS4.
-        if os.path.isfile(_get_local_features_path()):
-            _deploy_features_to_ps4(config)
-            log.info("  ✅ features.json deployed to PS4")
-        else:
-            log.warning("  ⚠️  Local features.json not found — skipping feature deploy")
+        # picks up the correct feature set. _deploy_features_to_ps4 merges
+        # DEFAULT_FEATURES into the local file first (materializing missing
+        # keys) and creates it when absent — a deploy always ships a complete
+        # flag set (Exp 221 fix).
+        _deploy_features_to_ps4(config)
+        log.info("  ✅ features.json deployed to PS4")
 
     # -----------------------------------------------------------------------
     # Step 11: Song metadata (song_metadata.json)
