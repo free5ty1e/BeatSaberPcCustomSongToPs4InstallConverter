@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8043"
+#define PLUGIN_VERSION "v0.8044"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -780,7 +780,8 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s",
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: plugin=%s  custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s",
+                 g_feature_plugin_enabled ? "ON" : "OFF",
                  g_feature_custom_song_replacements ? "ON" : "OFF",
                  g_feature_song_metadata_modification ? "ON" : "OFF",
                  g_feature_beatmap_mode_mapping ? "ON" : "OFF");
@@ -811,10 +812,28 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     log_write("hooks installed");
 
-    // Notification
+    // Notification: version banner
     memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
     snprintf(notif.message,sizeof(notif.message),"Beat Saber Deluxe %s\nBy Chris Primeish", PLUGIN_VERSION);
     sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
+
+    // Notification: feature flag status summary (Exp 220)
+    // Second, separate toast: overall state (kill switch) + enabled/total flags.
+    {
+        int enabled_count = g_feature_custom_song_replacements
+                          + g_feature_song_metadata_modification
+                          + g_feature_beatmap_mode_mapping;
+        memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
+        if (g_feature_plugin_enabled) {
+            snprintf(notif.message,sizeof(notif.message),
+                     "BSD Plugin enabled\n%d/3 feature flags ON",
+                     enabled_count);
+        } else {
+            snprintf(notif.message,sizeof(notif.message),
+                     "BSD Plugin DISABLED\nOfficial songs only (0/3 flags active)");
+        }
+        sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
+    }
 
     return 0;
 }

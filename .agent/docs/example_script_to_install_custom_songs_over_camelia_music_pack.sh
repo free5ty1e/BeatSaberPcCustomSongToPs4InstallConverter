@@ -36,7 +36,7 @@
 # Re-enable your custom songs:
 #   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
 # Takes effect on next game boot (features.json is read at plugin startup).
-# Requires plugin v0.8043+.
+# Requires plugin v0.8043+. Boot shows "BSD Plugin enabled N/3 feature flags ON" (v0.8044+).
 #
 # 🔧 NEW: Clear Target Song (--clear-target-song)
 # Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:

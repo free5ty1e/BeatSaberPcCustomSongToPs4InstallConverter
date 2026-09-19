@@ -48,7 +48,7 @@ python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_
 ```
 
 Takes effect on the next game boot (`features.json` is read at plugin startup).
-Requires plugin v0.8043+.
+Requires plugin v0.8043+. On boot, the plugin now also toasts its flag status — "BSD Plugin enabled — N/3 feature flags ON" or "BSD Plugin DISABLED — Official songs only" (v0.8044+).
 
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 

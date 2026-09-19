@@ -782,3 +782,17 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 **Tests:** 595/595 pass. **Versions:** pipeline v0.5339, plugin v0.8043.
 
 **Status:** ✅ Docs audited + replacements chosen + kill switch implemented and deployed. **Awaiting user:** re-deploy Camelia (or any pack) via the updated scripts when desired; boot test with `enable_plugin=false` to see official-only behavior, then `true` to restore.
+
+---
+
+### Experiment 220 — Startup Feature-Flag Status Notification
+- **Date:** 2026-09-19
+- **User request:** Beat Saber startup should show a separate notification after the version banner indicating feature-flag status — at minimum whether the plugin is enabled, plus a count of enabled flags (e.g. "BSD Plugin enabled with 3/3 feature flags").
+- **Change (plugin v0.8044):** second `sceKernelSendNotificationRequest` toast immediately after the version banner in `module_start`:
+  - Kill switch ON → `BSD Plugin enabled\n<N>/3 feature flags ON` where N = count of the three per-feature flags (custom_song_replacements, metadata_modification, beatmap_mode_mapping).
+  - Kill switch OFF → `BSD Plugin DISABLED\nOfficial songs only (0/3 flags active)` — so a disabled plugin is visible on the home screen before browsing any song (matching the `enable_plugin=false` kill-switch flow from Exp 219).
+  - The `FEATURE FLAGS:` log line also now reports `plugin=ON|OFF` first.
+- **Deploy note / lesson learned:** verifying a `.prx` upload by downloading it back is INVALID — GoldHEN's FTPD transparently unpacks FSELF containers on download (returns the inner OELF: ELF magic `7f 45 4c 46`, 109,840 bytes vs the 88,688-byte FSELF). An apparent md5 mismatch led to a false "upload failed" diagnosis and three redundant re-uploads before `strings` on the downloaded bytes confirmed v0.8044 content. Correct verification: `strings` the downloaded file for the expected version/notification text, or compare only for uploads that keep their container format.
+- **Verification:** v0.8044 built (FSELF magic `4f 15 3d 1d`), strings confirmed both notification branches, deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx`, downloaded-back bytes contain `=== BS Deluxe v0.8044 started ===` + `BSD Plugin enabled`. Test artifacts (`bsd_v8044.prx`, `bsd_new_test.prx`) removed from the plugins dir.
+- **Tests:** 595/595 pass.
+- **Status:** ✅ Deployed. **Awaiting user boot test** — expect two toasts: version banner, then `BSD Plugin enabled / 3/3 feature flags ON` (with the current features.json all three flags are true).

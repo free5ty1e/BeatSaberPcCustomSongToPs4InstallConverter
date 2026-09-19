@@ -8,7 +8,7 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8043"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8043 adds enable_plugin global kill switch (explicit false = fully inert plugin, official songs only; defaults true when absent)
+plugin_version: "0.8044"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8044: startup feature-flag status notification (second toast: "BSD Plugin enabled N/3 feature flags ON" / "BSD Plugin DISABLED Official songs only"); v0.8043: enable_plugin global kill switch
 pipeline_version: "0.5339" # in beat_saber_deluxe/VERSION - Exp 219: example-doc song audit (all 44 MAP_IDs verified native Easy/Normal/Hard; 15 songs replaced) + enable_plugin in DEFAULT_FEATURES. Exp 218 fixes (fill missing diffs, Info.dat BPM grid, OneSaber blue dots) all verified.
 
 # Platform Constraints

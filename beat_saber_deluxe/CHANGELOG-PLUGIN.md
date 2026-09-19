@@ -4,6 +4,14 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8044] — 2026-09-19
+### Added
+- **Startup feature-flag status notification** — a second toast right after the version banner shows the plugin's overall state and enabled-flag count at a glance:
+  - Kill switch ON: `BSD Plugin enabled\n<N>/3 feature flags ON` (counts `enable_custom_song_replacements` + `enable_song_metadata_modification` + `enable_beatmap_mode_mapping`).
+  - Kill switch OFF: `BSD Plugin DISABLED\nOfficial songs only (0/3 flags active)` — instantly visible that the plugin is inert before browsing to any song.
+- The `FEATURE FLAGS:` log line now includes `plugin=ON|OFF` alongside the three per-feature flags.
+- **Plugin version bump** to v0.8044.
+
 ## [v0.8043] — 2026-09-18
 ### Added
 - **Global kill switch `enable_plugin`** (runtime feature flag in `features.json`). When explicitly `false`, ALL plugin behavior is inert: no `redirects.json` redirects fire (stock song bundles and stock pack bundles load), and all song-metadata swap hooks (TMP set_text/SetText, MoveNext, metadata replacement) return the stock values untouched. The plugin still loads and logs (so `bs_log.txt` shows `DISABLED: enable_plugin is false`), but the game plays 100% official content.
