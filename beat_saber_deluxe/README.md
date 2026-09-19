@@ -1,4 +1,4 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8045 / v0.5340)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8046 / v0.5341)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 

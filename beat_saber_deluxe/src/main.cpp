@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8045"
+#define PLUGIN_VERSION "v0.8046"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -302,6 +302,25 @@ static int open_hook(const char *path, int flags, ...) {
             if (!np && g_feature_plugin_enabled && g_feature_custom_song_replacements) {
                 for (int i = 0; i < REDIRECT_COUNT; i++) {
                     if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
+                        // GATE (Exp 222): enable_beatmap_mode_mapping controls the
+                        // extra game-mode buttons (OneSaber/NoArrows/90Degree).
+                        // Those live in the PATCHED PACK BUNDLE preview sets —
+                        // when the flag is OFF we must serve the STOCK pack
+                        // bundle (Standard-only preview sets), not the patched
+                        // one. Pack-bundle redirects (keys containing
+                        // "pack_assets") are skipped so the stock bundle loads.
+                        // The CATALOG redirect must be skipped with it: the
+                        // patched catalog carries the m_Crc/m_BundleSize of the
+                        // PATCHED pack bundles — serving it against STOCK pack
+                        // bundles fails Unity's CRC validation and crashes at
+                        // the pack scan (Exp 180 invariant). Per-song redirects
+                        // still fire (custom audio + Standard beatmaps keep
+                        // working).
+                        if (!g_feature_beatmap_mode_mapping
+                            && (strstr(LOWER_REDIRECT_KEYS[i], "pack_assets")
+                                || strstr(LOWER_REDIRECT_KEYS[i], "catalog"))) {
+                            continue;
+                        }
                         np = REDIRECT_VALS[i];
                         break;
                     }
@@ -795,7 +814,7 @@ extern "C" int module_start(size_t argc, const void *args) {
         log_write("DISABLED: song_metadata_modification is OFF — metadata replacements disabled");
     }
     if (!g_feature_beatmap_mode_mapping) {
-        log_write("DISABLED: beatmap_mode_mapping is OFF — extra mode sets in pack bundles hidden");
+        log_write("DISABLED: beatmap_mode_mapping is OFF — pack bundle + catalog redirects skipped (stock packs, Standard-only modes; per-song customs still active)");
     }
 
     // fopen hook

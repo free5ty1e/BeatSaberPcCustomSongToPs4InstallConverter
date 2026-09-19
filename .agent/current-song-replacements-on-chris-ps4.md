@@ -37,10 +37,10 @@
 | 6 | `IDidntChangeMyNumber` | Take Me to the Beach | Imagine Dragons feat. Ado | 105 | 42a0a | 5/5 | 2.3s | ⏳ |
 | 7 | `HappierThanEver` | Cosmic | Red Velvet | 106 | 3e192 | 5/5 | 1.7s | ⏳ |
 | 8 | `BadGuy` | Odo | Ado | 128 | 1dbb9 | 5/5 | 1.8s | ⏳ |
-| 9 | `NDA` | Duvet | Bôa | 186 | 4b107 | 5/5 | 1.6s | ⏳ |
+| 9 | `NDA` | Dragula | Rob Zombie | 125 | 6d04 | 5/5 native | 8.2s | ✅ (v0.5341+) |
 | 10 | `ThereforeIAm` | Who's Laughing Now | Ava Max | 92 | f91e | 5/5 | 2.0s | ⏳ |
 
-> **Note:** NDA slot was originally assigned "360" by Charli xcx but replaced with Duvet by Bôa because the 360-degree characteristics made it unsuitable for PS4 VR play.
+> **Note:** NDA slot history: originally "360" by Charli xcx (unsuitable for PS4 VR — 360° characteristics), then Duvet by Bôa (4b107 — Hard/Expert+ only), then the 22c4e Shiki Miyoshino cover (qualified but DELETED from BeatSaver 2026-09-19, 404s mid-script), now **Dragula by Rob Zombie (6d04)** — no Duvet map with native Easy/Normal/Hard exists on BeatSaver.
 
 ## Lizzo Replacements (9 songs)
 

@@ -813,3 +813,38 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 
 **Verification:** plugin v0.8045 built (strings-verified: `BS Deluxe %s (ON)`, `(%d/3 features ON)`, `(official songs only)`), deployed, downloaded-back bytes confirmed v0.8045 (FSELF-unpack quirk per Exp 220). README gained a "Startup Notifications" section (flags table also now documents `enable_plugin`). All 69 example files' kill-switch blocks updated to the one-toast format. Tests: **598/598** (3 new: TestFeaturesMergeOnDeploy — missing-key materialization preserving explicit values, file creation from defaults, deploy-full/skip wiring).
 - **Status:** ✅ Deployed (plugin v0.8045 + all-ON flags). **Awaiting boot test:** expect the single toast `BS Deluxe v0.8045 (ON) / (3/3 features ON)` in the headset.
+
+---
+
+### Experiment 222 — Feature-Flag Gating Audit: enable_beatmap_mode_mapping Was Decorative + ps4_state Parse Fix
+- **Date:** 2026-09-19
+- **User findings (2):** (1) "if the beatmap feature flag was not there before, then how was the beatmap mode selector feature working? It should have been gated" — and (2) ps4_state.py failed: `(failed to parse features.json: Extra data: line 7 column 1 (char 155))`.
+
+**Audit result — the flag WAS decorative.** `g_feature_beatmap_mode_mapping` was assigned by the parser, included in logs and the boot-notification count, but had **zero conditional uses on any behavior path** — no `if (g_feature_beatmap_mode_mapping)` guarded anything. That is exactly why the mode selector worked with the flag absent: nothing was gated. Full matrix:
+| Flag | Gates what | Status |
+|---|---|---|
+| `enable_plugin` | redirect loop + all 3 metadata hooks + metadata load | ✅ real (since v0.8043/v0.8045) |
+| `enable_custom_song_replacements` | redirect loop | ✅ real |
+| `enable_song_metadata_modification` | metadata load + apply_metadata_replacement + move_next_hook + try_install_tmp_hook | ✅ real |
+| `enable_beatmap_mode_mapping` | NOTHING | ❌ decorative → FIXED in v0.8046 |
+
+**Fix (plugin v0.8046):** the mode buttons live in the PATCHED PACK BUNDLE preview sets. When the flag is OFF, the open-hook redirect loop now skips `pack_assets` keys (stock pack bundles load → Standard-only preview sets) AND the `catalog` key — the Exp 180 invariant requires skipping the catalog too (patched catalog's CRC/size describe patched bundles; against stock bundles = CRC mismatch = boot crash at the pack scan). Per-song redirects still fire: custom audio + Standard charts keep working with mode buttons hidden. Verified live: flipped the flag OFF on the PS4 (`ps4_state.py` correctly reports "2/3 features ON" + expected toast text), then restored all-ON.
+
+**ps4_state.py parse fix (pipeline v0.5341):** `cat_remote` returns lftp's combined stdout — banner chatter (e.g. `open: GetPass() failed -- assume anonymous login`) precedes/trails the file bytes, and `json.loads` failed at the file's exact end offset ("Extra data ... char 155" = 155-byte file + extra output). Both JSON reads (features.json + redirects.json) now find the first `{` and `raw_decode` exactly one object, ignoring lftp chatter.
+
+**Gating contract tests (permanent):** new `TestFeatureFlagGatingAudit` (5 tests in test_pack_mode_pipeline.py): mode-mapping gate checks pack_assets AND catalog keys; kill switch gates the redirect loop + every metadata hook definition; custom_song_replacements gates the loop before it starts; song_metadata_modification gates the load + all hooks; `test_no_flag_is_decorative` regex-verifies every `g_feature_*` has at least one conditional use outside load_features — a future decorative flag fails CI.
+
+**Verification:** plugin v0.8046 built (strings: "pack bundle + catalog redirects skipped"), deployed, downloaded-back bytes verified v0.8046. ps4_state.py reports flags correctly in all tested states (all-ON, mode-mapping-OFF, restored-all-ON). Tests: **603/603** (5 new).
+- **Status:** ✅ All four flags now genuinely gate their features. **Awaiting boot test:** with mode-mapping ON expect the normal 4-mode buttons; toggling it OFF (then booting) should show ONLY Standard on every song while customs still play.
+
+---
+
+### Experiment 223 — BeatSaver Map Deletion: 22c4e (Duvet cover) 404 Mid-Script
+- **Date:** 2026-09-19
+- **User report:** the Billie Eilish install script died at song 6 (nda slot): `BeatSaver download failed for map 22c4e — HTTP 404`. Songs 1–5 had deployed fine.
+- **Root cause:** the 22c4e map (Bôa - Duvet, Shiki Miyoshino cover — selected in Exp 219 as the only qualifying Duvet variant with native Easy/Normal/Hard) was **deleted from BeatSaver** between the Exp 219 audit (2026-09-18) and the user's script run (2026-09-19). Mappers delete maps; any MAP_ID in the example docs can vanish at any time.
+- **Replacement search:** no Duvet variant on BeatSaver qualifies anymore — 4b107 (original Bôa) is Hard/Expert+ only, 43f78 (TV Size) is Normal-only, remixes are Expert-only. Since the song can no longer meet the difficulty rule, replaced the SLOT's song entirely: **Dragula (Rob Zombie) 6d04** — industrial/alternative (matching the slot's indie/alt vibe), 5/5 native (Easy 317 / Normal 382 / Hard 624 / Expert 713 / ExpertPlus 1008 — verified by download), BPM 125, 214s audio, mapper CyanSnow (Noodleween pack). Both the BE `.md` (block + pack list + provenance note explaining the Duvet history) and `.sh` updated.
+- **Fleet-wide 404 audit:** re-checked all 43 real MAP_IDs across the 34 example docs — all alive and all still qualify native Easy/Normal/Hard. 22c4e was the only deletion.
+- **Systemic mitigation (future work):** a pre-deploy liveness+qualification check per MAP_ID (fail fast with a clear "map deleted from BeatSaver" message instead of the raw traceback), and/or a periodic audit script for the docs.
+- **Verification:** Dragula deploy via the exact failing command in progress (bundle + pack + validation).
+- **Status:** ✅ Replacement deployed (see deploy verification below). BE script's song 6 now works; user can re-run the full script or just the remaining songs.

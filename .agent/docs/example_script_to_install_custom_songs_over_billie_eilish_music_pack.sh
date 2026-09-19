@@ -105,11 +105,11 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3e192 
 if [ $? -ne 0 ]; then echo "ERROR: Failed happier than ever"; exit 1; fi
 echo "  happier than ever → Cosmic deployed successfully"
 
-# Song 6: nda → Duvet (Bôa — Shiki Miyoshino cover)
-echo "Deploying nda → Duvet (Bôa — Shiki Miyoshino cover)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 22c4e     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 6: nda → Dragula (Rob Zombie)
+echo "Deploying nda → Dragula (Rob Zombie)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6d04     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed nda"; exit 1; fi
-echo "  nda → Duvet deployed successfully"
+echo "  nda → Dragula deployed successfully"
 
 # Song 7: therefore i am → Who's Laughing Now (Ava Max)
 echo "Deploying therefore i am → Who's Laughing Now (Ava Max)..."

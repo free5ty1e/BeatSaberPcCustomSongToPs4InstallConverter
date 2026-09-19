@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8045"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8045: ONE combined boot toast "BS Deluxe v0.8045 (ON/OFF) / By Chris Primeish / (N/3 features ON | official songs only)" (second toast was swallowed by PS4VR headset switch-over); v0.8043: enable_plugin kill switch
-pipeline_version: "0.5340" # in beat_saber_deluxe/VERSION - Exp 221: features.json deploy merges DEFAULT_FEATURES (stale-file missing-flag fix — root cause of "2/3 flags"), --skip-plugin-deployment opt-out (--deploy-full always builds+deploys latest plugin), ps4_state.py reports feature flags.
+plugin_version: "0.8046"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8046: enable_beatmap_mode_mapping now REALLY gates (OFF = pack_assets + catalog redirects skipped → stock packs, Standard-only modes; was decorative v0.5334-v0.8045); v0.8045: one combined boot toast (ON/OFF + N/3 flags)
+pipeline_version: "0.5341" # in beat_saber_deluxe/VERSION - Exp 222: ps4_state.py JSON reads use raw_decode (lftp banner chatter broke json.loads); Exp 221: features deploy merges DEFAULT_FEATURES, --skip-plugin-deployment, ps4_state.py reports flags.
 
 # Platform Constraints
 target_platform: PS4

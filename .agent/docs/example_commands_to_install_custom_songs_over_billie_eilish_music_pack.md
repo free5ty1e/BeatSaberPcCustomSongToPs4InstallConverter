@@ -139,7 +139,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
   3. bellyache → Custom: ATTITUDE (IVE)
   4. bury a friend → Custom: Baddie (IVE)
   5. happier than ever → Custom: Cosmic (Red Velvet)
-  6. n da → Custom: Duvet (Bôa — Shiki Miyoshino cover)
+  6. n da → Custom: Dragula (Rob Zombie)
   7. therefore i am → Custom: Who's Laughing Now (Ava Max)
   8. 2 be loved (am i ready) → Custom: Yes I'm A Mess (AJR)
   9. about damn time → Custom: The Middle (Jimmy Eat World)
@@ -226,17 +226,21 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 36ab4 
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3e192     --target HappierThanEver     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 6. nda → Duvet (Bôa — Shiki Miyoshino cover)
-# Custom Song: Duvet
-# Artist: Bôa (Shiki Miyoshino cover)
-# Album: Twilight (Serial Experiments Lain opening / cover release)
-# Year: 1998 / 2023
-# BeatSaver MAP_ID: 22c4e
-# BeatSaver Link: https://beatsaver.com/maps/22c4e
-# Genre: Alternative Rock / Indie
-# BPM: 186
-# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper shad; Shiki Miyoshino cover version (the old 4b107 original-Bôa map was Hard/Expert+ only)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 22c4e     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# 6. nda → Dragula (Rob Zombie)
+# Custom Song: Dragula
+# Artist: Rob Zombie
+# Album: Hellbilly Deluxe
+# Year: 1998
+# BeatSaver MAP_ID: 6d04
+# BeatSaver Link: https://beatsaver.com/maps/6d04
+# Genre: Industrial Metal / Alternative
+# BPM: 125
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper CyanSnow (Noodleween pack)
+#   (Replaces Duvet — both the original 4b107 Bôa map [Hard/Expert+ only] and the
+#    22c4e Shiki Miyoshino cover [which qualified but was deleted from BeatSaver
+#    and now 404s] failed qualification/availability. No Duvet map with native
+#    Easy/Normal/Hard exists on BeatSaver as of 2026-09-19.)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6d04     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 7. therefore i am → Who's Laughing Now (Ava Max)
 # Custom Song: Who's Laughing Now

@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8046] — 2026-09-19
+### Fixed
+- **`enable_beatmap_mode_mapping` was DECORATIVE (Exp 222 audit):** the flag was read, logged, and counted but gated NOTHING — which is why the mode selector worked while the flag was silently absent ("2/3 feature flags"). It now genuinely gates the feature: when OFF, the open-hook redirect loop skips `pack_assets` bundle redirects AND the `catalog` redirect, so the game loads STOCK pack bundles (Standard-only preview sets, no extra mode buttons) while per-song customs (audio + Standard beatmaps) keep working. The catalog skip is required by the Exp 180 invariant: the patched catalog's m_Crc/m_BundleSize describe the PATCHED pack bundles — serving it against stock bundles fails Unity's CRC validation and crashes the pack scan.
+- The "beatmap_mode_mapping is OFF" startup log line now describes the real behavior (pack bundle + catalog redirects skipped) instead of claiming "extra mode sets hidden" with no implementation behind it.
+- **Gating contract enforced by tests:** new `TestFeatureFlagGatingAudit` (5 tests) pins that all four flags have behavioral gates — including `test_no_flag_is_decorative`, which fails if any `g_feature_*` variable has no conditional use outside `load_features`.
+
 ## [v0.8045] — 2026-09-19
 ### Changed
 - **Single compressed boot notification** (Exp 221): the version banner and the feature-flag status are now ONE toast — `BS Deluxe v0.8045 (ON) / By Chris Primeish / (3/3 features ON)` — because the PS4VR headset switch-over swallows the second toast when the headset is already powered on at launch (user-verified: both toasts appear only when launching with the headset off). Kill switch OFF variant: `BS Deluxe v0.8045 (OFF) / By Chris Primeish / (official songs only)`. The v0.8044 two-toast format is superseded.

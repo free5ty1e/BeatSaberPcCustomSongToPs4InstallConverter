@@ -1,5 +1,9 @@
 # Pipeline Changelog
 
+## v0.5341 (2026-09-19)
+### Fixed
+- **`ps4_state.py` "Extra data" JSON parse failure (Exp 222):** `cat_remote` returns lftp's combined stdout, which can carry banner chatter around the file bytes — `json.loads` on the raw capture choked at exactly the file's end offset. Both JSON reads (features.json, redirects.json) now locate the first `{` and `raw_decode` exactly one object, ignoring surrounding lftp output.
+
 ## v0.5340 (2026-09-19)
 ### Fixed
 - **Stale features.json deployed with silently-absent flags (Exp 221 — the "2/3 feature flags" report).** `--deploy-full`/`--deploy-features` uploaded the local `features.json` verbatim; a local file written before `enable_beatmap_mode_mapping` existed shipped without it, and the plugin booted with that flag OFF (user saw "2/3 feature flags ON" after clean-slate + two pack script installs). `_deploy_features_to_ps4()` now merges missing keys from `DEFAULT_FEATURES` (explicit values — including explicit false — are never overwritten) and creates the file from defaults when absent; the "skip deploy if local file missing" path is gone.

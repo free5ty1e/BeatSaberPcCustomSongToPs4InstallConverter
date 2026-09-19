@@ -838,3 +838,114 @@ class TestConfigGeneration:
             os.unlink(p)
 
         assert cat1 == cat2, "Catalog regeneration is NOT deterministic!"
+
+
+class TestFeatureFlagGatingAudit:
+    """Exp 222: every feature flag MUST gate real behavior — a flag that is
+    read, logged, and counted but never checked on a behavior path is
+    decorative (enable_beatmap_mode_mapping shipped that way for v0.5334–
+    v0.8045: the mode selector worked with the flag absent because nothing
+    was gated on it). These tests pin the gating contract for all four flags.
+    """
+
+    MAIN_CPP = os.path.join(PROJECT_ROOT, "src", "main.cpp")
+
+    def _code(self):
+        with open(self.MAIN_CPP) as f:
+            return f.read()
+
+    def _open_hook_code(self, code, span=4000):
+        start = code.find("static int open_hook(")
+        assert start > 0
+        return code[start:start + span]
+
+    def test_beatmap_mode_mapping_gates_pack_and_catalog_redirects(self):
+        """enable_beatmap_mode_mapping=OFF must skip pack-bundle AND catalog
+        redirects inside the open_hook loop (stock packs → Standard-only
+        modes; patched catalog against stock packs would fail CRC — Exp 180)."""
+        oh = self._open_hook_code(self._code())
+        assert "g_feature_beatmap_mode_mapping" in oh, \
+            "open_hook does not reference g_feature_beatmap_mode_mapping — mode-mapping flag is decorative"
+        # The gate must skip BOTH pack_assets and catalog keys
+        gate_idx = oh.find("g_feature_beatmap_mode_mapping")
+        window = oh[gate_idx:gate_idx + 600]
+        assert '"pack_assets"' in window and "pack_assets" in window, \
+            "mode-mapping gate must check for pack_assets keys"
+        assert '"catalog"' in window or "catalog" in window, \
+            "mode-mapping gate must also skip catalog redirects (CRC invariant)"
+
+    def _def_body(self, code, hook, span=500):
+        """Find a function DEFINITION (not the forward declaration) and return
+        its first `span` chars. Definitions have a '{' before the next ';'."""
+        for variant in (f"static void* {hook}(", f"static void {hook}(",
+                       f"static int {hook}("):
+            idx = 0
+            while True:
+                idx = code.find(variant, idx)
+                if idx < 0:
+                    break
+                # definition = next brace appears before next semicolon
+                brace = code.find("{", idx)
+                semi = code.find(";", idx)
+                if brace >= 0 and (semi < 0 or brace < semi):
+                    return code[idx:idx + span]
+                idx += 1
+        return ""
+
+    def test_kill_switch_gates_every_behavior_path(self):
+        """enable_plugin=OFF must gate: (1) the redirect loop, (2) every
+        metadata hook entry point. Each metadata hook must check it."""
+        code = self._code()
+        # open_hook gate
+        oh = self._open_hook_code(code)
+        assert "g_feature_plugin_enabled && g_feature_custom_song_replacements" in oh
+        # metadata hooks
+        for hook in ("apply_metadata_replacement", "move_next_hook", "try_install_tmp_hook"):
+            body = self._def_body(code, hook)
+            assert body, f"{hook} definition not found"
+            assert "g_feature_plugin_enabled" in body, \
+                f"{hook} must check g_feature_plugin_enabled (kill switch)"
+
+    def test_custom_song_replacements_gates_redirect_loop(self):
+        """enable_custom_song_replacements=OFF → no redirects fire at all."""
+        oh = self._open_hook_code(self._code())
+        gate_pos = oh.find("g_feature_plugin_enabled && g_feature_custom_song_replacements")
+        loop_pos = oh.find("for (int i = 0; i < REDIRECT_COUNT")
+        assert gate_pos > 0 and loop_pos > 0 and gate_pos < loop_pos
+
+    def test_song_metadata_modification_gates_all_metadata_paths(self):
+        """enable_song_metadata_modification=OFF → metadata loading AND every
+        metadata hook return stock behavior."""
+        code = self._code()
+        # the load itself is gated in module_start
+        assert "if (g_feature_song_metadata_modification) {" in code, \
+            "load_song_metadata must be gated"
+        for hook in ("apply_metadata_replacement", "move_next_hook", "try_install_tmp_hook"):
+            body = self._def_body(code, hook)
+            assert body, f"{hook} definition not found"
+            assert "g_feature_song_metadata_modification" in body, \
+                f"{hook} must check g_feature_song_metadata_modification"
+
+    def test_no_flag_is_decorative(self):
+        """Every g_feature_* variable must appear in at least one behavioral
+        gate (a conditional that is NOT just the parser, logger, or counter).
+        Parser/logger/counter uses live inside load_features or {snprintf/log}
+        blocks; we require at least one use as a condition guarding a hook,
+        redirect loop, or data load."""
+        code = self._code()
+        # strip load_features (parser) and log blocks — crude but effective:
+        # count occurrences outside the load_features function body
+        lf_start = code.find("static void load_features(")
+        lf_end = code.find("extern \"C\" FILE *fopen", lf_start)
+        lf_body = code[lf_start:lf_end]
+        rest = code.replace(lf_body, "")
+        for flag in ("g_feature_plugin_enabled",
+                     "g_feature_custom_song_replacements",
+                     "g_feature_song_metadata_modification",
+                     "g_feature_beatmap_mode_mapping"):
+            # appears outside load_features at least: gate(s) + log lines + toast
+            # Require a real conditional (if/&&/!) usage outside the loader
+            import re as _re
+            conds = _re.findall(rf"(?:if\s*\(|&&\s*|!\s*){flag}", rest)
+            assert len(conds) >= 1, \
+                f"{flag} has no behavioral gate outside load_features — decorative flag"

@@ -164,7 +164,10 @@ def main():
         red = cat_remote(f"{AFR_DIR}/redirects.json")
         if red is not None:
             try:
-                data = json.loads(red)
+                # cat_remote output may carry lftp banner chatter around the
+                # file bytes — decode exactly one JSON object (Exp 222).
+                start = red.index('{')
+                data, _ = json.JSONDecoder().raw_decode(red[start:])
                 redirects = data.get('redirects', {})
                 redirect_count = len(redirects)
                 # song redirects = BeatmapLevelsData/* keys; other keys = pack/catalog
@@ -219,6 +222,12 @@ def main():
 
     # 5b. Feature flags (runtime plugin behavior — what the plugin will do on
     # next boot). Read from the PS4's features.json, not any local copy.
+    # NOTE: cat_remote returns lftp's combined stdout, which can carry a
+    # banner/preamble line (e.g. "open: GetPass() failed -- assume anonymous
+    # login") before the file bytes — and trailing output after EOF. Parsing
+    # the raw capture produced "Extra data: line N column M" errors (Exp 222),
+    # so extract exactly the first JSON object via raw_decode and ignore any
+    # surrounding chatter.
     print()
     print("--- Feature Flags (PS4 features.json — plugin behavior on next boot) ---")
     fx = cat_remote(f"{AFR_DIR}/features.json")
@@ -226,7 +235,14 @@ def main():
         print("  (features.json not found on PS4 — plugin defaults: all features OFF)")
     else:
         try:
-            feats = json.loads(fx)
+            decoder = json.JSONDecoder()
+            # Find the first '{' and decode exactly one JSON object from there.
+            start = fx.index('{')
+            feats, _ = decoder.raw_decode(fx[start:])
+        except Exception as e:
+            print(f"  (failed to parse features.json: {e})")
+            feats = None
+        if feats is not None:
             # Absent keys default: enable_plugin=true (kill switch), others false.
             plugin_on = feats.get("enable_plugin", True)
             print(f"  Plugin (enable_plugin): {'ON — custom songs active' if plugin_on else 'OFF — official songs only'}")
@@ -241,8 +257,6 @@ def main():
             print(f"  → Boot notification will show: "
                   f"\"BS Deluxe vX ({'ON' if plugin_on else 'OFF'}) ... ({n_on}/3 features "
                   f"{'ON' if plugin_on else '— plugin disabled'})\"")
-        except Exception as e:
-            print(f"  (failed to parse features.json: {e})")
     print()
     print("=" * 62)
 

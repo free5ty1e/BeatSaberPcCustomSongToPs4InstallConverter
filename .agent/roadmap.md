@@ -244,6 +244,11 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 222) — Feature-Flag Gating Audit (Decorative Flag Fixed)
+- [x] **enable_beatmap_mode_mapping was decorative** (assigned, logged, counted — gated nothing; explains mode selector working with flag absent). v0.8046: OFF → open-hook skips pack_assets + catalog redirects → stock packs, Standard-only modes; per-song customs still play. Catalog skip required (Exp 180 CRC invariant).
+- [x] **Gating contract test suite** (5 tests): every g_feature_* must have a conditional use outside load_features; kill switch + each feature flag verified against their behavior paths.
+- [x] **ps4_state.py "Extra data" parse fixed:** lftp banner chatter around cat output; both JSON reads use raw_decode on the first object.
+
 ### Completed (Exp 221) — Flag-Count Fix + Plugin-Deploy Enforcement + Compressed Toast
 - [x] **"2/3 flags" root-caused:** stale local features.json missing enable_beatmap_mode_mapping deployed verbatim. Deploys now merge DEFAULT_FEATURES (explicit values preserved; file created from defaults when absent). 3 regression tests.
 - [x] **--deploy-full always builds + deploys the latest plugin** (make clean + make -B); --skip-plugin-deployment opts out.
