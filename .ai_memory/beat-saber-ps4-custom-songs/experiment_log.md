@@ -738,3 +738,47 @@ Git archaeology: the heuristic shipped in v0.52 (commit 28cbd25) justified by "3
 **Tests:** `TestFillMissingStandardDifficulties` (6), `TestCameliaSyncRegression` (2, uses the cached BeatSaver sources), OneSaber dots-only updates (5), BPM grid updates (3). **Full suite: 595/595 pass.**
 
 **Status:** ✅ Code complete + verified against all six cached map sources. **Awaiting redeploy + user retest.** Expected after redeploy of the four broken songs: Hard plays the custom chart at true BPM with notes on-grid through song end; OneSaber shows blue dots only.
+
+---
+
+### Experiment 219 — Example-File Song-Quality Audit + Global Plugin Kill Switch
+- **Date:** 2026-09-18
+- **User request:** (a) explain the fill-missing-difficulties algorithm; (b) the Camelia songs lock out lower-skilled players (Expert-heavy maps) — per `user_preferences.md` every custom song MUST ship native Easy/Normal/Hard (Expert/E+ may be auto-filled); research and choose replacement songs for the Camelia pack and update both example files; (c) audit EVERY entry in every `example_*` file and fix inaccurate metadata comments (the docs claimed "5/5" for ExpertPlus-only maps like Sexy Socialite — contradicting reality); (d) find/document the global plugin-disable feature flag, or implement it, with a pipeline command example.
+
+**Fill algorithm (v0.5338) explained:** `fill_missing_standard_difficulties()` iterates the 5 canonical difficulties in order (Easy, Normal, Hard, Expert, ExpertPlus). For each missing one it picks the closest HARDER difficulty (playing up is safer than down), falling back to the closest EASIER one; clones that difficulty's Standard beatmap verbatim into `<Diff>.dat`. Never overwrites files the map provides; never uses mode files (OneSaber/NoArrows/90Degree) as donors; runs before mode detection/generation/replacement. So a map with only ExpertPlus gets Easy←E+, Normal←E+, Hard←E+, Expert←E+ — every slot has custom content on the custom song's beat grid, but Easy/Normal/Hard are HARD charts (the "worst case" the user called out: ExpertPlus-only maps become ExpertPlus at every difficulty).
+
+**Audit method:** harvested all 44 unique MAP_IDs across the 34 pack `.md` files, queried the BeatSaver API per ID for the true Standard difficulty list, then DOWNLOADED each candidate replacement and verified real per-difficulty note counts (the API diffs alone are insufficient — several "qualifying" candidates had duplicate/flat charts, e.g. 2ed00 Gangnam Style: Easy=Normal=Hard=544 notes; 1ac04 Levitating: Easy=Hard, Normal=Expert; 4eff6 Uptown Funk: bad metadata + flat charts; 4391e Let's Groove: Hard=2344 vs Expert=616 nonsense). 15 of 44 entries failed the Easy/Normal/Hard rule. BeatSaver API notes: `/maps/id/<id>/download` is dead (404) — use the version `downloadURL`; votes/downloads fields return 0.
+
+**Replacements applied (all verified by download + note-count progression):**
+| Pack | Slot | Old (fail) | New | Native diffs |
+|---|---|---|---|---|
+| camelia | Crystallized | Sexy Socialite 6f1f (E+ only) | Le Freak (Chic) 1760d | 5/5 |
+| camelia | CycleHit | Jealous 111fd (E, Ex) | 24K Magic (Bruno Mars) 16726 | 5/5 |
+| camelia | ExitThisEarthsAtomosphere | 'Roni 115ba (E, Ex) | Fireball (Pitbull) 9c05 | 5/5 |
+| camelia | Ghost | Green Light 37d5 (E+ only) | Around The World (Niklas Dee) 40201 | 5/5 |
+| camelia | LightItUp | 1999 5352 (H, Ex, E+) | Daft Punk Megamix 1 242e9 | 5/5 |
+| camelia | WhatTheCat | FANCY 47f3 (N, H, Ex, E+) | Stayin' Alive (Bee Gees) 3cfe9 | 5/5 |
+| britney_spears | BabyOneMoreTime | Blinding Lights 8553 (E, H, Ex) | Take on Me (a-ha) 6d63 | 4/5 (E+) |
+| britney_spears | GimmeMore | Gangnam Style 141 (N, H, Ex) | That That (PSY ft. SUGA) 250b5 | 5/5 |
+| britney_spears | MeAgainstTheMusic | Mr. Blue Sky 570 (N, H, Ex) | Mr. Blue Sky [ARCS] 2fa04 | 4/5 (E+) |
+| britney_spears | OopsIDidItAgain | Rap God 46d4 (Ex, E+) | Oops!... I Did It Again [DITR4] 28566 | 5/5 |
+| britney_spears | Overprotected | Dancing On My Own 189d (H, Ex) | Shut Up And Dance (Walk The Moon) 285e8 | 5/5 |
+| britney_spears | Scream&Shout | Levitating 12355 (N,H,Ex,E+) | Cold Heart (PNAU Remix) 1d9fd | 5/5 |
+| britney_spears | TillTheWorldEnds | Dance Monkey 6cc2 (N,H,Ex) | Dance Monkey metal cover 13f31 | 4/5 (E+) |
+| britney_spears | Womanizer | Womanizer 12bd8 (H only) | Radar (Britney Spears) 1e2f7 | 5/5 |
+| lizzo | GoodAsHell | Do You Wanna Taste It 212c5 (80s clip, H only) | Do You Wanna Taste It (full) 25411 | 5/5 |
+| lizzo | Juice | Blame 5758 (Ex only) | One More (SG Lewis ft. Nile Rodgers) 27140 | 5/5 |
+| billie_eilish | NDA | Duvet 4b107 (H, E+) | Duvet (Shiki Miyoshino cover) 22c4e | 5/5 |
+| rolling_stones | BiteMyHeadOff | Escaping the Ruins 8c2a (E, Ex) | Escaping the Ruins 1fccd (same song) | 4/5 (E+) |
+Both the `.md` (metadata comments with true native diffs, album/year/genre/mapper) and `.sh` (MAP_ID + song names) were updated for all five packs; one substitution bug (`--target Womanizer` renamed to `Radar` by an over-eager replace) was caught and fixed before it could ship. Post-audit re-check: all 44 MAP_IDs now qualify; every difficulty comment states the true native set.
+
+**Global kill switch (NEW, plugin v0.8043 + pipeline v0.5339):** the flag did NOT exist (only per-feature flags + the `--disable-plugin` plugins.ini edit, which requires no clean but is heavyweight and not what the user wanted). Implemented `enable_plugin` as the master runtime flag in `features.json`: when explicitly false, the open-hook redirect loop AND all metadata hooks (TMP set_text/SetText, MoveNext, replacement apply) return stock behavior — the game plays 100% official content. Unlike every other flag it DEFAULTS TRUE when absent (a missing features.json keeps a deployed setup working; only explicit false disables). Pipeline command pair:
+```
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false   # play official songs
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true    # back to customs
+```
+Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043 built (FSELF magic verified) and deployed to `/data/GoldHEN/plugins/beat_saber_deluxe.prx` (88,688 bytes).
+
+**Tests:** 595/595 pass. **Versions:** pipeline v0.5339, plugin v0.8043.
+
+**Status:** ✅ Docs audited + replacements chosen + kill switch implemented and deployed. **Awaiting user:** re-deploy Camelia (or any pack) via the updated scripts when desired; boot test with `enable_plugin=false` to see official-only behavior, then `true` to restore.

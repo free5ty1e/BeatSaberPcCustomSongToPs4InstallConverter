@@ -11,10 +11,11 @@ The Beat Saber Deluxe plugin uses a `features.json` configuration file located i
 
 ## `features.json` Structure
 
-Since v0.5334, `features.json` holds the runtime flags the v0.8042 plugin reads at startup (via `load_features()` in `main.cpp`):
+Since v0.5334, `features.json` holds the runtime flags the plugin reads at startup (via `load_features()` in `main.cpp`). Current shape (v0.8043 plugin / v0.5339 pipeline):
 
 ```json
 {
+  "enable_plugin": true,
   "enable_custom_song_replacements": true,
   "enable_song_metadata_modification": true,
   "enable_beatmap_mode_mapping": true
@@ -28,6 +29,7 @@ Since v0.5334, `features.json` holds the runtime flags the v0.8042 plugin reads 
 
 | Flag | Default (missing file) | Purpose |
 |------|----------------------|---------|
+| `enable_plugin` | **`true`** (unique) | **Global kill switch (v0.8043+).** When explicitly `false`, the plugin is fully inert: no redirects fire AND all metadata hooks return stock values — the game plays 100% official content on next boot. The ONLY flag defaulting true when absent, so a missing features.json keeps a deployed setup working. Pipeline: `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false` to play official songs, `...=true` to restore customs. No plugins.ini edit, no PS4 clean. |
 | `enable_custom_song_replacements` | `false` | Gates all song redirects in `open_hook`. When OFF, no bundle redirects fire — game plays original songs. |
 | `enable_song_metadata_modification` | `false` | Gates song name/artist metadata replacement (MoveNext hook + `song_metadata.json` + TMP_Text replacement). ON in production. |
 | `enable_beatmap_mode_mapping` | `false` | Gates visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle preview arrays. When OFF, stock songs show only Standard; custom songs with their own mode sets show only Standard. When ON, custom songs with patched mode sets show all enabled modes. |

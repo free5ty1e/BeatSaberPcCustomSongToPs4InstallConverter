@@ -29,6 +29,16 @@
 #   # Each --deploy-full only adds extra modes for THAT song in the pack bundle
 #   python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> --target <SLOT> --pcm16 --no-pad --convert-to-v3 --deploy-full
 #
+#
+# 🔌 Global Plugin Kill Switch (enable_plugin)
+# Disable the ENTIRE plugin without editing plugins.ini or clearing the PS4 —
+# the game plays 100% official songs on the next boot:
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+# Re-enable your custom songs:
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+# Takes effect on next game boot (features.json is read at plugin startup).
+# Requires plugin v0.8043+.
+#
 # 🔧 NEW: Clear Target Song (--clear-target-song)
 # Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
 #   python3 tools/full_custom_song_pipeline.py --clear-target-song <SLOT_NAME>

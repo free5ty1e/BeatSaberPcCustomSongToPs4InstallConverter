@@ -1,5 +1,11 @@
 # Pipeline Changelog
 
+## v0.5339 (2026-09-18)
+### Added
+- **Global kill switch support: `enable_plugin`** added to `DEFAULT_FEATURES` (default `true`). `--features-only --set-feature enable_plugin=false` uploads a features.json that makes the plugin (v0.8043+) fully inert on next boot — official songs only, without editing plugins.ini or clearing the AFR dir. `--set-feature enable_plugin=true` re-enables.
+### Changed
+- **Song selection rule for all `example_*` docs (Exp 219 audit):** every custom song in the 34 pack example files must ship native Easy + Normal + Hard difficulties (per `user_preferences.md` — Expert-only maps lock out lower-skilled players). Audited all 44 unique BeatSaver MAP_IDs against the live API: replaced 15 failing songs across camelia (6), britney_spears (8), lizzo (2), billie_eilish (1), rolling_stones (1) with qualifying maps (verified by downloading each and checking real note counts per difficulty — several API-qualified candidates were rejected for duplicate/flat charts). Difficulty comments in the docs now state the TRUE native difficulties (the old docs claimed "5/5" for maps that shipped ExpertPlus-only — e.g. Sexy Socialite). Expert/Expert+ gaps are auto-filled by the pipeline from the map's own closest difficulty; Easy/Normal/Hard are never clones.
+
 ## v0.5338 (2026-09-17)
 ### Fixed
 - **"BPM wayyy too slow, notes wayyy too late" on partial-difficulty maps (Exp 218).** When a BeatSaver map provides fewer than 5 difficulties (e.g. Sexy Socialite/Green Light ship ExpertPlus only; Jealous/'Roni ship Easy+Expert), the pipeline replaced only those slots and left the **stock beatmaps** in the unreplaced difficulty TextAssets — stock timing (the stock song's BPM grid) played over the custom audio. Every difficulty the user selected that the map didn't provide was the wrong chart on the wrong grid. New `fill_missing_standard_difficulties()` (runs before mode detection/generation/replacement) materializes a `<Diff>.dat` for every missing difficulty, cloned from the map's own closest harder (else easier) difficulty — every Standard slot now carries the custom song's own beat grid.

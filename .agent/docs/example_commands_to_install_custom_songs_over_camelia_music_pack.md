@@ -3,7 +3,12 @@
 This document provides step-by-step, self-contained pipeline commands to replace all 6 songs
 in the official Camelia (Chromeo) DLC music pack with custom community songs from BeatSaver.
 
-Pipeline: v0.5331 — fully automated, no manual song_metadata.json editing required.
+Pipeline: v0.5338 — fully automated, no manual song_metadata.json editing required.
+
+**Song selection rule (v0.5338+):** every custom song below ships native Easy, Normal AND Hard
+difficulties from its mapper (per `user_preferences.md` — Expert-only maps lock out lower-skilled
+players and do not qualify for the collection). Songs missing Expert/Expert+ are filled from the
+map's own closest difficulty by the pipeline; Easy/Normal/Hard are NEVER clones.
 
 ---
 
@@ -30,6 +35,25 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> -
 ```
 
 ---
+
+---
+
+## 🔌 Global Plugin Kill Switch (`enable_plugin`)
+
+Play the **official Beat Saber songs** (100% stock behavior) without editing `plugins.ini`
+or clearing anything on the PS4 — the plugin simply goes fully inert (no redirects, no
+metadata swaps) on the next game boot:
+
+```bash
+# Disable everything — official songs only:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+
+# Re-enable your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
+
+Takes effect on the next game boot (`features.json` is read at plugin startup).
+Requires plugin v0.8043+.
 
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 
@@ -117,13 +141,15 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
 
 - **Pack key**: `camelia`
 - **Pack bundle**: `camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle`
-- **6 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
-  1. Crystallized → Custom: Sexy Socialite (Chromeo)
-  2. CycleHit → Custom: Jealous (I Ain't With It) (Chromeo)
-  3. ExitThisEarthsAtomosphere → Custom: 'Roni Got Me Stressed Out (Chromeo)
-  4. Ghost → Custom: Green Light (Chromeo Remix) (Lorde, Chromeo)
-  5. LightItUp → Custom: 1999 (Charli XCX & Troye Sivan)
-  6. WhatTheCat → Custom: FANCY (TWICE)
+- **6 songs** (each custom map ships ALL 5 difficulties natively: Easy, Normal, Hard, Expert, ExpertPlus —
+  meeting the collection rule that every song must be playable by lower-skilled players on Easy/Normal/Hard;
+  Expert+ is always the mapper's own chart, never a clone):
+  1. Crystallized → Custom: Le Freak (Chic)
+  2. CycleHit → Custom: 24K Magic (Bruno Mars)
+  3. ExitThisEarthsAtomosphere → Custom: Fireball (Pitbull feat. John Ryan)
+  4. Ghost → Custom: Around The World (Niklas Dee)
+  5. LightItUp → Custom: Daft Punk Megamix 1 (Daft Punk)
+  6. WhatTheCat → Custom: Stayin' Alive (Bee Gees)
 
 ## Where Target Metadata Lives
 
@@ -146,75 +172,75 @@ song_metadata.json
 ## Per-Song Pipeline Commands
 
 ```bash
-# 1. Crystallized → Sexy Socialite (Chromeo)
-# Custom Song: Sexy Socialite
-# Artist: Chromeo
-# Album: Head Over Heels
-# Year: 2018
-# BeatSaver MAP_ID: 6f1f
-# BeatSaver Link: https://beatsaver.com/maps/6f1f
-# Genre: Funk / Disco / Electronic
-# BPM: 142
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# 1. Crystallized → Le Freak (Chic)
+# Custom Song: Le Freak
+# Artist: Chic
+# Album: C'est Chic
+# Year: 1978
+# BeatSaver MAP_ID: 1760d
+# BeatSaver Link: https://beatsaver.com/maps/1760d
+# Genre: Disco / Funk
+# BPM: 120
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, Expert+) — mapper XYNie
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1760d     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 2. CycleHit → Jealous (I Ain't With It) (Chromeo)
-# Custom Song: Jealous (I Ain't With It)
-# Artist: Chromeo
-# Album: Head Over Heels
-# Year: 2018
-# BeatSaver MAP_ID: 111fd
-# BeatSaver Link: https://beatsaver.com/maps/111fd
-# Genre: Funk / Disco / Electronic
-# BPM: 129
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# 2. CycleHit → 24K Magic (Bruno Mars)
+# Custom Song: 24K Magic
+# Artist: Bruno Mars
+# Album: 24K Magic
+# Year: 2016
+# BeatSaver MAP_ID: 16726
+# BeatSaver Link: https://beatsaver.com/maps/16726
+# Genre: Funk / Disco-Pop
+# BPM: 107
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, Expert+) — mapper ETAN (NoodleJams Vol.1)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 16726     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 3. ExitThisEarthsAtomosphere → 'Roni Got Me Stressed Out (Chromeo)
-# Custom Song: 'Roni Got Me Stressed Out
-# Artist: Chromeo
-# Album: Head Over Heels
-# Year: 2018
-# BeatSaver MAP_ID: 115ba
-# BeatSaver Link: https://beatsaver.com/maps/115ba
-# Genre: Funk / Disco / Electronic
-# BPM: 117
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# 3. ExitThisEarthsAtomosphere → Fireball (Pitbull feat. John Ryan)
+# Custom Song: Fireball
+# Artist: Pitbull feat. John Ryan
+# Album: Globalization
+# Year: 2014
+# BeatSaver MAP_ID: 9c05
+# BeatSaver Link: https://beatsaver.com/maps/9c05
+# Genre: Dance / Electronic
+# BPM: 123
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, Expert+) — mapper Toadally
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 9c05     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 4. Ghost → Green Light (Chromeo Remix) (Lorde, Chromeo)
-# Custom Song: Green Light (Chromeo Remix)
-# Artist: Lorde, Chromeo
-# Album: Melodrama (Remixes)
-# Year: 2017
-# BeatSaver MAP_ID: 37d5
-# BeatSaver Link: https://beatsaver.com/maps/37d5
-# Genre: Electropop / Remix
-# BPM: 121
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-
-# 5. LightItUp → 1999 (Charli XCX & Troye Sivan)
-# Custom Song: 1999
-# Artist: Charli XCX & Troye Sivan
+# 4. Ghost → Around The World (Niklas Dee)
+# Custom Song: Around The World
+# Artist: Niklas Dee
 # Album: (single)
-# Year: 2018
-# BeatSaver MAP_ID: 5352
-# BeatSaver Link: https://beatsaver.com/maps/5352
-# Genre: Pop / Synth-pop
-# BPM: 124
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Year: 2024
+# BeatSaver MAP_ID: 40201
+# BeatSaver Link: https://beatsaver.com/maps/40201
+# Genre: Dance / Electronic
+# BPM: 150
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, Expert+) — mapper Najoko
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 40201     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 6. WhatTheCat → FANCY (TWICE)
-# Custom Song: FANCY
-# Artist: TWICE
-# Album: Fancy You
-# Year: 2019
-# BeatSaver MAP_ID: 47f3
-# BeatSaver Link: https://beatsaver.com/maps/47f3
-# Genre: K-Pop / Pop
-# BPM: 132
-# Difficulties: 5/5 (Easy through Expert+) [Normal, Hard, Expert, Expert+]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 47f3     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# 5. LightItUp → Daft Punk Megamix 1 (Daft Punk)
+# Custom Song: Megamix 1
+# Artist: Daft Punk
+# Album: (megamix)
+# Year: 2001
+# BeatSaver MAP_ID: 242e9
+# BeatSaver Link: https://beatsaver.com/maps/242e9
+# Genre: Electronic / House
+# BPM: 126
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, Expert+) — mapper P90KILLR
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 242e9     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+
+# 6. WhatTheCat → Stayin' Alive (Bee Gees)
+# Custom Song: Stayin' Alive
+# Artist: Bee Gees
+# Album: Saturday Night Fever
+# Year: 1977
+# BeatSaver MAP_ID: 3cfe9
+# BeatSaver Link: https://beatsaver.com/maps/3cfe9
+# Genre: Disco
+# BPM: 104
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, Expert+) — mappers Undeceiver & steeak
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3cfe9     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

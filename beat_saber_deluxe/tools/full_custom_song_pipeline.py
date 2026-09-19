@@ -3423,6 +3423,7 @@ FEATURES_FILENAME = "features.json"
 # This allows partial pack deployments (some songs custom, some stock) to
 # coexist without crashes — stock songs won't show extra mode buttons.
 DEFAULT_FEATURES = {
+    "enable_plugin": True,
     "enable_custom_song_replacements": True,
     "enable_song_metadata_modification": True,
     "enable_beatmap_mode_mapping": True,

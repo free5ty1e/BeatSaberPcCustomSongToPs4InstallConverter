@@ -31,6 +31,25 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> -
 
 ---
 
+---
+
+## 🔌 Global Plugin Kill Switch (`enable_plugin`)
+
+Play the **official Beat Saber songs** (100% stock behavior) without editing `plugins.ini`
+or clearing anything on the PS4 — the plugin simply goes fully inert (no redirects, no
+metadata swaps) on the next game boot:
+
+```bash
+# Disable everything — official songs only:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+
+# Re-enable your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
+
+Takes effect on the next game boot (`features.json` is read at plugin startup).
+Requires plugin v0.8043+.
+
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 
 Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
@@ -119,7 +138,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
 - **Pack bundle**: `therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle`
 - **11 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
   1. Angry → Custom: Rhythm Is A Dancer (Pegboard Nerds)
-  2. Bite My Head Off → Custom: Escaping the Ruins (MDK / Gareth Coker)
+  2. Bite My Head Off → Custom: Escaping the Ruins (Gareth Coker)
   3. Can't You Hear Me Knocking → Custom: Spicy (aespa)
   4. Gimme Shelter → Custom: Yes I'm A Mess (AJR)
   5. (I Can't Get No) Satisfaction → Custom: Dreams Come True (aespa)
@@ -163,17 +182,17 @@ song_metadata.json
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song c213     --target Angry     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 2. Bite My Head Off → Escaping the Ruins (MDK / Gareth Coker)
+# 2. Bite My Head Off → Escaping the Ruins (Gareth Coker)
 # Custom Song: Escaping the Ruins
-# Artist: MDK / Gareth Coker
+# Artist: Gareth Coker
 # Album: Ori and the Blind Forest OST
 # Year: 2015
-# BeatSaver MAP_ID: 8c2a
-# BeatSaver Link: https://beatsaver.com/maps/8c2a
+# BeatSaver MAP_ID: 1fccd
+# BeatSaver Link: https://beatsaver.com/maps/1fccd
 # Genre: Orchestral / Video Game Music
 # BPM: 160
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8c2a     --target BiteMyHeadOff     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — mapper Sp234; Expert+ auto-filled (replaces the old 8c2a map of the same song that shipped only Easy+Expert)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1fccd     --target BiteMyHeadOff     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 3. Can't You Hear Me Knocking → Spicy (aespa)
 # Custom Song: Spicy

@@ -31,6 +31,25 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> -
 
 ---
 
+---
+
+## 🔌 Global Plugin Kill Switch (`enable_plugin`)
+
+Play the **official Beat Saber songs** (100% stock behavior) without editing `plugins.ini`
+or clearing anything on the PS4 — the plugin simply goes fully inert (no redirects, no
+metadata swaps) on the next game boot:
+
+```bash
+# Disable everything — official songs only:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+
+# Re-enable your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
+
+Takes effect on the next game boot (`features.json` is read at plugin startup).
+Requires plugin v0.8043+.
+
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 
 Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
@@ -118,17 +137,17 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
 - **Pack key**: `britneyspears`
 - **Pack bundle**: `britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle`
 - **11 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
-  1. Baby One More Time → Custom: Blinding Lights (The Weeknd)
+  1. Baby One More Time → Custom: Take on Me (a-ha)
   2. Circus → Custom: Shape of You (Ed Sheeran)
-  3. Gimme More → Custom: Gangnam Style (PSY)
+  3. Gimme More → Custom: That That (PSY ft. SUGA of BTS)
   4. I'm a Slave 4 U → Custom: Believer (Imagine Dragons)
-  5. Me Against The Music → Custom: Mr. Blue Sky (Electric Light Orchestra)
-  6. Oops!...I Did It Again → Custom: Rap God (Eminem)
-  7. Overprotected → Custom: Dancing On My Own (Robyn)
-  8. Scream & Shout → Custom: Levitating (Dua Lipa)
-  9. Till The World Ends → Custom: Dance Monkey (Tones and I)
+  5. Me Against The Music → Custom: Mr. Blue Sky (Electric Light Orchestra) [ARCS]
+  6. Oops!...I Did It Again → Custom: Oops!... I Did It Again (Britney Spears) [DITR4]
+  7. Overprotected → Custom: Shut Up And Dance (Walk The Moon)
+  8. Scream & Shout → Custom: Cold Heart (PNAU Remix) (Elton John & Dua Lipa)
+  9. Till The World Ends → Custom: Dance Monkey (metal cover) (Leo Moracchioli)
   10. Toxic → Custom: Toxic (Britney Spears) - Emir's map
-  11. Womanizer → Custom: Womanizer (Britney Spears) - 12bd8 map
+  11. Womanizer → Custom: Radar (Britney Spears)
 
 ## Where Target Metadata Lives
 
@@ -157,17 +176,17 @@ Each custom song is downloaded from BeatSaver, converted to V3.2.0 schema, and d
 using a single pipeline command. A comment above each command identifies the song:
 
 ```bash
-# Song: Blinding Lights - The Weeknd
-# Custom Song: Blinding Lights
-# Artist: The Weeknd
-# Album: After Hours
-# Year: 2019
-# BeatSaver MAP_ID: 8553
-# BeatSaver Link: https://beatsaver.com/maps/8553
-# Genre: Synth-pop / R&B
-# BPM: 171
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 8553     --target BabyOneMoreTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song: Take on Me - a-ha
+# Custom Song: Take on Me
+# Artist: a-ha
+# Album: Hunting High and Low
+# Year: 1985
+# BeatSaver MAP_ID: 6d63
+# BeatSaver Link: https://beatsaver.com/maps/6d63
+# Genre: Synth-pop / New Wave
+# BPM: 169
+# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — Expert+ auto-filled from Expert
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6d63     --target BabyOneMoreTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -185,17 +204,17 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1672a 
 ```
 
 ```bash
-# Song: Gangnam Style - PSY
-# Custom Song: Gangnam Style
+# Song: That That - PSY (prod. & ft. SUGA of BTS)
+# Custom Song: That That
 # Artist: PSY
-# Album: Psy 6 (Six Rules), Part 1
-# Year: 2012
-# BeatSaver MAP_ID: 141
-# BeatSaver Link: https://beatsaver.com/maps/141
-# Genre: K-Pop / Dance / Comedy
-# BPM: 132
-# Difficulties: 3/5 (Normal, Hard, Expert) [Ranked]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 141     --target GimmeMore     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Album: PSY 9th
+# Year: 2022
+# BeatSaver MAP_ID: 250b5
+# BeatSaver Link: https://beatsaver.com/maps/250b5
+# Genre: K-Pop / Dance
+# BPM: 130
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper rodysan
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 250b5     --target GimmeMore     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -213,73 +232,73 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1fef  
 ```
 
 ```bash
-# Song: Mr. Blue Sky - Electric Light Orchestra
+# Song: Mr. Blue Sky - Electric Light Orchestra [ARCS]
 # Custom Song: Mr. Blue Sky
 # Artist: Electric Light Orchestra
 # Album: Out of the Blue
 # Year: 1977
-# BeatSaver MAP_ID: 570
-# BeatSaver Link: https://beatsaver.com/maps/570
-# Genre: Progressive Pop / Rock
-# BPM: 180
-# Difficulties: 5/5 (Easy through Expert+) [Ranked, greatyazer]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 570     --target MeAgainstTheMusic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# BeatSaver MAP_ID: 2fa04
+# BeatSaver Link: https://beatsaver.com/maps/2fa04
+# Genre: Classic Rock / Pop
+# BPM: 174
+# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — mappers JRE_McNuggies & symphonic; Expert+ auto-filled
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2fa04     --target MeAgainstTheMusic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
-# Song: Rap God - Eminem
-# Custom Song: Rap God
-# Artist: Eminem
-# Album: The Marshall Mathers LP 2
-# Year: 2013
-# BeatSaver MAP_ID: 46d4
-# BeatSaver Link: https://beatsaver.com/maps/46d4
-# Genre: Hip Hop / Rap
-# BPM: 148
-# Difficulties: 5/5 (Easy through Expert+) [Ryger, highest rated 0.959]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 46d4     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song: Oops!... I Did It Again - Britney Spears [DITR4]
+# Custom Song: Oops!... I Did It Again
+# Artist: Britney Spears
+# Album: Oops!... I Did It Again
+# Year: 2000
+# BeatSaver MAP_ID: 28566
+# BeatSaver Link: https://beatsaver.com/maps/28566
+# Genre: Pop
+# BPM: 95
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper chriscrow3
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 28566     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
-# Song: Dancing On My Own - Robyn (Buzz Junkies Remix)
-# Custom Song: Dancing On My Own (Buzz Junkies Remix)
-# Artist: Robyn
-# Album: Body Talk (Remixes)
-# Year: 2010
-# BeatSaver MAP_ID: 189d
-# BeatSaver Link: https://beatsaver.com/maps/189d
-# Genre: Electropop / Dance
+# Song: Shut Up And Dance - Walk The Moon
+# Custom Song: Shut Up And Dance
+# Artist: Walk The Moon
+# Album: Talking Is Hard
+# Year: 2014
+# BeatSaver MAP_ID: 285e8
+# BeatSaver Link: https://beatsaver.com/maps/285e8
+# Genre: Indie Pop / Dance Rock
 # BPM: 128
-# Difficulties: 2/5 (Hard, Expert) [constroyr]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 189d     --target Overprotected     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mappers Syndicate, OneSpookyBoi, TheCzar1994
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 285e8     --target Overprotected     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
-# Song: Levitating - Dua Lipa
-# Custom Song: Levitating
-# Artist: Dua Lipa
-# Album: Future Nostalgia
+# Song: Cold Heart (PNAU Remix) - Elton John & Dua Lipa
+# Custom Song: Cold Heart
+# Artist: Elton John & Dua Lipa
+# Album: The Lockdown Sessions
+# Year: 2021
+# BeatSaver MAP_ID: 1d9fd
+# BeatSaver Link: https://beatsaver.com/maps/1d9fd
+# Genre: Dance-pop / Nu-disco
+# BPM: 116
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mappers Faded 99 & Z-ANESaber
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1d9fd     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+```
+
+```bash
+# Song: Dance Monkey (metal cover) - Leo Moracchioli
+# Custom Song: Dance Monkey (metal cover)
+# Artist: Leo Moracchioli
+# Album: YouTube cover
 # Year: 2020
-# BeatSaver MAP_ID: 12355
-# BeatSaver Link: https://beatsaver.com/maps/12355
-# Genre: Disco-pop / Dance-pop
-# BPM: 103
-# Difficulties: 4/5 (Normal, Hard, Expert, Expert+) [yomama]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 12355     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-```
-
-```bash
-# Song: Dance Monkey - Tones and I
-# Custom Song: Dance Monkey
-# Artist: Tones and I
-# Album: The Kids Are Coming
-# Year: 2019
-# BeatSaver MAP_ID: 6cc2
-# BeatSaver Link: https://beatsaver.com/maps/6cc2
-# Genre: Pop / Dance
-# BPM: 98
-# Difficulties: 5/5 (Easy through Expert+) [Most upvoted 7,791]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6cc2     --target TillTheWorldEnds     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# BeatSaver MAP_ID: 13f31
+# BeatSaver Link: https://beatsaver.com/maps/13f31
+# Genre: Metal / Pop cover
+# BPM: 120
+# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — Expert+ auto-filled
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 13f31     --target TillTheWorldEnds     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -297,15 +316,15 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21540 
 ```
 
 ```bash
-# Song: Womanizer - Britney Spears
-# Custom Song: Womanizer
+# Song: Radar - Britney Spears
+# Custom Song: Radar
 # Artist: Britney Spears
 # Album: Circus
 # Year: 2008
-# BeatSaver MAP_ID: 12bd8
-# BeatSaver Link: https://beatsaver.com/maps/12bd8
-# Genre: Electropop / Dance-pop
-# BPM: 140
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 12bd8     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# BeatSaver MAP_ID: 1e2f7
+# BeatSaver Link: https://beatsaver.com/maps/1e2f7
+# Genre: Dance-pop
+# BPM: 128
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1e2f7     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

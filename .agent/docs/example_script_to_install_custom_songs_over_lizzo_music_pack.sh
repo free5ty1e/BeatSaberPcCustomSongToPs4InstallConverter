@@ -29,6 +29,16 @@
 #   # Each --deploy-full only adds extra modes for THAT song in the pack bundle
 #   python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> --target <SLOT> --pcm16 --no-pad --convert-to-v3 --deploy-full
 #
+#
+# 🔌 Global Plugin Kill Switch (enable_plugin)
+# Disable the ENTIRE plugin without editing plugins.ini or clearing the PS4 —
+# the game plays 100% official songs on the next boot:
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+# Re-enable your custom songs:
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+# Takes effect on next game boot (features.json is read at plugin startup).
+# Requires plugin v0.8043+.
+#
 # 🔧 NEW: Clear Target Song (--clear-target-song)
 # Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
 #   python3 tools/full_custom_song_pipeline.py --clear-target-song <SLOT_NAME>
@@ -91,15 +101,15 @@ echo "  Everybody's Gay → Queencard deployed successfully"
 
 # Song 5: Good As Hell → Do You Wanna Taste It (Wig Wam)
 echo "Deploying Good As Hell → Do You Wanna Taste It (Wig Wam)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 212c5     --target GoodAsHell     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 25411     --target GoodAsHell     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Good As Hell"; exit 1; fi
 echo "  Good As Hell → Do You Wanna Taste It deployed successfully"
 
-# Song 6: Juice → Blame (Calvin Harris feat. John Newman)
-echo "Deploying Juice → Blame (Calvin Harris feat. John Newman)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5758     --target Juice     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 6: Juice → One More (SG Lewis feat. Nile Rodgers)
+echo "Deploying Juice → One More (SG Lewis feat. Nile Rodgers)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27140     --target Juice     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Juice"; exit 1; fi
-echo "  Juice → Blame deployed successfully"
+echo "  Juice → One More deployed successfully"
 
 # Song 7: Tempo → Bruises (Fox Stevenson)
 echo "Deploying Tempo → Bruises (Fox Stevenson)..."

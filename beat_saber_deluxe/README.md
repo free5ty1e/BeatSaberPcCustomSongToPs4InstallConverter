@@ -1,8 +1,13 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8042 / v0.5338)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8043 / v0.5339)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
 This document covers pipeline-specific details. See the **[main README](../README.md)** for project overview, requirements, and quick start.
+
+## v0.5339 Highlights
+
+- **Global kill switch** — `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false` makes the plugin fully inert on the next boot (all song redirects and metadata swaps off — the game plays 100% official content). `...=true` restores the custom setup. No plugins.ini edit, no PS4 clean. Requires plugin v0.8043+.
+- **Example-doc song audit** — every BeatSaver MAP_ID across the 34 pack example files now ships native Easy/Normal/Hard difficulties (15 songs replaced with verified maps); difficulty comments state the true native difficulty sets.
 
 ## v0.5338 Highlights
 

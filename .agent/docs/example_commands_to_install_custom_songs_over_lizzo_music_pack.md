@@ -31,6 +31,25 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> -
 
 ---
 
+---
+
+## 🔌 Global Plugin Kill Switch (`enable_plugin`)
+
+Play the **official Beat Saber songs** (100% stock behavior) without editing `plugins.ini`
+or clearing anything on the PS4 — the plugin simply goes fully inert (no redirects, no
+metadata swaps) on the next game boot:
+
+```bash
+# Disable everything — official songs only:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+
+# Re-enable your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
+
+Takes effect on the next game boot (`features.json` is read at plugin startup).
+Requires plugin v0.8043+.
+
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 
 Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
@@ -123,7 +142,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
   3. Cuz I Love You → Custom: Bring It On (Giga-P)
   4. Everybody's Gay → Custom: Queencard ((G)I-DLE)
   5. Good As Hell → Custom: Do You Wanna Taste It (Wig Wam)
-  6. Juice → Custom: Blame (Calvin Harris feat. John Newman)
+  6. Juice → Custom: One More (SG Lewis feat. Nile Rodgers)
   7. Tempo → Custom: Bruises (Fox Stevenson)
   8. Truth Hurts → Custom: Genie In A Bottle (DisasterTheory)
   9. Worship → Custom: Best Day Of My Life (American Authors)
@@ -182,7 +201,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13 
 # BeatSaver Link: https://beatsaver.com/maps/2475
 # Genre: Vocaloid / Electronic
 # BPM: 160
-# Difficulties: 5/5 (Easy through Expert+)
+# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — Expert+ auto-filled
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 4. Everybody's Gay → Queencard ((G)I-DLE)
@@ -202,24 +221,24 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 40a53 
 # Artist: Wig Wam
 # Album: Non Stop Rock'n Roll (Peacemaker Intro)
 # Year: 2010
-# BeatSaver MAP_ID: 212c5
-# BeatSaver Link: https://beatsaver.com/maps/212c5
+# BeatSaver MAP_ID: 25411
+# BeatSaver Link: https://beatsaver.com/maps/25411
 # Genre: Glam Rock / Hard Rock
 # BPM: 184
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 212c5     --target GoodAsHell     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper TetsuBeats; full 179s version (the old 212c5 map was an 80s Hard-only clip)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 25411     --target GoodAsHell     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 6. Juice → Blame (Calvin Harris feat. John Newman)
-# Custom Song: Blame
-# Artist: Calvin Harris feat. John Newman
-# Album: Motion
-# Year: 2014
-# BeatSaver MAP_ID: 5758
-# BeatSaver Link: https://beatsaver.com/maps/5758
-# Genre: EDM / Pop
-# BPM: 128
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5758     --target Juice     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# 6. Juice → One More (SG Lewis feat. Nile Rodgers)
+# Custom Song: One More
+# Artist: SG Lewis feat. Nile Rodgers
+# Album: (single)
+# Year: 2019
+# BeatSaver MAP_ID: 27140
+# BeatSaver Link: https://beatsaver.com/maps/27140
+# Genre: Nu-disco / Funk
+# BPM: 120
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper DaftMaple (the old 5758 Blame map was Expert-only)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27140     --target Juice     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 7. Tempo → Bruises (Fox Stevenson)
 # Custom Song: Bruises

@@ -28,6 +28,16 @@
 #   # Each --deploy-full only adds extra modes for THAT song in the pack bundle
 #   python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> --target <SLOT> --pcm16 --no-pad --convert-to-v3 --deploy-full
 #
+#
+# 🔌 Global Plugin Kill Switch (enable_plugin)
+# Disable the ENTIRE plugin without editing plugins.ini or clearing the PS4 —
+# the game plays 100% official songs on the next boot:
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+# Re-enable your custom songs:
+#   python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+# Takes effect on next game boot (features.json is read at plugin startup).
+# Requires plugin v0.8043+.
+#
 # 🔧 NEW: Clear Target Song (--clear-target-song)
 # Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
 #   python3 tools/full_custom_song_pipeline.py --clear-target-song <SLOT_NAME>
@@ -35,7 +45,12 @@
 #
 #
 # This script deploys each of the 6 Camelia pack songs using the
-# per-song pipeline with --deploy-full flag. Each command is complete
+# per-song pipeline with --deploy-full flag (pipeline v0.5338+).
+# Song selection rule: every song ships native Easy, Normal AND Hard
+# difficulties from its mapper (Expert-only maps lock out lower-skilled
+# players and do not qualify). Expert/Expert+ gaps are auto-filled by the
+# pipeline from the map's own closest difficulty.
+# Each command is complete
 # and self-contained - it downloads the custom song from BeatSaver,
 # converts to V3.2.0, generates all 4 modes, deploys the song bundle,
 # resolves the song's DLC pack and deploys ONLY that one pack + song,
@@ -63,41 +78,41 @@ echo ""
 
 echo "=== Deploying Camelia (Chromeo) pack songs (full orchestration) ==="
 
-# Song 1: Crystallized → Sexy Socialite (Chromeo)
-echo "Deploying Crystallized → Sexy Socialite (Chromeo)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6f1f     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 1: Crystallized → Le Freak (Chic)
+echo "Deploying Crystallized → Le Freak (Chic)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1760d     --target Crystallized     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Crystallized"; exit 1; fi
-echo "  Crystallized → Sexy Socialite deployed successfully"
+echo "  Crystallized → Le Freak (Chic) deployed successfully"
 
-# Song 2: CycleHit → Jealous (I Ain't With It) (Chromeo)
-echo "Deploying CycleHit → Jealous (I Ain't With It) (Chromeo)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 111fd     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 2: CycleHit → 24K Magic (Bruno Mars)
+echo "Deploying CycleHit → 24K Magic (Bruno Mars)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 16726     --target CycleHit     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed CycleHit"; exit 1; fi
-echo "  CycleHit → Jealous deployed successfully"
+echo "  CycleHit → 24K Magic (Bruno Mars) deployed successfully"
 
-# Song 3: ExitThisEarthsAtomosphere → 'Roni Got Me Stressed Out (Chromeo)
-echo "Deploying ExitThisEarthsAtomosphere → 'Roni Got Me Stressed Out (Chromeo)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 115ba     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 3: ExitThisEarthsAtomosphere → Fireball (Pitbull feat. John Ryan)
+echo "Deploying ExitThisEarthsAtomosphere → Fireball (Pitbull feat. John Ryan)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 9c05     --target ExitThisEarthsAtomosphere     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed ExitThisEarthsAtomosphere"; exit 1; fi
-echo "  ExitThisEarthsAtomosphere → 'Roni Got Me Stressed Out deployed successfully"
+echo "  ExitThisEarthsAtomosphere → Fireball (Pitbull feat. John Ryan) deployed successfully"
 
-# Song 4: Ghost → Green Light (Chromeo Remix) (Lorde, Chromeo)
-echo "Deploying Ghost → Green Light (Chromeo Remix) (Lorde, Chromeo)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 37d5     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 4: Ghost → Around The World (Niklas Dee)
+echo "Deploying Ghost → Around The World (Niklas Dee)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 40201     --target Ghost     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Ghost"; exit 1; fi
-echo "  Ghost → Green Light (Chromeo Remix) deployed successfully"
+echo "  Ghost → Around The World (Niklas Dee) deployed successfully"
 
-# Song 5: LightItUp → 1999 (Charli XCX & Troye Sivan)
-echo "Deploying LightItUp → 1999 (Charli XCX & Troye Sivan)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 5352     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 5: LightItUp → Daft Punk Megamix 1 (Daft Punk)
+echo "Deploying LightItUp → Daft Punk Megamix 1 (Daft Punk)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 242e9     --target LightItUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed LightItUp"; exit 1; fi
-echo "  LightItUp → 1999 deployed successfully"
+echo "  LightItUp → Daft Punk Megamix 1 (Daft Punk) deployed successfully"
 
-# Song 6: WhatTheCat → FANCY (TWICE)
-echo "Deploying WhatTheCat → FANCY (TWICE)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 47f3     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 6: WhatTheCat → Stayin' Alive (Bee Gees)
+echo "Deploying WhatTheCat → Stayin' Alive (Bee Gees)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3cfe9     --target WhatTheCat     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed WhatTheCat"; exit 1; fi
-echo "  WhatTheCat → FANCY deployed successfully"
+echo "  WhatTheCat → Stayin' Alive (Bee Gees) deployed successfully"
 
 echo ""
 echo "=== All 6 Camelia pack songs deployed (full orchestration) ==="

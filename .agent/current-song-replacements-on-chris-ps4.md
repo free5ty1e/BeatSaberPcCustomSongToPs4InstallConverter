@@ -59,23 +59,24 @@
 > **Note:** The Tempo slot uses "Bruises" which was previously tested and had desync issues. May need lapped audio handling.
 
 
-## Camellia Music Pack Replacements (6 songs — Chromeo Expansion)
+## Camellia Music Pack Replacements (6 songs — funk/disco/electronic set)
 
-> **v0.5338 (Exp 218) note:** all six slots now deploy with every Standard
-> difficulty filled from the map's own content (maps providing fewer than 5
-> diffs previously left stock charts in the missing slots — the source maps
-> provide: Sexy Socialite E+ only; Jealous/'Roni Easy+Expert; Green Light E+
-> only; 1999 E/H/Ex/E+; FANCY 4/5), bpmData on the true Info.dat BPM grid, and
-> OneSaber as blue dot notes.
+> **v0.5339 (Exp 219) selection rule:** every song ships native Easy/Normal/Hard
+> (per user_preferences.md — Expert-heavy maps lock out lower-skilled players).
+> All six replacements below are 5/5 native from their mappers. The previous
+> Chromeo-set songs (v0.5338) shipped ExpertPlus-heavy charts and were replaced.
+> **NOTE: the PS4 still holds the v0.5338 Chromeo set until redeployed** — run the
+> updated `example_script_to_install_custom_songs_over_camelia_music_pack.sh` to
+> install this new set.
 
 | # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
 |---|---------|-------------|--------|-----|------------------|----------|------------|------|
-| 1 | `Crystallized` | Sexy Socialite | Chromeo | 142 | 6f1f | 5/5 | 1.8s | ✅ (v0.5338) |
-| 2 | `CycleHit` | Jealous (I Ain't With It) | Chromeo | 129 | 111fd | 5/5 | 2.1s | ✅ (v0.5338) |
-| 3 | `ExitThisEarthsAtomosphere` | 'Roni Got Me Stressed Out | Chromeo | 117 | 115ba | 5/5 | 2.2s | ✅ (v0.5338) |
-| 4 | `Ghost` | Green Light (Chromeo Remix) | Lorde, Chromeo | 121 | 37d5 | 5/5 | 1.9s | ✅ (v0.5338) |
-| 5 | `LightItUp` | 1999 | Charli XCX & Troye Sivan | 124 | 5352 | 5/5 | 1.9s | ✅ (v0.5338) |
-| 6 | `WhatTheCat` | FANCY | TWICE | 132 | 47f3 | 5/5 | 2.3s | ✅ (v0.5338) |
+| 1 | `Crystallized` | Le Freak | Chic | 120 | 1760d | 5/5 native | 2.5s | ⏳ pending deploy |
+| 2 | `CycleHit` | 24K Magic | Bruno Mars | 107 | 16726 | 5/5 native | 2.2s | ⏳ pending deploy |
+| 3 | `ExitThisEarthsAtomosphere` | Fireball | Pitbull feat. John Ryan | 123 | 9c05 | 5/5 native | 5.9s | ⏳ pending deploy |
+| 4 | `Ghost` | Around The World | Niklas Dee | 150 | 40201 | 5/5 native | 1.6s | ⏳ pending deploy |
+| 5 | `LightItUp` | Daft Punk Megamix 1 | Daft Punk | 126 | 242e9 | 5/5 native | 1.9s | ⏳ pending deploy |
+| 6 | `WhatTheCat` | Stayin' Alive | Bee Gees | 104 | 3cfe9 | 5/5 native | 2.3s | ⏳ pending deploy |
 
 ## Total: 38 Custom Songs Deployed
 

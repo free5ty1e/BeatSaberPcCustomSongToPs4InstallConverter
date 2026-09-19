@@ -4,6 +4,16 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8043] — 2026-09-18
+### Added
+- **Global kill switch `enable_plugin`** (runtime feature flag in `features.json`). When explicitly `false`, ALL plugin behavior is inert: no `redirects.json` redirects fire (stock song bundles and stock pack bundles load), and all song-metadata swap hooks (TMP set_text/SetText, MoveNext, metadata replacement) return the stock values untouched. The plugin still loads and logs (so `bs_log.txt` shows `DISABLED: enable_plugin is false`), but the game plays 100% official content.
+- **Default semantics:** `enable_plugin` defaults TRUE when the key is absent (unlike every other flag, which default false) — a missing features.json keeps a fully-deployed setup working, and only an explicit `false` disables the plugin.
+- Pipeline command pair (v0.5339+):
+  - Disable everything, play official songs: `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false`
+  - Re-enable the custom setup: `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true`
+  - Takes effect on the next game boot (features.json is read at plugin startup). No plugins.ini edit, no PS4 clean, no file removal.
+- **Plugin version bump** to v0.8043.
+
 ## [v0.8042] — 2026-09-14
 ### Added
 - **Runtime feature flag `enable_beatmap_mode_mapping`** — parsed from `features.json` at startup, stored in `g_feature_beatmap_mode_mapping`. Gates the visibility of extra mode sets (OneSaber, NoArrows, 90Degree) in pack bundle `_previewDifficultyBeatmapSets`. When OFF (default when missing), all songs show only Standard mode — safe for partial pack deployments where only some songs are custom. When ON, custom songs with patched mode sets show all 4 modes; stock songs (unpatched) show only Standard. This prevents crashes when selecting non-Standard modes on unmodified songs.

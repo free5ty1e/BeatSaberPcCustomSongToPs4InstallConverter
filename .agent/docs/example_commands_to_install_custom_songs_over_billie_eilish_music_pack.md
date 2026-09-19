@@ -32,6 +32,25 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song 4a901 --ta
 
 ---
 
+---
+
+## 🔌 Global Plugin Kill Switch (`enable_plugin`)
+
+Play the **official Beat Saber songs** (100% stock behavior) without editing `plugins.ini`
+or clearing anything on the PS4 — the plugin simply goes fully inert (no redirects, no
+metadata swaps) on the next game boot:
+
+```bash
+# Disable everything — official songs only:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+
+# Re-enable your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
+
+Takes effect on the next game boot (`features.json` is read at plugin startup).
+Requires plugin v0.8043+.
+
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 
 Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
@@ -120,7 +139,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
   3. bellyache → Custom: ATTITUDE (IVE)
   4. bury a friend → Custom: Baddie (IVE)
   5. happier than ever → Custom: Cosmic (Red Velvet)
-  6. n da → Custom: Duvet (Bôa)
+  6. n da → Custom: Duvet (Bôa — Shiki Miyoshino cover)
   7. therefore i am → Custom: Who's Laughing Now (Ava Max)
   8. 2 be loved (am i ready) → Custom: Yes I'm A Mess (AJR)
   9. about damn time → Custom: The Middle (Jimmy Eat World)
@@ -207,17 +226,17 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 36ab4 
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3e192     --target HappierThanEver     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 6. nda → Duvet (Bôa)
+# 6. nda → Duvet (Bôa — Shiki Miyoshino cover)
 # Custom Song: Duvet
-# Artist: Bôa
-# Album: Race of a Thousand Camels
-# Year: 1998
-# BeatSaver MAP_ID: 4b107
-# BeatSaver Link: https://beatsaver.com/maps/4b107
+# Artist: Bôa (Shiki Miyoshino cover)
+# Album: Twilight (Serial Experiments Lain opening / cover release)
+# Year: 1998 / 2023
+# BeatSaver MAP_ID: 22c4e
+# BeatSaver Link: https://beatsaver.com/maps/22c4e
 # Genre: Alternative Rock / Indie
 # BPM: 186
-# Difficulties: 5/5 (Easy through Expert+) [Noodle walls]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4b107     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper shad; Shiki Miyoshino cover version (the old 4b107 original-Bôa map was Hard/Expert+ only)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 22c4e     --target NDA     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 7. therefore i am → Who's Laughing Now (Ava Max)
 # Custom Song: Who's Laughing Now
@@ -264,6 +283,6 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13 
 # BeatSaver Link: https://beatsaver.com/maps/2475
 # Genre: Vocaloid / Electronic
 # BPM: 160
-# Difficulties: 5/5 (Easy through Expert+)
+# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — Expert+ auto-filled
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

@@ -10,6 +10,13 @@ This document demonstrates the complete exercise of the `backup-beat-saber-delux
 - This exercise assumes the PS4 is at `192.168.1.100` (set via `PS4_IP` env var)
 - Use `--local` flag for testing without actual PS4 connectivity
 
+> **Tip — temporarily play only official songs (no backup/restore needed):**
+> ```bash
+> python3 /workspace/beat_saber_deluxe/tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+> ```
+> Re-enable with `...enable_plugin=true`. Takes effect on the next game boot.
+> (Global kill switch, plugin v0.8043+.)
+
 ---
 
 ## Exercise 1: Restore from Backup + Observe Validation

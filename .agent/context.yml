@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8042"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8042 adds enable_beatmap_mode_mapping feature flag support (reads from features.json at runtime)
-pipeline_version: "0.5338" # in beat_saber_deluxe/VERSION - Exp 218: song-quality fixes — fill_missing_standard_difficulties() (no stock beatmaps left in missing-diff slots), Info.dat BPM is the authoritative bpmData grid (old max_beat heuristic undershot trailing-tail maps), OneSaber = blue dots (generator + injection normalization). Single-song --deploy-full + multi-pack preservation both working.
+plugin_version: "0.8043"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8043 adds enable_plugin global kill switch (explicit false = fully inert plugin, official songs only; defaults true when absent)
+pipeline_version: "0.5339" # in beat_saber_deluxe/VERSION - Exp 219: example-doc song audit (all 44 MAP_IDs verified native Easy/Normal/Hard; 15 songs replaced) + enable_plugin in DEFAULT_FEATURES. Exp 218 fixes (fill missing diffs, Info.dat BPM grid, OneSaber blue dots) all verified.
 
 # Platform Constraints
 target_platform: PS4

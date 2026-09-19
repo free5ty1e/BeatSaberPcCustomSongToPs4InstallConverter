@@ -19,7 +19,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8042"
+#define PLUGIN_VERSION "v0.8043"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -39,6 +39,13 @@ static int REDIRECT_COUNT = 0;
 // ── Feature flags ────────────────────────────────────────────────────────────
 // Read from /data/GoldHEN/AFR/CUSA12878/features.json at startup.
 // Missing file or missing key = false (default off for safety).
+// EXCEPTION: enable_plugin is the GLOBAL KILL SWITCH and defaults TRUE when
+// the key is ABSENT (only an explicit false disables the plugin). This lets a
+// bare/missing features.json keep a fully-deployed setup working, while
+// `--features-only --set-feature enable_plugin=false` instantly reverts the
+// game to 100% stock behavior (no redirects, no metadata swaps) without
+// touching plugins.ini or clearing the AFR directory.
+static int g_feature_plugin_enabled = 1;
 static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
 static int g_feature_beatmap_mode_mapping = 0;
@@ -93,7 +100,9 @@ static void load_features(void) {
         if (*p == 't') { val = 1; while (*p && *p != ',' && *p != '}') p++; }
         else if (*p == 'f') { val = 0; while (*p && *p != ',' && *p != '}') p++; }
 
-        if (strcmp(key, "enable_custom_song_replacements") == 0) {
+        if (strcmp(key, "enable_plugin") == 0) {
+            g_feature_plugin_enabled = val;
+        } else if (strcmp(key, "enable_custom_song_replacements") == 0) {
             g_feature_custom_song_replacements = val;
         } else if (strcmp(key, "enable_song_metadata_modification") == 0) {
             g_feature_song_metadata_modification = val;
@@ -103,9 +112,12 @@ static void load_features(void) {
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d",
-             g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping);
+    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d",
+             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping);
     log_write(logmsg);
+    if (!g_feature_plugin_enabled) {
+        log_write("DISABLED: enable_plugin is false — ALL plugin behavior off (stock game)");
+    }
 }
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -286,7 +298,8 @@ static int open_hook(const char *path, int flags, ...) {
 
             // ── User redirects from redirects.json ────────────────────────────
             // Only active when enable_custom_song_replacements feature flag is ON
-            if (!np && g_feature_custom_song_replacements) {
+            // AND the global kill switch (enable_plugin) is not FALSE.
+            if (!np && g_feature_plugin_enabled && g_feature_custom_song_replacements) {
                 for (int i = 0; i < REDIRECT_COUNT; i++) {
                     if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
                         np = REDIRECT_VALS[i];
@@ -553,7 +566,7 @@ static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
 
 // Shared replacement logic for both set_text and SetText hooks
 static void* apply_metadata_replacement(void* this_ptr, void* value) {
-    if (!g_feature_song_metadata_modification || !value) return value;
+    if (!g_feature_plugin_enabled || !g_feature_song_metadata_modification || !value) return value;
 
     char text_buf[256] = {0};
     int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
@@ -609,7 +622,7 @@ static void tmp_text_set_text2_hook(void* this_ptr, void* value, int sync_input,
 // RVA: 0x1D377C0 (private void MoveNext())
 static int g_move_next_hook_count = 0;
 static void move_next_hook(void* state_machine) {
-    if (g_feature_song_metadata_modification && state_machine) {
+    if (g_feature_plugin_enabled && g_feature_song_metadata_modification && state_machine) {
         void* beatmapLevel = *(void**)((char*)state_machine + 0x30);
         if (beatmapLevel) {
             // Modify songName at BeatmapLevel + 0x20
@@ -708,7 +721,7 @@ static int g_tmp_hook_installed = 0;
 
 static void try_install_tmp_hook(void) {
     if (g_tmp_hook_installed) return;
-    if (g_feature_song_metadata_modification == 0) return;
+    if (!g_feature_plugin_enabled || g_feature_song_metadata_modification == 0) return;
 
     // Skip early opens — our own log file and system devices load before game modules
     if (g_tmp_hook_attempts > 0 && g_open_count < 10) return;

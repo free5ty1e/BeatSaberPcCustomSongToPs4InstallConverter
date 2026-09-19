@@ -31,6 +31,25 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song <MAP_ID> -
 
 ---
 
+---
+
+## 🔌 Global Plugin Kill Switch (`enable_plugin`)
+
+Play the **official Beat Saber songs** (100% stock behavior) without editing `plugins.ini`
+or clearing anything on the PS4 — the plugin simply goes fully inert (no redirects, no
+metadata swaps) on the next game boot:
+
+```bash
+# Disable everything — official songs only:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false
+
+# Re-enable your custom songs:
+python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=true
+```
+
+Takes effect on the next game boot (`features.json` is read at plugin startup).
+Requires plugin v0.8043+.
+
 ## 🔧 NEW: Clear Target Song (`--clear-target-song`)
 
 Revert a single custom song slot back to its stock state WITHOUT a full PS4 clean slate:
