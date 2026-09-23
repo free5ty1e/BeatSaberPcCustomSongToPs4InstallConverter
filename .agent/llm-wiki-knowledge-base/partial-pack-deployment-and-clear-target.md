@@ -143,3 +143,19 @@ python3 tools/full_custom_song_pipeline.py --download-beat-saver-song 1dbb9 --ta
 - [[feature-flags]] — feature flag architecture and defaults
 - [[pipeline-afr-base-fix-clean-slate]] — clean slate workflow
 - [[procedural-mode-generators]] — build-time mode generators
+
+## Deploy Gates Must Use _resolve_active_packs (Exp 225 lesson)
+
+Since Exp 224 there is NO pinned pack list by default (`pack_modes.packs: []`
+means auto-discovery). Any code path that decides "do the pack flows apply?"
+MUST consult `_resolve_active_packs(config)` — the same helper that resolves
+the pack set everywhere else. A raw `if pm.get('packs'):` gate became
+permanently False under the new default and silently skipped the merged-catalog
+branch on clean-slate first-song deploys: the patched pack bundle deployed
+without its catalog or the `aa/catalog.json` redirect, and the game crashed at
+boot with CE-34878-0 (patched bundle vs origin catalog — the
+[[addressables-catalog-crc-validation]] invariant).
+
+Also: **failed post-deploy validation exits non-zero** (Exp 225). A deploy that
+cannot prove its own consistency must fail the script, not print "Pipeline
+complete!".

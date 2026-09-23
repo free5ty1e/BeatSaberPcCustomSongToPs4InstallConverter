@@ -80,7 +80,14 @@ def load_config(config_path: str) -> dict:
         # bundle without its matching catalog entry, and never update a catalog entry
         # for a bundle that is served unpatched — both crash at boot, Exp 180).
         "pack_modes": {
-            "packs": ["therollingstones", "billieeilish", "lizzo", "camellia"],
+            # NO hardcoded pack list (Exp 224 user directive): the pipeline has
+            # ZERO expectations about which music packs are modified — that is
+            # entirely up to what the user deploys. An empty list means
+            # AUTO-DISCOVER: every pack with a patched bundle built locally
+            # (in build_dir) is in scope, so validation/deployment match
+            # reality. Users may still set an explicit list in ps4_config.json
+            # to pin behavior.
+            "packs": [],
             "build_dir": "/workspace/beat_saber_deluxe/pack_modes_bundles",
             "song_ids_path": "/workspace/beat_saber_deluxe/beat_saber_song_ids.json",
             "dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
@@ -1067,16 +1074,42 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     cmd = [
         "lftp", "-u", user_part, "-p", str(ftp_port),
         ftp_host,
-        "-e", f"put {bundle_path} -o {remote_path}; quit"
+        "-e", f"put {_ftp_quote(bundle_path)} -o {_ftp_quote(remote_path)}; quit"
     ]
 
     log.info(f"Deploying bundle to PS4: {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
 
-    if result.returncode == 0:
-        log.info("  ✅ Bundle deployment successful")
-    else:
+    if result.returncode != 0:
         log.warning(f"  ⚠️ Bundle deploy failed (PS4 offline?): {result.stderr}")
+        return
+
+    # lftp can exit 0 while a put silently failed (metacharacters in the path
+    # split the command — the Scream&Shout upload landed at the wrong name and
+    # lftp still returned 0, Exp 224). Verify the remote file actually exists
+    # with the expected size before reporting success.
+    local_size = os.path.getsize(bundle_path) if os.path.isfile(bundle_path) else None
+    rc, out, err = _ftp_run(ftp_host, ftp_port, ftp_user, ftp_pass,
+                            [f"ls {_ftp_quote(remote_path)}"], timeout=30)
+    listed_size = None
+    if rc == 0 and out:
+        # lftp ls line: "perms ... <size> <date> <name>" — size is field 4
+        for line in out.splitlines():
+            parts = line.split()
+            if len(parts) >= 9 and parts[-1] == remote_path.split('/')[-1]:
+                try:
+                    listed_size = int(parts[4])
+                except ValueError:
+                    pass
+    if listed_size is None:
+        log.warning(f"  ⚠️ Bundle deploy UNVERIFIED — {remote_path} not found in listing "
+                    f"(upload may have silently failed; stderr: {err.strip()[:200]})")
+        return
+    if local_size is not None and listed_size != local_size:
+        log.warning(f"  ⚠️ Bundle deploy SIZE MISMATCH — remote {remote_path} is "
+                    f"{listed_size} bytes, expected {local_size}")
+        return
+    log.info(f"  ✅ Bundle deployment successful ({listed_size} bytes verified on PS4)")
 
 
 def _create_text_asset_object(cab, name, gz_data, path_id):
@@ -2120,6 +2153,17 @@ def build_plugin(project_root: str, debug: bool = False) -> str:
     return prx_path
 
 
+def _ftp_quote(path: str) -> str:
+    """Quote a path for the lftp -e command string.
+
+    lftp's command language treats shell metacharacters specially, so a path
+    like .../Scream&Shout_v3.bundle gets split at the '&' (the upload silently
+    lands at the wrong name or fails, while lftp still exits 0 — Exp 224).
+    Double-quoting the path in the -e script makes lftp treat it as one token.
+    """
+    return '"' + path.replace('"', '\\"') + '"'
+
+
 def _ftp_run(host: str, port: int, user: str, password: str, commands: list, timeout: int = 120):
     """
     Run a series of lftp commands and return (returncode, stdout, stderr).
@@ -2156,7 +2200,7 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
 
         # Try to download existing plugins.ini
         rc, out, err = _ftp_run(host, port, user, password,
-                                [f"get {ini_remote} -o {local_ini}"],
+                                [f"get {_ftp_quote(ini_remote)} -o {_ftp_quote(local_ini)}"],
                                 timeout=30)
         if rc != 0:
             log.info("  No existing plugins.ini found — creating new one")
@@ -2203,7 +2247,7 @@ def ensure_plugins_ini(config: dict, plugin_remote_path: str):
 
         # Upload the updated plugins.ini
         rc, out, err = _ftp_run(host, port, user, password,
-                                [f"put {local_ini} -o {ini_remote}"],
+                                [f"put {_ftp_quote(local_ini)} -o {_ftp_quote(ini_remote)}"],
                                 timeout=30)
         if rc == 0:
             log.info("  ✅ plugins.ini updated")
@@ -2259,7 +2303,7 @@ def enable_plugin(config: dict, debug: bool = False):
 
         # Download existing plugins.ini
         rc, out, err = _ftp_run(host, port, user, password,
-                                [f"get {ini_remote} -o {local_ini}"],
+                                [f"get {_ftp_quote(ini_remote)} -o {_ftp_quote(local_ini)}"],
                                 timeout=30)
         if rc != 0:
             log.info("  No existing plugins.ini — creating fresh")
@@ -2331,7 +2375,7 @@ def enable_plugin(config: dict, debug: bool = False):
 
         # Upload updated plugins.ini
         rc, out, err = _ftp_run(host, port, user, password,
-                                [f"put {local_ini} -o {ini_remote}"],
+                                [f"put {_ftp_quote(local_ini)} -o {_ftp_quote(ini_remote)}"],
                                 timeout=30)
         if rc == 0:
             log.info("  ✅ plugins.ini updated — plugin ENABLED")
@@ -2366,7 +2410,7 @@ def disable_plugin(config: dict):
 
         # Download existing plugins.ini
         rc, out, err = _ftp_run(host, port, user, password,
-                                [f"get {ini_remote} -o {local_ini}"],
+                                [f"get {_ftp_quote(ini_remote)} -o {_ftp_quote(local_ini)}"],
                                 timeout=30)
         if rc != 0:
             log.warning("  No existing plugins.ini found — nothing to disable")
@@ -2415,7 +2459,7 @@ def disable_plugin(config: dict):
                 f.write('\n'.join(new_lines) + '\n')
 
             rc, out, err = _ftp_run(host, port, user, password,
-                                    [f"put {local_out} -o {ini_remote}"],
+                                    [f"put {_ftp_quote(local_out)} -o {_ftp_quote(ini_remote)}"],
                                     timeout=30)
             if rc == 0:
                 log.info(f"  ✅ plugins.ini updated — plugin DISABLED ({disabled_count} entry(s))")
@@ -2445,7 +2489,7 @@ def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
 
     # Upload the .prx
     rc, out, err = _ftp_run(host, port, user, password,
-                            [f"put {prx_path} -o {plugin_remote}"],
+                            [f"put {_ftp_quote(prx_path)} -o {_ftp_quote(plugin_remote)}"],
                             timeout=120)
     if rc != 0:
         log.warning(f"  ⚠️ Plugin deploy failed (PS4 offline?): {err}")
@@ -2514,7 +2558,7 @@ def _download_redirect_from_ps4(config: dict) -> dict | None:
     with tempfile.TemporaryDirectory() as tmpdir:
         local_tmp = os.path.join(tmpdir, "redirects.json")
         cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-               "-e", f"get {remote_path} -o {local_tmp}; quit"]
+               "-e", f"get {_ftp_quote(remote_path)} -o {_ftp_quote(local_tmp)}; quit"]
         result = sp.run(cmd, capture_output=True, text=True, timeout=30)
         if result.returncode != 0 or not os.path.exists(local_tmp):
             return None
@@ -2542,7 +2586,7 @@ def _deploy_redirect_to_ps4(config: dict):
 
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"put {local_path} -o {remote_path}; quit"]
+           "-e", f"put {_ftp_quote(local_path)} -o {_ftp_quote(remote_path)}; quit"]
     log.info(f"  Deploying redirect config to PS4: {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
@@ -2694,6 +2738,63 @@ def _load_pack_albums(config: dict) -> dict:
     except Exception:
         return {}
 
+def _resolve_active_packs(config: dict) -> list:
+    """The pack set in scope — NEVER hardcoded (Exp 224 user directive).
+
+    Order of resolution:
+      1. `pack_modes.packs` from config, if the user pinned an explicit list
+         (empty/absent means not pinned);
+      2. otherwise AUTO-DISCOVER from the local redirects.json (the
+         pipeline's deployment state file, kept in sync with the PS4 on
+         every deploy/sync/enforce): exactly the packs whose
+         `*_pack_modes_*` bundles are referenced in what the USER actually
+         deployed. A pack merely built locally (or deployed in some earlier
+         session then cleaned) is NOT in scope.
+      3. if the local redirects.json is absent/empty (clean slate, fresh
+         clone), fall back to packs with local built bundles so build-time
+         flows still have a scope.
+    No FTP here — discovery must be fast and deterministic; validation
+    separately verifies the local and PS4 redirect sets match.
+    """
+    pm = config.get('pack_modes', {}) or {}
+    configured = pm.get('packs') or []
+    if configured:
+        return list(configured)
+    # Auto-discover from the deployed state (local redirects.json). If the
+    # state file EXISTS it is authoritative — a file that references no
+    # patched packs means the user has deployed NO packs, and inventing
+    # locally-built ones would violate "only what the user deployed". The
+    # build_dir fallback applies only when there is no state file at all
+    # (fresh clone / clean slate, build-time flows).
+    local_redirects_path = _get_redirect_config_path()
+    if os.path.isfile(local_redirects_path):
+        try:
+            deployed = _load_local_redirects(local_redirects_path)
+            redirects = deployed.get('redirects', {}) if 'redirects' in deployed else deployed
+            active = []
+            for key, val in sorted(redirects.items()):
+                if '_pack_modes_' in str(val):
+                    pack = str(val).split('_pack_modes_')[0]
+                    if pack not in active:
+                        active.append(pack)
+            return active
+        except Exception:
+            pass
+    # No state file at all: build-time fallback — packs with
+    # local built bundles.
+    albums = _load_pack_albums(config)
+    build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    active = []
+    for pack, album in sorted(albums.items()):
+        original = album.get('packBundle')
+        if not original:
+            continue
+        patched = pack_modes_builder.patched_bundle_name(original)
+        if os.path.isfile(os.path.join(build_dir, patched)):
+            active.append(pack)
+    return active
+
+
 def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     """
     Deterministic list of pack_modes entries derived from config + song_ids.json.
@@ -2701,10 +2802,12 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     Each entry: {pack, bundle_key (original pack bundle asset path),
     patched_bundle (AFR filename), local_path}. No build happens here — the
     patched filename is derived deterministically from the original one.
-    `packs` optionally limits which pack(s) to return (default: all configured).
+    `packs` optionally limits which pack(s) to return (default: all ACTIVE —
+    user-pinned config list or auto-discovered from built bundles, never a
+    hardcoded set).
     """
     pm = config.get('pack_modes', {}) or {}
-    configured = pm.get('packs') or []
+    configured = _resolve_active_packs(config)
     if not configured:
         return []
     if packs is not None:
@@ -2820,9 +2923,9 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     Returns number of bundles built.
     """
     pm = config.get('pack_modes', {}) or {}
-    configured = pm.get('packs') or []
+    configured = _resolve_active_packs(config)
     if not configured:
-        log.info("  ℹ️  pack_modes.packs not configured — nothing to build")
+        log.info("  ℹ️  no pack_modes packs in scope (no pinned list, no built bundles) — nothing to build")
         return 0
     if packs is not None:
         configured = [p for p in configured if p in packs]
@@ -2855,9 +2958,9 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     return built
 
 def _resolve_configured_packs(config: dict, packs: list | None) -> list:
-    """Return the pack list to operate on: `packs` if given else all configured."""
-    pm = config.get('pack_modes', {}) or {}
-    configured = pm.get('packs') or []
+    """Return the pack list to operate on: `packs` if given else all ACTIVE
+    (user-pinned list or auto-discovered from built bundles — never hardcoded)."""
+    configured = _resolve_active_packs(config)
     if packs is not None:
         return [p for p in configured if p in packs]
     return list(configured)
@@ -2874,9 +2977,20 @@ def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: lis
     merged catalog always matches the deployed redirects. Returns True if all uploads OK.
     """
     pm = config.get('pack_modes', {}) or {}
-    if not pm.get('packs'):
-        log.warning("  ⚠️  pack_modes not configured — nothing to deploy")
+    # Exp 225: gate on the ACTIVE pack set (pinned list or auto-discovered),
+    # NOT a non-empty pinned packs list — the old gate made auto-discovery
+    # mode (packs=[]) skip this function entirely, so the patched pack bundle
+    # deployed without its matching merged catalog → CRC crash (CE-34878-0).
+    active = _resolve_active_packs(config)
+    if not active:
+        log.warning("  ⚠️  no pack_modes packs in scope (no pinned list, no built "
+                    "bundles, no deployed state) — nothing to deploy")
         return False
+    if packs is not None:
+        active = [p for p in active if p in packs]
+        if not active:
+            log.info(f"  ℹ️  Requested pack(s) {packs} not in the active set — nothing to deploy")
+            return False
     _ensure_pack_mode_bundles(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots)
     pairs = [(e['local_path'], e['patched_bundle'])
              for e in _get_pack_modes_entries(config, packs=packs)
@@ -2914,7 +3028,7 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
     cmd = [
         "lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
-        "-e", f"put {local_path} -o {remote_path}; quit"
+        "-e", f"put {_ftp_quote(local_path)} -o {_ftp_quote(remote_path)}; quit"
     ]
     log.info(f"  Deploying {remote_name} -> {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
@@ -2960,7 +3074,7 @@ def _download_pack_bundle_from_ps4(config: dict, pack_name: str, local_dir: str)
 
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"get {remote_path} -o {local_path}; quit"]
+           "-e", f"get {_ftp_quote(remote_path)} -o {_ftp_quote(local_path)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=60)
     if result.returncode == 0 and os.path.exists(local_path):
         log.info(f"  Downloaded existing pack bundle from PS4: {patched_name}")
@@ -2984,7 +3098,7 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
     ok = True
 
     pm = config.get('pack_modes', {}) or {}
-    configured_packs = pm.get('packs') or []
+    configured_packs = _resolve_active_packs(config)
     if packs is not None:
         configured_packs = [p for p in configured_packs if p in packs]
 
@@ -3013,7 +3127,14 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
     else:
         log.warning("  ⚠️  No pack_bundle / pack_modes configured — nothing to deploy")
         ok = False
-    if config.get('pack_modes', {}).get('packs'):
+    # Always deploy the generalized pack_modes set (patched bundles + MERGED
+    # CATALOG) whenever ANY pack is in scope. The old gate checked a non-empty
+    # pinned pack_modes.packs list; with the Exp 224 auto-discovery default
+    # ([]) that gate was always False — the patched PACK bundle deployed while
+    # the matching CATALOG (and its aa/catalog.json redirect) never did, which
+    # boots into Unity's CRC check against the ORIGINAL catalog and crashes
+    # with CE-34878-0 (Exp 180 invariant; regression fixed here, Exp 225).
+    if configured_packs:
         ok = deploy_pack_modes(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots) and ok
     return ok
 
@@ -3070,7 +3191,7 @@ def _list_remote_dir(config: dict) -> dict:
     remote_dir = f"{afr_base}/{title_id}"
     user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
     cmd = ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
-           "-e", f"ls {remote_dir}; quit"]
+           "-e", f"ls {_ftp_quote(remote_dir)}; quit"]
     try:
         result = sp.run(cmd, capture_output=True, text=True, timeout=60)
     except Exception as e:
@@ -3137,7 +3258,7 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
     with tempfile.TemporaryDirectory() as tmpdir:
         local_tmp = os.path.join(tmpdir, "redirects.json")
         cmd = ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
-               "-e", f"get {remote_path} -o {local_tmp}; quit"]
+               "-e", f"get {_ftp_quote(remote_path)} -o {_ftp_quote(local_tmp)}; quit"]
         try:
             result = sp.run(cmd, capture_output=True, text=True, timeout=30)
             remote_ok = result.returncode == 0 and os.path.exists(local_tmp)
@@ -3249,7 +3370,7 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
                 remote_cat_tmp = os.path.join(tmpdir, "catalog_remote.json")
                 result = sp.run(
                     ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
-                     "-e", f"get {remote_cat_path} -o {remote_cat_tmp}; quit"],
+                     "-e", f"get {_ftp_quote(remote_cat_path)} -o {_ftp_quote(remote_cat_tmp)}; quit"],
                     capture_output=True, text=True, timeout=60,
                 )
                 if result.returncode != 0 or not os.path.exists(remote_cat_tmp):
@@ -3492,7 +3613,7 @@ def _deploy_features_to_ps4(config: dict):
 
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"put {local_path} -o {remote_path}; quit"]
+           "-e", f"put {_ftp_quote(local_path)} -o {_ftp_quote(remote_path)}; quit"]
     log.info(f"  Deploying features.json to PS4: {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
@@ -3636,7 +3757,7 @@ def _deploy_song_metadata_to_ps4(config: dict):
 
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"put {local_path} -o {remote_path}; quit"]
+           "-e", f"put {_ftp_quote(local_path)} -o {_ftp_quote(remote_path)}; quit"]
     log.info(f"  Deploying song_metadata.json to PS4: {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
@@ -3853,7 +3974,7 @@ def clear_target_song(config: dict, slot_name: str):
     local_redirect_path = _get_redirect_config_path()
     remote_redirect_path = _get_remote_redirect_path(config)
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"get {remote_redirect_path} -o {local_redirect_path}; quit"]
+           "-e", f"get {_ftp_quote(remote_redirect_path)} -o {_ftp_quote(local_redirect_path)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0 and os.path.exists(local_redirect_path):
         redirect_data = _load_local_redirects(local_redirect_path)
@@ -3975,7 +4096,7 @@ def clear_target_song(config: dict, slot_name: str):
     # Deploy redirects.json
     remote_redirect_path = _get_remote_redirect_path(config)
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"put {local_redirect_path} -o {remote_redirect_path}; quit"]
+           "-e", f"put {_ftp_quote(local_redirect_path)} -o {_ftp_quote(remote_redirect_path)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
         log.info(f"  ✅ redirects.json deployed to PS4")
@@ -3985,7 +4106,7 @@ def clear_target_song(config: dict, slot_name: str):
     # Deploy song_metadata.json
     remote_metadata_path = _get_remote_song_metadata_path(config)
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"put {local_metadata_path} -o {remote_metadata_path}; quit"]
+           "-e", f"put {_ftp_quote(local_metadata_path)} -o {_ftp_quote(remote_metadata_path)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
         log.info(f"  ✅ song_metadata.json deployed to PS4")
@@ -4704,7 +4825,7 @@ Examples:
             local_redirect_path = os.path.join(tmpdir, "redirects.json")
             user_part = f"{user},{password}" if password else f"{user},"
             cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-                   "-e", f"get {remote_redirect_path} -o {local_redirect_path}; quit"]
+                   "-e", f"get {_ftp_quote(remote_redirect_path)} -o {_ftp_quote(local_redirect_path)}; quit"]
             result = sp.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode == 0 and os.path.exists(local_redirect_path):
                 try:
@@ -4768,10 +4889,21 @@ Examples:
     # Step 9c: Post-deploy validation (self-validating pipeline, Exp 180).
     # Runs automatically whenever any --deploy option was used, unless
     # --no-verify-ps4 is passed. Reports PASS/FAIL for every check.
+    # A FAILED validation ABORTS the pipeline with a non-zero exit (Exp 225):
+    # the console previously printed "⚠️ FAILED" but continued to "Pipeline
+    # complete!" and exit 0 — the example scripts' `if [ $? -ne 0 ]` guards
+    # never fired, and a CRC-crash-prone state (missing catalog) shipped to
+    # the PS4 with a green-looking log.
+    deploy_verified = True
     if should_deploy and not args.no_verify_ps4:
-        verify_ps4_deployment(deploy_cfg, packs=deploy_packs)
+        deploy_verified = verify_ps4_deployment(deploy_cfg, packs=deploy_packs)
     elif args.verify_ps4:
-        verify_ps4_deployment(deploy_cfg, packs=deploy_packs)
+        deploy_verified = verify_ps4_deployment(deploy_cfg, packs=deploy_packs)
+    if not deploy_verified and should_deploy:
+        log.error("❌ Post-deploy validation FAILED — the PS4 state is inconsistent "
+                  "and the game may crash at boot (CE-34878-0). Fix the issues "
+                  "above and re-run the deploy before launching the game.")
+        sys.exit(1)
 
     # -----------------------------------------------------------------------
     # Step 9d: --deploy-full note (handled by flags set at arg parse time)

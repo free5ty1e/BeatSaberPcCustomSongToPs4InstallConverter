@@ -228,7 +228,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9 
 # Genre: K-Pop / Pop
 # BPM: 99
 # Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f     --target Satisfaction     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f     --target ICantGetNoSatisfaction     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
 # 6. Live by the Sword → Take Me to the Beach (Imagine Dragons feat. Ado)
 # Custom Song: Take Me to the Beach

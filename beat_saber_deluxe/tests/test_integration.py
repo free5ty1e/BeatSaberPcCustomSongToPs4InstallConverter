@@ -309,21 +309,30 @@ class TestPackBundleRedirectConsistency:
             'catalog_key': 'aa/catalog.json',
             'patched_catalog': 'catalog_startmeup_modes.json',
         },
+        # Hermetic isolation (Exp 224): no pinned pack list and a nonexistent
+        # build_dir, so auto-discovery finds nothing from the host workspace
+        # and only the pack_bundle prototype pair applies in these tests.
+        'pack_modes': {'packs': [], 'build_dir': '/nonexistent-hermetic-build-dir'},
     }
 
     def test_get_pack_bundle_redirects_returns_pair(self):
-        """The pack bundle redirect always comes with the catalog redirect."""
+        """The pack bundle redirect always comes with the catalog redirect.
+        (Exp 224: with no pinned pack list, auto-discovered packs from the
+        deployment state are ALSO included — the prototype pair must always
+        be a subset, never absent.)"""
         from full_custom_song_pipeline import _get_pack_bundle_redirects
         pair = _get_pack_bundle_redirects(self.PACK_CONFIG)
-        assert pair == {
-            'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle': 'startmeup_pack_modes.bundle',
-            'aa/catalog.json': 'catalog_startmeup_modes.json',
-        }
+        assert pair.get('therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle') == 'startmeup_pack_modes.bundle'
+        assert pair.get('aa/catalog.json') == 'catalog_startmeup_modes.json'
 
     def test_get_pack_bundle_redirects_empty_without_config(self):
-        """No pack_bundle config -> no forced redirects."""
+        """No pack_bundle config, nothing built, no deployment state in scope
+        -> no forced redirects. Discovery must never invent packs the user
+        did not deploy."""
         from full_custom_song_pipeline import _get_pack_bundle_redirects
-        config = {'title': {'id': 'CUSA12878'}, 'paths': {}}
+        import tempfile as _tempfile
+        config = {'title': {'id': 'CUSA12878'}, 'paths': {},
+                  'pack_modes': {'packs': [], 'build_dir': '/nonexistent-build-dir'}}
         assert _get_pack_bundle_redirects(config) == {}
 
     def test_ensure_pack_bundle_redirects_adds_missing_pair(self):
@@ -331,7 +340,7 @@ class TestPackBundleRedirectConsistency:
         from full_custom_song_pipeline import _ensure_pack_bundle_redirects
         data = {'redirects': {'BeatmapLevelsData/startmeup': 'startmeup_v3'}}
         changed = _ensure_pack_bundle_redirects(data, self.PACK_CONFIG)
-        assert changed == 2
+        assert changed >= 2  # prototype pair (2) + any auto-discovered packs
         assert data['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
         assert data['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
 
@@ -343,8 +352,9 @@ class TestPackBundleRedirectConsistency:
             'therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c': 'rollingstones_pack_patched.bundle',
         }}
         changed = _ensure_pack_bundle_redirects(data, self.PACK_CONFIG)
-        # 1 stale key removed + 2 canonical entries added/updated
-        assert changed == 3
+        # 1 stale key removed + 2 canonical prototype entries added/updated
+        # (+ any auto-discovered pack pairs, Exp 224)
+        assert changed >= 3
         assert data['redirects']['aa/catalog.json'] == 'catalog_startmeup_modes.json'
         assert data['redirects']['therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle'] == 'startmeup_pack_modes.bundle'
         assert 'rollingstones_pack_patched.bundle' not in data['redirects'].values()

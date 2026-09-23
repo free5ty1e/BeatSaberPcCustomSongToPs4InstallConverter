@@ -597,9 +597,13 @@ def _real_pack_modes_cfg():
 class TestPackModesRealArtifacts:
     @pytest.mark.skipif(not os.path.isfile(_SONG_IDS), reason='song_ids.json not present')
     def test_real_entries_and_redirects(self):
-        """Real song_ids.json + real built bundles produce the configured redirect set."""
+        """Real song_ids.json + real built bundles produce the ACTIVE redirect set.
+        (Exp 224: no hardcoded pack list — the active set is auto-discovered
+        from the deployment state: pinned config list, else packs referenced
+        in redirects.json, else local built bundles.)"""
+        from full_custom_song_pipeline import _resolve_active_packs
         cfg = _real_pack_modes_cfg()
-        packs = cfg['pack_modes']['packs']
+        packs = _resolve_active_packs(cfg)
         entries = _get_pack_modes_entries(cfg)
         assert len(entries) == len(packs)
         assert {e['pack'] for e in entries} == set(packs)
@@ -738,3 +742,92 @@ class TestSingleSongScoping:
         assert _BILLIE in red_all
         assert _RS in red_one
         assert _BILLIE not in red_one
+
+
+class TestCleanSlateCatalogPair:
+    """Exp 225 regression: the user's clean-slate + first-song deploy shipped a
+    patched PACK bundle with NO merged catalog and NO aa/catalog.json redirect
+    (boot = CE-34878-0 CRC crash, the Exp 180 signature). Root cause: the old
+    deploy gates checked a non-empty PINNED pack_modes.packs list, which the
+    Exp 224 auto-discovery default ([]) made permanently False."""
+
+    _BUNDLE_DIR = '/workspace/beat_saber_deluxe/pack_modes_bundles'
+    _BUNDLE = 'billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle'
+
+    def _clean_slate_cfg(self, tmp_path):
+        import shutil
+        build_dir = tmp_path / 'pack_modes_bundles'
+        build_dir.mkdir()
+        src = os.path.join(self._BUNDLE_DIR, self._BUNDLE)
+        if not os.path.isfile(src):
+            pytest.skip("billieeilish bundle not built locally")
+        shutil.copy2(src, str(build_dir))
+        msrc = os.path.join(self._BUNDLE_DIR, 'manifest.json')
+        if os.path.isfile(msrc):
+            shutil.copy2(msrc, str(build_dir))  # builder records CRC/size here
+        return {
+            'title': {'id': 'CUSA12878'},
+            'ps4': {'ip': 'x', 'ftp_port': 1},
+            'paths': {'afr_base': '/data/GoldHEN/AFR'},
+            'pack_modes': {
+                'packs': [],  # auto-discovery default (Exp 224)
+                'build_dir': str(build_dir),
+                'song_ids_path': _SONG_IDS,
+                'dump_dir': '/workspace/ps4_dump/CUSA12878-patch',
+                'catalog_key': 'aa/catalog.json',
+                'patched_catalog': 'catalog_pack_modes.json',
+                'patched_catalog_local': str(tmp_path / 'catalog_pack_modes.json'),
+            },
+        }
+
+    def test_clean_slate_discovers_local_bundle(self, tmp_path):
+        """No pinned list, no redirects.json state -> local built bundle IS the scope."""
+        from full_custom_song_pipeline import _resolve_active_packs
+        cfg = self._clean_slate_cfg(tmp_path)
+        active = _resolve_active_packs(cfg)
+        assert active == ['billieeilish']
+
+    def test_ensure_bundles_regenerates_missing_catalog(self, tmp_path):
+        """_ensure_pack_mode_bundles must regenerate the local merged catalog
+        when it is missing (clean slate) — the catalog redirect pair can only be
+        ensured once the file exists."""
+        if not os.path.isfile('/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'):
+            pytest.skip("origin catalog not present")
+        from full_custom_song_pipeline import _ensure_pack_mode_bundles
+        cfg = self._clean_slate_cfg(tmp_path)
+        built = _ensure_pack_mode_bundles(cfg, packs=['billieeilish'])
+        cat = cfg['pack_modes']['patched_catalog_local']
+        assert os.path.isfile(cat), "merged catalog must exist after ensure"
+        import json as _json
+        data = _json.load(open(cat))
+        assert data, "regenerated catalog must be non-empty"
+
+    def test_redirects_include_catalog_after_ensure(self, tmp_path):
+        """After ensure (catalog regenerated), _get_pack_modes_redirects must
+        carry BOTH the pack bundle redirect AND the aa/catalog.json redirect."""
+        if not os.path.isfile('/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'):
+            pytest.skip("origin catalog not present")
+        from full_custom_song_pipeline import (_ensure_pack_mode_bundles,
+                                               _get_pack_modes_redirects)
+        cfg = self._clean_slate_cfg(tmp_path)
+        _ensure_pack_mode_bundles(cfg, packs=['billieeilish'])
+        red = _get_pack_modes_redirects(cfg)
+        assert 'aa/catalog.json' in red, \
+            "aa/catalog.json redirect missing — the Exp 225 crash path"
+        assert red['aa/catalog.json'] == 'catalog_pack_modes.json'
+
+    def test_deploy_pack_modes_gates_on_active_not_pinned(self, tmp_path, monkeypatch):
+        """deploy_pack_modes with packs=[] (auto-discovery) must NOT early-return
+        — it must proceed to ensure + deploy. (The old gate returned False with
+        an empty pinned list even when active packs existed.)"""
+        from full_custom_song_pipeline import deploy_pack_modes
+        cfg = self._clean_slate_cfg(tmp_path)
+        # stub the FTP deploys to record what WOULD be deployed
+        uploaded = []
+        monkeypatch.setattr('full_custom_song_pipeline._deploy_file_to_ps4',
+                            lambda config, lp, rn: uploaded.append(rn) or True)
+        ok = deploy_pack_modes(cfg, packs=['billieeilish'])
+        assert ok is True
+        assert any('catalog_pack_modes.json' in u for u in uploaded), \
+            "merged catalog must be deployed alongside pack bundles"
+        assert any('billieeilish_pack_modes' in u for u in uploaded)

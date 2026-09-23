@@ -1,5 +1,21 @@
 # Pipeline Changelog
 
+## v0.5343 (2026-09-23)
+### Fixed
+- **Clean-slate first-song deploy booted into CE-34878-0 (Exp 225 — regression from v0.5342).** The patched pack bundle deployed WITHOUT its matching merged catalog and WITHOUT the aa/catalog.json redirect; the game then loaded the patched bundle against the ORIGIN catalog → Unity CRC validation failure at the pack scan (the classic Exp 180 crash signature). Root cause: `deploy_pack_bundle` and `deploy_pack_modes` both gated on a non-empty PINNED `pack_modes.packs` list (`if config.get('pack_modes', {}).get('packs'):`) — the Exp 224 auto-discovery default made that list `[]`, so the gate was permanently False and the catalog branch (build + upload + `aa/catalog.json` redirect) was silently skipped while the pack bundle still deployed via the generic pairs loop. Both gates now check the ACTIVE pack set (`_resolve_active_packs` — pinned list or auto-discovered).
+### Changed
+- **A FAILED post-deploy validation now aborts with a non-zero exit (Exp 225).** Previously the pipeline printed "⚠️ Post-deploy validation FAILED" but continued to "Pipeline complete!" and exited 0 — the example scripts' `if [ $? -ne 0 ]` guards never fired, so a crash-prone state shipped with a green-looking log. `--deploy-full`/deploy flows now exit 1 on validation failure with a clear error naming the CE-34878-0 risk.
+### Tests
+- `TestCleanSlateCatalogPair` (4 tests): clean-slate discovery of a locally built bundle; `_ensure_pack_mode_bundles` regenerates the missing merged catalog; `_get_pack_modes_redirects` then carries the aa/catalog.json pair; `deploy_pack_modes` with the empty pinned list deploys the catalog alongside the bundles (the exact crash path, now pinned). 607/607 pass.
+
+## v0.5342 (2026-09-19)
+### Changed
+- **ZERO hardcoded pack expectations (Exp 224 — user directive).** The default `pack_modes.packs` list (`["therollingstones","billieeilish","lizzo","camellia"]` — an Exp 188 leftover that encoded August's deployed state as a permanent expectation) is REMOVED; default is now `[]`. The active pack set is resolved per-invocation, never hardcoded: (1) a user-pinned `pack_modes.packs` list in ps4_config.json if set; else (2) AUTO-DISCOVERY from the deployment state — exactly the packs whose `*_pack_modes_*` bundles are referenced in redirects.json (the state file synced with the PS4 on every deploy; a state file that references no packs means NO packs are in scope — locally built bundles never count as deployed); else (3) if no state file exists at all (clean slate), packs with local built bundles so build flows have a scope. Affects `_get_pack_modes_entries`, `_ensure_pack_mode_bundles`, `_resolve_configured_packs`, `deploy_pack_modes`, `_get_pack_bundle_redirects`, `_regenerate_merged_catalog` and `--verify-ps4`. A pack merely built locally but never deployed (the rollingstones bundle from an earlier cycle) is no longer expected, validated, or force-added.
+### Fixed
+- **lftp shell-metacharacter path bug (Exp 224):** `put ... -o .../Scream&Shout_v3.bundle` — lftp's command language splits the path at `&`, so the upload silently failed while lftp exited 0 (validation caught it as a missing redirect target). ALL FTP command constructions in the pipeline now quote paths via a shared `_ftp_quote()` helper (21 sites), and `deploy_to_ps4` verifies the upload landed (remote listing size check) instead of trusting lftp's exit code.
+- **Example scripts/docs:** `--target Scream&Shout` quoted in the britney files (bash was splitting the same way — `Shout: command not found`); latent `--target Satisfaction` corrected to the real slot `ICantGetNoSatisfaction` in the rolling_stones files.
+- **Local catalog drift:** regenerated catalog_pack_modes.json from the auto-discovered set (RS entry dropped; md5 now matches the deployed catalog).
+
 ## v0.5341 (2026-09-19)
 ### Fixed
 - **`ps4_state.py` "Extra data" JSON parse failure (Exp 222):** `cat_remote` returns lftp's combined stdout, which can carry banner chatter around the file bytes — `json.loads` on the raw capture choked at exactly the file's end offset. Both JSON reads (features.json, redirects.json) now locate the first `{` and `raw_decode` exactly one object, ignoring surrounding lftp output.

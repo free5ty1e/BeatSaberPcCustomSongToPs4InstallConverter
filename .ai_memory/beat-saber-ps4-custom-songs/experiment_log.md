@@ -848,3 +848,42 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **Systemic mitigation (future work):** a pre-deploy liveness+qualification check per MAP_ID (fail fast with a clear "map deleted from BeatSaver" message instead of the raw traceback), and/or a periodic audit script for the docs.
 - **Verification:** Dragula deploy via the exact failing command in progress (bundle + pack + validation).
 - **Status:** ✅ Replacement deployed (see deploy verification below). BE script's song 6 now works; user can re-run the full script or just the remaining songs.
+
+---
+
+### Experiment 224 — lftp `&` Path Bug + ZERO Hardcoded Pack Expectations (User Directive)
+- **Date:** 2026-09-19/20
+- **User reports (2):** (1) britney script died at song 8: `Shout: command not found` + `Template bundle not found: .../BeatmapLevelsData/Scream` — the unquoted `--target Scream&Shout` split at the `&`; (2) mid-investigation, HARD STOP: "There should be ZERO expectations on which music packs should be modified... these hardcoded music packs need to be removed from the pipeline entirely, we care about ONLY what the user deploys."
+
+**Root cause 1 — `&` breaks BOTH bash AND lftp.** `--target Scream&Shout` unquoted in bash backgrounds at `&` (user's error). After fixing the docs, the redeploy STILL failed validation: `Scream&Shout_v3.bundle` missing on PS4 — the PIPELINE's own FTP commands embed paths unquoted in the lftp `-e` script, and lftp's command language ALSO splits at `&`; the upload silently failed while lftp exited 0 (the deploy logged "Bundle deployment successful"). Fixes: new `_ftp_quote()` helper applied at ALL 21 FTP command constructions (put/get/ls); `deploy_to_ps4` now verifies the remote listing shows the file at the expected size instead of trusting lftp's exit code. Docs: `--target "Scream&Shout"` quoted. Also caught a latent `--target Satisfaction` (real slot: ICantGetNoSatisfaction) in the rolling_stones files.
+
+**Root cause 2 — hardcoded pack list (the user's directive).** Origin: Exp 188 (v0.5319) put `"packs": ["therollingstones","billieeilish","lizzo","camellia"]` in the DEFAULT config — encoding August's deployed state as a permanent expectation. Found via: Cold Heart deploy's validation failed demanding a therollingstones pack bundle/pair/catalog entry that was never deployed in this clean-slate cycle. **Removed entirely.** New `_resolve_active_packs()`: (1) user-pinned `pack_modes.packs` in ps4_config.json if set; else (2) auto-discovery from the deployment state — packs whose `*_pack_modes_*` bundles are referenced in redirects.json (state file synced with PS4 every deploy; a state file referencing no packs = NO packs in scope — locally built bundles never count as deployed); else (3) no state file at all → local built bundles (build-time scope on a clean slate). Wired into all four consumers (entries/build/configured-packs/deploy) so validation, catalog regen, and enforcement all follow reality. Local catalog regenerated from the discovered 3-pack set (md5 now matches the PS4's).
+
+**Tests:** updated to the new semantics — integration prototype-pair tests now assert subset presence (auto-discovered packs may add to the prototype pair), PACK_CONFIG made hermetic (no workspace leakage), the real-artifacts test asserts the discovered set. **603/603 pass.**
+
+**Verification (live):** Scream&Shout_v3.bundle uploaded (35,753,685 bytes, correct name, size verified); `--verify-ps4` fully GREEN — catalog md5 match, all 3 deployed packs' pairs present, "all 3 configured packs" (RS gone), zero missing targets.
+
+**Lesson (durable):** any string embedded in an lftp `-e` script is parsed by lftp's own command language — quote every path, always; and never trust lftp's exit code for transfer success — verify the remote listing.
+
+- **Status:** ✅ All deployed state validated; user's britney script can resume (songs 1-8 done through Cold Heart; 9-11 remain). Hardcoded pack expectations eliminated pipeline-wide.
+
+---
+
+### Experiment 225 — Clean-Slate CE-34878-0: Exp 224 Regression (Missing Catalog on First Deploy)
+- **Date:** 2026-09-23
+- **User report:** clean-slate PS4 → first billie eilish song (AllTheGoodGirlsGoToHell → Mirror/Ado, 4a901) via `--deploy-full` → **CE-34878-0 at game launch**. Deploy log showed `Pack bundle + catalog redirect pair(s) present (1 entries)` and validation FAILING on `Could not download catalog_pack_modes.json from PS4` — yet the pipeline continued to "Pipeline complete!".
+- **PS4 log analysis** (archived: `.ai_memory/experiment_logs/v0.5342_clean_slate_boot_crash_catalog_missing.txt`, 615 lines, cleared after archival):
+  - `breakdown: 1 songs, 1 packs, 0 catalog` — redirects.json had NO aa/catalog.json entry
+  - `[OPEN #62] /app0/Media/StreamingAssets/aa/catalog.json` — NO `-> REDIRECTED`: the game read the ORIGIN catalog (original m_Crc/m_BundleSize)
+  - `[OPEN #203] billieeilish_pack_assets_... -> REDIRECTED` — the PATCHED pack bundle served against that original catalog
+  - = the exact Exp 180 CRC-validation crash: patched bundle + original catalog ⇒ CE-34878-0 at the pack scan. Log ends mid-pack-scan (~OPEN #589), consistent with the crash point of prior Exp 180/189 incidents.
+- **Root cause (self-inflicted regression from Exp 224):** TWO gates — in `deploy_pack_bundle` and `deploy_pack_modes` — checked `if config.get('pack_modes', {}).get('packs'):` (a non-empty PINNED list). Exp 224 changed the default to `[]` (auto-discovery), so both gates became permanently False: the pack BUNDLE still deployed via the generic `_get_remote_pack_paths` loop, but the entire catalog branch (`_ensure_pack_mode_bundles` → `_regenerate_merged_catalog` → catalog upload → `_ensure_pack_bundle_redirects` adding the `aa/catalog.json` pair) was silently skipped. Locally, the clean-slate backup had also wiped `catalog_pack_modes.json`, so nothing could backfill the missing pair.
+- **How it slipped through:** the v0.5342 test updates covered discovery semantics (which packs are in scope) but never asserted that a CLEAN-SLATE deploy (empty pinned list, local bundle present, no state files) still produces the catalog pair. Also, a FAILED validation did not abort: exit code 0 + "Pipeline complete!" let the scripts' error guards pass.
+- **Fixes (v0.5343):**
+  1. Both gates now check `_resolve_active_packs(config)` (the same resolution as everything else).
+  2. Failed post-deploy validation now `sys.exit(1)` with an explicit CE-34878-0 warning — scripts' `if [ $? -ne 0 ]` guards fire; a broken state can never look green.
+  3. Regression tests `TestCleanSlateCatalogPair` (4): discovery finds the local bundle; `_ensure_pack_mode_bundles` REGENERATES the missing merged catalog from origin; `_get_pack_modes_redirects` then includes the aa/catalog.json pair; `deploy_pack_modes` with empty pinned list deploys catalog + bundles (the exact crash path pinned).
+- **Repair of the live PS4:** re-ran the user's exact deploy with v0.5343 — catalog regenerated (1 entry), deployed, redirects.json now 3 entries (song + pack + aa/catalog.json), **validation PASSED**. Crash log archived + cleared.
+- **Prevention (durable):** any gate that decides "does this flow apply?" must consult the same resolution helper as the flow's inputs (here: `_resolve_active_packs`), never a raw config field that a defaults change can silently empty. And validation failure = deploy failure.
+- **Tests:** 607/607 pass.
+- **Status:** ✅ Fixed, repaired, deployed. **User next step: just boot the game** — Mirror/Ado on AllTheGoodGirlsGoToHell should load; then continue the BE script (songs 2+).

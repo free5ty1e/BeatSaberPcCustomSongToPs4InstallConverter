@@ -290,3 +290,22 @@ Custom-song level bundles (`<slot>_v3.bundle`) contain all 17 beatmap TextAssets
 **Re-attribution of Exp 196's "lizzo gameplay crash":** the old-structure lizzo bundle boots AND browses fine (verified with a clean catalog). That era's gameplay crash was almost certainly the stale/mismatched catalog of the time (Exp 196 itself found catalog staleness), not blob structure.
 
 **Rule (v0.5326):** every patched SO ends with exactly 4 sets whose pathIDs are exactly `{CHAR_PATH_IDS[m] for m in TARGET_MODES}` - all distinct - each with diffCount 5 and ranks exactly [0,1,2,3,4] (rank-dedup padding kept from v0.5325: short existing sets pad only from template records whose rank isn't already present). Regression tests pin this invariant (`test_new_mode_entries_use_own_pathids_and_clean_ranks`). Reproducibility proven: v0.5326 rebuild of lizzo == known-good deployed bytes (md5 `345d6a0e...`), rebuild of RS == golden working bytes (md5 `5ed23829...`).
+
+## Pack Scope Is NEVER Hardcoded (v0.5342, Exp 224)
+
+The pipeline has ZERO expectations about which music packs are modified — that is
+entirely up to what the user deploys. There is no default `pack_modes.packs`
+list. The active pack set resolves per-invocation via `_resolve_active_packs()`:
+1. a user-pinned `pack_modes.packs` list in ps4_config.json (explicit override);
+2. else AUTO-DISCOVERY from the deployment state: packs whose `*_pack_modes_*`
+   bundles are referenced in redirects.json (the state file synced with the
+   PS4 on every deploy). A state file referencing no packs = no packs in scope;
+   locally built bundles never count as deployed;
+3. else (no state file at all — clean slate) local built bundles, so build
+   flows have a scope.
+
+**lftp lesson (durable):** any path embedded in an lftp `-e` script is parsed by
+lftp's command language — `&`, spaces, etc. split the token. Quote every path
+(`_ftp_quote()`), and verify transfers by remote listing, never by lftp exit
+code (it exits 0 on silently-failed puts — the Scream&Shout_v3.bundle upload
+vanished this way).

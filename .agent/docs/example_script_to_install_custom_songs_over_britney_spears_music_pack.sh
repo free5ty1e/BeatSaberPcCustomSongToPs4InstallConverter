@@ -119,7 +119,7 @@ echo "  Overprotected → Shut Up And Dance deployed successfully"
 
 # Song 8: Scream & Shout → Cold Heart (PNAU Remix) (Elton John & Dua Lipa)
 echo "Deploying Scream & Shout → Cold Heart (PNAU Remix) (Elton John & Dua Lipa)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1d9fd     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1d9fd     --target "Scream&Shout"     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Scream & Shout"; exit 1; fi
 echo "  Scream & Shout → Cold Heart deployed successfully"
 

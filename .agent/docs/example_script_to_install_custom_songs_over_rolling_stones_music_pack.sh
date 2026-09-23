@@ -101,7 +101,7 @@ echo "  Gimme Shelter → Yes I'm A Mess deployed successfully"
 
 # Song 5: Satisfaction → Dreams Come True (aespa)
 echo "Deploying Satisfaction → Dreams Come True (aespa)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f     --target Satisfaction     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21a3f     --target ICantGetNoSatisfaction     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Dreams Come True"; exit 1; fi
 echo "  Satisfaction → Dreams Come True deployed successfully"
 

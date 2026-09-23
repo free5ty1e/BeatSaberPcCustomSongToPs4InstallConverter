@@ -244,6 +244,16 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 225) — Clean-Slate Catalog Crash (Exp 224 Regression) Fixed
+- [x] **Root cause:** two deploy gates checked the pinned pack_modes.packs list (always [] under auto-discovery) → clean-slate first-song deploy shipped the patched pack bundle WITHOUT the merged catalog or aa/catalog.json redirect → CRC crash CE-34878-0. Gates now use _resolve_active_packs.
+- [x] **Failed validation now aborts** (exit 1 + CE-34878-0 warning) — a broken deploy can never print "Pipeline complete!" and exit 0 again.
+- [x] **4 regression tests** pin the exact crash path (TestCleanSlateCatalogPair). Live PS4 repaired: catalog deployed, 3 redirects, validation PASSED. 607/607.
+
+### Completed (Exp 224) — lftp `&` Path Bug + Zero Hardcoded Pack Expectations
+- [x] **All FTP paths quoted** (_ftp_quote, 21 sites) — lftp's command language splits paths at `&` (Scream&Shout upload silently failed, lftp exit 0); deploy_to_ps4 now verifies uploads via remote listing, never trusting lftp's exit code. `--target "Scream&Shout"` quoted in docs; latent `--target Satisfaction` → ICantGetNoSatisfaction fixed in RS docs.
+- [x] **Hardcoded pack list removed (user directive: ZERO pack expectations)** — pack_modes.packs default now []; `_resolve_active_packs` auto-discovers from the deployed state (pinned config list → redirects.json referenced packs → local built bundles only when no state file). Validation/catalog/enforcement follow reality; a never-deployed RS bundle no longer triggers failures.
+- [x] **Scream&Shout_v3.bundle re-uploaded; full --verify-ps4 GREEN.** 603/603 tests.
+
 ### Completed (Exp 222) — Feature-Flag Gating Audit (Decorative Flag Fixed)
 - [x] **enable_beatmap_mode_mapping was decorative** (assigned, logged, counted — gated nothing; explains mode selector working with flag absent). v0.8046: OFF → open-hook skips pack_assets + catalog redirects → stock packs, Standard-only modes; per-song customs still play. Catalog skip required (Exp 180 CRC invariant).
 - [x] **Gating contract test suite** (5 tests): every g_feature_* must have a conditional use outside load_features; kill switch + each feature flag verified against their behavior paths.

@@ -284,7 +284,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 285e8 
 # Genre: Dance-pop / Nu-disco
 # BPM: 116
 # Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mappers Faded 99 & Z-ANESaber
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1d9fd     --target Scream&Shout     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1d9fd     --target "Scream&Shout"     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash

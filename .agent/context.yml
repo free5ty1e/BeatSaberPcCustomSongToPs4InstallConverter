@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8046"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8046: enable_beatmap_mode_mapping now REALLY gates (OFF = pack_assets + catalog redirects skipped → stock packs, Standard-only modes; was decorative v0.5334-v0.8045); v0.8045: one combined boot toast (ON/OFF + N/3 flags)
-pipeline_version: "0.5341" # in beat_saber_deluxe/VERSION - Exp 222: ps4_state.py JSON reads use raw_decode (lftp banner chatter broke json.loads); Exp 221: features deploy merges DEFAULT_FEATURES, --skip-plugin-deployment, ps4_state.py reports flags.
+pipeline_version: "0.5343" # in beat_saber_deluxe/VERSION - Exp 225: fixed Exp 224 regression (deploy_pack_bundle/deploy_pack_modes gates checked the PINNED packs list — auto-discovery default [] silently skipped the merged catalog + aa/catalog.json redirect on clean-slate first deploys -> CE-34878-0; gates now use _resolve_active_packs); failed post-deploy validation now exits 1. Exp 224: zero hardcoded pack expectations, _ftp_quote, upload verification.
 
 # Platform Constraints
 target_platform: PS4
