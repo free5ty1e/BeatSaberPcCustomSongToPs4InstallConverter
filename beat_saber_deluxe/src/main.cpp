@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -19,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8046"
+#define PLUGIN_VERSION "v0.8047"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -132,6 +133,64 @@ static int in_hook = 0;
 static int log_ok = 0;
 
 // ── Minimal JSON parser ─────────────────────────────────────────────────────
+// JSON string unescape: converts \uXXXX, \n, \t, \\, \" etc. in place.
+// The PS4-deployed song_metadata.json may carry \uXXXX escapes (Python's
+// json.dump default ensure_ascii=True writes them for any non-ASCII key).
+// Exp 228: '…Baby One More Time' shipped as "…Baby One More Time" and
+// the byte-verbatim key parse made the metadata lookup miss forever.
+static void json_unescape_inplace(char *s) {
+    char *r = s;  // read
+    char *w = s;  // write
+    while (*r) {
+        if (*r != '\\') { *w++ = *r++; continue; }
+        r++;
+        switch (*r) {
+            case 'n': *w++ = '\n'; r++; break;
+            case 't': *w++ = '\t'; r++; break;
+            case 'r': *w++ = '\r'; r++; break;
+            case 'b': *w++ = '\b'; r++; break;
+            case 'f': *w++ = '\f'; r++; break;
+            case '"': *w++ = '"';  r++; break;
+            case '\\': *w++ = '\\'; r++; break;
+            case '/': *w++ = '/';  r++; break;
+            case 'u': {
+                // \uXXXX -> UTF-8 (surrogate pairs not supported; song titles
+                // with astral chars are folded to '?' at comparison anyway)
+                if (isxdigit((unsigned char)r[1]) && isxdigit((unsigned char)r[2]) &&
+                    isxdigit((unsigned char)r[3]) && isxdigit((unsigned char)r[4])) {
+                    unsigned cp = 0;
+                    for (int i = 1; i <= 4; i++) {
+                        char c = r[i];
+                        cp <<= 4;
+                        if (c >= '0' && c <= '9') cp |= (unsigned)(c - '0');
+                        else if (c >= 'a' && c <= 'f') cp |= (unsigned)(c - 'a' + 10);
+                        else if (c >= 'A' && c <= 'F') cp |= (unsigned)(c - 'A' + 10);
+                    }
+                    r += 5;
+                    if (cp < 0x80) {
+                        *w++ = (char)cp;
+                    } else if (cp < 0x800) {
+                        *w++ = (char)(0xC0 | (cp >> 6));
+                        *w++ = (char)(0x80 | (cp & 0x3F));
+                    } else {
+                        *w++ = (char)(0xE0 | (cp >> 12));
+                        *w++ = (char)(0x80 | ((cp >> 6) & 0x3F));
+                        *w++ = (char)(0x80 | (cp & 0x3F));
+                    }
+                } else {
+                    *w++ = '\\';  // malformed — keep literal backslash
+                }
+                break;
+            }
+            default:
+                *w++ = '\\';
+                if (*r) *w++ = *r++;
+                break;
+        }
+        *w = '\0';
+    }
+}
+
 static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], char vals[][MAX_PATH]) {
     int count = 0;
     const char *p = json;
@@ -152,6 +211,12 @@ static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], ch
         vals[count][vi] = '\0';
         if (*p) p++;
         count++;
+    }
+    // Unescape AFTER parsing so keys/vals hold real UTF-8 bytes, matching what
+    // extract_utf16_string() produces from the game's System.String objects.
+    for (int i = 0; i < count; i++) {
+        json_unescape_inplace(keys[i]);
+        json_unescape_inplace(vals[i]);
     }
     return count;
 }
@@ -371,6 +436,35 @@ static int g_tmp_text_set_text_count = 0;
 // Forward-declare IL2CPP's MethodInfo (opaque type)
 struct MethodInfo;
 
+// Fold a UTF-8 C string to the same ASCII projection that
+// extract_utf16_string() applies to game System.String objects: every
+// non-ASCII codepoint collapses to a single '?'. In-place; ASCII-only
+// strings pass through unchanged. Keys loaded from song_metadata.json are
+// folded at load time so key comparison matches the folded extraction of
+// the game's song titles exactly (Exp 228: '…Baby One More Time' extracted
+// as '?Baby One More Time' never matched the raw UTF-8 key).
+// NOTE: astral-plane chars (emoji, > U+FFFF) occupy TWO UTF-16 code units
+// in the game string (two '?') but only one UTF-8 codepoint here (one '?')
+// — known limitation; no current song title uses astral chars.
+static void fold_utf8_to_ascii(char *s) {
+    char *r = s, *w = s;
+    while (*r) {
+        unsigned char c = (unsigned char)*r;
+        if (c < 0x80) { *w++ = *r++; continue; }
+        // Multibyte UTF-8: consume the full sequence, emit one '?' per UTF-16
+        // code unit it decodes to (BMP = 1 unit / 1 '?', astral = 2 units / 2
+        // '?') — an exact mirror of extract_utf16_string's fold so key
+        // comparison is byte-identical for any Unicode title.
+        int seq = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : 2;
+        if ((c == 0xC0) || (c == 0xC1)) seq = 2;  // overlong — treat as 2
+        int nq = (seq == 4) ? 2 : 1;
+        r += seq;
+        if (*(r-1) == '\0') r--;  // don't step past terminator on truncation
+        while (nq-- > 0) *w++ = '?';
+    }
+    *w = '\0';
+}
+
 // ── Load song metadata from JSON config file ────────────────────────────────
 // Parses "song_names" and "song_artists" sections from song_metadata.json
 // Uses same parse_json_pairs() as redirects loading.
@@ -401,6 +495,7 @@ static void load_song_metadata(void) {
             char vals[METADATA_MAX][MAX_PATH];
             int n = parse_json_pairs(sn, METADATA_MAX, keys, vals);
             for (int i = 0; i < n && i < METADATA_MAX; i++) {
+                fold_utf8_to_ascii(keys[i]);  // match extract_utf16_string's '?' fold
                 METADATA_NAME_KEYS[i] = (char*)malloc(strlen(keys[i]) + 1);
                 METADATA_NAME_VALS[i] = (char*)malloc(strlen(vals[i]) + 1);
                 if (METADATA_NAME_KEYS[i] && METADATA_NAME_VALS[i]) {
@@ -422,6 +517,7 @@ static void load_song_metadata(void) {
             char vals[METADATA_MAX][MAX_PATH];
             int n = parse_json_pairs(sa, METADATA_MAX, keys, vals);
             for (int i = 0; i < n && i < METADATA_MAX; i++) {
+                fold_utf8_to_ascii(keys[i]);  // match extract_utf16_string's '?' fold
                 METADATA_ARTIST_KEYS[i] = (char*)malloc(strlen(keys[i]) + 1);
                 METADATA_ARTIST_VALS[i] = (char*)malloc(strlen(vals[i]) + 1);
                 if (METADATA_ARTIST_KEYS[i] && METADATA_ARTIST_VALS[i]) {
@@ -562,6 +658,7 @@ static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
 
     int len = strlen(cstr);
     // Size: 16 (klass+monitor) + 4 (length) + (len * 2) (UTF-16LE chars) + 2 (null terminator)
+    // len is an upper bound — multibyte UTF-8 sequences shrink the count
     int total = 16 + 4 + (len * 2) + 2;
     void* str_mem = malloc(total);
     if (!str_mem) return NULL;
@@ -570,15 +667,33 @@ static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
     memcpy(str_mem, klass_ptr, 8);
     // Zero monitor (8 bytes)
     memset((char*)str_mem + 8, 0, 8);
-    // Set string length
-    *(uint32_t*)((char*)str_mem + 16) = (uint32_t)len;
-    // Convert ASCII to UTF-16LE
+
+    // Decode UTF-8 -> UTF-16LE (Exp 228: ASCII-per-byte produced mojibake for
+    // non-ASCII replacement values; il2cpp_string_new already handles UTF-8,
+    // this manual fallback must too). Malformed bytes fold to U+FFFD-replacement
+    // '?' to stay defensive against garbage values.
     uint16_t* chars = (uint16_t*)((char*)str_mem + 20);
-    for (int i = 0; i < len; i++) {
-        chars[i] = (uint16_t)(unsigned char)cstr[i];
+    int nch = 0;
+    for (int i = 0; i < len; ) {
+        unsigned char c = (unsigned char)cstr[i];
+        uint32_t cp = 0;
+        int seq = 1;
+        if (c < 0x80) { cp = c; seq = 1; }
+        else if ((c & 0xE0) == 0xC0) { cp = c & 0x1F; seq = 2; }
+        else if ((c & 0xF0) == 0xE0) { cp = c & 0x0F; seq = 3; }
+        else if ((c & 0xF8) == 0xF0) { cp = c & 0x07; seq = 4; }
+        else { cp = '?'; seq = 1; }  // stray continuation byte
+        for (int j = 1; j < seq && (i + j) < len; j++) {
+            unsigned char cc = (unsigned char)cstr[i + j];
+            if ((cc & 0xC0) != 0x80) { cp = '?'; seq = 1; break; }
+            cp = (cp << 6) | (cc & 0x3F);
+        }
+        if (cp >= 0x10000) cp = '?';  // astral chars don't fit one UTF-16 unit here
+        chars[nch++] = (uint16_t)cp;
+        i += seq;
     }
-    // Null terminator (optional but safe)
-    chars[len] = 0;
+    *(uint32_t*)((char*)str_mem + 16) = (uint32_t)nch;  // actual char count
+    chars[nch] = 0;  // null terminator
 
     return str_mem;
 }

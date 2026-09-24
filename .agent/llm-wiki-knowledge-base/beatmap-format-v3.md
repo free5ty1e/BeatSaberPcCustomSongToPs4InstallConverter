@@ -203,4 +203,23 @@ like the V2 branch already did. See `tests/test_mode_generators.py`
 | Bomb type | `_type: 3` in `_notes` | Separate `bombNotes` array |
 | Field naming | Underscore prefix (`_time`) | No underscore (`b`) |
 
-See also: [[beatmap-conversion-pipeline]], [[assetbundle-structure]]
+## BeatSaver V4 Maps Use This Same Columnar Layout (Exp 228)
+
+BeatSaver "v4.0.x" map downloads (e.g. 4dea2 Kiss Me More, 443f3 15 Minutes)
+ship beatmaps in **this exact columnar format** — `colorNotes[{b, i?}]` +
+`colorNotesData[{x,y,c,d,a?}]` rows, plus `bombNotesData`/`obstaclesData`/
+`arcsData`/`chainsData`/`basicBeatmapEventsData`/`njsEvents(+Data)`. The PS4
+game parses them natively (it IS the game's own format) — a v4-sourced
+Standard chart deploys and plays with NO conversion.
+
+**Two real hazards (pipeline v0.5346 fixes both):**
+1. **Procedural mode generators assume denormalized fields.** `_generate_one_saber`/`_generate_no_arrows`/`_generate_90_degree` read and mutate `colorNotes[n]["c"]/["d"]` directly. On a columnar event (`{b, i}` only) they attach inline `c`/`d` ALONGSIDE the `i` index — an ambiguous mixed event (index says "use colorNotesData[2]", inline says blue/dot). Fix: `convert_v4_to_v3()` denormalizes before anything else touches the map (`replace_beatmaps` + mode-injection donor paths).
+2. **V4 Info.dat metadata keys differ.** `song.title`/`song.author`/`audio.bpm` instead of `_songName`/`_songAuthorName`/`_beatsPerMinute` — read via `_read_info_song_metadata`/`_read_info_bpm_from_dict`, or the display name silently falls back to the BeatSaver map ID ('Oxytocin' -> '4dea2').
+
+Also note: the pipeline's own canonical output is the DENORMALIZED layout
+(flat `colorNotes` with inline x/y/c/d, `version: 3.2.0` + full
+`normalize_v3_schema` arrays) — the game accepts both; denormalized keeps
+every downstream generator/repair operating on one shape.
+
+See also: [[beatmap-conversion-pipeline]], [[assetbundle-structure]],
+[[unicode-song-metadata-matching]]

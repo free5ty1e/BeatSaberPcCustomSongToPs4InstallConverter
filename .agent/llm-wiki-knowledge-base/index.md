@@ -69,6 +69,7 @@ metadata:
 
 ## Key Root Causes Found
 - [[m-script-gzip-format|m_Script = Just Gzip]] — The blocker: was adding decompressed_size prefix before gzip
+- [[unicode-song-metadata-matching|Unicode Song Metadata Matching]] — non-ASCII titles ('…') missed replacement: \uXXXX escaping + byte-verbatim parse + UTF-16 '?' fold; fixed by mirroring the fold on both sides (v0.5346/v0.8047)
 - [[unitypy-serialization|save_typetree vs set_raw_data]] — set_raw_data causes serialization bugs for 3/5 objects
 - [[surrogateescape-encoding|Surrogateescape Encoding]] — latin-1 + utf-8 = corrupted binary data
 - [[note-color-field-version-differences|Note Color Field Version Differences]] — V2 uses `a`, V3 uses `c` for note color field

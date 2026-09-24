@@ -41,6 +41,8 @@
 
 > **Note:** NDA slot history: originally "360" by Charli xcx (unsuitable for PS4 VR — 360° characteristics), then Duvet by Bôa (4b107 — Hard/Expert+ only), then the 22c4e Shiki Miyoshino cover (qualified but DELETED from BeatSaver 2026-09-19, 404s mid-script), now **Dragula by Rob Zombie (6d04)** — no Duvet map with native Easy/Normal/Hard exists on BeatSaver.
 
+> **Note (v0.5346, Exp 228):** slots 1 & 3 are BeatSaver **V4 (v4.0.x) maps** — they shipped with map-ID display names ('4dea2'/'443f3') because V4 Info.dat uses `song.title`/`song.author` (unread until v0.5346) and their first deploy passed the columnar beatmaps through unconverted (Standard played fine — the PS4's native format — but generated modes were ambiguous). Both bundles REGENERATED with the v4→v3 denormalizer and REDEPLOYED 2026-09-24; their metadata entries corrected via `--metadata-only` ('Kiss Me More / Doja Cat', '15 Minutes / Sabrina Carpenter').
+
 ## Lizzo Replacements (9 songs)
 
 | # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |

@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8046"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8046: enable_beatmap_mode_mapping now REALLY gates (OFF = pack_assets + catalog redirects skipped → stock packs, Standard-only modes; was decorative v0.5334-v0.8045); v0.8045: one combined boot toast (ON/OFF + N/3 flags)
-pipeline_version: "0.5345" # in beat_saber_deluxe/VERSION - Exp 227: deploy flows use _resolve_deployed_packs (state file ONLY, no local-bundle fallback — the fallback resurrected 6 ghost packs into a clean-slate clear-song run); caller packs= is AUTHORITATIVE scope in entries/ensure; --clean-ps4 now wipes ALL local state (pack_modes_bundles/, custom_songs/, mass_bundles/, blobs — regenerable). Exp 226: union semantics for deploys.
+plugin_version: "0.8047"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8047: Unicode metadata matching (json_unescape_inplace \uXXXX + fold_utf8_to_ascii key fold mirroring extract_utf16_string's '?' projection; create_il2cpp_string UTF-8→UTF-16LE fix); v0.8046: enable_beatmap_mode_mapping REALLY gates; v0.8045: one combined boot toast
+pipeline_version: "0.5346" # in beat_saber_deluxe/VERSION - Exp 228: song_metadata.json raw UTF-8 (ensure_ascii=False); V4 columnar beatmap support (is_v4_beatmap/convert_v4_to_v3 + V4 Info.dat song.title/author + audio.bpm); --metadata-only mode. Exp 227: _resolve_deployed_packs; authoritative packs= scope; --clean-ps4 wipes ALL local state.
 
 # Platform Constraints
 target_platform: PS4
@@ -122,6 +122,12 @@ safe_defaults:
   features_only: >
     Standalone mode: `--features-only --set-feature key=value` applies + deploys features.json
     then exits — no song/plugin/redirect processing. Requires --set-feature (errors otherwise).
+  metadata_only: >
+    Standalone mode (Exp 228): `--metadata-only --target <slot> --song-name "X" --artist "Y" --deploy`
+    adds/updates a song_metadata.json entry and ships it to the PS4, then exits — no song
+    processing, no plugin, no redirects. Without --song-name/--artist, deploys the local file as-is.
+    Written as raw UTF-8 (ensure_ascii=False) — non-ASCII titles (e.g. '…Baby One More Time')
+    must never be \uXXXX-escaped (plugin folds keys to the extract_utf16_string '?' projection).
   resolution_helpers: resolve_audio_codec, resolve_pad_to_size, resolve_mode_mapping, resolve_convert_to_v3
 
 # Mode Generation (v0.5310, default ON since v0.5314)

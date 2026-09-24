@@ -1093,3 +1093,245 @@ class TestClearTargetSongRedirectSafety:
             "clear_target_song must not scope redirect generation to rebuild_slots (the 44-redirect wipe)"
         assert 'Empty slot scope — preserving all existing song redirects' in src, \
             "the empty-scope no-op guard must be present"
+
+
+# ======================================================================
+# Exp 228 — Metadata special-character handling
+# ======================================================================
+
+class TestMetadataUnicodeHandling:
+    """
+    '…Baby One More Time' (U+2026) title never got its metadata replacement
+    deployed. Root cause chain: (a) json.dump default ensure_ascii=True wrote
+    the key as \\u2026Baby One More Time, (b) the plugin's byte-verbatim JSON
+    parser kept the escape, (c) the game's UTF-16 title folds to
+    '?Baby One More Time' in extract_utf16_string. Fix: pipeline writes raw
+    UTF-8 (ensure_ascii=False), plugin unescapes \\uXXXX and folds keys to
+    the same ASCII projection.
+    """
+
+    def test_song_metadata_written_as_raw_utf8(self, tmp_path):
+        """song_metadata.json must be written with ensure_ascii=False so
+        non-ASCII keys stay human-readable raw UTF-8, not \\uXXXX escapes."""
+        from full_custom_song_pipeline import manage_song_metadata
+        local_path = os.path.join(tmp_path, "song_metadata.json")
+        import full_custom_song_pipeline as fp
+        orig = fp._get_song_metadata_path
+        fp._get_song_metadata_path = lambda: local_path
+        try:
+            manage_song_metadata(
+                {},
+                song_name="Take On Me",
+                artist="A-ha",
+                target_name="BabyOneMoreTime",
+                deploy=False,
+            )
+            raw = open(local_path, 'rb').read()
+            # The key must be raw UTF-8 bytes (0xE2 0x80 0xA6), not the
+            # 6-byte ASCII sequence backslash-u-2-0-2-6
+            assert b'\xe2\x80\xa6Baby One More Time' in raw, \
+                "non-ASCII key must be raw UTF-8, not \\u2026-escaped"
+            assert b'\\u2026' not in raw, \
+                "escaped \\u2026 must never appear in the written file"
+        finally:
+            fp._get_song_metadata_path = orig
+
+    def test_read_info_song_metadata_v4(self):
+        """V4 Info.dat (BeatSaver 4.0.x) stores title/author in the nested
+        'song' object; the pipeline must read them (was: fallback to map ID
+        as the display name, e.g. 'Oxytocin' -> '4dea2')."""
+        from full_custom_song_pipeline import _read_info_song_metadata
+        # Real shape from 4dea2 (Kiss Me More) Info.dat
+        info_v4 = {
+            "version": "4.0.1",
+            "song": {"title": "Kiss Me More", "subTitle": "(feat. SZA)", "author": "Doja Cat"},
+            "audio": {"songFilename": "song.egg", "bpm": 111.0},
+        }
+        name, artist = _read_info_song_metadata(info_v4)
+        assert name == "Kiss Me More"
+        assert artist == "Doja Cat"
+
+    def test_read_info_song_metadata_v3_still_works(self):
+        """V2/V3 Info.dat reads must not regress: _songName/_songAuthorName
+        remain the primary keys."""
+        from full_custom_song_pipeline import _read_info_song_metadata
+        info_v3 = {"_songName": "Espresso", "_songAuthorName": "Sabrina Carpenter",
+                   "_beatsPerMinute": 111.0}
+        name, artist = _read_info_song_metadata(info_v3)
+        assert name == "Espresso"
+        assert artist == "Sabrina Carpenter"
+
+    def test_read_info_bpm_v4(self):
+        """V4 Info.dat carries BPM in audio.bpm; must be read when
+        _beatsPerMinute is absent."""
+        from full_custom_song_pipeline import _read_info_bpm_from_dict
+        info_v4 = {"version": "4.0.1", "audio": {"bpm": 111.0}}
+        assert _read_info_bpm_from_dict(info_v4) == 111.0
+        info_v3 = {"_beatsPerMinute": 202.5}
+        assert _read_info_bpm_from_dict(info_v3) == 202.5
+        assert _read_info_bpm_from_dict({}) is None
+
+    def test_metadata_only_mode_help(self):
+        """--metadata-only must exist in the CLI (source audit)."""
+        src = open(os.path.join(os.path.dirname(__file__), '..', 'tools',
+                                'full_custom_song_pipeline.py')).read()
+        assert '--metadata-only' in src, \
+            "--metadata-only CLI flag must exist for surgical metadata fixes"
+
+    def test_plugin_json_unescape_present(self):
+        """The plugin must unescape \\uXXXX in parse_json_pairs (source audit)
+        so already-deployed escaped files still match."""
+        src = open(os.path.join(os.path.dirname(__file__), '..', 'src',
+                                'main.cpp')).read()
+        assert 'json_unescape_inplace' in src, \
+            "plugin must unescape \\uXXXX escapes in JSON values"
+        assert 'fold_utf8_to_ascii' in src, \
+            "plugin must fold keys to the extract_utf16_string projection"
+        # The fold must be applied to metadata keys (song_names + song_artists)
+        assert src.count('fold_utf8_to_ascii(keys[i])') == 2, \
+            "key fold must be applied in both song_names and song_artists parsers"
+
+
+class TestPluginUnescapeUnit:
+    """C-level unit checks of the plugin's unescape/fold semantics via the
+    source (no PS4 needed) — mirrors of the C logic in Python for behavior
+    verification."""
+
+    def _fold(self, s):
+        # Python mirror of fold_utf8_to_ascii
+        out = []
+        i = 0
+        b = s.encode('utf-8')
+        while i < len(b):
+            c = b[i]
+            if c < 0x80:
+                out.append(chr(c))
+                i += 1
+                continue
+            seq = 4 if c >= 0xF0 else 3 if c >= 0xE0 else 2
+            nq = 2 if seq == 4 else 1
+            i += seq
+            out.append('?' * nq)
+        return ''.join(out)
+
+    def test_fold_bmp_char_matches_extraction(self):
+        """'…' (BMP) extracts from UTF-16 as ONE '?' — key fold must produce
+        exactly one '?' for the UTF-8 sequence."""
+        assert self._fold('…Baby One More Time') == '?Baby One More Time'
+
+    def test_fold_ascii_untouched(self):
+        assert self._fold("Oops!...I Did It Again") == "Oops!...I Did It Again"
+
+    def test_fold_astral_two_question_marks(self):
+        """Astral chars occupy two UTF-16 code units -> extract produces TWO
+        '?' — fold must mirror that."""
+        assert self._fold('🎵 Party') == '?? Party'
+
+    def test_escaped_file_matches_after_unescape_then_fold(self):
+        """The full chain for the already-deployed escaped file:
+        parse (keeps \\u2026) -> unescape (raw '…') -> fold ('?') == the
+        extraction of the game title ('?')."""
+        # parse keeps the literal escape text
+        parsed_key = r'…Baby One More Time'
+        # json_unescape_inplace turns it into real UTF-8
+        unescaped = json.loads('"' + parsed_key + '"')
+        # fold to the extraction projection
+        folded = self._fold(unescaped)
+        assert folded == '?Baby One More Time'
+
+
+# ======================================================================
+# Exp 228 — V4 columnar beatmap support
+# ======================================================================
+
+class TestV4BeatmapConversion:
+    """
+    BeatSaver v4.0.x maps (4dea2 Kiss Me More, 443f3 15 Minutes) use a
+    columnar layout: colorNotes[{b, i?}] + colorNotesData[{x,y,c,d,a} ...
+    rows]. Without conversion the pipeline shipped notes with ONLY {b, i}
+    — the game read x=0/y=0 defaults and every note stacked bottom-left.
+    """
+
+    def test_is_v4_beatmap_detection(self):
+        from full_custom_song_pipeline import is_v4_beatmap, is_v2_beatmap
+        v4 = {"version": "4.0.1", "colorNotes": [{"b": 4.0}],
+              "colorNotesData": [{"x": 2, "c": 1, "d": 1}]}
+        assert is_v4_beatmap(v4) is True
+        assert is_v2_beatmap(v4) is False  # never treated as V2 either
+        v3 = {"version": "3.2.0", "colorNotes": [{"b": 4.0, "x": 1, "y": 0}]}
+        assert is_v4_beatmap(v3) is False
+
+    def test_convert_v4_denormalizes_notes(self):
+        from full_custom_song_pipeline import convert_v4_to_v3
+        v4 = {"version": "4.0.1",
+              "colorNotes": [{"b": 4.0}, {"b": 6.0, "i": 2}],
+              "colorNotesData": [{"x": 2, "c": 1, "d": 1}, {"x": 3}, {"x": 1, "y": 1}]}
+        out = convert_v4_to_v3(v4)
+        assert out["colorNotes"][0] == {"b": 4.0, "x": 2, "c": 1, "d": 1}
+        # 'i' indexes into colorNotesData AND must be stripped from the event
+        assert out["colorNotes"][1] == {"b": 6.0, "x": 1, "y": 1}
+        assert "colorNotesData" not in out
+        assert out["version"] == "3.2.0"
+
+    def test_convert_v4_default_index_is_position(self):
+        """Events without 'i' index their OWN data row (colorNotesData[0],
+        colorNotesData[1], ...) — verified against real 4dea2 Easy.dat."""
+        from full_custom_song_pipeline import convert_v4_to_v3
+        v4 = {"version": "4.0.1",
+              "colorNotes": [{"b": 1.0}, {"b": 2.0}, {"b": 3.0}],
+              "colorNotesData": [{"x": 0}, {"x": 1}, {"x": 2}]}
+        out = convert_v4_to_v3(v4)
+        assert [n["x"] for n in out["colorNotes"]] == [0, 1, 2]
+
+    def test_convert_v4_obstacles_merge(self):
+        from full_custom_song_pipeline import convert_v4_to_v3
+        v4 = {"version": "4.0.1",
+              "obstacles": [{"b": 66.25}, {"b": 67.25, "i": 1}],
+              "obstaclesData": [{"x": 2, "d": 0.0625, "w": 1, "h": 5},
+                                 {"x": 1, "d": 0.0625, "w": 1, "h": 5}]}
+        out = convert_v4_to_v3(v4)
+        assert out["obstacles"][0] == {"b": 66.25, "x": 2, "d": 0.0625, "w": 1, "h": 5}
+        assert out["obstacles"][1] == {"b": 67.25, "x": 1, "d": 0.0625, "w": 1, "h": 5}
+
+    def test_convert_v4_real_4dea2_shape(self):
+        """Shape check against the exact structure of 4dea2's Easy.dat
+        (first notes with sparse columnar rows)."""
+        from full_custom_song_pipeline import convert_v4_to_v3
+        v4 = {"version": "4.0.1",
+              "colorNotes": [{"b": 4.0}, {"b": 6.0, "i": 1}, {"b": 7.5, "i": 2}],
+              "colorNotesData": [{"x": 2, "c": 1, "d": 1}, {"x": 3, "y": 1, "c": 1},
+                                  {"x": 1, "d": 1}]}
+        out = convert_v4_to_v3(v4)
+        assert out["colorNotes"][2] == {"b": 7.5, "x": 1, "d": 1}
+
+    def test_v4_info_dat_metadata(self):
+        """V4 Info.dat title/author must be read (the 'Oxytocin' -> '4dea2'
+        display-name regression)."""
+        from full_custom_song_pipeline import _read_info_song_metadata
+        info = {"version": "4.0.1",
+                "song": {"title": "Kiss Me More", "subTitle": "(feat. SZA)",
+                         "author": "Doja Cat"},
+                "audio": {"bpm": 111.0, "audioDataFilename": "AudioData.dat"}}
+        name, artist = _read_info_song_metadata(info)
+        assert name == "Kiss Me More"
+        assert artist == "Doja Cat"
+
+    def test_v4_info_bpm_fallback(self):
+        """V4 audio.bpm must be honored by both BPM helpers."""
+        from full_custom_song_pipeline import _read_info_bpm_from_dict
+        info = {"version": "4.0.1", "audio": {"bpm": 111.0}}
+        assert _read_info_bpm_from_dict(info) == 111.0
+        assert _read_info_bpm_from_dict({"_beatsPerMinute": 202.5}) == 202.5
+
+    def test_replace_beatmaps_converts_v4(self, tmp_path):
+        """replace_beatmaps must convert v4 sources before writing to the
+        CAB (source audit + behavior: the v4 check precedes the v2 check)."""
+        src = open(os.path.join(os.path.dirname(__file__), '..', 'tools',
+                                'full_custom_song_pipeline.py')).read()
+        # v4 conversion is applied in replace_beatmaps BEFORE v2 conversion
+        v4_block = re.search(
+            r"if is_v4_beatmap\(data\):\s*\n\s*data = convert_v4_to_v3\(data\)", src)
+        assert v4_block is not None, "replace_beatmaps must convert V4 first"
+        # and in the mode-injection path
+        assert re.search(r"if is_v4_beatmap\(bm_data\):", src) is not None, \
+            "mode injection path must also handle V4 sources"

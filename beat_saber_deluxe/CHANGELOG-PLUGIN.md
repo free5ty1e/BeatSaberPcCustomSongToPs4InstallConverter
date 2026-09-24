@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8047] — 2026-09-24
+### Fixed
+- **Non-ASCII song titles never matched their metadata replacement (Exp 228 — '…Baby One More Time').** Three-part root cause: (1) the pipeline wrote `song_metadata.json` with `ensure_ascii=True`, shipping the key as the 6-ASCII-byte escape `…` — the plugin's byte-verbatim `parse_json_pairs` compared those literal bytes; (2) the game's UTF-16 title (U+2026 ellipsis) folds to `?` in `extract_utf16_string`; (3) no amount of unescaping alone fixes the fold mismatch. Fixes: `json_unescape_inplace()` unescapes `\uXXXX`/`\n`/`\\` etc. in parsed keys/values (backward compat with already-deployed escaped files); `fold_utf8_to_ascii()` folds loaded KEYS through the same projection as extraction (BMP char → 1 `?`, astral → 2 `?` — an exact byte-for-byte mirror) so comparison succeeds for ANY Unicode title; values stay raw UTF-8 (display strings).
+- **`create_il2cpp_string` (manual fallback) wrote mojibake for non-ASCII replacement values:** one UTF-16 code unit per BYTE (`…` → two code units). Now decodes UTF-8 → code points → UTF-16LE properly; malformed bytes and astral chars fold to `?`. `il2cpp_string_new` (primary path) already handled UTF-8 correctly.
+
 ## [v0.8046] — 2026-09-19
 ### Fixed
 - **`enable_beatmap_mode_mapping` was DECORATIVE (Exp 222 audit):** the flag was read, logged, and counted but gated NOTHING — which is why the mode selector worked while the flag was silently absent ("2/3 feature flags"). It now genuinely gates the feature: when OFF, the open-hook redirect loop skips `pack_assets` bundle redirects AND the `catalog` redirect, so the game loads STOCK pack bundles (Standard-only preview sets, no extra mode buttons) while per-song customs (audio + Standard beatmaps) keep working. The catalog skip is required by the Exp 180 invariant: the patched catalog's m_Crc/m_BundleSize describe the PATCHED pack bundles — serving it against stock bundles fails Unity's CRC validation and crashes the pack scan.

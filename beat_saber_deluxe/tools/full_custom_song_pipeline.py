@@ -369,7 +369,10 @@ def _scan_beatmap_max_beat(song_dir: str) -> float:
 
 
 def _read_info_bpm(song_dir: str) -> float | None:
-    """Read _beatsPerMinute from Info.dat/info.dat, or None if unavailable."""
+    """Read _beatsPerMinute from Info.dat/info.dat, or None if unavailable.
+
+    Format-aware (Exp 228): V4 maps carry BPM in audio.bpm instead of
+    _beatsPerMinute — fall back to it so v4 sources sync correctly."""
     for fname in ("Info.dat", "info.dat"):
         info_path = os.path.join(song_dir, fname)
         if os.path.exists(info_path):
@@ -378,6 +381,9 @@ def _read_info_bpm(song_dir: str) -> float | None:
                     info = json.load(f)
                 bpm = float(info.get("_beatsPerMinute", info.get("beatsPerMinute", 0)) or 0)
                 if bpm > 0:
+                    return bpm
+                bpm = _read_info_bpm_from_dict(info)
+                if bpm:
                     return bpm
             except Exception:
                 pass
@@ -502,6 +508,83 @@ def is_v2_beatmap(data: dict) -> bool:
     if "_notes" in data and "colorNotes" not in data:
         return True
     return False
+
+
+def is_v4_beatmap(data: dict) -> bool:
+    """
+    Check if a beatmap dict is in V4 format (BeatSaver v4.0.x columnar layout).
+
+    V4 splits every object list into an index-bearing event array plus a
+    columnar data array: colorNotes[{b, i?}] + colorNotesData[{x,y,c,d,a}],
+    bombNotes/bombNotesData, obstacles/obstaclesData, arcs/arcsData,
+    chains/chainsData, basicBeatmapEvents/basicBeatmapEventsData,
+    njsEvents/njsEventsData. The *Data suffix is the reliable marker —
+    a V3 beatmap never carries it.
+    """
+    if str(data.get("version", "")).startswith("4"):
+        return True
+    return any(k in data for k in (
+        "colorNotesData", "bombNotesData", "obstaclesData",
+        "arcsData", "chainsData", "basicBeatmapEventsData",
+    ))
+
+
+# V4 columnar pairs: (event array name, data array name, V3 target key).
+# Events carry timing/index ({b, i?}); data rows carry geometry
+# ({x, y, c, d, a} for notes, {x, y, d, w, h} for obstacles, etc.).
+_V4_COLUMNAR_PAIRS = (
+    ("colorNotes", "colorNotesData", "colorNotes"),
+    ("bombNotes", "bombNotesData", "bombNotes"),
+    ("obstacles", "obstaclesData", "obstacles"),
+    ("arcs", "arcsData", "arcs"),
+    ("chains", "chainsData", "chains"),
+    ("basicBeatmapEvents", "basicBeatmapEventsData", "basicBeatmapEvents"),
+    ("colorBoostBeatmapEvents", "colorBoostBeatmapEventsData", "colorBoostBeatmapEvents"),
+)
+
+
+def convert_v4_to_v3(v4_data: dict) -> dict:
+    """
+    Convert a V4 (v4.0.x) columnar beatmap to the denormalized V3.2.0
+    layout the PS4 deserializer expects.
+
+    V4 stores objects split-by-concern: the event array holds timing plus an
+    optional row index ('i', defaulting to the event's own position), and
+    the paired *Data array holds the per-row geometry/attributes. V3 wants
+    one flat object per note. Denormalize by merging event[n] with
+    data[i] and dropping the v4-only keys.
+
+    Exp 228: without this, v4 sources (BeatSaver 4dea2/443f3) passed through
+    'is_v2_beatmap' untouched and shipped notes with ONLY {b, i} — the game
+    read default x=0/y=0 and every note stacked in the bottom-left cell.
+    """
+    if not is_v4_beatmap(v4_data):
+        return v4_data
+
+    out = dict(v4_data)  # keep unknown keys (harmless); overwrite below
+    out["version"] = "3.2.0"
+
+    for events_key, data_key, v3_key in _V4_COLUMNAR_PAIRS:
+        events = v4_data.get(events_key) or []
+        rows = v4_data.get(data_key) or []
+        merged = []
+        for n, ev in enumerate(events):
+            if not isinstance(ev, dict):
+                continue
+            idx = ev.get("i", n)
+            row = rows[idx] if isinstance(idx, int) and 0 <= idx < len(rows) else {}
+            obj = dict(ev)
+            obj.pop("i", None)
+            obj.update(row)
+            merged.append(obj)
+        out[v3_key] = merged
+        out.pop(data_key, None)
+
+    # V4-only event kinds without V3 equivalents: drop (PS4 ignores njs anyway)
+    for k in ("njsEvents", "njsEventsData"):
+        out.pop(k, None)
+
+    return out
 
 
 # Complete V3.2.0 schema as emitted by the game's own files and by
@@ -824,7 +907,9 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
     if os.path.exists(info_path):
         with open(info_path) as f:
             info = json.load(f)
-        bpm = float(info.get("_beatsPerMinute", 120.0))
+        # Exp 228: format-aware (V4 maps carry audio.bpm, not _beatsPerMinute)
+        v4_bpm = _read_info_bpm_from_dict(info)
+        bpm = v4_bpm if v4_bpm is not None else 120.0
 
     beatmap_files = [f for f in os.listdir(beatmap_dir)
                      if f.endswith(('.json', '.dat'))]
@@ -858,6 +943,12 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
                 with open(path, 'r', encoding='utf-8') as fh:
                     data = json.load(fh)
 
+                # Auto-convert V4 columnar → V3 denormalized if needed
+                # (Exp 228: v4 sources otherwise ship {b,i}-only notes)
+                if is_v4_beatmap(data):
+                    data = convert_v4_to_v3(data)
+                    log.info(f"  Converted V4 columnar -> V3: '{matched_file}'")
+
                 # Auto-convert V2 → V3.2.0 if requested
                 if auto_convert and is_v2_beatmap(data):
                     data = convert_v2_to_v3(data, default_bpm=bpm)
@@ -881,6 +972,8 @@ def replace_beatmaps(cab, beatmap_dir: str, ignore_non_standard=False, auto_conv
                     if donor:
                         with open(donor, 'r', encoding='utf-8') as fh:
                             ddata = json.load(fh)
+                        if is_v4_beatmap(ddata):
+                            ddata = convert_v4_to_v3(ddata)
                         if is_v2_beatmap(ddata):
                             ddata = convert_v2_to_v3(ddata, default_bpm=bpm)
                         normalize_v3_schema(ddata)
@@ -1322,7 +1415,11 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
                         try:
                             with open(fpath, 'r', encoding='utf-8') as fh:
                                 bm_data = json.load(fh)
-                            # Convert V2 → V3 if needed (game requires V3.2.0)
+                            # Convert V4 columnar → V3 (Exp 228), then V2 → V3
+                            # if needed (game requires V3.2.0)
+                            if is_v4_beatmap(bm_data):
+                                bm_data = convert_v4_to_v3(bm_data)
+                                log.info(f"  {mode}/{diff}: converted V4→V3 for injection")
                             if is_v2_beatmap(bm_data):
                                 bm_data = convert_v2_to_v3(bm_data, default_bpm=bpm)
                                 log.info(f"  {mode}/{diff}: converted V2→V3 for injection")
@@ -1334,6 +1431,8 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
                                 if donor:
                                     with open(donor, 'r', encoding='utf-8') as fh:
                                         ddata = json.load(fh)
+                                    if is_v4_beatmap(ddata):
+                                        ddata = convert_v4_to_v3(ddata)
                                     if is_v2_beatmap(ddata):
                                         ddata = convert_v2_to_v3(ddata, default_bpm=bpm)
                                     normalize_v3_schema(ddata)
@@ -3729,6 +3828,45 @@ def apply_feature_flags(set_features: list, config: dict):
 SONG_METADATA_FILENAME = "song_metadata.json"
 SONG_IDS_FILENAME = "beat_saber_song_ids.json"
 
+def _read_info_song_metadata(info: dict) -> tuple:
+    """
+    Extract (song_name, song_artist) from an Info.dat dict.
+
+    Format-aware (Exp 228):
+    - V2/V3 Info.dat: top-level "_songName" / "_songAuthorName"
+    - V4 Info.dat (BeatSaver v4.0.x maps): nested "song" object with
+      "title" / "author" — reading only the V2/V3 keys made the pipeline
+      fall back to the map ID as the display name ('Oxytocin' -> '4dea2').
+
+    Returns (None, None) when absent so callers keep their own fallbacks.
+    """
+    song_name = info.get("_songName")
+    song_artist = info.get("_songAuthorName")
+    if not song_name or not song_artist:
+        v4_song = info.get("song") or {}
+        if not song_name:
+            song_name = v4_song.get("title") or v4_song.get("songName")
+        if not song_artist:
+            song_artist = v4_song.get("author") or v4_song.get("songAuthorName")
+    return song_name, song_artist
+
+
+def _read_info_bpm_from_dict(info: dict) -> float | None:
+    """
+    Extract the BPM from an Info.dat dict, format-aware.
+
+    V2/V3: top-level "_beatsPerMinute"; V4: nested "audio" object's "bpm"
+    (e.g. 4dea2/443f3 ship audio.bpm=111.0 with no _beatsPerMinute).
+    Returns None when absent/unparsable so callers keep their own fallbacks.
+    """
+    bpm = info.get("_beatsPerMinute")
+    if bpm is None:
+        bpm = (info.get("audio") or {}).get("bpm")
+    try:
+        return float(bpm) if bpm is not None else None
+    except (TypeError, ValueError):
+        return None
+
 def _get_song_metadata_path(project_root: str = PROJECT_ROOT) -> str:
     """Return the local path to song_metadata.json in the project root."""
     return os.path.join(project_root, SONG_METADATA_FILENAME)
@@ -3882,8 +4020,13 @@ def manage_song_metadata(
         log.info(f"  Artist metadata: '{exact_song_name}' -> '{artist}'")
 
     os.makedirs(os.path.dirname(local_path) or '.', exist_ok=True)
-    with open(local_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
+    # Exp 228: ensure_ascii=False so non-ASCII slot titles (e.g. '…Baby One
+    # More Time') are written as raw UTF-8, not \uXXXX escapes. The plugin's
+    # byte-level JSON parser gained \uXXXX unescape support for backward
+    # compatibility, but raw UTF-8 keeps the file human-readable and the
+    # plugin's key fold exact.
+    with open(local_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
         f.write('\n')
     count_names = len(metadata.get('song_names', {}))
     count_artists = len(metadata.get('song_artists', {}))
@@ -3947,6 +4090,12 @@ def download_beat_saver_song(map_id: str, output_dir: str | None = None,
                     log.info(f"  Download URL: {cdn_url}")
     except Exception as e:
         log.warning(f"  ⚠️  Could not fetch song info: {e}")
+    if song_name == map_id:
+        # Exp 228: the API name fetch failed — without this warning the map ID
+        # silently became the deployed display name ('Oxytocin' -> '4dea2').
+        log.warning(
+            f"  ⚠️  Song display name will fall back to the map ID ('{map_id}'). "
+            f"Pass --song-name/--artist to set them explicitly.")
 
     if not cdn_url:
         # Fallback: try the direct download endpoint
@@ -4126,8 +4275,9 @@ def clear_target_song(config: dict, slot_name: str):
             rebuild_slots = remaining_slots
 
     # Save updated song_metadata.json locally (will be modified below)
-    with open(local_metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
+    # Exp 228: ensure_ascii=False — non-ASCII titles stay raw UTF-8
+    with open(local_metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
         f.write('\n')
     log.info(f"  ✅ Updated local song_metadata.json")
 
@@ -4151,8 +4301,9 @@ def clear_target_song(config: dict, slot_name: str):
         log.info(f"  Other custom songs remain in pack — keeping artist metadata blanked for pack")
 
     # Save updated song_metadata.json locally (after artist metadata changes)
-    with open(local_metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
+    # Exp 228: ensure_ascii=False — non-ASCII titles stay raw UTF-8
+    with open(local_metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
         f.write('\n')
     log.info(f"  ✅ Updated local song_metadata.json")
 
@@ -4449,6 +4600,14 @@ Examples:
                              'to PS4, then exit. No song processing, no plugin deploy. '
                              'Useful to toggle a runtime feature flag on the PS4 without '
                              'reprocessing a song or rebuilding the plugin.')
+    parser.add_argument('--metadata-only', action='store_true',
+                        help='Update and/or deploy song_metadata.json to the PS4, then exit. '
+                             'No song processing, no plugin deploy, no redirects. '
+                             'Requires --song-name/--artist (add or update an entry) or '
+                             '--deploy (deploy the existing local file). Use --target to '
+                             'specify which PS4 slot the metadata applies to. '
+                             'Example: --metadata-only --target "...Baby One More Time" '
+                             '--song-name "Take On Me" --artist "A-ha" --deploy')
 
     args = parser.parse_args()
 
@@ -4496,6 +4655,27 @@ Examples:
             sys.exit(1)
         apply_feature_flags(args.set_feature, {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths})
         log.info("Feature flags applied and deployed (features-only mode)")
+        sys.exit(0)
+
+    # Metadata-only mode: update and/or deploy song_metadata.json and exit
+    # (Exp 228): no song processing, no plugin deploy, no redirect changes —
+    # the surgical path for fixing a deployed song's display metadata.
+    if args.metadata_only:
+        if not (args.song_name or args.artist or args.deploy):
+            log.error("--metadata-only requires --song-name/--artist "
+                      "(to add/update an entry) or --deploy (to ship the local file)")
+            sys.exit(1)
+        manage_song_metadata(
+            {'ps4': cfg_ps4, 'title': cfg_title, 'paths': cfg_paths,
+             'pack_bundle': config.get('pack_bundle', {}),
+             'pack_modes': config.get('pack_modes', {}),
+             'mass_deploy': config.get('mass_deploy', {})},
+            song_name=args.song_name,
+            artist=args.artist,
+            target_name=args.target,
+            deploy=args.deploy,
+        )
+        log.info("Song metadata updated and/or deployed (metadata-only mode)")
         sys.exit(0)
 
     # Plugin-only mode: deploy plugin and exit
@@ -4615,9 +4795,12 @@ Examples:
     if os.path.isfile(info_dat_path):
         with open(info_dat_path) as f:
             info = json.load(f)
-        song_name = info.get("_songName", song_name)
-        song_artist = info.get("_songAuthorName", song_artist)
-        bpm = float(info.get("_beatsPerMinute", 120.0))
+        # Exp 228: format-aware read (V4 maps use song.title/author + audio.bpm)
+        v4_name, v4_artist = _read_info_song_metadata(info)
+        song_name = v4_name or song_name
+        song_artist = v4_artist or song_artist
+        v4_bpm = _read_info_bpm_from_dict(info)
+        bpm = v4_bpm if v4_bpm is not None else bpm
 
     # -----------------------------------------------------------------------
     # Step 0: Audio conversion (WAV -> FSB5)
@@ -4818,9 +5001,12 @@ Examples:
     if os.path.isfile(info_dat_path):
         with open(info_dat_path) as f:
             info = json.load(f)
-        song_name = info.get("_songName", song_name)
-        song_artist = info.get("_songAuthorName", song_artist)
-        bpm = float(info.get("_beatsPerMinute", bpm))
+        # Exp 228: format-aware read (V4 maps use song.title/author + audio.bpm)
+        v4_name, v4_artist = _read_info_song_metadata(info)
+        song_name = v4_name or song_name
+        song_artist = v4_artist or song_artist
+        v4_bpm = _read_info_bpm_from_dict(info)
+        bpm = v4_bpm if v4_bpm is not None else bpm
     custom_name = args.song_name or song_name
     custom_artist = args.artist or song_artist
 
