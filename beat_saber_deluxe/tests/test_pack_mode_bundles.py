@@ -720,18 +720,32 @@ class TestSingleSongScoping:
         assert _resolve_target_pack(cfg, None) is None
 
     def test_entries_scoped_to_single_pack(self, tmp_path):
+        """Exp 226 semantics: a requested pack JOINS the active set (never
+        filtered by it). With no deployed state in this hermetic config, the
+        requested pack plus any locally-built bundles form the scope."""
         cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
         entries = _get_pack_modes_entries(cfg, packs=['demopacka'])
-        assert len(entries) == 1
-        assert entries[0]['pack'] == 'demopacka'
+        packs_in = [e['pack'] for e in entries]
+        # Exp 227: a caller-provided packs list is the AUTHORITATIVE scope —
+        # deploy flows union the deployed state themselves; re-unioning here
+        # resurrected ghost packs from the local build dir.
+        assert packs_in == ['demopacka'], \
+            f"authoritative scope violated: {packs_in}"
 
     def test_entries_all_packs_when_no_filter(self, tmp_path):
         cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
         entries = _get_pack_modes_entries(cfg)
         assert {e['pack'] for e in entries} == {'demopacka', 'demopackb'}
 
-    def test_redirects_scoped_to_single_pack(self, tmp_path):
+    def test_redirects_scoped_to_single_pack(self, tmp_path, monkeypatch):
+        """Exp 226: requesting pack A with pack B built-but-not-requested
+        includes BOTH in the redirect set (union, not filter) — a deployed
+        pack must never be dropped by a request for another pack. Restricting
+        output is the caller's job (deploy exactly the pairs you intend)."""
         cfg = _make_pack_modes_config(tmp_path, _song_ids_fixture())
+        # hermetic: no live workspace redirects.json leakage
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: os.path.join(tmp_path, 'no-redirects.json'))
         build_dir = cfg['pack_modes']['build_dir']
         os.makedirs(build_dir, exist_ok=True)
         open(os.path.join(build_dir, patched_bundle_name(_RS)), 'w').close()
@@ -740,6 +754,8 @@ class TestSingleSongScoping:
         red_one = _get_pack_modes_redirects(cfg, packs=['demopacka'])
         assert red_all and _RS in red_all
         assert _BILLIE in red_all
+        # Exp 227 authoritative scope: requesting demopacka yields ONLY
+        # demopacka's bundle — the deploy flows union deployed state themselves
         assert _RS in red_one
         assert _BILLIE not in red_one
 
@@ -780,10 +796,14 @@ class TestCleanSlateCatalogPair:
             },
         }
 
-    def test_clean_slate_discovers_local_bundle(self, tmp_path):
+    def test_clean_slate_discovers_local_bundle(self, tmp_path, monkeypatch):
         """No pinned list, no redirects.json state -> local built bundle IS the scope."""
         from full_custom_song_pipeline import _resolve_active_packs
         cfg = self._clean_slate_cfg(tmp_path)
+        # hermetic: no live workspace redirects.json (would add the user's
+        # currently-deployed packs to the discovery result)
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: os.path.join(tmp_path, 'no-state.json'))
         active = _resolve_active_packs(cfg)
         assert active == ['billieeilish']
 
@@ -831,3 +851,145 @@ class TestCleanSlateCatalogPair:
         assert any('catalog_pack_modes.json' in u for u in uploaded), \
             "merged catalog must be deployed alongside pack bundles"
         assert any('billieeilish_pack_modes' in u for u in uploaded)
+
+
+class TestRequestedPackUnion:
+    """Exp 226 regression: deploying pack N with only pack M in the deployed
+    state silently skipped pack N's patch (pure-filter scoping against the
+    stale deployed-state discovery) — the user saw mode buttons ONLY on the
+    first pack they deployed. An explicitly requested pack must ALWAYS be in
+    scope: it JOINS the active set instead of being filtered by it."""
+
+    def _cfg_with_state(self, tmp_path, state_packs):
+        """Config whose deployed state (local redirects.json) covers
+        `state_packs` only — simulating mid-batch-deploy reality."""
+        build_dir = tmp_path / 'pack_modes_bundles'
+        build_dir.mkdir(exist_ok=True)
+        redirects = {'redirects': {}}
+        for p in state_packs:
+            redirects['redirects'][f'{p}_pack_assets_all_x.bundle'] = f'{p}_pack_modes_assets_all_x.bundle'
+        rpath = tmp_path / 'redirects.json'
+        rpath.write_text(__import__('json').dumps(redirects))
+        return {
+            'title': {'id': 'CUSA12878'}, 'ps4': {'ip': 'x', 'ftp_port': 1},
+            'paths': {'afr_base': '/data/GoldHEN/AFR'},
+            'pack_modes': {
+                'packs': [], 'build_dir': str(build_dir),
+                'song_ids_path': _SONG_IDS,
+                'dump_dir': '/workspace/ps4_dump/CUSA12878-patch',
+                'catalog_key': 'aa/catalog.json',
+                'patched_catalog': 'catalog_pack_modes.json',
+                'patched_catalog_local': str(tmp_path / 'catalog_pack_modes.json'),
+            },
+        }, rpath
+
+    def test_entries_include_requested_pack_not_in_state(self, tmp_path, monkeypatch):
+        """britneyspears requested while deployed state only knows billieeilish
+        -> britneyspears MUST appear in the entries (it joins, not filters)."""
+        from full_custom_song_pipeline import (_get_pack_modes_entries,
+                                               _load_local_redirects)
+        cfg, rpath = self._cfg_with_state(tmp_path, ['billieeilish'])
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        entries = _get_pack_modes_entries(cfg, packs=['britneyspears', 'billieeilish'])
+        packs_in = [e['pack'] for e in entries]
+        assert 'britneyspears' in packs_in, \
+            "requested pack dropped by deployed-state filter — the mode-buttons-only-on-first-pack bug"
+        assert 'billieeilish' in packs_in
+
+    def test_state_discovery_without_request_unchanged(self, tmp_path, monkeypatch):
+        """No explicit request -> discovery still returns ONLY the deployed
+        state (zero hardcoded expectations preserved)."""
+        from full_custom_song_pipeline import (_get_pack_modes_entries,
+                                               _resolve_active_packs)
+        cfg, rpath = self._cfg_with_state(tmp_path, ['billieeilish'])
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        assert _resolve_active_packs(cfg) == ['billieeilish']
+        entries = _get_pack_modes_entries(cfg)
+        assert [e['pack'] for e in entries] == ['billieeilish']
+
+    def test_ensure_includes_requested_missing_bundle(self, tmp_path, monkeypatch):
+        """_ensure_pack_mode_bundles with a requested pack must target that
+        pack's entry even when no bundle exists locally yet (clean build)."""
+        if not os.path.isfile('/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'):
+            pytest.skip("origin catalog not present")
+        from full_custom_song_pipeline import _get_pack_modes_entries
+        cfg, rpath = self._cfg_with_state(tmp_path, ['billieeilish'])
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        # Do NOT actually build (slow); assert the build TARGET list logic by
+        # checking entries resolution the ensure function uses.
+        entries = _get_pack_modes_entries(cfg, packs=['camellia', 'billieeilish'])
+        assert 'camellia' in [e['pack'] for e in entries]
+
+
+class TestClearSongNoGhostPacks:
+    """Exp 227: --clear-target-song on a CLEAN-SLATE PS4 (with stale local
+    pack bundles from earlier work) rebuilt + deployed SIX packs the user
+    never installed. Root cause: deploy flows unioned the LOCAL-BUNDLE
+    fallback discovery into the caller's scope. Fixes: (1) new
+    _resolve_deployed_packs (state file ONLY, no fallback) used by deploy
+    flows; (2) caller-provided packs= is the AUTHORITATIVE scope in
+    _get_pack_modes_entries/_ensure_pack_mode_bundles."""
+
+    def test_deployed_packs_no_fallback(self, tmp_path, monkeypatch):
+        """Clean slate (state file exists, references no packs) -> [] even
+        though 6 bundles sit in the real build_dir."""
+        from full_custom_song_pipeline import (_resolve_deployed_packs,
+                                               _resolve_active_packs)
+        cfg = {
+            'pack_modes': {'packs': [], 'build_dir': '/workspace/beat_saber_deluxe/pack_modes_bundles'},
+            'paths': {},
+        }
+        rpath = tmp_path / 'redirects.json'
+        rpath.write_text('{"redirects": {"BeatmapLevelsData/BadGuy": "BadGuy_v3.bundle"}}')
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        assert _resolve_deployed_packs(cfg) == [], \
+            "deploy flows must never derive scope from local bundles"
+        # A present state file that references no packs is AUTHORITATIVE for
+        # _resolve_active_packs too (Exp 224): [] means no packs in scope.
+        # The build_dir fallback applies only when NO state file exists.
+        assert _resolve_active_packs(cfg) == []
+
+    def test_clear_song_scope_is_target_pack_only(self, tmp_path, monkeypatch):
+        """With 2 BE songs deployed, clearing one must scope pack work to
+        billieeilish ONLY — no ghosts from the build_dir."""
+        from full_custom_song_pipeline import (_resolve_deployed_packs,
+                                               _get_pack_modes_entries)
+        cfg = {
+            'pack_modes': {'packs': [], 'build_dir': '/workspace/beat_saber_deluxe/pack_modes_bundles'},
+            'paths': {},
+        }
+        rpath = tmp_path / 'redirects.json'
+        rpath.write_text(__import__('json').dumps({"redirects": {
+            "BeatmapLevelsData/BadGuy": "BadGuy_v3.bundle",
+            "BeatmapLevelsData/Bellyache": "Bellyache_v3.bundle",
+            "billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle":
+                "billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle",
+            "aa/catalog.json": "catalog_pack_modes.json"}}))
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        target_pack = 'billieeilish'
+        deployed = _resolve_deployed_packs(cfg)
+        scope = [target_pack] + [p for p in deployed if p != target_pack]
+        assert scope == ['billieeilish'], f"ghost packs in scope: {scope}"
+        entries = _get_pack_modes_entries(cfg, packs=scope)
+        assert [e['pack'] for e in entries] == ['billieeilish'], \
+            "authoritative scope must not be re-unioned with build_dir packs"
+
+    def test_single_song_deploy_preserves_deployed_packs(self, tmp_path, monkeypatch):
+        """Deploying a britney song with BE + camellia deployed preserves both
+        (union against DEPLOYED state — Exp 217 invariant, still intact)."""
+        from full_custom_song_pipeline import _resolve_deployed_packs
+        cfg = {'pack_modes': {'packs': []}, 'paths': {}}
+        rpath = tmp_path / 'redirects.json'
+        rpath.write_text(__import__('json').dumps({"redirects": {
+            "billieeilish_pack_assets_all_x.bundle": "billieeilish_pack_modes_assets_all_x.bundle",
+            "camellia_pack_assets_all_y.bundle": "camellia_pack_modes_assets_all_y.bundle"}}))
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        deployed = _resolve_deployed_packs(cfg)
+        scope = ['britneyspears'] + [p for p in deployed if p != 'britneyspears']
+        assert set(scope) == {'britneyspears', 'billieeilish', 'camellia'}

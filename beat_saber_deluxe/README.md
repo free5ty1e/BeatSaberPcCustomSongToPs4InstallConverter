@@ -1,8 +1,13 @@
-# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8046 / v0.5341)
+# PS4 Beat Saber Deluxe — Pipeline & Plugin (v0.8046 / v0.5343)
 
 This is the core implementation directory for the **[Beat Saber Deluxe](../README.md)** project.
 
 This document covers pipeline-specific details. See the **[main README](../README.md)** for project overview, requirements, and quick start.
+
+## v0.5343 Highlights
+
+- **Clean-slate crash fixed (Exp 225)** — the v0.5342 auto-discovery change left two deploy gates checking the (now empty) pinned pack list: a first-song deploy on a clean PS4 shipped the patched pack bundle WITHOUT its catalog → CE-34878-0. Gates now use `_resolve_active_packs`; **failed post-deploy validation exits 1** so a broken state can never look green.
+- **Zero hardcoded pack expectations (Exp 224, user directive)** — `pack_modes.packs` defaults `[]`; the active pack set is auto-discovered from what you actually deployed (pinned list → redirects.json → local builds). All FTP paths quoted (`_ftp_quote` — `Scream&Shout` split at `&` silently); uploads verified by remote listing, not lftp exit codes.
 
 ## v0.5339 Highlights
 

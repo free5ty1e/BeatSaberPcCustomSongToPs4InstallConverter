@@ -55,7 +55,7 @@ This approach:
 | `redirects.json` | `/data/GoldHEN/AFR/CUSA12878/redirects.json` | PS4 copy — read by plugin at runtime |
 | `main.cpp` | `beat_saber_deluxe/src/main.cpp` | Plugin source — file I/O hooks + redirect logic |
 | `full_custom_song_pipeline.py` | `beat_saber_deluxe/tools/full_custom_song_pipeline.py` | Pipeline — builds custom song bundles |
-| `deploy_all.sh` | `beat_saber_deluxe/deploy_all.sh` | Deployment script — uploads everything to PS4 |
+| `--deploy-full` | `tools/full_custom_song_pipeline.py` | Self-contained per-song deploy (bundle + pack patch + catalog + plugin + redirects + validation). `deploy_all.sh` is OUTDATED (13 hardcoded slots) |
 
 ## Redirect Config Format
 

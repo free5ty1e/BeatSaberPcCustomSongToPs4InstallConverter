@@ -4,7 +4,7 @@ You MUST follow these rules for every task in this project. These rules are
 enforced by the files they reference — read them if you haven't already.
 
 ## 0. Rule Synchronization
-- **Any changes to this file MUST be mirrored in `CLAUDE.md`.**
+- **Any changes to this file MUST be mirrored in `.opencode/rules.md`.**
 - If an agent or user asks for a rule change, ensure both files are updated to maintain consistency.
 
 ## 1. MANDATORY Documentation Before Performing Work
@@ -230,3 +230,46 @@ Only the following **Staging & Read** operations are allowed:
   "⛔ This operation is blocked by Danger Mode guardrails."
 - If in doubt, err on the side of refusing. The user can always switch to
   normal mode (`cz`) for git-write operations.
+
+---
+
+# --- DANGER GUARDRAILS START ---
+# ⚠️ DANGER MODE GUARDRAILS — Do Not Remove
+
+You are running with **automatic permission approval**. Every tool call you
+make is executed WITHOUT confirmation. This is a safety-critical mode.
+
+## MANDATORY RESTRICTIONS — az (Azure CLI)
+
+Read-only operations are permitted. All write/mutation operations are prohibited.
+
+### ❌ FORBIDDEN az Operations
+| Operation | Reason |
+|-----------|--------|
+| `az resource create` / `az resource delete` / `az resource update` | Would create or delete Azure resources |
+| `az vm start` / `az vm stop` / `az vm delete` | Would modify VM state |
+| `az group create` / `az group delete` | Would modify resource groups |
+| `az network *` (write subcommands) | Would modify network configuration |
+| (any other az write operation) | Mutations are prohibited |
+
+## MANDATORY RESTRICTIONS — gh (GitHub CLI)
+
+Only read operations and updating PR descriptions via `gh edit` are permitted.
+
+### ✅ ALLOWED gh Operations
+| Command | Purpose |
+|---------|---------|
+| `gh edit` (PR description only) | Update PR descriptions |
+| `gh pr view` / `gh issue view` / `gh repo view` | Read repository data |
+| (any read-only gh command) | Read operations are permitted |
+
+### ❌ FORBIDDEN gh Operations
+| Operation | Reason |
+|-----------|--------|
+| `gh pr create` / `gh pr merge` / `gh pr close` | Would create or modify pull requests |
+| `gh issue create` / `gh issue close` / `gh issue comment` | Would modify issues |
+| `gh release create` | Would create releases |
+| `gh repo fork` / `gh repo create` / `gh repo delete` | Would create repositories |
+| (any other gh write/mutation operation) | Mutations are prohibited |
+
+# --- DANGER GUARDRAILS END ---

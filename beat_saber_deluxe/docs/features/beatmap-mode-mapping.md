@@ -7,7 +7,7 @@ with configurable fallback logic for slots without dedicated files.
 
 ## Requirements
 
-1. **Feature flag enabled** — `enable_beatmap_mode_mapping` must be `true` in `/data/GoldHEN/AFR/CUSA12878/features.json` (default: `true`)
+1. **Feature flag enabled** — `enable_beatmap_mode_mapping` must be `true` in `/data/GoldHEN/AFR/CUSA12878/features.json` (absent key defaults `false`; the pipeline's DEFAULT_FEATURES deploys it as `true`). Since plugin v0.8046 the flag REALLY gates: OFF serves stock pack bundles + catalog (Standard-only everywhere, per-song customs still play)
 2. **Pipeline v0.5310+** — CLI flag `--enable-beatmap-mode-mapping` (plus optional `--fallback-mode-map`, `--skip-mode-generation`, `--one-saber-min-gap`, `--rotation-cycle-beats`)
 
 ## How It Works
@@ -40,12 +40,17 @@ The pipeline performs the following steps when `--enable-beatmap-mode-mapping` i
    and difficulties without a Standard source are skipped.
    - **NoArrows** — `_generate_no_arrows`: every color note becomes a dot
      (V2 `_cutDirection`/V3 `d` = 8); bombs keep direction. Non-mutating.
-   - **OneSaber** — `_generate_one_saber`: recolors all notes to a single saber
-     (color 0), removes simultaneous notes and same-cell arrowed notes closer
-     than `min_gap` beats (default 0.25, `--one-saber-min-gap`); dots after
-     arrows are kept. Non-mutating.
+   - **OneSaber** — `_generate_one_saber`: recolors all notes to the RIGHT/blue
+     saber (color 1 — red OneSaber maps are unplayable, fixed v0.5323) AND
+     converts every note to a DOT (`d`/`_cutDirection` = 8, since v0.5338 — the
+     user-facing convention is dots-only), removes simultaneous notes (one
+     saber cuts one note per instant). Mapper-authored `<Diff>OneSaber.dat`
+     charts are normalized through the same generator at injection. Bombs pass
+     through. Non-mutating.
    - **90Degree** — `_generate_90_degree`: V2 sources are converted to V3 first,
-     then `rotationEvents` alternating `+90/-90` are added every `cycle_beats`
+     then `rotationEvents` stepping ±15° lanes within a ±45° arc are added every
+     `cycle_beats` (rewritten v0.5313 — the old alternating +90/-90 swung the
+     lane perpendicular to the player)
      (default 8.0 = 2 measures, `--rotation-cycle-beats`). Non-mutating.
 
 3. **`build_mode_mapping(detected_modes, fallback_map)`**

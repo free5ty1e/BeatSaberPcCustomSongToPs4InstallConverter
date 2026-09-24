@@ -72,6 +72,22 @@ PIPELINE_STATE_FILES = [
     "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
 ]
 
+# Local ARTIFACT directories that mirror the PS4's deployed state. A clean
+# slate must remove these too (Exp 227 user directive): pack_modes_bundles/
+# is the local-bundle fallback source for pack-scope discovery, and stale
+# bundles there were "resurrected" as ghost-pack deployments during a
+# --clear-target-song run on a clean-slate PS4 (6 packs the user never
+# installed got rebuilt + deployed). custom_songs/ holds per-song bundles
+# that the mass deploy path would re-upload from. All of it is REGENERATED
+# on demand by the pipeline from the BeatSaver sources + game dump, so
+# removing it costs nothing but build time. The manifest inside
+# pack_modes_bundles goes with it (it describes only those bundles).
+PIPELINE_STATE_DIRS = [
+    "/workspace/beat_saber_deluxe/pack_modes_bundles",
+    "/workspace/beat_saber_deluxe/custom_songs",
+    "/workspace/beat_saber_deluxe/mass_bundles",
+]
+
 # PS4 paths based on actual FTP exploration
 # On this PS4: beat_saber_deluxe.prx is NOT present at /data/GoldHEN/plugins/
 # Instead: afr.prx, game_patch.prx, and other plugins exist
@@ -502,12 +518,19 @@ def backup_ps4_files(target_dir):
 
 
 def clear_local_pipeline_state():
-    """Remove ALL local pipeline state cache files so the pipeline treats the PS4 as fresh.
+    """Remove ALL local pipeline state — config caches AND build artifacts —
+    so the pipeline treats the PS4 (and the workspace) as fresh.
 
     Called after a PS4 --clean-ps4 operation so a single-song test deploy does NOT
     get forced back to the previous full loadout (the caches record what was deployed).
+    Since Exp 227 this ALSO removes the local build-artifact directories
+    (pack_modes_bundles/, custom_songs/): pack-scope discovery falls back to
+    locally-built pack bundles when no deployment state exists, so stale
+    artifacts from an earlier session become "ghost packs" that get rebuilt
+    and deployed to a clean-slate PS4. Everything removed here is regenerable
+    from BeatSaver sources + the game dump.
     """
-    print(f"   Clearing local pipeline state cache files (so pipeline treats PS4 as fresh)...")
+    print(f"   Clearing local pipeline state (caches + build artifacts, so pipeline treats PS4 as fresh)...")
     cleared = []
     for f in PIPELINE_STATE_FILES:
         fp = Path(f)
@@ -520,6 +543,26 @@ def clear_local_pipeline_state():
                 print(f"     ✗ Failed to clear {fp.name}: {e}")
         else:
             print(f"     ⊘ {fp.name} already absent")
+    # Stray per-song debug blobs (_beatmap_level_so_<name>.blob) — regenerated
+    # on every build; stale ones are never re-read but keep the workspace clean.
+    for blob in Path("/workspace/beat_saber_deluxe").glob("_beatmap_level_so_*.blob"):
+        try:
+            blob.unlink()
+            cleared.append(blob.name)
+        except Exception:
+            pass
+    for d in PIPELINE_STATE_DIRS:
+        dp = Path(d)
+        if dp.is_dir():
+            try:
+                n_files = sum(1 for _ in dp.rglob("*") if _.is_file())
+                shutil.rmtree(dp)
+                cleared.append(f"{dp.name}/ ({n_files} files)")
+                print(f"     ✓ Cleared local {dp.name}/ ({n_files} files)")
+            except Exception as e:
+                print(f"     ✗ Failed to clear {dp.name}/: {e}")
+        else:
+            print(f"     ⊘ {dp.name}/ already absent")
     return cleared
 
 

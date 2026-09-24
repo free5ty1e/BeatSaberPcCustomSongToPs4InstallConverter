@@ -148,6 +148,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
   9. Sugar Soaker → Custom: Venom of Venus (Powerwolf)
   10. Sympathy For The Devil → Custom: LIT (Polyphia)
   11. Whole Wide World → Custom: VOLUPTE (Tare)
+  12. Start Me Up → Custom: Wake Me Up (Avicii)
 
 ## Where Target Metadata Lives
 
@@ -266,18 +267,6 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 15db5 
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a909     --target PaintItBlack     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 9. Sugar Soaker → Venom of Venus (Powerwolf)
-# Custom Song: Venom of Venus
-# Artist: Powerwolf
-# Album: The Sacrament of Sin
-# Year: 2018
-# BeatSaver MAP_ID: b7aa
-# BeatSaver Link: https://beatsaver.com/maps/b7aa
-# Genre: Power Metal / Heavy Metal
-# BPM: 164
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song b7aa     --target SugarSoaker     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-
 # 10. Sympathy For The Devil → LIT (Polyphia)
 # Custom Song: LIT
 # Artist: Polyphia
@@ -301,4 +290,16 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1b457 
 # BPM: 128
 # Difficulties: 5/5 (Easy through Expert+)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a692     --target WholeWideWorld     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+
+# 12. Start Me Up → Wake Me Up (Avicii)
+# Custom Song: Wake Me Up
+# Artist: Avicii
+# Album: True
+# Year: 2013
+# BeatSaver MAP_ID: 437d
+# BeatSaver Link: https://beatsaver.com/maps/437d
+# Genre: EDM / Country-Pop fusion
+# BPM: 124
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — verified clean note-count progression
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 437d     --target StartMeUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

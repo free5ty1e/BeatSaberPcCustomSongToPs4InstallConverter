@@ -142,12 +142,12 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
   3. Gimme More → Custom: That That (PSY ft. SUGA of BTS)
   4. I'm a Slave 4 U → Custom: Believer (Imagine Dragons)
   5. Me Against The Music → Custom: Mr. Blue Sky (Electric Light Orchestra) [ARCS]
-  6. Oops!...I Did It Again → Custom: Oops!... I Did It Again (Britney Spears) [DITR4]
+  6. Oops!...I Did It Again → Custom: Hollaback Girl (Gwen Stefani)
   7. Overprotected → Custom: Shut Up And Dance (Walk The Moon)
   8. Scream & Shout → Custom: Cold Heart (PNAU Remix) (Elton John & Dua Lipa)
   9. Till The World Ends → Custom: Dance Monkey (metal cover) (Leo Moracchioli)
-  10. Toxic → Custom: Toxic (Britney Spears) - Emir's map
-  11. Womanizer → Custom: Radar (Britney Spears)
+  10. Toxic → Custom: Complicated (MELODICKA BROS — Avril Lavigne cover)
+  11. Womanizer → Custom: Teenagers (My Chemical Romance)
 
 ## Where Target Metadata Lives
 
@@ -246,17 +246,19 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2fa04 
 ```
 
 ```bash
-# Song: Oops!... I Did It Again - Britney Spears [DITR4]
-# Custom Song: Oops!... I Did It Again
-# Artist: Britney Spears
-# Album: Oops!... I Did It Again
-# Year: 2000
-# BeatSaver MAP_ID: 28566
-# BeatSaver Link: https://beatsaver.com/maps/28566
-# Genre: Pop
-# BPM: 95
-# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus) — mapper chriscrow3
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 28566     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song: Hollaback Girl - Gwen Stefani
+# Custom Song: Hollaback Girl
+# Artist: Gwen Stefani
+# Album: Love. Angel. Music. Baby.
+# Year: 2004
+# BeatSaver MAP_ID: 53e4
+# BeatSaver Link: https://beatsaver.com/maps/53e4
+# Genre: Pop / Dance-Pop
+# BPM: 110
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
+#   (Replaces the previous Oops!... I Did It Again DITR4 pick — user directive:
+#    no target-artist songs (incl. fan re-charts) in the target artist's pack.)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 53e4     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
@@ -302,29 +304,33 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 13f31 
 ```
 
 ```bash
-# Song: Toxic - Britney Spears
-# Custom Song: Toxic
-# Artist: Britney Spears
-# Album: In the Zone
-# Year: 2003
-# BeatSaver MAP_ID: 21540
-# BeatSaver Link: https://beatsaver.com/maps/21540
-# Genre: Dance-pop / Electropop
-# BPM: 143
-# Difficulties: 5/5 (Easy through Expert+) [Emir]
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21540     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song: Complicated - MELODICKA BROS (Avril Lavigne cover)
+# Custom Song: Complicated
+# Artist: MELODICKA BROS (Avril Lavigne cover)
+# Album: (YouTube cover)
+# Year: 2002 / 2020
+# BeatSaver MAP_ID: 19849
+# BeatSaver Link: https://beatsaver.com/maps/19849
+# Genre: Pop-Rock
+# BPM: 156
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
+#   (Replaces the previous Toxic pick — user directive: no target-artist songs
+#    installed as customs in the target artist's own pack.)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 19849     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
 
 ```bash
-# Song: Radar - Britney Spears
-# Custom Song: Radar
-# Artist: Britney Spears
-# Album: Circus
-# Year: 2008
-# BeatSaver MAP_ID: 1e2f7
-# BeatSaver Link: https://beatsaver.com/maps/1e2f7
-# Genre: Dance-pop
-# BPM: 128
+# Song: Teenagers - My Chemical Romance
+# Custom Song: Teenagers
+# Artist: My Chemical Romance
+# Album: The Black Parade
+# Year: 2006
+# BeatSaver MAP_ID: 217f1
+# BeatSaver Link: https://beatsaver.com/maps/217f1
+# Genre: Emo / Alternative Rock
+# BPM: 110
 # Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1e2f7     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+#   (Replaces the previous Radar pick — user directive: no target-artist songs
+#    installed as customs in the target artist's own pack.)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 217f1     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```

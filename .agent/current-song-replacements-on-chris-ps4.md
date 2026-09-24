@@ -7,34 +7,33 @@
 > **Verified on hardware (2026-08-25):** v0.5326 lizzo-only config boots clean, No Arrows gameplay OK (Exp 199 structure fix confirmed); log archived in `.ai_memory/experiment_logs/v0.5326_lizzo_noarrows_SUCCESS_boot.txt`.
 > **Mode mapping:** every custom slot carries all 4 modes x the source's playable difficulties as beatmap TextAssets (verified in fresh builds; sources lacking a difficulty — e.g. CuzILoveYou has no ExpertPlus — correctly ship only what exists). The 4 configured DLC packs have all their BeatmapLevelSOs patched to expose the 4 preview modes with DISTINCT characteristic pathIDs (hardware-proven requirement, Exp 199). **Selector mechanics (Exp 200):** the in-game mode selector is driven by the PACK bundle's preview sets, not by per-song bundles — which is why custom slots showed Standard-only under the lizzo-only config (RS pack redirect absent) and why full-config deployment is required for customs to show 4 modes.
 
-## Rolling Stones Replacements (13 songs)
+## Rolling Stones Replacements (12 songs)
 
 | # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
 |---|---------|-------------|--------|-----|------------------|----------|------------|------|
-| 1 | `startmeup` | Espresso | Sabrina Carpenter | 104 | 3bcb2 | 5/5 | 2.3s | ✅ |
+| 1 | `StartMeUp` | Wake Me Up | Avicii | 124 | 437d | 5/5 native | 2.0s | ⏳ |
 | 2 | `angry` | Rhythm Is A Dancer | Pegboard Nerds | 128 | c213 | 5/5 | 1.9s | ✅ |
-| 3 | `bitemyheadoff` | Escaping the Ruins | MDK / Gareth Coker | 160 | 8c2a | 5/5 | 5.5s | ✅ |
+| 3 | `BiteMyHeadOff` | Escaping the Ruins | Gareth Coker | 160 | 1fccd | 4/5 native (E+ auto-filled) | 2.1s | ⏳ |
 | 4 | `cantyouhearmeknocking` | Spicy | aespa | 115 | 32c7a | 5/5 | 3.7s | ✅ |
-| 5 | `deadmanwalking` | Finesse (Remix) | Bruno Mars feat. Cardi B | 105 | 16729 | 5/5 | 2.3s | ✅ |
-| 6 | `gimmeshelter` | Yes I'm A Mess | AJR | 184 | 35ca9 | 5/5 | 2.6s | ⏳ |
-| 7 | `icantgetnosatisfaction` | Dreams Come True | aespa | 99 | 21a3f | 5/5 | 2.9s | ✅ |
-| 8 | `livebythesword` | Take Me to the Beach | Imagine Dragons feat. Ado | 105 | 42a0a | 5/5 | 2.3s | ⏳ |
-| 9 | `messitup` | Powersnake | Brothers of Metal | 175 | 15db5 | 5/5 | 2.7s | ✅ |
-| 10 | `paintitblack` | Time Lapse | TheFatRat | 127 | a909 | 5/5 | 1.9s | ✅ |
-| 11 | `sugarsoaker` | Venom of Venus | Powerwolf | 164 | b7aa | 5/5 | 2.9s | ✅ |
-| 12 | `sympathyforthedevil` | LIT | Polyphia | 99 | 1b457 | 5/5 | 2.4s | ✅ |
-| 13 | `wholewideworld` | VOLUPTE | Tare | 128 | a692 | 5/5 | 2.8s | ✅ |
+| 5 | `gimmeshelter` | Yes I'm A Mess | AJR | 184 | 35ca9 | 5/5 | 2.6s | ⏳ |
+| 6 | `icantgetnosatisfaction` | Dreams Come True | aespa | 99 | 21a3f | 5/5 | 2.9s | ✅ |
+| 7 | `livebythesword` | Take Me to the Beach | Imagine Dragons feat. Ado | 105 | 42a0a | 5/5 | 2.3s | ⏳ |
+| 8 | `messitup` | Powersnake | Brothers of Metal | 175 | 15db5 | 5/5 | 2.7s | ✅ |
+| 9 | `paintitblack` | Time Lapse | TheFatRat | 127 | a909 | 5/5 | 1.9s | ✅ |
+| 10 | `sugarsoaker` | Venom of Venus | Powerwolf | 164 | b7aa | 5/5 | 2.9s | ✅ |
+| 11 | `sympathyforthedevil` | LIT | Polyphia | 99 | 1b457 | 5/5 | 2.4s | ✅ |
+| 12 | `wholewideworld` | VOLUPTE | Tare | 128 | a692 | 5/5 | 2.8s | ✅ |
 
-## Billie Eilish Replacements (10 songs)
+## Billie Eilish Replacements (13 songs)
 
 | # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
 |---|---------|-------------|--------|-----|------------------|----------|------------|------|
-| 1 | `Oxytocin` | Overdose | Natori | 118 | 44bcf | 5/5 | 2.0s | ⏳ |
+| 1 | `Oxytocin` | Kiss Me More | Doja Cat ft. SZA | 111 | 4dea2 | 5/5 native | 2.0s | ⏳ |
 | 2 | `AllTheGoodGirlsGoToHell` | Mirror | Ado | 114 | 4a901 | 5/5 | 2.1s | ⏳ |
-| 3 | `YouShouldSeeMeInACrown` | Show | Ado | 132 | 35be7 | 5/5 | 2.7s | ⏳ |
+| 3 | `YouShouldSeeMeInACrown` | 15 Minutes | Sabrina Carpenter | 132 | 443f3 | 5/5 native | 2.0s | ⏳ |
 | 4 | `Bellyache` | ATTITUDE | IVE | 118 | 44218 | 5/5 | 2.0s | ⏳ |
 | 5 | `BuryAFriend` | Baddie | IVE | 160 | 36ab4 | 5/5 | 3.4s | ⏳ |
-| 6 | `IDidntChangeMyNumber` | Take Me to the Beach | Imagine Dragons feat. Ado | 105 | 42a0a | 5/5 | 2.3s | ⏳ |
+| 6 | `IDidntChangeMyNumber` | Mr. Brightside | The Killers | 148 | 3fc90 | 5/5 native | 2.0s | ⏳ |
 | 7 | `HappierThanEver` | Cosmic | Red Velvet | 106 | 3e192 | 5/5 | 1.7s | ⏳ |
 | 8 | `BadGuy` | Odo | Ado | 128 | 1dbb9 | 5/5 | 1.8s | ⏳ |
 | 9 | `NDA` | Dragula | Rob Zombie | 125 | 6d04 | 5/5 native | 8.2s | ✅ (v0.5341+) |
@@ -78,7 +77,28 @@
 | 5 | `LightItUp` | Daft Punk Megamix 1 | Daft Punk | 126 | 242e9 | 5/5 native | 1.9s | ⏳ pending deploy |
 | 6 | `WhatTheCat` | Stayin' Alive | Bee Gees | 104 | 3cfe9 | 5/5 native | 2.3s | ⏳ pending deploy |
 
-## Total: 38 Custom Songs Deployed
+## Britney Spears Replacements (11 songs)
+
+| # | Slot ID | Custom Song | Artist | BPM | BeatSaver MAP_ID | Beatmaps | First Note | Sync |
+|---|---------|-------------|--------|-----|------------------|----------|------------|------|
+| 1 | `BabyOneMoreTime` | Take on Me | a-ha | 169 | 6d63 | 4/5 native (E+ auto-filled) | 1.9s | ⏳ |
+| 2 | `Circus` | Shape of You | Ed Sheeran | 96 | 1672a | 5/5 native | 2.2s | ⏳ |
+| 3 | `GimmeMore` | That That | PSY (prod. & ft. SUGA of BTS) | 130 | 250b5 | 5/5 native | 2.0s | ⏳ |
+| 4 | `ImASlave4U` | Believer | Imagine Dragons | 125 | 1fef | 4/5 native (E+ auto-filled) | 1.5s | ⏳ |
+| 5 | `MeAgainstTheMusic` | Mr. Blue Sky | Electric Light Orchestra | 174 | 2fa04 | 4/5 native (E+ auto-filled) | 2.4s | ⏳ |
+| 6 | `OopsIDidItAgain` | Hollaback Girl | Gwen Stefani | 110 | 53e4 | 5/5 native | 2.0s | ⏳ |
+| 7 | `Overprotected` | Shut Up And Dance | Walk The Moon | 128 | 285e8 | 5/5 native | 1.9s | ⏳ |
+| 8 | `Scream&Shout` | Cold Heart (PNAU Remix) | Elton John & Dua Lipa | 116 | 1d9fd | 5/5 native | 1.6s | ⏳ |
+| 9 | `TillTheWorldEnds` | Dance Monkey (metal cover) | Leo Moracchioli | 120 | 13f31 | 4/5 native (E+ auto-filled) | 2.4s | ⏳ |
+| 10 | `Toxic` | Complicated (Avril Lavigne cover) | MELODICKA BROS | 156 | 19849 | 5/5 native | 1.6s | ⏳ |
+| 11 | `Womanizer` | Teenagers | My Chemical Romance | 110 | 217f1 | 5/5 native | 2.0s | ⏳ |
+
+> **Note:** All slots now carry non-Britney songs per the user directive (no
+> target-artist songs — including fan re-charts — in the target artist's pack).
+> Toxic/Womanizer previously held Toxic/Radar, and OopsIDidItAgain held the DITR4
+> fan re-chart of the same Britney song.
+
+## Total: 51 Custom Songs Deployed (12 RS + 13 BE + 9 Lizzo + 6 Camellia + 11 Britney)
 
 ## How to Deploy
 

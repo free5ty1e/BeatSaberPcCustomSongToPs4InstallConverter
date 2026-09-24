@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8046"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8046: enable_beatmap_mode_mapping now REALLY gates (OFF = pack_assets + catalog redirects skipped → stock packs, Standard-only modes; was decorative v0.5334-v0.8045); v0.8045: one combined boot toast (ON/OFF + N/3 flags)
-pipeline_version: "0.5343" # in beat_saber_deluxe/VERSION - Exp 225: fixed Exp 224 regression (deploy_pack_bundle/deploy_pack_modes gates checked the PINNED packs list — auto-discovery default [] silently skipped the merged catalog + aa/catalog.json redirect on clean-slate first deploys -> CE-34878-0; gates now use _resolve_active_packs); failed post-deploy validation now exits 1. Exp 224: zero hardcoded pack expectations, _ftp_quote, upload verification.
+pipeline_version: "0.5345" # in beat_saber_deluxe/VERSION - Exp 227: deploy flows use _resolve_deployed_packs (state file ONLY, no local-bundle fallback — the fallback resurrected 6 ghost packs into a clean-slate clear-song run); caller packs= is AUTHORITATIVE scope in entries/ensure; --clean-ps4 now wipes ALL local state (pack_modes_bundles/, custom_songs/, mass_bundles/, blobs — regenerable). Exp 226: union semantics for deploys.
 
 # Platform Constraints
 target_platform: PS4

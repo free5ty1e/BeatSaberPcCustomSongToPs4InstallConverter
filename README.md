@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-**Plugin v0.8046 | Pipeline v0.5341** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
+**Plugin v0.8046 | Pipeline v0.5343** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
 
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
@@ -194,14 +194,14 @@ feature-flag state (a single toast because the PS4VR headset switch-over can
 swallow a second toast when the headset is already powered on at launch):
 
 ```
-BS Deluxe v0.8045 (ON)
+BS Deluxe v0.8046 (ON)
 By Chris Primeish
 (3/3 features ON)
 ```
 
 - **`(ON)` / `(OFF)`** — the global `enable_plugin` kill-switch state
 - **`(N/3 features ON)`** — how many of the three feature flags are enabled
-- When the kill switch is OFF: `BS Deluxe v0.8045 (OFF) / By Chris Primeish / (official songs only)`
+- When the kill switch is OFF: `BS Deluxe v0.8046 (OFF) / By Chris Primeish / (official songs only)`
 
 To change what the next boot shows:
 
@@ -301,23 +301,34 @@ Your PS4 must be:
 - On the same network as your dev machine
 - **IP configured in** `beat_saber_deluxe/ps4_config.json`
 
-### 3.1 Quick deploy (plugin + all 13 song bundles + config)
+### 3.1 Quick deploy — one song at a time (RECOMMENDED)
 
 ```bash
 cd /workspace/beat_saber_deluxe
 
-# Build and deploy release plugin + all bundles + redirects config
-./deploy_all.sh
-
-# Or deploy debug plugin
-./deploy_all.sh --debug
+# Build + deploy EVERYTHING for one song (bundle, music-pack patch, catalog,
+# plugin, features.json, scoped redirects, validation) in ONE command:
+python3 tools/full_custom_song_pipeline.py \
+    --download-beat-saver-song <MAP_ID> \
+    --target <SLOT_NAME> \
+    --deploy-full
 ```
 
-This script:
-1. Uploads the plugin to `/data/GoldHEN/plugins/beat_saber_deluxe.prx`
-2. Uploads all 13 custom song bundles from `custom_songs/` to `/data/GoldHEN/AFR/CUSA12878/`
-3. Uploads `redirects.json` to `/data/GoldHEN/AFR/CUSA12878/redirects.json`
-4. Clears the PS4 log file
+Each command is self-contained: it always builds and deploys the LATEST plugin
+source (opt out with `--skip-plugin-deployment`), surgically patches only that
+song's music pack with a matching catalog (Unity CRC-safe), preserves custom
+songs already deployed in other packs, regenerates `redirects.json` scoped to
+exactly what is deployed, and runs post-deploy validation — **a failed
+validation exits non-zero** so a broken state can never look green.
+
+**Batch deploys:** for a whole music pack, use the ready-made scripts in
+`.agent/docs/example_script_to_install_custom_songs_over_<pack>_music_pack.sh`
+(one `--deploy-full` per song, with a PS4-state check + confirmation prompt up
+front and error handling per song).
+
+> **`deploy_all.sh` is OUTDATED** (13 hardcoded Rolling Stones slots, pre-dating
+> pack-mode patching). It remains only for historical reference — do not use it
+> for new deployments.
 
 ### 3.2 Manual deploy (individual components)
 
@@ -381,8 +392,8 @@ grep "->" /tmp/ps4_log.txt | grep AFR
 You can deploy an updated plugin while the game is running:
 
 ```bash
-# Build and deploy without restarting the game
-make && ./deploy_all.sh
+# Build and deploy the latest plugin source without restarting the game
+python3 tools/full_custom_song_pipeline.py --deploy-plugin
 
 # Then restart Beat Saber from the PS4 menu
 ```
@@ -393,7 +404,7 @@ The plugin is reloaded by GoldHEN when the game executable is launched. A full P
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| No "BS Deluxe" in log | Plugin not deployed | Run `deploy_all.sh` |
+| No "BS Deluxe" in log | Plugin not deployed | Run `python3 tools/full_custom_song_pipeline.py --deploy-plugin` |
 | Old version shown | Plugin cache | Restart Beat Saber or reboot PS4 |
 | CE-34878-0 crash | Bundle CRC/size mismatch | Use default build (PCM16 + no-pad, both default since v0.5314) or `--preserve-metadata` |
 | "redirect" shows in log but song doesn't play | Bundle format issue | Verify bundle deployed correctly |
@@ -428,7 +439,8 @@ python3 tools/full_custom_song_pipeline.py \
 **Parameters explained:**
 - `<MAP_ID>` — the BeatSaver map key (e.g. `1d6c7c2`). Find it on [BeatSaver.com](https://beatsaver.com) — it's the short hash in the URL (e.g. `beatsaver.com/maps/1d6c7c2`)
 - `--target <slot_name>` — which PS4 song slot to replace. See [Available Song Slots](#available-song-slots-targets) above
-- `--deploy-full` — **Self-contained SINGLE-SONG orchestration in ONE command**: deploys only the target song + its music-pack mode bundle + matching catalog + plugin + `plugins.ini` entry + `features.json` + scoped redirects + post-deploy validation. Run one command at a time and test in-game after each (it does NOT deploy the other packs/songs).
+- `--deploy-full` — **Self-contained SINGLE-SONG orchestration in ONE command**: deploys only the target song + its music-pack mode bundle + matching catalog + plugin + `plugins.ini` entry + `features.json` + scoped redirects + post-deploy validation. Run one command at a time and test in-game after each (it does NOT deploy the other packs/songs). Always builds and deploys the LATEST plugin source — add `--skip-plugin-deployment` to keep the PS4's current plugin pinned. **A failed post-deploy validation exits non-zero** (the deploy is never reported complete with an inconsistent PS4 state — that state crashes the game with CE-34878-0).
+- `--skip-plugin-deployment` — skip the plugin build+deploy even in `--deploy-full` (for pinning a specific plugin build on the PS4).
 
 > **v0.5314+ safe defaults (no flags needed):** PCM16 lossless audio + full-length (no padding truncation) + beatmap mode mapping (OneSaber/NoArrows/90Degree auto-generated to fill gaps) + V2→V3 conversion are all **default ON**. The old explicit flags (`--pcm16`, `--no-pad`, `--convert-to-v3`, `--enable-beatmap-mode-mapping`) are still accepted as no-op compat flags. To opt out: `--hevag`/`--vorbis` (codec), `--pad-fsb5` (**DANGER** — truncates audio to 12MB, produces partial songs), `--disable-beatmap-mode-mapping` (Standard only), `--no-convert-to-v3` (leave V2).
 
@@ -546,11 +558,8 @@ Before each experiment, clear the log so you only see fresh output:
 lftp -u anonymous, -p 2121 <PS4_IP> \
     -e "rm /data/GoldHEN/AFR/CUSA12878/bs_log.txt; quit"
 
-# Or via the pipeline
+# Or via the pipeline (plugin deploys also clear the log)
 python3 tools/full_custom_song_pipeline.py --deploy-plugin
-
-# deploy_all.sh also clears the log automatically
-./deploy_all.sh
 ```
 
 ### 7.2 Download and analyze the log
@@ -617,7 +626,7 @@ The plugin hooks file I/O to redirect DLC song asset paths to custom song bundle
 |-----------|----------|-------------|
 | GoldHEN Plugin | `src/` | C++ plugin that hooks file I/O, detects song loading, and redirects to custom bundles |
 | Song Pipeline | `tools/full_custom_song_pipeline.py` | Python script that converts custom songs into PS4-compatible bundles |
-| Deploy Script | `deploy_all.sh` | Uploads plugin + bundles + config to PS4 via FTP |
+| Deploy Flow | `tools/full_custom_song_pipeline.py --deploy-full` | One-command per-song deploy: bundle + pack patch + catalog + plugin + redirects + validation |
 | Development Scripts | `development/scripts/` | Experimental scripts — not production-ready |
 | Game Dump | `/workspace/ps4_dump/` | Decrypted PS4 game dump (base app + patch) |
 | Bundles | `custom_songs/` | Built custom song bundles ready for deployment |

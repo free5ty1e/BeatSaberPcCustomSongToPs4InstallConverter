@@ -990,30 +990,40 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
 
     # If slots is provided, only keep those slots; otherwise use all configured
     if slots is not None:
-        # Case-insensitive matching: slots from PS4 redirects may have different casing
-        # than mass_deploy.slots (e.g., "Crystallized" vs "crystallized")
-        slots_lower = {s.lower(): s for s in slots}
-        configured = [s for s in all_configured if s.lower() in slots_lower]
-        if not configured:
-            # Remove all song redirects when slots list is empty (stock state)
-            redirects = redirect_data.setdefault('redirects', {})
-            removed = 0
-            for k in list(redirects):
-                if k.startswith('BeatmapLevelsData/'):
-                    log.info(f"  🧹 Removed song redirect (no slots in scope): {k} -> {redirects[k]}")
-                    del redirects[k]
-                    removed += 1
-            if removed:
-                log.info(f"  🎵 Removed {removed} song redirects (empty slot scope)")
-            return removed
+        # An EMPTY slots list is a NO-OP for removal (Exp 226): it is used by
+        # callers to mean "no slots need extra pack modes" — never "delete all
+        # song redirects". The empty-scope wipe previously destroyed every
+        # song redirect from every pack when --clear-target-song cleared the
+        # last custom song of an unrelated pack. Removing redirects is the
+        # job of the dedicated removal paths (--clear-target-song, clean
+        # slate), not of scope filtering.
+        if len(slots) == 0:
+            log.info("  ℹ️  Empty slot scope — preserving all existing song redirects")
+            configured = []
+            # fall through WITHOUT removing anything
+        else:
+            # Case-insensitive matching: slots from PS4 redirects may have different casing
+            # than mass_deploy.slots (e.g., "Crystallized" vs "crystallized")
+            slots_lower = {s.lower(): s for s in slots}
+            configured = [s for s in all_configured if s.lower() in slots_lower]
+            if not configured:
+                # Requested slots are not in mass_deploy config — still preserve
+                # existing redirects; only OUT-OF-SCOPE removal below trims.
+                # (The old branch deleted EVERYTHING here — including slots from
+                # packs the user never asked to touch, Exp 226.)
+                log.info("  ℹ️  Requested slots not in mass_deploy config — preserving existing redirects")
+                configured = []
     else:
         configured = all_configured
 
     redirects = redirect_data.setdefault('redirects', {})
     changed = 0
 
-    # When slots is provided, remove redirects for slots NOT in the scope
-    if slots is not None:
+    # When slots is provided AND matches at least one configured slot, remove
+    # redirects for slots NOT in the scope. If the scope matched nothing in
+    # mass_deploy.slots (or is empty), preserve everything — scope filtering
+    # must never turn into an unintended wipe (Exp 226).
+    if slots is not None and configured:
         scoped = {s.lower() for s in slots}
         for k in list(redirects):
             if k.startswith('BeatmapLevelsData/'):
@@ -2738,6 +2748,36 @@ def _load_pack_albums(config: dict) -> dict:
     except Exception:
         return {}
 
+def _resolve_deployed_packs(config: dict) -> list:
+    """Packs ACTUALLY deployed per the redirects.json state file ONLY.
+
+    Like _resolve_active_packs but WITHOUT the local-bundle fallback: a pack
+    merely built locally must never be auto-deployed (Exp 227 — after a clean
+    slate the fallback resurrected every previously-built pack into a
+    --clear-target-song run, rebuilding/redeploying 6 packs the user had
+    never installed on the clean PS4). Returns [] on a clean slate.
+    """
+    pm = config.get('pack_modes', {}) or {}
+    configured = pm.get('packs') or []
+    if configured:
+        return list(configured)
+    local_redirects_path = _get_redirect_config_path()
+    if os.path.isfile(local_redirects_path):
+        try:
+            deployed = _load_local_redirects(local_redirects_path)
+            redirects = deployed.get('redirects', {}) if 'redirects' in deployed else deployed
+            active = []
+            for key, val in sorted(redirects.items()):
+                if '_pack_modes_' in str(val):
+                    pack = str(val).split('_pack_modes_')[0]
+                    if pack not in active:
+                        active.append(pack)
+            return active
+        except Exception:
+            pass
+    return []
+
+
 def _resolve_active_packs(config: dict) -> list:
     """The pack set in scope — NEVER hardcoded (Exp 224 user directive).
 
@@ -2802,18 +2842,24 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     Each entry: {pack, bundle_key (original pack bundle asset path),
     patched_bundle (AFR filename), local_path}. No build happens here — the
     patched filename is derived deterministically from the original one.
-    `packs` optionally limits which pack(s) to return (default: all ACTIVE —
-    user-pinned config list or auto-discovered from built bundles, never a
-    hardcoded set).
+    `packs` is the AUTHORITATIVE scope when provided (Exp 227) — deploy flows
+    have already unioned their requested packs against the DEPLOYED state, so
+    re-unioning the local-bundle fallback here would resurrect never-installed
+    packs. Default (None): all ACTIVE (user-pinned list or auto-discovered
+    from built bundles — build-time scope, never hardcoded).
     """
     pm = config.get('pack_modes', {}) or {}
-    configured = _resolve_active_packs(config)
+    if packs is not None:
+        # Exp 227: the caller's list is the AUTHORITATIVE scope when provided
+        # — deploy flows already unioned it against the DEPLOYED state
+        # (_resolve_deployed_packs). Unioning the local-bundle fallback here
+        # re-admitted stale locally-built packs the user never installed
+        # (clean-slate --clear-target-song rebuilt + deployed 6 packs).
+        configured = list(packs)
+    else:
+        configured = _resolve_active_packs(config)
     if not configured:
         return []
-    if packs is not None:
-        configured = [p for p in configured if p in packs]
-        if not configured:
-            return []
     albums = _load_pack_albums(config)
     build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
     entries = []
@@ -2923,13 +2969,16 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     Returns number of bundles built.
     """
     pm = config.get('pack_modes', {}) or {}
-    configured = _resolve_active_packs(config)
+    if packs is not None:
+        # Exp 227: the caller's list is the AUTHORITATIVE scope when provided
+        # (deploy flows already unioned the deployed state into it).
+        configured = list(packs)
+    else:
+        configured = _resolve_active_packs(config)
     if not configured:
         log.info("  ℹ️  no pack_modes packs in scope (no pinned list, no built bundles) — nothing to build")
         return 0
-    if packs is not None:
-        configured = [p for p in configured if p in packs]
-    entries = [e for e in _get_pack_modes_entries(config) if e['pack'] in configured]
+    entries = [e for e in _get_pack_modes_entries(config, packs=configured) if e['pack'] in configured]
 
     # When target_slots is provided, we need to force rebuild to ensure
     # surgical patching — only those slots get extra modes.
@@ -2958,11 +3007,11 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     return built
 
 def _resolve_configured_packs(config: dict, packs: list | None) -> list:
-    """Return the pack list to operate on: `packs` if given else all ACTIVE
-    (user-pinned list or auto-discovered from built bundles — never hardcoded)."""
-    configured = _resolve_active_packs(config)
+    """Return the pack list to operate on: `packs` if given else all DEPLOYED
+    (never hardcoded; no local-bundle fallback — deploy-side helper, Exp 227)."""
+    configured = _resolve_deployed_packs(config)
     if packs is not None:
-        return [p for p in configured if p in packs]
+        return [p for p in packs if True] or [p for p in configured if p in packs]
     return list(configured)
 
 def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None) -> bool:
@@ -2981,19 +3030,27 @@ def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: lis
     # NOT a non-empty pinned packs list — the old gate made auto-discovery
     # mode (packs=[]) skip this function entirely, so the patched pack bundle
     # deployed without its matching merged catalog → CRC crash (CE-34878-0).
-    active = _resolve_active_packs(config)
+    # Exp 226: an EXPLICITLY REQUESTED pack is always in scope — the deployed-
+    # state discovery reflects what is on the PS4 NOW, which by definition
+    # lags the pack being deployed (the user's britney/camellia/lizzo/RS
+    # deploys each found only billieeilish "active" and silently skipped the
+    # requested pack's patch, so those packs booted with stock mode buttons).
+    if packs is not None:
+        # Exp 226/227: requested packs JOIN the DEPLOYED state (redirects.json),
+        # not the local-bundle fallback — the fallback resurrected never-installed
+        # packs on clean-slate runs (6 packs rebuilt+deployed during a
+        # --clear-target-song that should have touched exactly one pack).
+        deployed = _resolve_deployed_packs(config)
+        active = list(packs) + [p for p in deployed if p not in packs]
+    else:
+        active = _resolve_deployed_packs(config)
     if not active:
         log.warning("  ⚠️  no pack_modes packs in scope (no pinned list, no built "
-                    "bundles, no deployed state) — nothing to deploy")
+                    "bundles, no deployed state, none requested) — nothing to deploy")
         return False
-    if packs is not None:
-        active = [p for p in active if p in packs]
-        if not active:
-            log.info(f"  ℹ️  Requested pack(s) {packs} not in the active set — nothing to deploy")
-            return False
-    _ensure_pack_mode_bundles(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots)
+    _ensure_pack_mode_bundles(config, packs=active, enable_modes=enable_modes, target_slots=target_slots)
     pairs = [(e['local_path'], e['patched_bundle'])
-             for e in _get_pack_modes_entries(config, packs=packs)
+             for e in _get_pack_modes_entries(config, packs=active)
              if os.path.isfile(e['local_path'])]
     if pm.get('patched_catalog_local') and pm.get('patched_catalog'):
         pairs.append((pm['patched_catalog_local'], pm['patched_catalog']))
@@ -3098,9 +3155,18 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
     ok = True
 
     pm = config.get('pack_modes', {}) or {}
-    configured_packs = _resolve_active_packs(config)
     if packs is not None:
-        configured_packs = [p for p in configured_packs if p in packs]
+        # Exp 226/227: requested packs JOIN the DEPLOYED state (what the
+        # redirects.json state file says is on the PS4) — discovery lags the
+        # pack being deployed, so a pure filter dropped it (mode buttons only
+        # on the first pack). Exp 227: use _resolve_deployed_packs, NOT
+        # _resolve_active_packs — the local-bundle fallback resurrected every
+        # locally-built pack into a --clear-target-song run on a clean-slate
+        # PS4 (6 packs the user never installed got rebuilt + deployed).
+        deployed = _resolve_deployed_packs(config)
+        configured_packs = list(packs) + [p for p in deployed if p not in packs]
+    else:
+        configured_packs = _resolve_deployed_packs(config)
 
     # For each pack, download existing patched bundle from PS4 if present,
     # then use it as base for incremental patching
@@ -4122,7 +4188,25 @@ def clear_target_song(config: dict, slot_name: str):
                       'mass_deploy': config.get('mass_deploy', {})}
 
         deploy_pack_bundle(deploy_cfg, packs=[target_pack], enable_modes=None, target_slots=rebuild_slots)
-        # Also deploy redirects again to pick up pack bundle changes
+        # Also deploy redirects again to pick up pack bundle changes.
+        # NOTE (Exp 226): slots must NOT be scoped to rebuild_slots here —
+        # rebuild_slots is the PACK-MODE target list (empty when clearing the
+        # last custom song in a pack), and passing it as the redirect scope
+        # made _ensure_mass_song_redirects treat it as "empty scope" and wipe
+        # EVERY song redirect from every pack (44 redirects destroyed).
+        # Per-song redirects are managed by earlier steps; every existing
+        # custom song must keep its redirect.
+        # Scope the re-ensure to exactly the song redirects that still exist
+        # (after the surgical removal in step 2) — no additions, no wipes.
+        # Reading the just-saved local file (step 2 wrote it) gives precisely
+        # the user's deployed song set.
+        current_slots = []
+        try:
+            _cd = _load_local_redirects(local_redirect_path).get('redirects', {})
+            current_slots = [k[len('BeatmapLevelsData/'):] for k in _cd
+                             if k.startswith('BeatmapLevelsData/')]
+        except Exception:
+            pass
         manage_redirect_config(
             config,
             target_name=None,
@@ -4130,8 +4214,8 @@ def clear_target_song(config: dict, slot_name: str):
             deploy=True,
             sync=False,
             enforce_local=False,
-            packs=[target_pack],
-            slots=rebuild_slots,
+            packs=None,
+            slots=current_slots if current_slots else None,
         )
 
     log.info(f"✅ Slot '{slot_name}' reverted to stock state")

@@ -23,7 +23,9 @@ metadata:
 | `--no-verify-ps4` | Skip automatic post-deploy validation | — |
 | `--sync-config` | Download config from PS4, merge, save, redeploy | — |
 | `--enforce-config` | Use local `redirects.json` as truth and deploy to PS4 | — |
-| `--deploy-full` | **Self-contained single-song orchestration** (one song + its pack + catalog + plugin + plugins.ini + features + redirects + validation) | — |
+| `--deploy-full` | **Self-contained single-song orchestration** (one song + its pack + catalog + plugin + plugins.ini + features + redirects + validation). Always builds+deploys the LATEST plugin source; a FAILED validation exits 1 (Exp 225) | — |
+| `--skip-plugin-deployment` | Skip plugin build+deploy even in `--deploy-full` (pin the PS4's current plugin) | — |
+| `--clear-target-song <SLOT>` | Revert one song slot to stock (bundle + redirect + metadata removed, pack re-patched) | — |
 | `--deploy-plugin` | Build + deploy plugin PRX | — |
 | `--debug-logging` | Verbose PS4 logging (DEBUG=1 build) | — |
 | `--features-only` | Apply + deploy `--set-feature` changes only | — |

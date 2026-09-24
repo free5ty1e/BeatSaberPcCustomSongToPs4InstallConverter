@@ -244,6 +244,17 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 227) — Ghost Packs + True Clean Slate
+- [x] **Ghost packs fixed:** the Exp 226 union pulled the local-bundle fallback into deploy scopes → clean-slate clear-song rebuilt 6 never-installed packs. New _resolve_deployed_packs (state-file-only) drives deploy unions; caller packs= authoritative in entries/ensure.
+- [x] **--clean-ps4 now wipes ALL local state** (user directive): pack_modes_bundles/, custom_songs/, mass_bundles/, stray blobs — every local input a fallback could read. Verified 3+8+69+39+51 items cleared, full regenerability confirmed.
+- [x] 3 ghost-pack regression tests + 5 scoping tests updated. 616/616.
+
+### Completed (Exp 226) — Mode Buttons Per Pack + clear-target-song Wipe + Script Completion
+- [x] **Pure-filter pack scoping fixed:** requested packs JOIN the active set in all 4 helpers (deployed-state discovery lags the deploy — britney/camellia/lizzo/RS patches were silently skipped; only the first pack got mode buttons). All 5 packs patched + validated live.
+- [x] **--clear-target-song redirect wipe fixed** (empty scope = no-op; re-ensure scoped to existing redirects; unmatched scope preserves). Live state restored (44 songs + 5 packs + catalog), validation PASSED.
+- [x] **RS script misplaced PATD slot (SugarSoaker) removed**; PATD deployment reverted; catalog regenerated for the 5 intended packs.
+- [x] **Scripts completed:** BE +3 songs, RS +StartMeUp, britney Toxic/Womanizer → non-Britney songs (all download-verified). 5 wipe-safety + scoping regression tests; 613/613.
+
 ### Completed (Exp 225) — Clean-Slate Catalog Crash (Exp 224 Regression) Fixed
 - [x] **Root cause:** two deploy gates checked the pinned pack_modes.packs list (always [] under auto-discovery) → clean-slate first-song deploy shipped the patched pack bundle WITHOUT the merged catalog or aa/catalog.json redirect → CRC crash CE-34878-0. Gates now use _resolve_active_packs.
 - [x] **Failed validation now aborts** (exit 1 + CE-34878-0 warning) — a broken deploy can never print "Pipeline complete!" and exit 0 again.

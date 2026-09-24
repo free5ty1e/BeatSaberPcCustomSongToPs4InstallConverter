@@ -7,17 +7,23 @@ This guide walks through the end-to-end process of replacing an entire official 
 - Pipeline script (`tools/full_custom_song_pipeline.py`) installed and configured.
 - A list of BeatSaver Map IDs for your replacements.
 
-## Required Flags
+## Flags
 
-All song replacements **must** use these flags:
-- `--pcm16` — PCM16 FSB5 audio encoding (lossless, required for PS4 compatibility)
-- `--no-pad` — Skip 12MB audio padding (PCM16 output is often larger than original)
-- `--convert-to-v3` — Convert V2 beatmaps to V3.2.0 format (required for Beat Saber PS4)
+Since v0.5314 these are all **default ON** (the explicit flags below remain as
+no-op compat options):
+- PCM16 FSB5 audio encoding (lossless — required for PS4 compatibility)
+- Full-length audio (no 12MB padding truncation)
+- V2→V3.2.0 beatmap conversion (required for Beat Saber PS4)
 
-Additional flags for pack replacement:
-- `--song-name "Name"` — Custom song display name
-- `--artist "Artist"` — Custom artist name
-- `--deploy` — Upload bundle to PS4 via FTP
+Pack replacement (one song at a time — the recommended flow):
+- `--download-beat-saver-song <MAP_ID>` — fetch the custom song from BeatSaver
+- `--target <SLOT_NAME>` — which song slot to replace
+- `--deploy-full` — ONE command: bundle + music-pack patch + catalog + plugin +
+  features.json + scoped redirects + post-deploy validation (exits non-zero on
+  validation failure)
+
+Metadata: song/artist names are picked up from the map's Info.dat
+automatically; `--song-name`/`--artist` override if desired.
 - `--generate-config` — Update `redirects.json` with new slot mapping
 - `--deploy-config` — Upload updated config to PS4
 

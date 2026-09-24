@@ -123,23 +123,24 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a909  
 if [ $? -ne 0 ]; then echo "ERROR: Failed Time Lapse"; exit 1; fi
 echo "  Paint It Black → Time Lapse deployed successfully"
 
-# Song 9: Sugar Soaker → Venom of Venus (Powerwolf)
-echo "Deploying Sugar Soaker → Venom of Venus (Powerwolf)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song b7aa     --target SugarSoaker     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-if [ $? -ne 0 ]; then echo "ERROR: Failed Venom of Venus"; exit 1; fi
-echo "  Sugar Soaker → Venom of Venus deployed successfully"
-
-# Song 10: Sympathy For The Devil → LIT (Polyphia)
+# Song 9: Sympathy For The Devil → LIT (Polyphia)
 echo "Deploying Sympathy For The Devil → LIT (Polyphia)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1b457     --target SympathyForTheDevil     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed LIT"; exit 1; fi
 echo "  Sympathy For The Devil → LIT deployed successfully"
 
-# Song 11: Whole Wide World → VOLUPTE (Tare)
+# Song 10: Whole Wide World → VOLUPTE (Tare)
 echo "Deploying Whole Wide World → VOLUPTE (Tare)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song a692     --target WholeWideWorld     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Whole Wide World"; exit 1; fi
 echo "  Whole Wide World → VOLUPTE deployed successfully"
+
+echo ""
+# Song 11: Start Me Up → Wake Me Up (Avicii)
+echo "Deploying Start Me Up → Wake Me Up (Avicii)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 437d     --target StartMeUp     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+if [ $? -ne 0 ]; then echo "ERROR: Failed Start Me Up"; exit 1; fi
+echo "  Start Me Up → Wake Me Up deployed successfully"
 
 echo ""
 echo "=== All 11 Rolling Stones pack songs deployed (full orchestration) ==="

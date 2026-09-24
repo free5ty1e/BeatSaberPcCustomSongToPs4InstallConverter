@@ -105,11 +105,11 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2fa04 
 if [ $? -ne 0 ]; then echo "ERROR: Failed Me Against The Music"; exit 1; fi
 echo "  Me Against The Music → Mr. Blue Sky deployed successfully"
 
-# Song 6: Oops!...I Did It Again → Oops!... I Did It Again (Britney Spears) [DITR4]
-echo "Deploying Oops!...I Did It Again → Oops!... I Did It Again (Britney Spears) [DITR4]..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 28566     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 6: Oops!...I Did It Again → Hollaback Girl (Gwen Stefani)
+echo "Deploying Oops!...I Did It Again → Hollaback Girl (Gwen Stefani)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 53e4     --target OopsIDidItAgain     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Oops!...I Did It Again"; exit 1; fi
-echo "  Oops!...I Did It Again → Oops!... I Did It Again deployed successfully"
+echo "  Oops!...I Did It Again → Hollaback Girl deployed successfully"
 
 # Song 7: Overprotected → Shut Up And Dance (Walk The Moon)
 echo "Deploying Overprotected → Shut Up And Dance (Walk The Moon)..."
@@ -129,17 +129,17 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 13f31 
 if [ $? -ne 0 ]; then echo "ERROR: Failed Till The World Ends"; exit 1; fi
 echo "  Till The World Ends → Dance Monkey (metal cover) deployed successfully"
 
-# Song 10: Toxic → Toxic (Britney Spears - Emir's map)
-echo "Deploying Toxic → Toxic (Britney Spears)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 21540     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 10: Toxic → Complicated (MELODICKA BROS — Avril Lavigne cover)
+echo "Deploying Toxic → Complicated (MELODICKA BROS — Avril Lavigne cover)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 19849     --target Toxic     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Toxic"; exit 1; fi
-echo "  Toxic → Toxic deployed successfully"
+echo "  Toxic → Complicated deployed successfully"
 
-# Song 11: Womanizer → Radar (Britney Spears)
-echo "Deploying Womanizer → Radar (Britney Spears)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 1e2f7     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+# Song 11: Womanizer → Teenagers (My Chemical Romance)
+echo "Deploying Womanizer → Teenagers (My Chemical Romance)..."
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 217f1     --target Womanizer     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed Womanizer"; exit 1; fi
-echo "  Womanizer → Radar deployed successfully"
+echo "  Womanizer → Teenagers deployed successfully"
 
 echo ''
 echo '=== All 11 Britney Spears pack songs deployed (full orchestration) ==='

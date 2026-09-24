@@ -7,6 +7,7 @@ Unit tests for recent pipeline bug fixes
 4. Note count standard initialization
 """
 import os
+import re
 import sys
 import json
 import tempfile
@@ -1046,3 +1047,49 @@ class TestCameliaSyncRegression:
         assert abs(regions[0]['eb'] - 214.0 * 117.0 / 60.0) < 0.5
         # the old heuristic would have produced 404.1 (112.1 BPM — 4.2% slow)
         assert abs(regions[0]['eb'] - max_beat) > 5.0
+
+
+# ======================================================================
+# Exp 226: --clear-target-song on the LAST custom song of an unrelated
+# pack wiped ALL song redirects from EVERY pack (44 destroyed live).
+# Two fixes: (1) clear_target_song's step-6 re-ensure must scope to the
+# song redirects that still EXIST (never slots=[] / rebuild_slots);
+# (2) _ensure_mass_song_redirects treats an empty scope as a NO-OP, not a
+# wipe — and an unmatched non-empty scope preserves redirects too.
+# ======================================================================
+class TestClearTargetSongRedirectSafety:
+    def test_empty_scope_never_wipes(self, tmp_path):
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {
+            'BeatmapLevelsData/BadGuy': 'BadGuy_v3.bundle',
+            'BeatmapLevelsData/Crystallized': 'crystallized_v3.bundle',
+            'aa/catalog.json': 'catalog_pack_modes.json',
+        }}
+        config = {'mass_deploy': {'slots': ['BadGuy', 'Crystallized']}}
+        _ensure_mass_song_redirects(data, config, slots=[])
+        assert data['redirects']['BeatmapLevelsData/BadGuy'] == 'BadGuy_v3.bundle'
+        assert data['redirects']['BeatmapLevelsData/Crystallized'] == 'crystallized_v3.bundle'
+        assert data['redirects']['aa/catalog.json'] == 'catalog_pack_modes.json'
+
+    def test_unmatched_scope_preserves_existing(self, tmp_path):
+        """A non-empty scope matching nothing in mass_deploy.slots must NOT
+        delete existing redirects (the old branch deleted EVERYTHING)."""
+        from full_custom_song_pipeline import _ensure_mass_song_redirects
+        data = {'redirects': {
+            'BeatmapLevelsData/BadGuy': 'BadGuy_v3.bundle',
+        }}
+        # SugarSoaker (PATD pack) is not in mass_deploy.slots
+        config = {'mass_deploy': {'slots': ['BadGuy', 'Crystallized']}}
+        _ensure_mass_song_redirects(data, config, slots=['SugarSoaker'])
+        assert data['redirects'].get('BeatmapLevelsData/BadGuy') == 'BadGuy_v3.bundle', \
+            "unmatched scope must preserve existing redirects"
+
+    def test_clear_target_source_contract(self):
+        """The step-6 manage_redirect_config call in clear_target_song must
+        never pass rebuild_slots as the redirect scope (source audit)."""
+        src = open(os.path.join(os.path.dirname(__file__), '..', 'tools',
+                                'full_custom_song_pipeline.py')).read()
+        assert re.search(r'\bslots=rebuild_slots\b', src) is None, \
+            "clear_target_song must not scope redirect generation to rebuild_slots (the 44-redirect wipe)"
+        assert 'Empty slot scope — preserving all existing song redirects' in src, \
+            "the empty-scope no-op guard must be present"

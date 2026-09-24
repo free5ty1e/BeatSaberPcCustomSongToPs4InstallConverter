@@ -92,31 +92,35 @@ jobs:
           echo "plugins.ini generated:"
           cat plugins.ini
 
-      - name: Generate redirects.json
+      - name: Generate redirects.json (clean-slate template)
         run: |
+          # Empty redirect template — the pipeline regenerates the real file on
+          # every deploy (scoped to exactly what the user deploys; there are NO
+          # hardcoded slot/pack expectations, v0.5342+).
           cat > redirects.json << 'JSONEOF'
           {
             "titleId": "CUSA12878",
             "afrBase": "/data/GoldHEN/AFR",
-            "redirects": {
-              "angry": "angry_custom_v3",
-              "bitemyheadoff": "bitemyheadoff_custom_v3",
-              "cantyouhearmeknocking": "cantyouhearmeknocking_custom_v3",
-              "deadmanwalking": "deadmanwalking_custom_v3",
-              "gimmeshelter": "gimmeshelter_custom_v3",
-              "icantgetnosatisfaction": "icantgetnosatisfaction_custom_v3",
-              "livebythesword": "livebythesword_custom_v3",
-              "messitup": "messitup_custom_v3",
-              "paintitblack": "paintitblack_custom_v3",
-              "startmeup": "startmeup_custom_v3",
-              "sugarsoaker": "sugarsoaker_custom_v3",
-              "sympathyforthedevil": "sympathyforthedevil_custom_v3",
-              "wholewideworld": "wholewideworld_custom_v3"
-            }
+            "redirects": {}
           }
           JSONEOF
-          echo "redirects.json generated:"
-          python3 -m json.tool redirects.json | head -5
+          echo "redirects.json generated (empty template):"
+          python3 -m json.tool redirects.json
+
+      - name: Generate features.json (default feature flags)
+        run: |
+          # Default runtime feature flags (v0.5340+): all features on, global
+          # kill switch enabled. The plugin shows their state in the boot toast.
+          cat > features.json << 'JSONEOF'
+          {
+            "enable_plugin": true,
+            "enable_custom_song_replacements": true,
+            "enable_song_metadata_modification": true,
+            "enable_beatmap_mode_mapping": true
+          }
+          JSONEOF
+          echo "features.json generated:"
+          python3 -m json.tool features.json
 
       - name: Run tests with coverage
         run: |
@@ -141,6 +145,7 @@ jobs:
           # Config files
           cp plugins.ini release-zip/
           cp redirects.json release-zip/
+          cp features.json release-zip/
 
           # Changelogs and version
           cp beat_saber_deluxe/CHANGELOG-PLUGIN.md release-zip/
@@ -153,6 +158,7 @@ jobs:
           # Feature docs
           cp beat_saber_deluxe/docs/features/custom-song-replacement.md release-zip/docs/features/
           cp beat_saber_deluxe/docs/features/song-metadata-modification.md release-zip/docs/features/
+          cp beat_saber_deluxe/docs/features/beatmap-mode-mapping.md release-zip/docs/features/
 
           # Example / how-to docs
           cp beat_saber_deluxe/docs/camellia-pack-example.md release-zip/docs/examples/

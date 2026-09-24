@@ -37,7 +37,7 @@ The pipeline:
 5. Builds + deploys the GoldHEN plugin and ensures the `plugins.ini` `[CUSA12878]` entry.
 6. Deploys `features.json` (runtime feature flags).
 7. Regenerates `redirects.json` scoped to just that song + its pack pair.
-8. Runs post-deploy validation.
+8. Runs post-deploy validation — **a failure exits non-zero** (Exp 225: the deploy is never reported complete with an inconsistent PS4 state, which would crash the game with CE-34878-0).
 
 > It does **NOT** touch the other configured packs (e.g. deploying one Billie Eilish song no
 > longer re-deploys therollingstones/lizzo/camellia or the other 9 songs). On a clean PS4, run

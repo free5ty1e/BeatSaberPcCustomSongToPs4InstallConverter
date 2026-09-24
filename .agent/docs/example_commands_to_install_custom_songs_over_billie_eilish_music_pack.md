@@ -1,6 +1,6 @@
 # Installing Custom Songs Over the Billie Eilish Music Pack
 
-This document provides step-by-step, self-contained pipeline commands to replace all 10 songs
+This document provides step-by-step, self-contained pipeline commands to replace all 13 songs
 in the official Billie Eilish DLC music pack with custom community songs from BeatSaver.
 
 Pipeline: v0.5334 — fully automated, no manual song_metadata.json editing required.
@@ -133,7 +133,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
 
 - **Pack key**: `billieeilish`
 - **Pack bundle**: `billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle`
-- **10 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
+- **13 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
   1. all the good girls go to hell → Custom: Mirror (Ado)
   2. bad guy → Custom: Odo (Ado)
   3. bellyache → Custom: ATTITUDE (IVE)
@@ -144,6 +144,9 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
   8. 2 be loved (am i ready) → Custom: Yes I'm A Mess (AJR)
   9. about damn time → Custom: The Middle (Jimmy Eat World)
   10. cuz i love you → Custom: Bring It On (Giga-P)
+  11. i didn't change my number → Custom: Mr. Brightside (The Killers)
+  12. oxytocin → Custom: Kiss Me More (Doja Cat ft. SZA)
+  13. you should see me in a crown → Custom: 15 Minutes (Sabrina Carpenter)
 
 ## Where Target Metadata Lives
 
@@ -289,4 +292,40 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13 
 # BPM: 160
 # Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — Expert+ auto-filled
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+
+# 11. i didn't change my number → Mr. Brightside (The Killers)
+# Custom Song: Mr. Brightside
+# Artist: The Killers
+# Album: Hot Fuss
+# Year: 2004
+# BeatSaver MAP_ID: 3fc90
+# BeatSaver Link: https://beatsaver.com/maps/3fc90
+# Genre: Indie Rock / Post-Punk Revival
+# BPM: 148
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3fc90     --target IDidntChangeMyNumber     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+
+# 12. oxytocin → Kiss Me More (Doja Cat ft. SZA)
+# Custom Song: Kiss Me More
+# Artist: Doja Cat ft. SZA
+# Album: Planet Her
+# Year: 2021
+# BeatSaver MAP_ID: 4dea2
+# BeatSaver Link: https://beatsaver.com/maps/4dea2
+# Genre: Pop / R&B
+# BPM: 111
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4dea2     --target Oxytocin     --pcm16     --no-pad     --convert-to-v3     --deploy-full
+
+# 13. you should see me in a crown → 15 Minutes (Sabrina Carpenter)
+# Custom Song: 15 Minutes
+# Artist: Sabrina Carpenter
+# Album: Emails I Can't Send
+# Year: 2023
+# BeatSaver MAP_ID: 443f3
+# BeatSaver Link: https://beatsaver.com/maps/443f3
+# Genre: Pop
+# BPM: 132
+# Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
+python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 443f3     --target YouShouldSeeMeInACrown     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 ```
