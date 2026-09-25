@@ -186,3 +186,11 @@ rules (F841/F401/F541/I001) to the frozen file, with a comment recording
 why. The linter serves the release; the release does not serve the linter.
 Docs, tests, and CI workflow files remain fair game — "test updates do not
 count" as functional changes.
+
+**Lifting the freeze (Exp 230):** when the user explicitly authorizes a new
+version + fresh QA pass, style debt gets fixed IN CODE with the same rigor
+as a functional change: AST-verify each import removal has zero references,
+prove dead-store removal is inert (extract both versions' function via AST,
+run identical edge cases, diff outputs byte-for-byte), bump the version, and
+remove the config suppression so the file is honestly lint-enforced again.
+The freeze is lifted by the user's decision — never by the linter's.

@@ -953,3 +953,18 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **CORRECTION (user directive, post-staging):** the pipeline file was QA-FROZEN — the v0.5347 lint edits to `full_custom_song_pipeline.py` (dead `changed` flags, unused imports, f-string prefixes) were REVERTED to the QA-tested v0.5346 state, along with the version bump and changelog entry. "Test updates do not count" — and neither do style edits; after QA sign-off nothing functional (or cosmetic, in the shipped pipeline) changes on this branch. The Lint CI failure is instead resolved via CONFIG: `pyproject.toml` `[tool.ruff.lint.per-file-ignores]` for `tools/full_custom_song_pipeline.py` = ["F841", "F401", "F541", "I001"], with a comment documenting the freeze rationale. `ruff check tools/` exit 0 with the frozen code untouched.
 - **Tests (final):** full suite green against the RESTORED frozen pipeline (hardware gates active). ruff clean via config only. VERSION stays 0.5346 — no pipeline version bump; the branch's pipeline code is byte-identical to what the user QA-tested.
 - **Status:** ✅ All staged (docs/tests/CI/config only — zero functional pipeline changes). User pushes to re-trigger CI; expected: Lint green (config-based), Unit Tests green (skips on hardware tests), build green → release artifact builds with all 69 example files.
+
+---
+
+### Experiment 230 — Lint Fixes IN CODE (user-approved post-QA), v0.5347
+- **Date:** 2026-09-24
+- **User directive:** Exp 229's config-only lint suppression was a stopgap; with a fresh QA pass authorized, fix the 17 ruff findings in the code itself, bump the version, and re-test — "so that we can be at a very stable point to create this release."
+- **Changes (17 findings, zero functional):**
+  - F841 ×2 — dead stores: `changed` flag in `normalize_v3_schema` (6 writes, 0 reads) and `std_lightshow_pid` in `add_mode_characteristics` (computed, never used).
+  - F401 ×3 — unused imports: `TypeTreeNode` (`_create_text_asset_object`), duplicate local `import tempfile` in `_download_pack_bundle_from_ps4` + `clear_target_song`. All three AST-verified: zero name/attribute references in the enclosing function bodies.
+  - F541 ×10 — f-string prefixes without placeholders (log lines only).
+  - I001 ×2 — function-local import blocks sorted.
+- **Behavioral equivalence proof (the QA-risk question):** `normalize_v3_schema` (the only function with statement-level removals) was AST-extracted from BOTH the QA version (git HEAD) and the fixed version, executed against 10 edge cases (all-zero colorNotes repair, partial-zero no-repair, bpmEvents m-repair, empty dict, colorNotes:None, non-dict basicEventTypesWithKeywords, missing keys, populated-no-touch) — outputs byte-identical. The removals are provably inert; bundle content is unaffected by construction (dead code cannot change behavior).
+- **pyproject.toml:** the Exp 229 `per-file-ignores` suppression for this file is REMOVED — the file is fully lint-enforced again; `ruff check tools/` exits 0 honestly.
+- **Version:** pipeline 0.5346 → **0.5347**; plugin unchanged (v0.8047 — no plugin edits).
+- **User test procedure (their plan):** clean-slate PS4 → chained 5-pack example scripts → expected: all deploys succeed, 4 mode buttons per custom song across all packs, OneSaber blue dots, correct titles (incl. '…Baby One More Time' → 'Take On Me / A-ha'), Oxytocin/Crown real names. After: pull+archive bs_log per workflow.

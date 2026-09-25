@@ -244,6 +244,11 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 230) — Lint Fixes In Code (v0.5347)
+- [x] All 17 ruff findings fixed in `full_custom_song_pipeline.py` (2 dead stores, 3 unused imports AST-verified, 10 f-string prefixes, 2 import sorts). Zero functional changes — normalize_v3_schema byte-equivalence proven across 10 edge cases.
+- [x] Exp 229's pyproject.toml per-file-ignores removed — file fully lint-enforced; `ruff check tools/` exit 0.
+- [x] Version 0.5346 → 0.5347; plugin unchanged (v0.8047). User re-runs the QA test procedure for the stable release point.
+
 ### Completed (Exp 229) — CI Failure RCA + Release Artifact Audit
 - [x] **214 CI test failures root-caused:** (1) hardcoded /workspace absolute paths in tests — repo-relative now; (2) hardware-environment tests (dump + built bundles) with no skip guards — HAS_DUMP/HAS_BUILT_ALL class gates added; (3) Unit Tests job green-lying via tee exit-code swallow — set -o pipefail.
 - [x] **17 lint findings resolved via config** (pyproject.toml per-file-ignores for the QA-frozen pipeline file — zero code changes per user directive; ruff clean on tools/).

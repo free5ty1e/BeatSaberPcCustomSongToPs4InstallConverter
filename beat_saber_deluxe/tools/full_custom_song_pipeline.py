@@ -619,18 +619,15 @@ _V3_REQUIRED_SCALARS = {
 def normalize_v3_schema(data: dict) -> dict:
     """Fill missing V3 arrays/fields with empty defaults (idempotent).
 
-    Returns the same dict mutated in place when nothing was missing; a patched
-    copy otherwise. Logs nothing — callers report what changed if they care.
+    Mutates and returns `data` in place — callers report what changed if they
+    care (Exp 230: the `changed` flag was a dead store, never read).
     """
-    changed = False
     for key in _V3_REQUIRED_ARRAYS:
         if key not in data or data[key] is None:
             data[key] = []
-            changed = True
     for key, default in _V3_REQUIRED_SCALARS.items():
         if key not in data:
             data[key] = default if not isinstance(default, dict) else dict(default)
-            changed = True
     # basicEventTypesWithKeywords must exist and be a dict with 'd' list
     if not isinstance(data.get("basicEventTypesWithKeywords"), dict):
         types = sorted({int(e.get("et", 0)) for e in data.get("basicBeatmapEvents", [])
@@ -638,10 +635,8 @@ def normalize_v3_schema(data: dict) -> dict:
         data["basicEventTypesWithKeywords"] = {
             "d": [{"e": t, "n": f"EventType{t}"} for t in types]
         }
-        changed = True
     elif "d" not in data["basicEventTypesWithKeywords"]:
         data["basicEventTypesWithKeywords"]["d"] = []
-        changed = True
 
     # --- Repair colorNotes: if all entries have c=0, d=0, restore structure ---
     color_notes = data.get("colorNotes", [])
@@ -653,7 +648,6 @@ def normalize_v3_schema(data: dict) -> dict:
                 cn["c"] = 0 if i % 2 == 0 else 1
                 cn["d"] = i % 8
             data["colorNotes"] = color_notes
-            changed = True
     # --- Repair bpmEvents: if all have b=0, ensure m (BPM) is set ---
     bpm_events = data.get("bpmEvents", [])
     if bpm_events:
@@ -665,7 +659,6 @@ def normalize_v3_schema(data: dict) -> dict:
                     ev["m"] = 120.0
                 # Ensure b offset is explicitly set
                 ev["b"] = 0.0
-            changed = True
     return data
 
 
@@ -1234,7 +1227,6 @@ def _create_text_asset_object(cab, name, gz_data, path_id):
         The new ObjectReader instance.
     """
     from UnityPy.files.ObjectReader import ObjectReader
-    from UnityPy.helpers.TypeTreeNode import TypeTreeNode
     from UnityPy.streams.EndianBinaryWriter import EndianBinaryWriter
 
     # Build Unity TextAsset binary format using UnityPy's writer to ensure
@@ -1383,7 +1375,6 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
             return 0
 
         std_diffs = standard_set.get('_difficultyBeatmaps', [])
-        std_lightshow_pid = std_diffs[0]['_lightshowAsset']['m_PathID'] if std_diffs else 0
 
         # Add each requested mode
         for mode in enable_modes:
@@ -3197,7 +3188,6 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
 def _download_pack_bundle_from_ps4(config: dict, pack_name: str, local_dir: str) -> str | None:
     """Download the current patched pack bundle from PS4 for incremental patching.
     Returns the local path to the downloaded bundle, or None if not found/failed."""
-    import tempfile
     import subprocess as sp
     import sys
 
@@ -3275,7 +3265,7 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
             # Try to download existing patched bundle from PS4 for incremental patching
             existing_bundle = _download_pack_bundle_from_ps4(config, pack, tmpdir)
             if existing_bundle:
-                log.info(f"  Using existing PS4 pack bundle as base for incremental patching")
+                log.info("  Using existing PS4 pack bundle as base for incremental patching")
                 # Copy to pack_modes_bundles for builder to use as base
                 pm_build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
                 os.makedirs(pm_build_dir, exist_ok=True)
@@ -4153,7 +4143,6 @@ def clear_target_song(config: dict, slot_name: str):
     If other custom songs remain in the pack, the pack bundle is rebuilt
     with only those remaining custom songs getting extra modes.
     """
-    import tempfile
     import subprocess as sp
 
     log.info(f"🧹 Clearing custom song override for slot: {slot_name}")
@@ -4193,10 +4182,10 @@ def clear_target_song(config: dict, slot_name: str):
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0 and os.path.exists(local_redirect_path):
         redirect_data = _load_local_redirects(local_redirect_path)
-        log.info(f"  Downloaded current redirects.json from PS4")
+        log.info("  Downloaded current redirects.json from PS4")
     else:
         redirect_data = _load_local_redirects(local_redirect_path)
-        log.warning(f"  Could not download redirects.json from PS4, using local")
+        log.warning("  Could not download redirects.json from PS4, using local")
     redirects = redirect_data.get('redirects', {})
 
     # Find and remove the redirect key (handles both with and without prefix)
@@ -4220,7 +4209,7 @@ def clear_target_song(config: dict, slot_name: str):
     with open(local_redirect_path, 'w') as f:
         json.dump(redirect_data, f, indent=2)
         f.write('\n')
-    log.info(f"  ✅ Updated local redirects.json")
+    log.info("  ✅ Updated local redirects.json")
 
     # 3. Remove song metadata entries
     local_metadata_path = _get_song_metadata_path()
@@ -4279,7 +4268,7 @@ def clear_target_song(config: dict, slot_name: str):
     with open(local_metadata_path, 'w', encoding='utf-8') as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
         f.write('\n')
-    log.info(f"  ✅ Updated local song_metadata.json")
+    log.info("  ✅ Updated local song_metadata.json")
 
     # Remove from song_names
     if exact_song_name in metadata.get('song_names', {}):
@@ -4298,14 +4287,14 @@ def clear_target_song(config: dict, slot_name: str):
             del metadata['song_artists'][exact_song_name]
             log.info(f"  Restored artist metadata (last custom song in pack): '{exact_song_name}'")
     else:
-        log.info(f"  Other custom songs remain in pack — keeping artist metadata blanked for pack")
+        log.info("  Other custom songs remain in pack — keeping artist metadata blanked for pack")
 
     # Save updated song_metadata.json locally (after artist metadata changes)
     # Exp 228: ensure_ascii=False — non-ASCII titles stay raw UTF-8
     with open(local_metadata_path, 'w', encoding='utf-8') as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
         f.write('\n')
-    log.info(f"  ✅ Updated local song_metadata.json")
+    log.info("  ✅ Updated local song_metadata.json")
 
     # 5. Deploy updated configs to PS4
     log.info("  Deploying updated configs to PS4...")
@@ -4316,7 +4305,7 @@ def clear_target_song(config: dict, slot_name: str):
            "-e", f"put {_ftp_quote(local_redirect_path)} -o {_ftp_quote(remote_redirect_path)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
-        log.info(f"  ✅ redirects.json deployed to PS4")
+        log.info("  ✅ redirects.json deployed to PS4")
     else:
         log.warning(f"  ⚠️  Failed to deploy redirects.json: {result.stderr}")
 
@@ -4326,7 +4315,7 @@ def clear_target_song(config: dict, slot_name: str):
            "-e", f"put {_ftp_quote(local_metadata_path)} -o {_ftp_quote(remote_metadata_path)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
     if result.returncode == 0:
-        log.info(f"  ✅ song_metadata.json deployed to PS4")
+        log.info("  ✅ song_metadata.json deployed to PS4")
     else:
         log.warning(f"  ⚠️  Failed to deploy song_metadata.json: {result.stderr}")
 
@@ -5089,8 +5078,8 @@ Examples:
         title_id = cfg_title.get('id', 'CUSA12878')
         remote_redirect_path = f"{afr_base}/{title_id}/redirects.json"
 
-        import tempfile
         import subprocess as sp
+        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             local_redirect_path = os.path.join(tmpdir, "redirects.json")
             user_part = f"{user},{password}" if password else f"{user},"

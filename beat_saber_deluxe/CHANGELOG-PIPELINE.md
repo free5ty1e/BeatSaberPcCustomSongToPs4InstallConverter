@@ -1,5 +1,14 @@
 # Pipeline Changelog
 
+## v0.5347 (2026-09-24)
+### Fixed
+- **Lint: all 17 ruff findings in `full_custom_song_pipeline.py` resolved IN CODE** (Exp 230 — user-approved post-QA; replaces the Exp 229 temporary config suppression, which is removed — the file is fully lint-enforced again):
+  - F841 ×2: dead stores removed — `changed` flag in `normalize_v3_schema` (written 6×, never read; function documented as in-place mutation) and `std_lightshow_pid` in `add_mode_characteristics` (computed, never used). **Behavioral equivalence proven**: both versions' extracted `normalize_v3_schema` produce byte-identical JSON across 10 edge cases (all-zero colorNotes repair, bpmEvents repair, empty input, missing keys, non-dict basicEventTypesWithKeywords, non-zero no-repair cases).
+  - F401 ×3: unused imports removed — `TypeTreeNode` in `_create_text_asset_object` and duplicate local `import tempfile` in `_download_pack_bundle_from_ps4` + `clear_target_song` (zero references confirmed by AST scan of each function body).
+  - F541 ×10: f-string prefixes without placeholders dropped (log strings only).
+  - I001 ×2: function-local import blocks sorted (`import subprocess as sp` / `import tempfile` order).
+- Zero functional changes: every hunk is a dead store, an unused import, an f-string prefix, or import order. `ruff check tools/` exits 0 with no per-file-ignores; full suite re-verified green; deployed-bundle behavior is byte-identical by construction.
+
 ## v0.5346 (2026-09-24)
 ### Fixed
 - **'…Baby One More Time' title metadata never replaced (Exp 228 — Unicode ellipsis chain).** Three independent bugs: (1) `json.dump`'s default `ensure_ascii=True` wrote the key as `…Baby One More Time`; (2) the plugin's byte-verbatim JSON parser kept the escape; (3) the game's UTF-16 title folds to `?Baby One More Time` in `extract_utf16_string`. Fixes: pipeline writes `song_metadata.json` as raw UTF-8 (`ensure_ascii=False`, all 3 dump sites); plugin gained `\uXXXX` unescape (`json_unescape_inplace`) + key fold (`fold_utf8_to_ascii`) mirroring the extraction projection (BMP=1 `?`, astral=2 `?`); plugin `create_il2cpp_string` now decodes UTF-8→UTF-16LE properly (manual fallback was byte-per-codeunit mojibake). Backward compatible: escaped files already deployed still match.
