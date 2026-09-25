@@ -20,7 +20,9 @@ import build_pack_mode_bundles as bpb
 import lz4.block
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DUMP_DIR = "/workspace/ps4_dump/CUSA12878-patch"
+# Repo-layout-derived dump path (was a /workspace absolute — CI checks the
+# repo out elsewhere, so every dump-dependent test failed on GitHub runners).
+DUMP_DIR = os.path.join(os.path.dirname(PROJECT_ROOT), "ps4_dump", "CUSA12878-patch")
 BUILD_DIR = os.path.join(PROJECT_ROOT, "pack_modes_bundles")
 SONG_IDS_PATH = os.path.join(PROJECT_ROOT, "beat_saber_song_ids.json")
 CAT_ORIGIN = os.path.join(DUMP_DIR, "Media", "StreamingAssets", "aa", "catalog.json")
@@ -41,11 +43,32 @@ def _load_manifest():
 ALBUMS = _load_albums()
 MANIFEST = _load_manifest()
 
+# Hardware-resource gates (CI has no decrypted game dump and no locally-built
+# patched bundles — those exist only on a machine that ran the pipeline).
+# Tests that need them SKIP (not fail) when absent, mirroring the skipif
+# pattern already used in test_pack_mode_bundles.py. Song selection rules:
+#   - origin bundle/catalog tests -> need the ps4_dump DLC pack bundles
+#   - patched-bundle tests -> need pack_modes_bundles/ + manifest.json
+HAS_DUMP = os.path.isdir(DUMP_DIR) and os.path.isfile(CAT_ORIGIN)
+_HAS_BUILT = os.path.isdir(BUILD_DIR) and any(
+    f.endswith('.bundle') for f in (os.listdir(BUILD_DIR) if os.path.isdir(BUILD_DIR) else [])
+) and bool(MANIFEST)
+
+_FIXTURE_PACKS = ("therollingstones", "lizzo", "billieeilish", "camellia")
+_HAS_BUILT_ALL = _HAS_BUILT and all(
+    any(f.startswith(f"{p}_pack_modes_") for f in os.listdir(BUILD_DIR))
+    for p in _FIXTURE_PACKS
+)
+pytestmark_dump = pytest.mark.skipif(not HAS_DUMP, reason="decrypted game dump (ps4_dump/) not present — hardware-environment test")
+pytestmark_built = pytest.mark.skipif(not _HAS_BUILT_ALL, reason="locally-built patched pack bundles (pack_modes_bundles/) not present for all fixture packs — hardware-environment test")
+
 
 # ─── Tier 1: Origin bundle integrity ─────────────────────────────────────────
 
 class TestOriginBundleIntegrity:
     """Can we read and parse the origin bundle for every configured pack?"""
+    pytestmark = pytestmark_dump
+
 
     @pytest.fixture(params=["therollingstones", "lizzo", "billieeilish", "camellia"])
     def pack(self, request):
@@ -154,6 +177,9 @@ class TestOriginBundleIntegrity:
 # ─── Tier 2: Blob patching correctness ───────────────────────────────────────
 
 class TestBlobPatching:
+    pytestmark = [pytestmark_dump, pytestmark_built]
+
+
     """Does build_modes_blob produce correct output for every song?"""
 
     @pytest.fixture(params=["therollingstones", "lizzo", "billieeilish", "camellia"])
@@ -286,6 +312,9 @@ class TestBlobPatching:
 # ─── Tier 3: Bundle rebuild integrity ────────────────────────────────────────
 
 class TestBundleRebuild:
+    pytestmark = [pytestmark_dump, pytestmark_built]
+
+
     """Does rebuild_bundle + rebuild_bundle_file produce a valid bundle?"""
 
     @pytest.fixture(params=["therollingstones", "lizzo", "billieeilish", "camellia"])
@@ -387,6 +416,9 @@ class TestBundleRebuild:
 # ─── Tier 4: CRC and catalog consistency ─────────────────────────────────────
 
 class TestCRCAndCatalog:
+    pytestmark = [pytestmark_dump, pytestmark_built]
+
+
     """Does the patched bundle CRC match the catalog entry?"""
 
     @pytest.fixture(params=["therollingstones", "lizzo", "billieeilish", "camellia"])
@@ -505,6 +537,9 @@ class TestCRCAndCatalog:
 # ─── Tier 5: Catalog dataindex integrity after merge ─────────────────────────
 
 class TestCatalogDataindexes:
+    pytestmark = [pytestmark_dump, pytestmark_built]
+
+
     """Verify all dataindexes remain valid after catalog regeneration."""
 
     @pytest.fixture(params=["therollingstones", "lizzo", "billieeilish", "camellia"])
@@ -582,6 +617,9 @@ class TestCatalogDataindexes:
 # ─── Tier 6: Cross-pack structural comparison ────────────────────────────────
 
 class TestCrossPackComparison:
+    pytestmark = [pytestmark_dump, pytestmark_built]
+
+
     """Compare therollingstones (works) vs others (crash) to find structural diffs."""
 
     def test_therollingstones_vs_lizzo_origin_sets(self):
@@ -792,6 +830,9 @@ class TestFeatureFlagGating:
 # ─── Tier 8: Config generation consistency ───────────────────────────────────
 
 class TestConfigGeneration:
+    pytestmark = [pytestmark_dump, pytestmark_built]
+
+
     """Verify that pipeline config generation produces consistent results."""
 
     def test_single_pack_catalog_has_one_entry(self):

@@ -9,7 +9,7 @@ description: >
 
 # Current Versions
 plugin_version: "0.8047"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8047: Unicode metadata matching (json_unescape_inplace \uXXXX + fold_utf8_to_ascii key fold mirroring extract_utf16_string's '?' projection; create_il2cpp_string UTF-8→UTF-16LE fix); v0.8046: enable_beatmap_mode_mapping REALLY gates; v0.8045: one combined boot toast
-pipeline_version: "0.5346" # in beat_saber_deluxe/VERSION - Exp 228: song_metadata.json raw UTF-8 (ensure_ascii=False); V4 columnar beatmap support (is_v4_beatmap/convert_v4_to_v3 + V4 Info.dat song.title/author + audio.bpm); --metadata-only mode. Exp 227: _resolve_deployed_packs; authoritative packs= scope; --clean-ps4 wipes ALL local state.
+pipeline_version: "0.5346" # in beat_saber_deluxe/VERSION - QA-FROZEN for this release (user directive post-QA: NO functional pipeline changes; lint findings suppressed via pyproject.toml per-file-ignores, not code edits). Exp 229 (docs/tests/CI only): CI fixed (repo-relative test paths, hardware skip gates, pipefail, ruff clean via config); release zip ships all 69 example files + ps4_dump disclaimer; clean-slate wipe preserves git-tracked assets. Exp 228: song_metadata.json raw UTF-8 (ensure_ascii=False); V4 columnar beatmap support (is_v4_beatmap/convert_v4_to_v3 + V4 Info.dat song.title/author + audio.bpm); --metadata-only mode. Exp 227: _resolve_deployed_packs; authoritative packs= scope; --clean-ps4 wipes ALL local state.
 
 # Platform Constraints
 target_platform: PS4

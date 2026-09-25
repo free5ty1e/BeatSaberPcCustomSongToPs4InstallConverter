@@ -148,3 +148,41 @@ Every cycle must update:
 6. Stage all changes in git
 
 See also: [[plugin-architecture]], [[toolchain-and-build]], [[ps4-file-system-redirects]], [[beatmap-conversion-pipeline]]
+
+## CI-Environment Test Gating (Exp 229)
+
+GitHub runners cannot have the decrypted game dump (`ps4_dump/`) or the
+locally-built patched pack bundles (`pack_modes_bundles/`) — those exist
+only on the hardware-development machine. Tests needing them must SKIP,
+not fail. Two gates at module level in `tests/test_pack_mode_pipeline.py`:
+
+```python
+HAS_DUMP = os.path.isdir(DUMP_DIR) and os.path.isfile(CAT_ORIGIN)
+_HAS_BUILT_ALL = ... all four fixture packs present in pack_modes_bundles/
+pytestmark_dump  = pytest.mark.skipif(not HAS_DUMP, ...)
+pytestmark_built = pytest.mark.skipif(not _HAS_BUILT_ALL, ...)
+# per-class: pytestmark = [pytestmark_dump, pytestmark_built]
+```
+
+The `built` gate requires ALL fixture packs — a mid-deploy partial build
+(e.g. 2 of 5 packs rebuilt during a chained script run) skips the class
+instead of failing on missing manifest entries.
+
+**Two more CI traps found here (both bit us):**
+1. `cmd 2>&1 | tee out.txt` swallows the command's exit code — the CI job
+   showed GREEN while 107 tests failed. Always `set -o pipefail` first.
+2. Tests must NEVER hardcode `/workspace/...` absolute paths — runners
+   check the repo out elsewhere. Derive from `__file__`
+   (`os.path.dirname(os.path.dirname(os.path.abspath(__file__)))`).
+
+## QA-Freeze Discipline (Exp 229 correction)
+
+After the user completes hands-on QA of a release candidate, production
+code (`full_custom_song_pipeline.py`, plugin source) is FROZEN on that
+branch — no functional AND no style edits. When CI lint flags findings in
+frozen code, fix the CONFIG, not the code:
+`[tool.ruff.lint.per-file-ignores]` in `pyproject.toml` scopes the exact
+rules (F841/F401/F541/I001) to the frozen file, with a comment recording
+why. The linter serves the release; the release does not serve the linter.
+Docs, tests, and CI workflow files remain fair game — "test updates do not
+count" as functional changes.

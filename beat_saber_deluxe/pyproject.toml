@@ -48,3 +48,13 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 ignore = ["E501", "E402"]
+
+# full_custom_song_pipeline.py is QA-FROZEN for this release (hardware-verified
+# through Exps 217-228; do not modify code to satisfy style tooling). The
+# remaining findings there are behavior-neutral style residue: unused local
+# flag variables (F841), an unused defensive import (F401), f-string prefixes
+# without placeholders (F541), and function-local import ordering (I001 —
+# deliberate: function-local imports avoid heavy module-level dependencies
+# like UnityPy). Suppressed HERE, in config, instead of editing frozen code.
+[tool.ruff.lint.per-file-ignores]
+"tools/full_custom_song_pipeline.py" = ["F841", "F401", "F541", "I001"]

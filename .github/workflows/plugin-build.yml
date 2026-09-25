@@ -137,6 +137,7 @@ jobs:
           mkdir -p release-zip/plugins
           mkdir -p release-zip/docs/features
           mkdir -p release-zip/docs/examples
+          mkdir -p release-zip/docs/example-scripts
 
           # Plugin binaries
           cp beat_saber_deluxe/beat_saber_deluxe.prx release-zip/plugins/
@@ -146,14 +147,18 @@ jobs:
           cp plugins.ini release-zip/
           cp redirects.json release-zip/
           cp features.json release-zip/
+          # Pipeline configuration template the user edits for their own PS4
+          # (IP, FTP port) — see README "Configure"
+          cp beat_saber_deluxe/ps4_config.example.json release-zip/
 
           # Changelogs and version
           cp beat_saber_deluxe/CHANGELOG-PLUGIN.md release-zip/
           cp beat_saber_deluxe/CHANGELOG-PIPELINE.md release-zip/
           cp beat_saber_deluxe/VERSION release-zip/
 
-          # Main README
+          # Main README + pipeline README
           cp README.md release-zip/
+          cp beat_saber_deluxe/README.md release-zip/PIPELINE-README.md
 
           # Feature docs
           cp beat_saber_deluxe/docs/features/custom-song-replacement.md release-zip/docs/features/
@@ -164,6 +169,11 @@ jobs:
           cp beat_saber_deluxe/docs/camellia-pack-example.md release-zip/docs/examples/
           cp beat_saber_deluxe/docs/how-to-replace-pack.md release-zip/docs/
 
+          # EVERY example_*.* file (commands + scripts for each music pack —
+          # ready-to-run reference deployments the user can adapt; 69 files:
+          # 34 packs x (.md command doc + .sh script))
+          cp .agent/docs/example_* release-zip/docs/example-scripts/
+
           # Test coverage report
           if [ -d "beat_saber_deluxe/htmlcov" ]; then
             cp -r beat_saber_deluxe/htmlcov release-zip/coverage-report
@@ -172,10 +182,18 @@ jobs:
           # Pipeline tools (exclude __pycache__)
           rsync -a --exclude='__pycache__' beat_saber_deluxe/tools/ release-zip/tools/
 
+          # Pipeline prerequisites the tools import (song catalog the pack
+          # resolution + slot targeting rely on)
+          cp beat_saber_deluxe/beat_saber_song_ids.json release-zip/
+
+          # requirements for end users installing the pipeline
+          cp beat_saber_deluxe/requirements-test.txt release-zip/requirements.txt
+
           # Create the zip
           cd release-zip && zip -r "../${ZIP_NAME}" . && cd ..
           echo "Created ${ZIP_NAME}"
           ls -lh "${ZIP_NAME}"
+          echo "=== example files bundled: $(ls release-zip/docs/example-scripts/ | wc -l) ==="
 
       - name: Verify artifacts
         run: |

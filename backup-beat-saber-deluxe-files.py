@@ -517,6 +517,24 @@ def backup_ps4_files(target_dir):
     return backed_up, failed
 
 
+def _git_tracked_files(dir_path: Path) -> list:
+    """List git-tracked files under dir_path (returns [] outside a repo or
+    when git is unavailable). Used by clear_local_pipeline_state to preserve
+    committed assets that happen to live inside build-artifact directories
+    (custom_songs/fsb5_header_template.bin & friends, Exp 229)."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--", str(dir_path)],
+            capture_output=True, text=True, timeout=15,
+            cwd=str(dir_path) if not dir_path.is_absolute() else None,
+        )
+        if result.returncode != 0:
+            return []
+        return [Path(line) for line in result.stdout.splitlines() if line.strip()]
+    except Exception:
+        return []
+
+
 def clear_local_pipeline_state():
     """Remove ALL local pipeline state — config caches AND build artifacts —
     so the pipeline treats the PS4 (and the workspace) as fresh.
@@ -556,9 +574,39 @@ def clear_local_pipeline_state():
         if dp.is_dir():
             try:
                 n_files = sum(1 for _ in dp.rglob("*") if _.is_file())
-                shutil.rmtree(dp)
-                cleared.append(f"{dp.name}/ ({n_files} files)")
-                print(f"     ✓ Cleared local {dp.name}/ ({n_files} files)")
+                # Preserve git-tracked files inside the state dir (Exp 229):
+                # custom_songs/ holds committed production assets
+                # (fsb5_header_template.bin — the hevag encoder's FSB5 header
+                # template; quick_test.bundle/quick_test_gen.py — dev fixtures)
+                # that a wholesale rmtree deleted. They are NOT regenerable
+                # pipeline state; deleting them dirties the working tree and
+                # breaks the legacy --hevag codec path. Everything else in
+                # these dirs is a build artifact and gets removed.
+                tracked = _git_tracked_files(dp)
+                if tracked:
+                    kept = [tf.name for tf in tracked]
+                    # Remove everything EXCEPT the tracked files (files and
+                    # symlinks first, then prune empty subdirectories).
+                    for item in list(dp.rglob("*")):
+                        if (item.is_file() or item.is_symlink()) and item not in tracked:
+                            try:
+                                item.unlink()
+                                n_files = max(0, n_files - 1)
+                            except Exception:
+                                pass
+                    # Prune now-empty subdirectories (tracked files' parents stay)
+                    for item in sorted(dp.rglob("*"), reverse=True):
+                        if item.is_dir() and item != dp:
+                            try:
+                                item.rmdir()  # only succeeds when empty
+                            except OSError:
+                                pass
+                    cleared.append(f"{dp.name}/ ({n_files} files, preserved git-tracked: {', '.join(kept)})")
+                    print(f"     ✓ Cleared local {dp.name}/ ({n_files} files, preserved git-tracked: {', '.join(kept)})")
+                else:
+                    shutil.rmtree(dp)
+                    cleared.append(f"{dp.name}/ ({n_files} files)")
+                    print(f"     ✓ Cleared local {dp.name}/ ({n_files} files)")
             except Exception as e:
                 print(f"     ✗ Failed to clear {dp.name}/: {e}")
         else:

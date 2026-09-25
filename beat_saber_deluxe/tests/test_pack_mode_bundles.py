@@ -584,8 +584,14 @@ class TestPackModesRedirects:
 # Integration with the real repo artifacts (skip if dump/song_ids missing)
 # ---------------------------------------------------------------------------
 
-_DUMP_CATALOG = '/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'
-_SONG_IDS = '/workspace/beat_saber_deluxe/beat_saber_song_ids.json'
+# Repo-layout-derived paths (NOT /workspace absolutes — CI checks out the repo
+# elsewhere, and hardcoded /workspace paths made TestRequestedPackUnion fail
+# on GitHub runners: _load_pack_albums found no song_ids.json, entries=[]).
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SONG_IDS = os.path.join(_PROJECT_ROOT, 'beat_saber_song_ids.json')
+_DUMP_CATALOG = os.path.join(os.path.dirname(_PROJECT_ROOT),
+                             'ps4_dump', 'CUSA12878-patch',
+                             'Media', 'StreamingAssets', 'aa', 'catalog.json')
 
 
 def _real_pack_modes_cfg():
@@ -767,7 +773,7 @@ class TestCleanSlateCatalogPair:
     deploy gates checked a non-empty PINNED pack_modes.packs list, which the
     Exp 224 auto-discovery default ([]) made permanently False."""
 
-    _BUNDLE_DIR = '/workspace/beat_saber_deluxe/pack_modes_bundles'
+    _BUNDLE_DIR = os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')
     _BUNDLE = 'billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle'
 
     def _clean_slate_cfg(self, tmp_path):
@@ -789,7 +795,7 @@ class TestCleanSlateCatalogPair:
                 'packs': [],  # auto-discovery default (Exp 224)
                 'build_dir': str(build_dir),
                 'song_ids_path': _SONG_IDS,
-                'dump_dir': '/workspace/ps4_dump/CUSA12878-patch',
+                'dump_dir': os.path.join(os.path.dirname(_PROJECT_ROOT), 'ps4_dump', 'CUSA12878-patch'),
                 'catalog_key': 'aa/catalog.json',
                 'patched_catalog': 'catalog_pack_modes.json',
                 'patched_catalog_local': str(tmp_path / 'catalog_pack_modes.json'),
@@ -811,7 +817,7 @@ class TestCleanSlateCatalogPair:
         """_ensure_pack_mode_bundles must regenerate the local merged catalog
         when it is missing (clean slate) — the catalog redirect pair can only be
         ensured once the file exists."""
-        if not os.path.isfile('/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'):
+        if not os.path.isfile(_DUMP_CATALOG):
             pytest.skip("origin catalog not present")
         from full_custom_song_pipeline import _ensure_pack_mode_bundles
         cfg = self._clean_slate_cfg(tmp_path)
@@ -825,7 +831,7 @@ class TestCleanSlateCatalogPair:
     def test_redirects_include_catalog_after_ensure(self, tmp_path):
         """After ensure (catalog regenerated), _get_pack_modes_redirects must
         carry BOTH the pack bundle redirect AND the aa/catalog.json redirect."""
-        if not os.path.isfile('/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'):
+        if not os.path.isfile(_DUMP_CATALOG):
             pytest.skip("origin catalog not present")
         from full_custom_song_pipeline import (_ensure_pack_mode_bundles,
                                                _get_pack_modes_redirects)
@@ -876,7 +882,7 @@ class TestRequestedPackUnion:
             'pack_modes': {
                 'packs': [], 'build_dir': str(build_dir),
                 'song_ids_path': _SONG_IDS,
-                'dump_dir': '/workspace/ps4_dump/CUSA12878-patch',
+                'dump_dir': os.path.join(os.path.dirname(_PROJECT_ROOT), 'ps4_dump', 'CUSA12878-patch'),
                 'catalog_key': 'aa/catalog.json',
                 'patched_catalog': 'catalog_pack_modes.json',
                 'patched_catalog_local': str(tmp_path / 'catalog_pack_modes.json'),
@@ -912,7 +918,7 @@ class TestRequestedPackUnion:
     def test_ensure_includes_requested_missing_bundle(self, tmp_path, monkeypatch):
         """_ensure_pack_mode_bundles with a requested pack must target that
         pack's entry even when no bundle exists locally yet (clean build)."""
-        if not os.path.isfile('/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/aa/catalog.json'):
+        if not os.path.isfile(_DUMP_CATALOG):
             pytest.skip("origin catalog not present")
         from full_custom_song_pipeline import _get_pack_modes_entries
         cfg, rpath = self._cfg_with_state(tmp_path, ['billieeilish'])
@@ -939,7 +945,7 @@ class TestClearSongNoGhostPacks:
         from full_custom_song_pipeline import (_resolve_deployed_packs,
                                                _resolve_active_packs)
         cfg = {
-            'pack_modes': {'packs': [], 'build_dir': '/workspace/beat_saber_deluxe/pack_modes_bundles'},
+            'pack_modes': {'packs': [], 'build_dir': os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')},
             'paths': {},
         }
         rpath = tmp_path / 'redirects.json'
@@ -959,7 +965,7 @@ class TestClearSongNoGhostPacks:
         from full_custom_song_pipeline import (_resolve_deployed_packs,
                                                _get_pack_modes_entries)
         cfg = {
-            'pack_modes': {'packs': [], 'build_dir': '/workspace/beat_saber_deluxe/pack_modes_bundles'},
+            'pack_modes': {'packs': [], 'build_dir': os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')},
             'paths': {},
         }
         rpath = tmp_path / 'redirects.json'

@@ -20,6 +20,8 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 >   ps4_dump/CUSA12878-patch/        # Game patch (v2.04)
 >   ```
 >   The dump must include the unpacked patch files (eboot.bin, Media/ directory, etc.). Tools like PS4 Dumper on a jailbroken PS4 create this via the `split=3` config option.
+> - **Bring your own dump — it is NOT included in this repo or any release.**
+>   Dumped game data is copyrighted content and cannot be distributed. **You are responsible for obtaining your own decrypted dump of the game with the correct version (v2.04) and the DLC loadout you intend to modify** (the music packs whose songs you want to replace must be installed on the PS4 BEFORE dumping — their pack bundles live in the patch's `Media/StreamingAssets/aa/` and the pipeline reads them from your dump). Place the dump files into the `ps4_dump/` folder as shown above.
 
 ## Features
 

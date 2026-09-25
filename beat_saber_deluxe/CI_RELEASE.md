@@ -20,16 +20,45 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | File                                 | Description                                      |
 | ------------------------------------ | ------------------------------------------------ |
 | `tools/full_custom_song_pipeline.py` | Main pipeline script for converting custom songs |
-| `tools/*.py`                         | Supporting tools (downloader, audio encoder)     |
+| `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder) |
 | `VERSION`                            | Pipeline version                                 |
+| `beat_saber_song_ids.json`           | Song-slot catalog: every pack, slot ID, stock song title, bundle name — the pipeline's targeting database |
+| `requirements.txt`                    | Python dependencies for the pipeline            |
+| `ps4_config.example.json`             | Copy to `ps4_config.json`, fill in your PS4's IP/FTP |
+
+### 📚 Documentation
+
+| File | Description |
+| ---- | ----------- |
+| `README.md` | Main documentation (pipeline, features, feature flags, clean slate) |
+| `PIPELINE-README.md` | Pipeline-internal README |
+| `CHANGELOG-PLUGIN.md` / `CHANGELOG-PIPELINE.md` | Full change history |
+| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping |
+| `docs/examples/`, `docs/how-to-replace-pack.md` | Pack-replacement walkthroughs |
+| `docs/example-scripts/example_*` | **All 69 ready-to-run example files** — per-music-pack command docs (`.md`) + shell scripts (`.sh`) for every DLC pack, with verified BeatSaver MAP_IDs for five packs (billie eilish, britney spears, camelia, lizzo, rolling stones) and `[REPLACE_WITH_MAP_ID]` templates for the rest |
 
 ## Running the Pipeline
 
 **Prerequisites:**
 
 - Python 3.8+
-- `pip install UnityPy` (see `requirements-test.txt`)
+- `pip install UnityPy` (see `requirements.txt` in this zip)
 - A PS4 with GoldHEN, FTP enabled (port 2121), configured in `ps4_config.json`
+  (copy `ps4_config.example.json` and fill in your PS4's IP)
+
+**⚠️ REQUIRED — bring your own decrypted game dump (`ps4_dump/`):**
+
+> This release does **NOT** include any dumped game data. The pack-bundle
+> patching and catalog merging in the pipeline read the ORIGINAL stock pack
+> bundles and Addressables catalog from a decrypted dump of YOUR OWN copy of
+> the game. **You are responsible for obtaining your own dump of the correct
+> game version with the DLC music packs you intend to modify, and placing the
+> files into the `ps4_dump/` folder** next to the repo (the pipeline expects
+> `ps4_dump/CUSA12878-patch/...`). We cannot and do not distribute these
+> files — they are copyrighted game content. The expected layout is
+> documented in the README ("ps4_dump"). Without the dump, per-song deploys
+> still work (they only need the dump for the music-pack mode mapping /
+> catalog steps); pack-mode deploys will tell you which bundle is missing.
 
 **Quick Start — one command per song (recommended):**
 
