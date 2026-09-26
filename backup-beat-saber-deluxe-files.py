@@ -518,19 +518,24 @@ def backup_ps4_files(target_dir):
 
 
 def _git_tracked_files(dir_path: Path) -> list:
-    """List git-tracked files under dir_path (returns [] outside a repo or
-    when git is unavailable). Used by clear_local_pipeline_state to preserve
-    committed assets that happen to live inside build-artifact directories
+    """List git-tracked files under dir_path as ABSOLUTE resolved paths
+    (returns [] outside a repo or when git is unavailable). Used by
+    clear_local_pipeline_state to preserve committed assets that happen to
+    live inside build-artifact directories
     (custom_songs/fsb5_header_template.bin & friends, Exp 229).
 
     Exp 231: the git call's cwd is pinned to the repo root (derived from this
-    script's own path), NOT the process's working directory. The original
-    version inherited the caller's cwd — running the backup script from any
-    directory other than the repo root made `git ls-files` resolve to no
-    repository, return [], and the wipe rmtree'd the state dirs wholesale,
-    deleting the tracked files AGAIN on the user's real clean-slate run
-    (my earlier scratch test passed only because it happened to run from
-    /workspace)."""
+    script's own path), NOT the process's working directory — an inherited
+    cwd from a non-repo launch dir made git resolve to no repository.
+
+    Exp 233: the returned paths are now ABSOLUTE (repo_root / relative).
+    `git ls-files` emits REPO-RELATIVE paths ('beat_saber_deluxe/custom_songs/
+    fsb5_header_template.bin'), but the wipe compares them against rglob()'s
+    ABSOLUTE paths with `item not in tracked` — a relative Path can never
+    equal an absolute one, so EVERY file (tracked included) was unlinked
+    while the log printed 'preserved git-tracked: ...'. Two prior fixes
+    (Exp 229 cwd pin, Exp 231) never touched this comparison, which is why
+    the files kept dying on every real clean-slate run."""
     try:
         # The backup script lives at the repo root (next to .git)
         repo_root = Path(__file__).resolve().parent
@@ -540,7 +545,9 @@ def _git_tracked_files(dir_path: Path) -> list:
         )
         if result.returncode != 0:
             return []
-        return [Path(line) for line in result.stdout.splitlines() if line.strip()]
+        # git ls-files paths are repo-RELATIVE; resolve them to absolute so
+        # they compare equal against rglob()'s absolute paths.
+        return [(repo_root / line).resolve() for line in result.stdout.splitlines() if line.strip()]
     except Exception:
         return []
 
@@ -595,10 +602,15 @@ def clear_local_pipeline_state():
                 tracked = _git_tracked_files(dp)
                 if tracked:
                     kept = [tf.name for tf in tracked]
+                    # Exp 233: compare as RESOLVED-ABSOLUTE strings — Path
+                    # equality failed silently across relative/absolute forms
+                    # for three experiments running. A set of strings is the
+                    # unambiguous comparison surface.
+                    tracked_abs = {str(tf.resolve()) for tf in tracked}
                     # Remove everything EXCEPT the tracked files (files and
                     # symlinks first, then prune empty subdirectories).
                     for item in list(dp.rglob("*")):
-                        if (item.is_file() or item.is_symlink()) and item not in tracked:
+                        if (item.is_file() or item.is_symlink()) and str(item.resolve()) not in tracked_abs:
                             try:
                                 item.unlink()
                                 n_files = max(0, n_files - 1)

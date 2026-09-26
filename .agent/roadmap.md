@@ -244,6 +244,12 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 233) — The Real 3-File Deletion Bug + --no-prompt + Last CI Gates
+- [x] **3-file deletion ACTUALLY fixed:** relative-vs-absolute Path comparison in the wipe (git ls-files emits repo-relative; rglob yields absolute; `item not in tracked` never matched — every file unlinked, log lied "preserved"). Both layers normalized to resolved-absolute strings; NEW E2E test runs the real wipe against a scratch git repo.
+- [x] **--no-prompt on all 34 example scripts** — unattended chained runs.
+- [x] **CI green:** last live-state test class (TestPackModesRealArtifacts) gated like the hardware tests; both jobs' single failing test resolved.
+- [x] **User full QA procedure PASSED from clean slate** (chained multi-pack green — Exp 232 validated on hardware). v0.5350.
+
 ### Completed (Exp 232) — CRITICAL: Chained Multi-Pack Deploy Keeps Only Last Pack
 - [x] **Root cause:** stale-sweep validated pack redirects by LOCAL bundle existence; clean-slate wipe empties pack_modes_bundles/ → each script's deploy deleted the previous packs' redirects. Latent since Exp 226; exposed by the true clean slate. Fix: validity = current pair OR deployed-per-state-file (_resolve_deployed_packs).
 - [x] **Live state repaired:** 5 pack pairs + catalog re-added, regenerated for all 5 packs, 2 ghost PATD song redirects (deadmanwalking/sugarsoaker) cleared via --clear-target-song. Validation PASSED (5 packs, 36 songs, catalog md5 match).

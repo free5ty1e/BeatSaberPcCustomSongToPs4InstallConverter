@@ -70,10 +70,22 @@ echo "PRE-DEPLOY CHECK — Current Beat Saber Deluxe state on PS4"
 echo "=============================================================="
 python3 /workspace/beat_saber_deluxe/development/scripts/ps4_state.py
 echo ""
-echo "Review the PS4 state above. If it is NOT what you expect (e.g. you"
-echo "do not want to proceed from this state), press Ctrl+C to abort."
-echo "Otherwise press Enter to continue with the deployment..."
-read -r _
+# --no-prompt: skip the interactive confirmation so chained pack scripts
+# can run in series without babysitting (e.g. script1.sh --no-prompt &&
+# script2.sh --no-prompt && ...). Default (no flag) keeps the prompt.
+NO_PROMPT=0
+for arg in "$@"; do
+    if [ "$arg" = "--no-prompt" ]; then NO_PROMPT=1; fi
+done
+if [ "$NO_PROMPT" -eq 1 ]; then
+    echo "--no-prompt: skipping confirmation, continuing in 3s..."
+    sleep 3
+else
+    echo "Review the PS4 state above. If it is NOT what you expect (e.g. you"
+    echo "do not want to proceed from this state), press Ctrl+C to abort."
+    echo "Otherwise press Enter to continue with the deployment..."
+    read -r _
+fi
 echo ""
 
 echo "=== Deploying Daft Punk pack songs (full orchestration) ==="

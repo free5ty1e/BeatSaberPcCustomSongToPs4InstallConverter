@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-**Plugin v0.8047 | Pipeline v0.5349** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
+**Plugin v0.8047 | Pipeline v0.5350** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
 
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
@@ -341,7 +341,13 @@ validation exits non-zero** so a broken state can never look green.
 **Batch deploys:** for a whole music pack, use the ready-made scripts in
 `.agent/docs/example_script_to_install_custom_songs_over_<pack>_music_pack.sh`
 (one `--deploy-full` per song, with a PS4-state check + confirmation prompt up
-front and error handling per song).
+front and error handling per song). Pass `--no-prompt` to skip the confirmation
+and chain several packs unattended:
+
+```bash
+'/workspace/.agent/docs/example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh' --no-prompt && \
+'/workspace/.agent/docs/example_script_to_install_custom_songs_over_britney_spears_music_pack.sh' --no-prompt
+```
 
 > **`deploy_all.sh` is OUTDATED** (13 hardcoded Rolling Stones slots, pre-dating
 > pack-mode patching). It remains only for historical reference — do not use it

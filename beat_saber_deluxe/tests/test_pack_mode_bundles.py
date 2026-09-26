@@ -601,7 +601,13 @@ def _real_pack_modes_cfg():
 
 
 class TestPackModesRealArtifacts:
-    @pytest.mark.skipif(not os.path.isfile(_SONG_IDS), reason='song_ids.json not present')
+    @pytest.mark.skipif(
+        not (os.path.isfile(_SONG_IDS) and os.path.isdir(
+            os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) and any(
+                f.endswith('.bundle') for f in os.listdir(os.path.join(
+                    _PROJECT_ROOT, 'pack_modes_bundles')) if os.path.isfile(
+                    os.path.join(_PROJECT_ROOT, 'pack_modes_bundles', f)))),
+        reason='song_ids.json or locally-built pack bundles not present (hardware-environment test)')
     def test_real_entries_and_redirects(self):
         """Real song_ids.json + real built bundles produce the ACTIVE redirect set.
         (Exp 224: no hardcoded pack list — the active set is auto-discovered
@@ -619,6 +625,7 @@ class TestPackModesRealArtifacts:
 
     @pytest.mark.skipif(not os.path.isfile(_DUMP_CATALOG), reason='dump catalog not present')
     @pytest.mark.skipif(not os.path.isfile(_SONG_IDS), reason='song_ids.json not present')
+    @pytest.mark.skipif(not any(f.endswith('.bundle') for f in os.listdir(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) if os.path.isfile(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles', f))) if os.path.isdir(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) else True, reason='locally-built pack bundles not present (hardware-environment test)')
     def test_ensure_skip_if_already_built(self):
         """All configured packs are built -> _ensure_pack_mode_bundles returns 0."""
         cfg = _real_pack_modes_cfg()
@@ -629,6 +636,7 @@ class TestPackModesRealArtifacts:
 
     @pytest.mark.skipif(not os.path.isfile(_DUMP_CATALOG), reason='dump catalog not present')
     @pytest.mark.skipif(not os.path.isfile(_SONG_IDS), reason='song_ids.json not present')
+    @pytest.mark.skipif(not any(f.endswith('.bundle') for f in os.listdir(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) if os.path.isfile(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles', f))) if os.path.isdir(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) else True, reason='locally-built pack bundles not present (hardware-environment test)')
     def test_merged_catalog_crcs_match_bundles(self):
         """Every merged-catalog entry's m_Crc equals the bundle's dec-stream CRC."""
         import build_pack_mode_bundles as bpm
@@ -666,6 +674,7 @@ class TestPackModesRealArtifacts:
             assert found, f"catalog entry for {pack} not found"
 
     @pytest.mark.skipif(not os.path.isfile(_DUMP_CATALOG), reason='dump catalog not present')
+    @pytest.mark.skipif(not any(f.endswith('.bundle') for f in os.listdir(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) if os.path.isfile(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles', f))) if os.path.isdir(os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')) else True, reason='locally-built pack bundles not present (hardware-environment test)')
     def test_merged_catalog_entry_dataindexes_stay_valid(self):
         """
         CRITICAL regression (v0.5319 PS4 crash): m_EntryDataString rec[4] is a
