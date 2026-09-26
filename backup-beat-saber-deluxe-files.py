@@ -521,12 +521,22 @@ def _git_tracked_files(dir_path: Path) -> list:
     """List git-tracked files under dir_path (returns [] outside a repo or
     when git is unavailable). Used by clear_local_pipeline_state to preserve
     committed assets that happen to live inside build-artifact directories
-    (custom_songs/fsb5_header_template.bin & friends, Exp 229)."""
+    (custom_songs/fsb5_header_template.bin & friends, Exp 229).
+
+    Exp 231: the git call's cwd is pinned to the repo root (derived from this
+    script's own path), NOT the process's working directory. The original
+    version inherited the caller's cwd — running the backup script from any
+    directory other than the repo root made `git ls-files` resolve to no
+    repository, return [], and the wipe rmtree'd the state dirs wholesale,
+    deleting the tracked files AGAIN on the user's real clean-slate run
+    (my earlier scratch test passed only because it happened to run from
+    /workspace)."""
     try:
+        # The backup script lives at the repo root (next to .git)
+        repo_root = Path(__file__).resolve().parent
         result = subprocess.run(
-            ["git", "ls-files", "--", str(dir_path)],
+            ["git", "-C", str(repo_root), "ls-files", "--", str(dir_path)],
             capture_output=True, text=True, timeout=15,
-            cwd=str(dir_path) if not dir_path.is_absolute() else None,
         )
         if result.returncode != 0:
             return []

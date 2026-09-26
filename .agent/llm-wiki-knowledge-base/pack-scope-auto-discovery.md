@@ -115,3 +115,25 @@ Rules (v0.5345):
 **Lesson: a fallback built for one flow (build-time scope) must never be
 consumed by a different flow (deploy-time preservation) — give the deploy side
 its own strict resolver.**
+
+## State-Authority vs Local-Existence (Exp 232 — the sweep rule)
+
+A redirect-**deleting** sweep must validate against the DEPLOYED-STATE
+authority (`_resolve_deployed_packs` — the redirects.json state file),
+never against local cache existence (`os.path.isfile` on build artifacts).
+The Exp 232 regression: `_ensure_pack_bundle_redirects`' stale-sweep asked
+"which packs are still configured?" via the current pair — which filters by
+local bundle presence — while the clean-slate wipe empties
+`pack_modes_bundles/`. Each chained script's deploy then found only its OWN
+bundle locally and deleted every other pack's redirect ("pack no longer
+configured") even though those bundles were live on the PS4. The 5-script
+chain ended with exactly one pack redirect: the last script's.
+
+**Why prior QA passed:** stale local bundles from earlier sessions made the
+file-existence filter accidentally permissive. The bug was latent since
+Exp 226; the Exp 227 true-clean-slate exposed it.
+
+**Rule:** local caches are BUILD inputs; the state file is the RECORD of
+what is deployed. Deletion decisions read the record, not the cache. A
+pack is removable only when it is in neither the current pair NOR the
+deployed state.

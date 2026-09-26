@@ -1335,3 +1335,209 @@ class TestV4BeatmapConversion:
         # and in the mode-injection path
         assert re.search(r"if is_v4_beatmap\(bm_data\):", src) is not None, \
             "mode injection path must also handle V4 sources"
+
+
+# ======================================================================
+# Exp 231 — V4 columnar clobber: NoArrows arrows after v4→v3 merge
+# ======================================================================
+
+class TestV4NoArrowsClobberFix:
+    """
+    '15 Minutes' (443f3, BeatSaver v4.0.x columnar) shipped Hard NoArrows
+    charts IDENTICAL to Standard — arrows everywhere. Chain: the generator
+    wrote d=8 onto the columnar EVENTS, but colorNotesData ROWS kept their
+    arrow d; convert_v4_to_v3 merges row-OVER-event at injection, so the
+    arrows came back. OneSaber was immune (post-merge re-application since
+    Exp 218); 90Degree is immune (generator only APPENDS rotationEvents,
+    which the row merge cannot clobber). Fix: re-apply the NoArrows dot pass
+    AFTER format conversion at injection (idempotent: d=8 stays d=8).
+    """
+
+    def test_row_merge_clobbers_generator_dots(self):
+        """The bug itself: convert_v4_to_v3 merges row-over-event, restoring
+        arrow d-values over the generator's d=8 events."""
+        from full_custom_song_pipeline import convert_v4_to_v3
+        gen_noarrows = {
+            "version": "4.0.1",
+            "colorNotes": [{"b": 5.0, "d": 8}, {"b": 5.0, "i": 1, "d": 8}],
+            "colorNotesData": [{"x": 2, "y": 0, "c": 0, "d": 1},
+                                {"x": 3, "y": 0, "c": 1, "d": 4}],
+        }
+        merged = convert_v4_to_v3(gen_noarrows)
+        # This documents the clobber — the reason the post-conversion pass exists
+        assert merged['colorNotes'][0]['d'] == 1, \
+            "row merge must overwrite event d (that IS the converter contract)"
+        assert merged['colorNotes'][1]['d'] == 4
+
+    def test_post_conversion_no_arrows_pass_restores_dots(self):
+        """Re-applying _generate_no_arrows AFTER the v4 conversion yields
+        all-dot charts regardless of the columnar clobber."""
+        from full_custom_song_pipeline import (convert_v4_to_v3,
+                                               normalize_v3_schema,
+                                               _generate_no_arrows)
+        gen_noarrows = {
+            "version": "4.0.1",
+            "colorNotes": [{"b": 5.0, "d": 8}, {"b": 5.0, "i": 1, "d": 8},
+                            {"b": 6.0, "i": 2, "d": 8}],
+            "colorNotesData": [{"x": 2, "y": 0, "c": 0, "d": 1},
+                                {"x": 3, "y": 0, "c": 1, "d": 1},
+                                {"x": 1, "y": 2, "c": 0, "d": 4}],
+            "bombNotes": [], "obstacles": [],
+        }
+        bm = convert_v4_to_v3(__import__('json').loads(__import__('json').dumps(gen_noarrows)))
+        normalize_v3_schema(bm)
+        bm = _generate_no_arrows(bm)
+        dvals = sorted({n.get('d', 8) for n in bm['colorNotes']})
+        assert dvals == [8], f"NoArrows must be all dots after post-conversion pass, got {dvals}"
+        # geometry must survive (x/y/c from the rows)
+        assert bm['colorNotes'][0]['x'] == 2
+        assert bm['colorNotes'][2]['y'] == 2
+
+    def test_no_arrows_pass_idempotent_on_correct_data(self):
+        """The post-conversion pass must be a no-op for well-formed (already
+        denormalized, already-dot) sources."""
+        from full_custom_song_pipeline import _generate_no_arrows
+        ok = {"version": "3.2.0",
+              "colorNotes": [{"b": 5.0, "x": 1, "y": 0, "c": 0, "d": 8},
+                              {"b": 6.0, "x": 2, "y": 1, "c": 1, "d": 8}]}
+        out = _generate_no_arrows(ok)
+        assert all(n['d'] == 8 for n in out['colorNotes'])
+        assert out['colorNotes'][0]['x'] == 1
+
+    def test_injection_path_applies_no_arrows_after_conversion(self):
+        """Source audit: add_mode_characteristics must re-apply the NoArrows
+        dot pass AFTER convert_v4_to_v3 (and must NOT blanket-apply the
+        90Degree generator, which appends rotations and is not idempotent)."""
+        src = open(os.path.join(os.path.dirname(__file__), '..', 'tools',
+                                'full_custom_song_pipeline.py')).read()
+        # The NoArrows post-conversion pass exists...
+        assert re.search(
+            r'elif mode == "NoArrows":\s*\n\s*bm_data = _generate_no_arrows\(bm_data\)', src), \
+            "injection path must re-apply NoArrows dots after format conversion"
+        # ...and it must come AFTER the is_v4_beatmap conversion block
+        m_v4 = re.search(r'if is_v4_beatmap\(bm_data\):', src)
+        m_noarrows = re.search(r'elif mode == "NoArrows":', src)
+        assert m_v4 and m_noarrows and m_v4.start() < m_noarrows.start(), \
+            "NoArrows re-application must follow the v4 conversion in the injection path"
+        # 90Degree must NOT be blanket re-applied (rotation-append is not idempotent)
+        assert 'elif mode in _MODE_GENERATORS' not in src, \
+            "blanket generator re-application would double 90Degree rotations"
+
+    def test_v4_map_expertplus_via_tier3(self):
+        """443f3's ExpertPlus uses '<Diff>.beatmap.dat' (v4 bare tier) — the
+        file selector must still resolve it with ignore_non_standard=True
+        (the mode generators need a Standard source for every difficulty)."""
+        from full_custom_song_pipeline import _select_beatmap_file, DIFFICULTIES
+        files = ['AudioData.dat', 'EasyStandard.dat', 'ExpertPlus.beatmap.dat',
+                 'ExpertPlus.lightshow.dat', 'ExpertStandard.dat', 'HardStandard.dat',
+                 'Info.dat', 'NormalStandard.dat']
+        sel = {d: _select_beatmap_file(d, files, ignore_non_standard=True) for d in DIFFICULTIES}
+        assert sel['ExpertPlus'] == 'ExpertPlus.beatmap.dat'
+        assert sel['Hard'] == 'HardStandard.dat'
+
+
+# ======================================================================
+# Exp 232 — Chained multi-pack deploy on a clean slate must ACCUMULATE pack redirects
+# ======================================================================
+
+class TestChainedPackRedirectAccumulation:
+    """
+    Clean-slate PS4 + 5 pack scripts in sequence ended with only the LAST
+    pack's pack-bundle redirect surviving — the other 4 packs loaded stock
+    (metadata swapped, but stock beatmaps/modes/songs). Root cause:
+    _ensure_pack_bundle_redirects' stale-sweep defined "still configured"
+    purely by LOCAL bundle existence (_get_pack_bundle_redirects filters
+    os.path.isfile), while the clean-slate wipe empties pack_modes_bundles/.
+    Each script's deploy saw only ITS OWN pack's bundle and deleted every
+    other pack's redirect as "no longer configured" — even though those
+    bundles were live on the PS4. Fix (Exp 232): a pack redirect is valid if
+    in the current pair OR the pack is DEPLOYED per the redirects state file
+    (_resolve_deployed_packs — the same authority every deploy flow uses).
+    """
+
+    def _build_cfg(self, tmp_path, build_dir):
+        import full_custom_song_pipeline as fcp
+        _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        albums = json.load(open(os.path.join(_root, 'beat_saber_song_ids.json')))['albums']
+        cfg = {
+            'title': {'id': 'CUSA12878'}, 'ps4': {'ip': 'x', 'ftp_port': 1},
+            'paths': {'afr_base': '/data/GoldHEN/AFR'},
+            'pack_modes': {'packs': [], 'build_dir': str(build_dir),
+                'song_ids_path': os.path.join(_root, 'beat_saber_song_ids.json'),
+                'dump_dir': '/workspace/ps4_dump/CUSA12878-patch',
+                'catalog_key': 'aa/catalog.json',
+                'patched_catalog': 'catalog_pack_modes.json',
+                'patched_catalog_local': str(tmp_path / 'catalog_pack_modes.json')},
+        }
+        with open(cfg['pack_modes']['patched_catalog_local'], 'w') as f:
+            f.write('{}')
+        return cfg, albums
+
+    def test_clean_slate_chain_accumulates_all_packs(self, tmp_path, monkeypatch):
+        """THE regression: 5 scripts chained on a wiped workspace (each pack's
+        local bundle exists only from its own run) must end with all 5 pack
+        redirect entries — never only the last one."""
+        import full_custom_song_pipeline as fcp
+        rpath = tmp_path / 'redirects.json'
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        build_dir = tmp_path / 'build'
+        build_dir.mkdir()
+        cfg, albums = self._build_cfg(tmp_path, build_dir)
+        packs = ['billieeilish', 'britneyspears', 'camellia', 'lizzo', 'therollingstones']
+        for pack in packs:
+            for a in albums:
+                if a['pack'] == pack:
+                    patched = fcp.pack_modes_builder.patched_bundle_name(a['packBundle'])
+                    (build_dir / patched).write_bytes(b'BUNDLE')
+            data = json.loads(rpath.read_text()) if rpath.exists() else {
+                'titleId': 'CUSA12878', 'afrBase': '/data/GoldHEN/AFR', 'redirects': {}}
+            fcp._ensure_pack_bundle_redirects(data, cfg, packs=[pack])
+            rpath.write_text(json.dumps(data))
+        final = json.loads(rpath.read_text())['redirects']
+        pe = [k for k in final if '_pack_assets_' in k]
+        assert len(pe) == 5, f"chained deploy must accumulate all 5 pack redirects, got {len(pe)}"
+        assert 'aa/catalog.json' in final
+
+    def test_deployed_pack_redirect_survives_missing_local_bundle(self, tmp_path, monkeypatch):
+        """A pack whose bundle is live on the PS4 (entry in the state file)
+        but missing locally must NOT have its redirect deleted by another
+        pack's deploy."""
+        import full_custom_song_pipeline as fcp
+        rpath = tmp_path / 'redirects.json'
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        build_dir = tmp_path / 'build'
+        build_dir.mkdir()
+        cfg, albums = self._build_cfg(tmp_path, build_dir)
+        # billieeilish deployed earlier (state file references it), bundle absent locally
+        be_album = next(a for a in albums if a['pack'] == 'billieeilish')
+        be_key = be_album['packBundle']
+        be_val = be_key.replace('_pack_assets_', '_pack_modes_')
+        rpath.write_text(json.dumps({
+            'titleId': 'CUSA12878', 'afrBase': '/data/GoldHEN/AFR',
+            'redirects': {be_key: be_val, 'aa/catalog.json': 'catalog_pack_modes.json'}}))
+        # britneyspears bundle exists locally; its deploy must not delete BE's entry
+        br_album = next(a for a in albums if a['pack'] == 'britneyspears')
+        (build_dir / fcp.pack_modes_builder.patched_bundle_name(br_album['packBundle'])).write_bytes(b'B')
+        data = json.loads(rpath.read_text())
+        fcp._ensure_pack_bundle_redirects(data, cfg, packs=['britneyspears'])
+        assert be_key in data['redirects'], \
+            "deployed pack's redirect deleted because its local bundle is missing — the Exp 232 regression"
+
+    def test_true_stale_pack_redirect_still_removed(self, tmp_path, monkeypatch):
+        """The sweep must still remove redirects for packs that are neither in
+        the current pair nor deployed (e.g. a pack uninstalled long ago)."""
+        import full_custom_song_pipeline as fcp
+        rpath = tmp_path / 'redirects.json'
+        monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
+                            lambda project_root=None: str(rpath))
+        build_dir = tmp_path / 'build'
+        build_dir.mkdir()
+        cfg, albums = self._build_cfg(tmp_path, build_dir)
+        be_album = next(a for a in albums if a['pack'] == 'billieeilish')
+        (build_dir / fcp.pack_modes_builder.patched_bundle_name(be_album['packBundle'])).write_bytes(b'B')
+        ghost_key = 'ghost_pack_assets_all_ffffffffffffffffffffffffffffffff.bundle'
+        data = {'redirects': {ghost_key: 'ghost_pack_modes_assets_all_ffffffffffffffffffffffffffffffff.bundle'}}
+        fcp._ensure_pack_bundle_redirects(data, cfg, packs=['billieeilish'])
+        assert ghost_key not in data['redirects'], "true-stale pack redirect must still be removed"

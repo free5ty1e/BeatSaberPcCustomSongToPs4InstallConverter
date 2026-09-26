@@ -1444,6 +1444,21 @@ def add_mode_characteristics(cab, enable_modes: list, song_dir: str = None,
                             if mode == "OneSaber":
                                 bm_data = _generate_one_saber(bm_data)
                                 log.info(f"  {mode}/{diff}: normalized to blue dots")
+                            # NoArrows normalization AFTER format conversion
+                            # (Exp 231): V4 columnar sources sneak past the
+                            # generator — it writes d=8 (dots) onto the EVENTS,
+                            # but the rows in colorNotesData keep their arrow d,
+                            # and convert_v4_to_v3 merges row-OVER-event, so the
+                            # arrows come back ('15 Minutes' shipped NoArrows
+                            # charts identical to Standard). Re-applying the
+                            # dots pass on the DENORMALIZED data is idempotent
+                            # for well-formed sources (d=8 stays d=8) and fixes
+                            # columnar ones. 90Degree needs no such pass: its
+                            # generator only APPENDS rotationEvents, which the
+                            # row merge cannot clobber.
+                            elif mode == "NoArrows":
+                                bm_data = _generate_no_arrows(bm_data)
+                                log.info(f"  {mode}/{diff}: re-applied dot pass after format conversion")
                             json_bytes = json.dumps(bm_data,
                                                     separators=(',', ':')).encode('utf-8')
                             gz_bytes = gzip.compress(json_bytes)
@@ -2770,6 +2785,16 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict,
     # entry no longer has a matching CRC — the CE-34878-0 crash.
     # Use hash-based matching: extract the content hash from "assets_all_<hash>.bundle"
     # and skip removal if any current pack has the same hash.
+    # Exp 232: a pack redirect is VALID if it is in the current pair (local
+    # bundle present) OR the pack is DEPLOYED per the redirects state file —
+    # the same authority the deploy flows use (_resolve_deployed_packs). The
+    # old sweep validated "still configured" purely by LOCAL file existence:
+    # after a clean-slate wipe (pack_modes_bundles/ emptied), each pack
+    # script's deploy found only its OWN bundle locally and deleted every
+    # other pack's redirect as "no longer configured" — a 5-script chained
+    # deploy ended with only the LAST pack's pack redirect surviving
+    # (metadata swapped but stock beatmaps/modes on 4 packs). Local bundle
+    # presence must never be the authority for deleting deployed state.
     import re
     valid_pack_keys = set(pair.keys())
     valid_hashes = set()
@@ -2778,6 +2803,14 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict,
         m = _hash_re.search(pk)
         if m:
             valid_hashes.add(m.group(1).lower())
+    # Deployed packs (redirects state file): their entries are live on the PS4
+    deployed_pack_names = set(_resolve_deployed_packs(config))
+    deployed_hashes = set()
+    for dp in deployed_pack_names:
+        for e in _get_pack_modes_entries(config, packs=[dp]):
+            m = _hash_re.search(e['bundle_key'])
+            if m:
+                deployed_hashes.add(m.group(1).lower())
     stale_pack_keys = []
     for k in list(redirects):
         m = _hash_re.search(k)
@@ -2786,6 +2819,10 @@ def _ensure_pack_bundle_redirects(redirect_data: dict, config: dict,
         if k in valid_pack_keys:
             continue
         if m.group(1).lower() in valid_hashes:
+            continue
+        # Exp 232: a deployed pack's redirect is NOT stale just because its
+        # local bundle is missing — the bundle is live on the PS4.
+        if m.group(1).lower() in deployed_hashes:
             continue
         stale_pack_keys.append(k)
     for k in stale_pack_keys:

@@ -244,6 +244,17 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 232) — CRITICAL: Chained Multi-Pack Deploy Keeps Only Last Pack
+- [x] **Root cause:** stale-sweep validated pack redirects by LOCAL bundle existence; clean-slate wipe empties pack_modes_bundles/ → each script's deploy deleted the previous packs' redirects. Latent since Exp 226; exposed by the true clean slate. Fix: validity = current pair OR deployed-per-state-file (_resolve_deployed_packs).
+- [x] **Live state repaired:** 5 pack pairs + catalog re-added, regenerated for all 5 packs, 2 ghost PATD song redirects (deadmanwalking/sugarsoaker) cleared via --clear-target-song. Validation PASSED (5 packs, 36 songs, catalog md5 match).
+- [x] 3 regression tests (chain accumulation, deployed-survives-missing-bundle, true-stale removal). v0.5349.
+
+### Completed (Exp 231) — V4 Columnar NoArrows Clobber + cwd-Dependent Wipe Bug
+- [x] **'15 Minutes' NoArrows arrows root-caused:** v4 columnar rows' arrow d clobber the generator's d=8 events via the row-over-event merge at injection. Fix: NoArrows dot pass re-applied AFTER v4/v2 conversion (idempotent; 90Degree excluded — rotation-append not idempotent; OneSaber already post-merge). NOT a missing-difficulty failure — the auto-fill + generators + lookup all ran correctly.
+- [x] **Both v4 songs redeployed live** (15 Minutes + Oxytocin): all 10 NoArrows charts verified all-dots in-bundle; PS4 bundles + pack + catalog live.
+- [x] **The recurring 3-file deletion truly fixed:** Exp 229's preserve logic was cwd-dependent (git ls-files inherited the process cwd — any non-repo launch dir returned [] → wholesale rmtree). Now `git -C <script_dir>`; verified from /workspace, /tmp, /.
+- [x] 5 regression tests (clobber documented, post-conversion pass, idempotency, source-audit ordering, tier-3 ExpertPlus). 639/639; ruff clean. v0.5348.
+
 ### Completed (Exp 230) — Lint Fixes In Code (v0.5347)
 - [x] All 17 ruff findings fixed in `full_custom_song_pipeline.py` (2 dead stores, 3 unused imports AST-verified, 10 f-string prefixes, 2 import sorts). Zero functional changes — normalize_v3_schema byte-equivalence proven across 10 edge cases.
 - [x] Exp 229's pyproject.toml per-file-ignores removed — file fully lint-enforced; `ruff check tools/` exit 0.

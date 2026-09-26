@@ -212,9 +212,10 @@ ship beatmaps in **this exact columnar format** — `colorNotes[{b, i?}]` +
 game parses them natively (it IS the game's own format) — a v4-sourced
 Standard chart deploys and plays with NO conversion.
 
-**Two real hazards (pipeline v0.5346 fixes both):**
+**Three real hazards (pipeline v0.5346/v0.5348 fix all):**
 1. **Procedural mode generators assume denormalized fields.** `_generate_one_saber`/`_generate_no_arrows`/`_generate_90_degree` read and mutate `colorNotes[n]["c"]/["d"]` directly. On a columnar event (`{b, i}` only) they attach inline `c`/`d` ALONGSIDE the `i` index — an ambiguous mixed event (index says "use colorNotesData[2]", inline says blue/dot). Fix: `convert_v4_to_v3()` denormalizes before anything else touches the map (`replace_beatmaps` + mode-injection donor paths).
 2. **V4 Info.dat metadata keys differ.** `song.title`/`song.author`/`audio.bpm` instead of `_songName`/`_songAuthorName`/`_beatsPerMinute` — read via `_read_info_song_metadata`/`_read_info_bpm_from_dict`, or the display name silently falls back to the BeatSaver map ID ('Oxytocin' -> '4dea2').
+3. **The columnar merge clobbers generator output written onto events (Exp 231).** `convert_v4_to_v3` merges row-OVER-event (`obj.update(row)`). A mode generator that sets fields on columnar EVENTS (e.g. NoArrows writing d=8) has its output overwritten by the rows' own d at injection → arrowed NoArrows charts shipped (15 Minutes, Oxytocin). Rule: mode generators must be applied (or re-applied) on DENORMALIZED data, after format conversion. Idempotent generators (NoArrows dots) are safe to re-apply; append-style generators (90Degree rotations) are NOT idempotent — re-applying doubles the rotations, so 90Degree relies on its output living in a key the row merge cannot touch (rotationEvents).
 
 Also note: the pipeline's own canonical output is the DENORMALIZED layout
 (flat `colorNotes` with inline x/y/c/d, `version: 3.2.0` + full
