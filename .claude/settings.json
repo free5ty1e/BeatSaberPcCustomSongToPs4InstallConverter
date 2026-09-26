@@ -1,0 +1,9 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/workspace/.claude/statusline.sh"
+  },
+  "theme": "dark-daltonized",
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": false
+}

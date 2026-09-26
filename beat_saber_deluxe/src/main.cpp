@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -19,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8040"
+#define PLUGIN_VERSION "v0.8047"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -39,8 +40,16 @@ static int REDIRECT_COUNT = 0;
 // ── Feature flags ────────────────────────────────────────────────────────────
 // Read from /data/GoldHEN/AFR/CUSA12878/features.json at startup.
 // Missing file or missing key = false (default off for safety).
+// EXCEPTION: enable_plugin is the GLOBAL KILL SWITCH and defaults TRUE when
+// the key is ABSENT (only an explicit false disables the plugin). This lets a
+// bare/missing features.json keep a fully-deployed setup working, while
+// `--features-only --set-feature enable_plugin=false` instantly reverts the
+// game to 100% stock behavior (no redirects, no metadata swaps) without
+// touching plugins.ini or clearing the AFR directory.
+static int g_feature_plugin_enabled = 1;
 static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
+static int g_feature_beatmap_mode_mapping = 0;
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -92,17 +101,24 @@ static void load_features(void) {
         if (*p == 't') { val = 1; while (*p && *p != ',' && *p != '}') p++; }
         else if (*p == 'f') { val = 0; while (*p && *p != ',' && *p != '}') p++; }
 
-        if (strcmp(key, "enable_custom_song_replacements") == 0) {
+        if (strcmp(key, "enable_plugin") == 0) {
+            g_feature_plugin_enabled = val;
+        } else if (strcmp(key, "enable_custom_song_replacements") == 0) {
             g_feature_custom_song_replacements = val;
         } else if (strcmp(key, "enable_song_metadata_modification") == 0) {
             g_feature_song_metadata_modification = val;
+        } else if (strcmp(key, "enable_beatmap_mode_mapping") == 0) {
+            g_feature_beatmap_mode_mapping = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: custom_song_replacements=%d metadata_modification=%d",
-             g_feature_custom_song_replacements, g_feature_song_metadata_modification);
+    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d",
+             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping);
     log_write(logmsg);
+    if (!g_feature_plugin_enabled) {
+        log_write("DISABLED: enable_plugin is false — ALL plugin behavior off (stock game)");
+    }
 }
 
 extern "C" FILE *fopen(const char *path, const char *mode);
@@ -117,6 +133,64 @@ static int in_hook = 0;
 static int log_ok = 0;
 
 // ── Minimal JSON parser ─────────────────────────────────────────────────────
+// JSON string unescape: converts \uXXXX, \n, \t, \\, \" etc. in place.
+// The PS4-deployed song_metadata.json may carry \uXXXX escapes (Python's
+// json.dump default ensure_ascii=True writes them for any non-ASCII key).
+// Exp 228: '…Baby One More Time' shipped as "…Baby One More Time" and
+// the byte-verbatim key parse made the metadata lookup miss forever.
+static void json_unescape_inplace(char *s) {
+    char *r = s;  // read
+    char *w = s;  // write
+    while (*r) {
+        if (*r != '\\') { *w++ = *r++; continue; }
+        r++;
+        switch (*r) {
+            case 'n': *w++ = '\n'; r++; break;
+            case 't': *w++ = '\t'; r++; break;
+            case 'r': *w++ = '\r'; r++; break;
+            case 'b': *w++ = '\b'; r++; break;
+            case 'f': *w++ = '\f'; r++; break;
+            case '"': *w++ = '"';  r++; break;
+            case '\\': *w++ = '\\'; r++; break;
+            case '/': *w++ = '/';  r++; break;
+            case 'u': {
+                // \uXXXX -> UTF-8 (surrogate pairs not supported; song titles
+                // with astral chars are folded to '?' at comparison anyway)
+                if (isxdigit((unsigned char)r[1]) && isxdigit((unsigned char)r[2]) &&
+                    isxdigit((unsigned char)r[3]) && isxdigit((unsigned char)r[4])) {
+                    unsigned cp = 0;
+                    for (int i = 1; i <= 4; i++) {
+                        char c = r[i];
+                        cp <<= 4;
+                        if (c >= '0' && c <= '9') cp |= (unsigned)(c - '0');
+                        else if (c >= 'a' && c <= 'f') cp |= (unsigned)(c - 'a' + 10);
+                        else if (c >= 'A' && c <= 'F') cp |= (unsigned)(c - 'A' + 10);
+                    }
+                    r += 5;
+                    if (cp < 0x80) {
+                        *w++ = (char)cp;
+                    } else if (cp < 0x800) {
+                        *w++ = (char)(0xC0 | (cp >> 6));
+                        *w++ = (char)(0x80 | (cp & 0x3F));
+                    } else {
+                        *w++ = (char)(0xE0 | (cp >> 12));
+                        *w++ = (char)(0x80 | ((cp >> 6) & 0x3F));
+                        *w++ = (char)(0x80 | (cp & 0x3F));
+                    }
+                } else {
+                    *w++ = '\\';  // malformed — keep literal backslash
+                }
+                break;
+            }
+            default:
+                *w++ = '\\';
+                if (*r) *w++ = *r++;
+                break;
+        }
+        *w = '\0';
+    }
+}
+
 static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], char vals[][MAX_PATH]) {
     int count = 0;
     const char *p = json;
@@ -137,6 +211,12 @@ static int parse_json_pairs(const char *json, int max, char keys[][MAX_PATH], ch
         vals[count][vi] = '\0';
         if (*p) p++;
         count++;
+    }
+    // Unescape AFTER parsing so keys/vals hold real UTF-8 bytes, matching what
+    // extract_utf16_string() produces from the game's System.String objects.
+    for (int i = 0; i < count; i++) {
+        json_unescape_inplace(keys[i]);
+        json_unescape_inplace(vals[i]);
     }
     return count;
 }
@@ -207,6 +287,18 @@ static void load_redirects(void) {
         snprintf(sample, sizeof(sample), "  e.g. %s -> %s", REDIRECT_KEYS[0], REDIRECT_VALS[0]);
         log_write(sample);
         }
+    // Count redirect types for diagnostic summary
+    int n_songs = 0, n_packs = 0, n_catalog = 0;
+    for (int i = 0; i < REDIRECT_COUNT; i++) {
+        if (strstr(REDIRECT_KEYS[i], "catalog")) n_catalog++;
+        else if (strstr(REDIRECT_KEYS[i], "pack_assets")) n_packs++;
+        else n_songs++;
+    }
+    {
+        char sbuf[256];
+        snprintf(sbuf, sizeof(sbuf), "  breakdown: %d songs, %d packs, %d catalog", n_songs, n_packs, n_catalog);
+        log_write(sbuf);
+    }
     }
 
 static void free_redirects(void) {
@@ -271,9 +363,29 @@ static int open_hook(const char *path, int flags, ...) {
 
             // ── User redirects from redirects.json ────────────────────────────
             // Only active when enable_custom_song_replacements feature flag is ON
-            if (!np && g_feature_custom_song_replacements) {
+            // AND the global kill switch (enable_plugin) is not FALSE.
+            if (!np && g_feature_plugin_enabled && g_feature_custom_song_replacements) {
                 for (int i = 0; i < REDIRECT_COUNT; i++) {
                     if (strstr(lower_path, LOWER_REDIRECT_KEYS[i])) {
+                        // GATE (Exp 222): enable_beatmap_mode_mapping controls the
+                        // extra game-mode buttons (OneSaber/NoArrows/90Degree).
+                        // Those live in the PATCHED PACK BUNDLE preview sets —
+                        // when the flag is OFF we must serve the STOCK pack
+                        // bundle (Standard-only preview sets), not the patched
+                        // one. Pack-bundle redirects (keys containing
+                        // "pack_assets") are skipped so the stock bundle loads.
+                        // The CATALOG redirect must be skipped with it: the
+                        // patched catalog carries the m_Crc/m_BundleSize of the
+                        // PATCHED pack bundles — serving it against STOCK pack
+                        // bundles fails Unity's CRC validation and crashes at
+                        // the pack scan (Exp 180 invariant). Per-song redirects
+                        // still fire (custom audio + Standard beatmaps keep
+                        // working).
+                        if (!g_feature_beatmap_mode_mapping
+                            && (strstr(LOWER_REDIRECT_KEYS[i], "pack_assets")
+                                || strstr(LOWER_REDIRECT_KEYS[i], "catalog"))) {
+                            continue;
+                        }
                         np = REDIRECT_VALS[i];
                         break;
                     }
@@ -324,6 +436,35 @@ static int g_tmp_text_set_text_count = 0;
 // Forward-declare IL2CPP's MethodInfo (opaque type)
 struct MethodInfo;
 
+// Fold a UTF-8 C string to the same ASCII projection that
+// extract_utf16_string() applies to game System.String objects: every
+// non-ASCII codepoint collapses to a single '?'. In-place; ASCII-only
+// strings pass through unchanged. Keys loaded from song_metadata.json are
+// folded at load time so key comparison matches the folded extraction of
+// the game's song titles exactly (Exp 228: '…Baby One More Time' extracted
+// as '?Baby One More Time' never matched the raw UTF-8 key).
+// NOTE: astral-plane chars (emoji, > U+FFFF) occupy TWO UTF-16 code units
+// in the game string (two '?') but only one UTF-8 codepoint here (one '?')
+// — known limitation; no current song title uses astral chars.
+static void fold_utf8_to_ascii(char *s) {
+    char *r = s, *w = s;
+    while (*r) {
+        unsigned char c = (unsigned char)*r;
+        if (c < 0x80) { *w++ = *r++; continue; }
+        // Multibyte UTF-8: consume the full sequence, emit one '?' per UTF-16
+        // code unit it decodes to (BMP = 1 unit / 1 '?', astral = 2 units / 2
+        // '?') — an exact mirror of extract_utf16_string's fold so key
+        // comparison is byte-identical for any Unicode title.
+        int seq = (c >= 0xF0) ? 4 : (c >= 0xE0) ? 3 : 2;
+        if ((c == 0xC0) || (c == 0xC1)) seq = 2;  // overlong — treat as 2
+        int nq = (seq == 4) ? 2 : 1;
+        r += seq;
+        if (*(r-1) == '\0') r--;  // don't step past terminator on truncation
+        while (nq-- > 0) *w++ = '?';
+    }
+    *w = '\0';
+}
+
 // ── Load song metadata from JSON config file ────────────────────────────────
 // Parses "song_names" and "song_artists" sections from song_metadata.json
 // Uses same parse_json_pairs() as redirects loading.
@@ -354,6 +495,7 @@ static void load_song_metadata(void) {
             char vals[METADATA_MAX][MAX_PATH];
             int n = parse_json_pairs(sn, METADATA_MAX, keys, vals);
             for (int i = 0; i < n && i < METADATA_MAX; i++) {
+                fold_utf8_to_ascii(keys[i]);  // match extract_utf16_string's '?' fold
                 METADATA_NAME_KEYS[i] = (char*)malloc(strlen(keys[i]) + 1);
                 METADATA_NAME_VALS[i] = (char*)malloc(strlen(vals[i]) + 1);
                 if (METADATA_NAME_KEYS[i] && METADATA_NAME_VALS[i]) {
@@ -375,6 +517,7 @@ static void load_song_metadata(void) {
             char vals[METADATA_MAX][MAX_PATH];
             int n = parse_json_pairs(sa, METADATA_MAX, keys, vals);
             for (int i = 0; i < n && i < METADATA_MAX; i++) {
+                fold_utf8_to_ascii(keys[i]);  // match extract_utf16_string's '?' fold
                 METADATA_ARTIST_KEYS[i] = (char*)malloc(strlen(keys[i]) + 1);
                 METADATA_ARTIST_VALS[i] = (char*)malloc(strlen(vals[i]) + 1);
                 if (METADATA_ARTIST_KEYS[i] && METADATA_ARTIST_VALS[i]) {
@@ -515,6 +658,7 @@ static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
 
     int len = strlen(cstr);
     // Size: 16 (klass+monitor) + 4 (length) + (len * 2) (UTF-16LE chars) + 2 (null terminator)
+    // len is an upper bound — multibyte UTF-8 sequences shrink the count
     int total = 16 + 4 + (len * 2) + 2;
     void* str_mem = malloc(total);
     if (!str_mem) return NULL;
@@ -523,22 +667,40 @@ static void* create_il2cpp_string(void* klass_ptr, const char* cstr) {
     memcpy(str_mem, klass_ptr, 8);
     // Zero monitor (8 bytes)
     memset((char*)str_mem + 8, 0, 8);
-    // Set string length
-    *(uint32_t*)((char*)str_mem + 16) = (uint32_t)len;
-    // Convert ASCII to UTF-16LE
+
+    // Decode UTF-8 -> UTF-16LE (Exp 228: ASCII-per-byte produced mojibake for
+    // non-ASCII replacement values; il2cpp_string_new already handles UTF-8,
+    // this manual fallback must too). Malformed bytes fold to U+FFFD-replacement
+    // '?' to stay defensive against garbage values.
     uint16_t* chars = (uint16_t*)((char*)str_mem + 20);
-    for (int i = 0; i < len; i++) {
-        chars[i] = (uint16_t)(unsigned char)cstr[i];
+    int nch = 0;
+    for (int i = 0; i < len; ) {
+        unsigned char c = (unsigned char)cstr[i];
+        uint32_t cp = 0;
+        int seq = 1;
+        if (c < 0x80) { cp = c; seq = 1; }
+        else if ((c & 0xE0) == 0xC0) { cp = c & 0x1F; seq = 2; }
+        else if ((c & 0xF0) == 0xE0) { cp = c & 0x0F; seq = 3; }
+        else if ((c & 0xF8) == 0xF0) { cp = c & 0x07; seq = 4; }
+        else { cp = '?'; seq = 1; }  // stray continuation byte
+        for (int j = 1; j < seq && (i + j) < len; j++) {
+            unsigned char cc = (unsigned char)cstr[i + j];
+            if ((cc & 0xC0) != 0x80) { cp = '?'; seq = 1; break; }
+            cp = (cp << 6) | (cc & 0x3F);
+        }
+        if (cp >= 0x10000) cp = '?';  // astral chars don't fit one UTF-16 unit here
+        chars[nch++] = (uint16_t)cp;
+        i += seq;
     }
-    // Null terminator (optional but safe)
-    chars[len] = 0;
+    *(uint32_t*)((char*)str_mem + 16) = (uint32_t)nch;  // actual char count
+    chars[nch] = 0;  // null terminator
 
     return str_mem;
 }
 
 // Shared replacement logic for both set_text and SetText hooks
 static void* apply_metadata_replacement(void* this_ptr, void* value) {
-    if (!g_feature_song_metadata_modification || !value) return value;
+    if (!g_feature_plugin_enabled || !g_feature_song_metadata_modification || !value) return value;
 
     char text_buf[256] = {0};
     int len = extract_utf16_string(value, text_buf, sizeof(text_buf));
@@ -594,7 +756,7 @@ static void tmp_text_set_text2_hook(void* this_ptr, void* value, int sync_input,
 // RVA: 0x1D377C0 (private void MoveNext())
 static int g_move_next_hook_count = 0;
 static void move_next_hook(void* state_machine) {
-    if (g_feature_song_metadata_modification && state_machine) {
+    if (g_feature_plugin_enabled && g_feature_song_metadata_modification && state_machine) {
         void* beatmapLevel = *(void**)((char*)state_machine + 0x30);
         if (beatmapLevel) {
             // Modify songName at BeatmapLevel + 0x20
@@ -693,7 +855,7 @@ static int g_tmp_hook_installed = 0;
 
 static void try_install_tmp_hook(void) {
     if (g_tmp_hook_installed) return;
-    if (g_feature_song_metadata_modification == 0) return;
+    if (!g_feature_plugin_enabled || g_feature_song_metadata_modification == 0) return;
 
     // Skip early opens — our own log file and system devices load before game modules
     if (g_tmp_hook_attempts > 0 && g_open_count < 10) return;
@@ -752,9 +914,11 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: custom_song_replacements=%s  metadata_modification=%s",
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: plugin=%s  custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s",
+                 g_feature_plugin_enabled ? "ON" : "OFF",
                  g_feature_custom_song_replacements ? "ON" : "OFF",
-                 g_feature_song_metadata_modification ? "ON" : "OFF");
+                 g_feature_song_metadata_modification ? "ON" : "OFF",
+                 g_feature_beatmap_mode_mapping ? "ON" : "OFF");
         log_write(flog);
     }
 
@@ -763,6 +927,9 @@ extern "C" int module_start(size_t argc, const void *args) {
     }
     if (!g_feature_song_metadata_modification) {
         log_write("DISABLED: song_metadata_modification is OFF — metadata replacements disabled");
+    }
+    if (!g_feature_beatmap_mode_mapping) {
+        log_write("DISABLED: beatmap_mode_mapping is OFF — pack bundle + catalog redirects skipped (stock packs, Standard-only modes; per-song customs still active)");
     }
 
     // fopen hook
@@ -779,10 +946,27 @@ extern "C" int module_start(size_t argc, const void *args) {
 
     log_write("hooks installed");
 
-    // Notification
-    memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
-    snprintf(notif.message,sizeof(notif.message),"Beat Saber Deluxe %s\nBy Chris Primeish", PLUGIN_VERSION);
-    sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
+    // Notification: version + feature-flag status in ONE toast (Exp 221).
+    // Two separate toasts were compressed into one because the PS4VR
+    // switch-over swallows the second notification when the headset is
+    // already powered on at game launch (user-verified: second toast only
+    // appears when launching without the headset active).
+    {
+        int enabled_count = g_feature_custom_song_replacements
+                          + g_feature_song_metadata_modification
+                          + g_feature_beatmap_mode_mapping;
+        memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
+        if (g_feature_plugin_enabled) {
+            snprintf(notif.message,sizeof(notif.message),
+                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/3 features ON)",
+                     PLUGIN_VERSION, enabled_count);
+        } else {
+            snprintf(notif.message,sizeof(notif.message),
+                     "BS Deluxe %s (OFF)\nBy Chris Primeish\n(official songs only)",
+                     PLUGIN_VERSION);
+        }
+        sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
+    }
 
     return 0;
 }

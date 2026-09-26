@@ -1,0 +1,840 @@
+=== BS Deluxe v0.8048 started ===
+v0.8048 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 38 redirects from config
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+features: custom_song_replacements=1 metadata_modification=1 beatmap_mode_mapping=1
+loaded song_metadata: 38 name replacements, 11 artist replacements
+FEATURE FLAGS: custom_song_replacements=ON  metadata_modification=ON  beatmap_mode_mapping=ON
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 1, open #1) — retrying
+[OPEN #1] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+hooks installed
+[OPEN #2] /dev/notification0
+[OPEN #3] /dev/notification0
+[OPEN #4] /dev/notification1
+[OPEN #5] /dev/urandom
+[OPEN #6] /app0/sce_discmap.plt
+[OPEN #7] /app0/sce_discmap_patch.plt
+[OPEN #8] /app0/sce_discmap.plt
+[OPEN #9] /app0/sce_discmap_patch.plt
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 2, open #10) — retrying
+[OPEN #10] /app0/media/boot.config
+[METADATA] Found 5 modules
+[METADATA] Found IL2CPP module: Il2CppUserAssemblies.prx at 0x806c0000 (3 segments)
+[METADATA] IL2CPP base: 0x806c0000, set_text: 0x833f5be0, SetText: 0x833fe1d0, MoveNext: 0x823f77c0 (attempt 3, open #11)
+[METADATA] TMP_Text.set_text + SetText + MoveNext hooks installed
+[OPEN #11] /dev/urandom
+[OPEN #12] /app0/debug.log
+[OPEN #13] /app0/archive.psarc
+[OPEN #14] /app0/archive_patch.psarc
+[OPEN #15] /app0/Media/Metadata/global-metadata.dat
+[OPEN #16] /app0/Media/il2cpp.usym
+[OPEN #17] /archive/mount/point/Media/RuntimeInitializeOnLoads.json
+[OPEN #18] /app0/Media/RuntimeInitializeOnLoads.json
+[OPEN #19] /archive/mount/point/Media/ScriptingAssemblies.json
+[OPEN #20] /app0/Media/ScriptingAssemblies.json
+[OPEN #21] /dev/dce
+[OPEN #22] /dev/hid
+[OPEN #23] /dev/hid
+[OPEN #24] /dev/hid
+[OPEN #25] /dev/urandom
+[OPEN #26] /archive/mount/point/Media/globalgamemanagers
+[OPEN #27] /app0/Media/globalgamemanagers
+[OPEN #28] /savedata0/memory.dat
+[OPEN #29] /app0/Media/UnitySubsystems
+[OPEN #30] /archive/mount/point/Media/UnitySubsystems/PSVRXRSDKPlugin/UnitySubsystemsManifest.json
+[OPEN #31] /app0/Media/UnitySubsystems/PSVRXRSDKPlugin/UnitySubsystemsManifest.json
+[OPEN #32] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #33] /app0/Media/Resources/unity default resources
+[OPEN #34] /dev/ajm
+[OPEN #35] /archive/mount/point/Media/globalgamemanagers.assets
+[OPEN #36] /app0/Media/globalgamemanagers.assets
+[OPEN #37] /archive/mount/point/Media/globalgamemanagers.assets.resS
+[OPEN #38] /app0/Media/globalgamemanagers.assets.resS
+[OPEN #39] /archive/mount/point/Media/Resources/unity_builtin_extra
+[OPEN #40] /app0/Media/Resources/unity_builtin_extra
+[OPEN #41] /app0/Media/Resources/mscorlib.dll-resources.dat
+[OPEN #42] /dev/hmd_cmd
+[OPEN #43] /dev/hmd_snsr
+[OPEN #44] /dev/hmd_3da
+[OPEN #45] /dev/hmd_dist
+[OPEN #46] /archive/mount/point/Media/sharedassets0.assets
+[OPEN #47] /app0/Media/sharedassets0.assets
+[OPEN #48] /archive/mount/point/Media/level0
+[OPEN #49] /app0/Media/level0
+[OPEN #50] /archive/mount/point/Media/level0.resS
+[OPEN #51] /app0/Media/level0.resS
+[OPEN #52] /archive/mount/point/Media/sharedassets1.assets
+[OPEN #53] /app0/Media/sharedassets1.assets
+[OPEN #54] /archive/mount/point/Media/level1
+[OPEN #55] /app0/Media/level1
+[OPEN #56] /archive/mount/point/Media/Resources/unity_builtin_extra
+[OPEN #57] /app0/Media/Resources/unity_builtin_extra
+[OPEN #58] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #59] /app0/Media/Resources/unity default resources
+[OPEN #60] /dev/urandom
+[OPEN #61] /app0/Media/StreamingAssets/aa/settings.json
+[OPEN #62] /app0/Media/StreamingAssets/aa/catalog.json
+[OPEN #63] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #64] /archive/mount/point/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #65] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #66] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #67] /app0/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #68] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #69] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #70] /app0/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #71] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #72] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #73] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #74] /archive/mount/point/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #75] /archive/mount/point/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #76] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #77] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #78] /app0/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #79] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #80] /app0/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #81] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #82] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #83] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #84] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #85] /archive/mount/point/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #86] /app0/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #87] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #88] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #89] /archive/mount/point/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #90] /app0/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #91] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #92] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #93] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #94] /app0/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #95] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #96] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #97] /archive/mount/point/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #98] /app0/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #99] /archive/mount/point/Media/resources.assets
+[OPEN #100] /app0/Media/resources.assets
+[OPEN #101] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #102] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #103] /archive/mount/point/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[OPEN #104] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #105] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[OPEN #106] /app0/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[OPEN #107] /app0/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[OPEN #108] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #109] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[OPEN #110] /archive/mount/point/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[OPEN #111] /archive/mount/point/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[OPEN #112] /archive/mount/point/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[OPEN #113] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[OPEN #114] /archive/mount/point/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[OPEN #115] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[OPEN #116] /archive/mount/point/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[OPEN #117] /archive/mount/point/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[OPEN #118] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[OPEN #119] /archive/mount/point/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[OPEN #120] /archive/mount/point/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[OPEN #121] /app0/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[OPEN #122] /app0/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[OPEN #123] /app0/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[OPEN #124] /app0/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[OPEN #125] /app0/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[OPEN #126] /app0/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[OPEN #127] /app0/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[OPEN #128] /app0/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[OPEN #129] /app0/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[OPEN #130] /app0/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[OPEN #131] /app0/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[OPEN #132] /app0/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[OPEN #133] /archive/mount/point/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[OPEN #134] /archive/mount/point/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[OPEN #135] /app0/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[OPEN #136] /app0/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[OPEN #137] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[OPEN #138] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[OPEN #139] /archive/mount/point/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[OPEN #140] /archive/mount/point/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[OPEN #141] /archive/mount/point/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[OPEN #142] /app0/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[OPEN #143] /app0/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[OPEN #144] /app0/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[OPEN #145] /app0/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[OPEN #146] /app0/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[OPEN #147] /archive/mount/point/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[OPEN #148] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[OPEN #149] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[OPEN #150] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[OPEN #151] /app0/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[OPEN #152] /app0/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[OPEN #153] /app0/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[OPEN #154] /app0/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[OPEN #155] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[OPEN #156] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[OPEN #157] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[OPEN #158] /app0/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[OPEN #159] /app0/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[OPEN #160] /app0/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[OPEN #161] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[OPEN #162] /archive/mount/point/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[OPEN #163] /archive/mount/point/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[OPEN #164] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[OPEN #165] /app0/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[OPEN #166] /app0/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[OPEN #167] /app0/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[OPEN #168] /app0/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[OPEN #169] /archive/mount/point/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[OPEN #170] /archive/mount/point/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[OPEN #171] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[OPEN #172] /app0/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[OPEN #173] /app0/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[OPEN #174] /app0/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[OPEN #175] /archive/mount/point/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[OPEN #176] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #177] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[OPEN #178] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[OPEN #179] /archive/mount/point/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[OPEN #180] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[OPEN #181] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[OPEN #182] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[OPEN #183] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #184] /app0/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[OPEN #185] /app0/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[OPEN #186] /app0/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[OPEN #187] /app0/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[OPEN #188] /app0/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[OPEN #189] /app0/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[OPEN #190] /app0/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[OPEN #191] /archive/mount/point/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[OPEN #192] /archive/mount/point/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[OPEN #193] /archive/mount/point/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[OPEN #194] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[OPEN #195] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #196] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #197] /app0/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #198] /app0/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #199] /app0/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[OPEN #200] /app0/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[OPEN #201] /app0/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[OPEN #202] /app0/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[OPEN #203] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #204] /archive/mount/point/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle
+[OPEN #205] /archive/mount/point/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[OPEN #206] /app0/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[OPEN #207] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #208] /app0/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle
+[OPEN #209] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[OPEN #210] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #211] /archive/mount/point/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[OPEN #212] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #213] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #214] /app0/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[OPEN #215] /app0/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[OPEN #216] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #217] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #218] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[OPEN #219] /app0/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[OPEN #220] /savedata0/PlayerData.dat
+[OPEN #221] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #222] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #223] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #224] /archive/mount/point/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[OPEN #225] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #226] /app0/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[OPEN #227] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #228] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #229] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #230] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[OPEN #231] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #232] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #233] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #234] /app0/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[OPEN #235] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #236] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #237] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #238] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #239] /archive/mount/point/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[OPEN #240] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #241] /app0/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[OPEN #242] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #243] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #244] /savedata0/settings.cfg
+[OPEN #245] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #246] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #247] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #248] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #249] /app0/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #250] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #251] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #252] /archive/mount/point/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[OPEN #253] /app0/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[OPEN #254] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #255] /archive/mount/point/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[OPEN #256] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #257] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[OPEN #258] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[OPEN #259] /app0/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[OPEN #260] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #261] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[OPEN #262] /app0/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[OPEN #263] /archive/mount/point/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[OPEN #264] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[OPEN #265] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[OPEN #266] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[OPEN #267] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #268] /app0/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[OPEN #269] /app0/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[OPEN #270] /app0/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[OPEN #271] /app0/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[OPEN #272] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #273] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #274] /archive/mount/point/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[OPEN #275] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #276] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #277] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[OPEN #278] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #279] /app0/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[OPEN #280] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #281] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #282] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #283] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[OPEN #284] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #285] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #286] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[OPEN #287] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #288] /app0/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[OPEN #289] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #290] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #291] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[OPEN #292] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[OPEN #293] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[OPEN #294] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[OPEN #295] /app0/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[OPEN #296] /app0/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[OPEN #297] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[OPEN #298] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[OPEN #299] /archive/mount/point/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[OPEN #300] /app0/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[OPEN #301] /archive/mount/point/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[OPEN #302] /app0/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[OPEN #303] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[OPEN #304] /app0/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[OPEN #305] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[OPEN #306] /app0/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[OPEN #307] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[OPEN #308] /app0/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[OPEN #309] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[OPEN #310] /app0/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[OPEN #311] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[OPEN #312] /app0/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[OPEN #313] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[OPEN #314] /app0/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[OPEN #315] /archive/mount/point/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[OPEN #316] /app0/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[OPEN #317] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #318] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #319] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #320] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #321] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[OPEN #322] /app0/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[OPEN #323] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[OPEN #324] /app0/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[OPEN #325] /archive/mount/point/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[OPEN #326] /app0/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[OPEN #327] /archive/mount/point/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[OPEN #328] /app0/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[OPEN #329] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[OPEN #330] /app0/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[OPEN #331] /archive/mount/point/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[OPEN #332] /app0/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[OPEN #333] /archive/mount/point/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[OPEN #334] /app0/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[OPEN #335] /archive/mount/point/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[OPEN #336] /app0/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[OPEN #337] /archive/mount/point/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[OPEN #338] /app0/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[OPEN #339] /archive/mount/point/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[OPEN #340] /app0/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[OPEN #341] /archive/mount/point/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[OPEN #342] /app0/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[OPEN #343] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[OPEN #344] /app0/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[OPEN #345] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[OPEN #346] /app0/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[OPEN #347] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #348] /app0/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #349] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[OPEN #350] /app0/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[OPEN #351] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[OPEN #352] /app0/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[OPEN #353] /archive/mount/point/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[OPEN #354] /app0/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[OPEN #355] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[OPEN #356] /app0/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[OPEN #357] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #358] /app0/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #359] /archive/mount/point/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[OPEN #360] /app0/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[OPEN #361] /archive/mount/point/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle
+[OPEN #362] /app0/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle
+[OPEN #363] /archive/mount/point/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[OPEN #364] /app0/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[OPEN #365] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #366] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #367] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[OPEN #368] /app0/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[OPEN #369] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[OPEN #370] /app0/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[OPEN #371] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #372] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #373] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[OPEN #374] /app0/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[OPEN #375] /archive/mount/point/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[OPEN #376] /app0/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[OPEN #377] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #378] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #379] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[OPEN #380] /app0/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[OPEN #381] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #382] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #383] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #384] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #385] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #386] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #387] /archive/mount/point/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[OPEN #388] /app0/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[OPEN #389] /archive/mount/point/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[OPEN #390] /app0/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[OPEN #391] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #392] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #393] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #394] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #395] /archive/mount/point/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[OPEN #396] /app0/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[OPEN #397] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #398] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #399] /archive/mount/point/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[OPEN #400] /app0/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[OPEN #401] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #402] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #403] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #404] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #405] /archive/mount/point/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[OPEN #406] /app0/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[OPEN #407] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #408] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #409] /archive/mount/point/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[OPEN #410] /app0/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[OPEN #411] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #412] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[OPEN #413] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #414] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #415] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #416] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #417] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #418] /app0/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #419] /archive/mount/point/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[OPEN #420] /app0/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[OPEN #421] /archive/mount/point/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[OPEN #422] /app0/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[OPEN #423] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #424] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #425] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[OPEN #426] /app0/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[OPEN #427] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #428] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #429] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #430] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #431] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #432] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #433] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[OPEN #434] /app0/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[OPEN #435] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[OPEN #436] /app0/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[OPEN #437] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[OPEN #438] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[OPEN #439] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[OPEN #440] /app0/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[OPEN #441] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[OPEN #442] /app0/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[OPEN #443] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[OPEN #444] /app0/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[OPEN #445] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #446] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #447] /archive/mount/point/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[OPEN #448] /app0/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[OPEN #449] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #450] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #451] /archive/mount/point/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[OPEN #452] /app0/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[OPEN #453] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[OPEN #454] /app0/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[OPEN #455] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[OPEN #456] /app0/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[OPEN #457] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #458] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #459] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[OPEN #460] /app0/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[OPEN #461] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #462] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #463] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[OPEN #464] /app0/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[OPEN #465] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[OPEN #466] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[OPEN #467] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[OPEN #468] /app0/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[OPEN #469] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[OPEN #470] /app0/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[OPEN #471] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #472] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #473] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #474] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #475] /archive/mount/point/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[OPEN #476] /app0/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[OPEN #477] /archive/mount/point/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[OPEN #478] /app0/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[OPEN #479] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[OPEN #480] /app0/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[OPEN #481] /archive/mount/point/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[OPEN #482] /app0/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[OPEN #483] /archive/mount/point/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[OPEN #484] /app0/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[OPEN #485] /archive/mount/point/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[OPEN #486] /app0/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[OPEN #487] /archive/mount/point/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[OPEN #488] /app0/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[OPEN #489] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[OPEN #490] /app0/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[OPEN #491] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[OPEN #492] /app0/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[OPEN #493] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #494] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #495] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #496] /app0/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #497] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[OPEN #498] /app0/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[OPEN #499] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #500] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #501] /archive/mount/point/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[OPEN #502] /app0/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[OPEN #503] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #504] /app0/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #505] /archive/mount/point/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle
+[OPEN #506] /app0/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle
+[OPEN #507] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #508] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #509] /archive/mount/point/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[OPEN #510] /app0/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[OPEN #511] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #512] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #513] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[OPEN #514] /app0/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[OPEN #515] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #516] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #517] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[OPEN #518] /app0/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[OPEN #519] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #520] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #521] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[OPEN #522] /app0/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[OPEN #523] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[OPEN #524] /app0/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[OPEN #525] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[OPEN #526] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[OPEN #527] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[OPEN #528] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[OPEN #529] /archive/mount/point/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[OPEN #530] /app0/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[OPEN #531] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #532] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #533] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #534] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #535] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #536] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #537] /archive/mount/point/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[OPEN #538] /app0/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[OPEN #539] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #540] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #541] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #542] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #543] /archive/mount/point/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[OPEN #544] /app0/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[OPEN #545] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #546] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #547] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #548] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #549] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #550] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #551] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #552] /app0/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #553] /archive/mount/point/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[OPEN #554] /app0/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[OPEN #555] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #556] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #557] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #558] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #559] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #560] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #561] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #562] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #563] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[OPEN #564] /app0/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[OPEN #565] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[OPEN #566] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[OPEN #567] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[OPEN #568] /app0/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[OPEN #569] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[OPEN #570] /app0/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[OPEN #571] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[OPEN #572] /app0/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[OPEN #573] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #574] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #575] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #576] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #577] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #578] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #579] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #580] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #581] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[OPEN #582] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[OPEN #583] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #584] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #585] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #586] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #587] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #588] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #589] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[OPEN #590] /app0/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[OPEN #591] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[OPEN #592] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[OPEN #593] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[OPEN #594] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[OPEN #595] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #596] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #597] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #598] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[OPEN #599] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #600] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[OPEN #601] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #602] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[OPEN #603] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #604] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[OPEN #605] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #606] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[OPEN #607] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #608] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[OPEN #609] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #610] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #611] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #612] /app0/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #613] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #614] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #615] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #616] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #617] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #618] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #619] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #620] /app0/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #621] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #622] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #623] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #624] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #625] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #626] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #627] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #628] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #629] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #630] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[OPEN #631] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #632] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[OPEN #633] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #634] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[OPEN #635] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #636] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[OPEN #637] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #638] /app0/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle
+[OPEN #639] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #640] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[OPEN #641] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #642] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[OPEN #643] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #644] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[OPEN #645] /savedata0/AvatarData.dat
+[OPEN #646] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #647] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[OPEN #648] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #649] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[OPEN #650] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #651] /app0/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+[OPEN #652] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #653] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[OPEN #654] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #655] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[OPEN #656] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #657] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[OPEN #658] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #659] /app0/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle
+[OPEN #660] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #661] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[OPEN #662] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #663] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[OPEN #664] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #665] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[OPEN #666] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #667] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[OPEN #668] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #669] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #670] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #671] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #672] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #673] /app0/Media/Resources/unity default resources
+[OPEN #674] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #675] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #676] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #677] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #678] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #679] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #680] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #681] /app0/Media/Resources/unity default resources
+[OPEN #682] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #683] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #684] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #685] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #686] /archive/mount/point/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #687] /app0/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #688] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #689] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #690] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #691] /app0/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #692] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #693] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #694] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[MODE] sceKernelQueryMemoryProtection verified (prot=0x3)
+[OPEN #695] /archive/mount/point/Media/Resources/unity_builtin_extra
+[OPEN #696] /app0/Media/Resources/unity_builtin_extra
+[OPEN #697] /archive/mount/point/Media/resources.assets
+[OPEN #698] /app0/Media/resources.assets
+[OPEN #699] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #700] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #701] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #702] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #703] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #704] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #705] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #706] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #707] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #708] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #709] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #710] /app0/Media/Resources/unity default resources
+[OPEN #711] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #712] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #713] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #714] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #715] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #716] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #717] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #718] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #719] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #720] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #721] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #722] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[OPEN #723] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #724] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #725] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #726] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[OPEN #727] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #728] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #729] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #730] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #731] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #732] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[OPEN #733] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[MODE] first MoveNext at open #732
+[OPEN #734] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] il2cpp_string_new NOT found — using manual string creation
+[OPEN #735] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #1: songName 'Angry' -> 'Rhythm Is A Dancer / Pegboard Nerds'
+[OPEN #736] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #2: author 'The Rolling Stones' -> ' '
+[OPEN #737] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #3: songName 'Bite My Head Off' -> 'Escaping the Ruins / MDK / Gareth Coker'
+[OPEN #738] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #4: author 'The Rolling Stones' -> ' '
+[OPEN #739] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #5: songName 'Can't You Hear Me Knocking' -> 'Spicy / aespa'
+[OPEN #740] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #6: author 'The Rolling Stones' -> ' '
+[OPEN #741] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #7: songName 'Gimme Shelter' -> 'Yes I'm A Mess / AJR'
+[OPEN #742] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #8: author 'The Rolling Stones' -> ' '
+[OPEN #743] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #9: songName '(I Can't Get No) Satisfaction' -> 'Dreams Come True / Various'
+[OPEN #744] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #10: author 'The Rolling Stones' -> ' '
+[OPEN #745] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #11: songName 'Live by the Sword' -> 'Take Me to the Beach / Imagine Dragons'
+[OPEN #746] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #12: author 'The Rolling Stones' -> ' '
+[OPEN #747] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #13: songName 'Mess it Up' -> 'Powersnake / Brothers of Metal'
+[OPEN #748] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #14: author 'The Rolling Stones' -> ' '
+[OPEN #749] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #15: songName 'Paint It Black' -> 'Time Lapse / TheFatRat'
+[OPEN #750] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #16: author 'The Rolling Stones' -> ' '
+[OPEN #751] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #17: songName 'Start Me Up' -> 'drop pop candy / Reol'
+[OPEN #752] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #18: author 'The Rolling Stones' -> ' '
+[OPEN #753] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #19: songName 'Sympathy For The Devil' -> 'LIT / Polyphia'
+[OPEN #754] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #20: author 'The Rolling Stones' -> ' '
+[OPEN #755] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #21: songName 'Whole Wide World' -> 'VOLUPTE / REZZ / Tare'
+[OPEN #756] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #22: author 'The Rolling Stones' -> ' '
+[OPEN #757] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[MODE] pack data open #757: /archive/mount/point/media/streamingassets/aa/ps4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle
+[MODE] Triggered from song-start redirect (attempt 1) -- running synchronous scan
+[MODE] Starting BeatmapLevelSO memory scan...
+[MODE]   cand klass=0x200000000 @0x1C27B60 ver=3 lid=0x600000002 sn=0x700000003 an=0x500000006
+[MODE]   raw64@0x1C27B60: 00 00 00 00 02 00 00 00 | 01 00 00 00 02 00 00 00
+[MODE]   raw64@0x1C27B70: 00 00 00 00 03 00 00 00 | 03 00 00 00 06 00 00 00
+[MODE]   raw64@0x1C27B80: 02 00 00 00 06 00 00 00 | 03 00 00 00 07 00 00 00
+[MODE]   raw64@0x1C27B90: 07 00 00 00 05 00 00 00 | 06 00 00 00 05 00 00 00
+[MODE]   cand klass=0x200000001 @0x1C40F40 ver=4 lid=0x400000001 sn=0xD00000001 an=0x1100000010
+[MODE]   raw64@0x1C40F40: 01 00 00 00 02 00 00 00 | 02 00 00 00 02 00 00 00
+[MODE]   raw64@0x1C40F50: 01 00 00 00 01 00 00 00 | 04 00 00 00 01 00 00 00
+[MODE]   raw64@0x1C40F60: 01 00 00 00 04 00 00 00 | 01 00 00 00 0D 00 00 00
+[MODE]   raw64@0x1C40F70: 13 00 00 00 0E 00 00 00 | 10 00 00 00 11 00 00 00
+[MODE]   cand klass=0x200000002 @0x1C44D40 ver=2 lid=0x200000002 sn=0x200000002 an=0x100000003
+[MODE]   raw64@0x1C44D40: 02 00 00 00 02 00 00 00 | 02 00 00 00 02 00 00 00
+[MODE]   raw64@0x1C44D50: 02 00 00 00 02 00 00 00 | 02 00 00 00 02 00 00 00
+[MODE]   raw64@0x1C44D60: 02 00 00 00 02 00 00 00 | 02 00 00 00 02 00 00 00
+[MODE]   raw64@0x1C44D70: 02 00 00 00 02 00 00 00 | 03 00 00 00 01 00 00 00
+[MODE]   cand klass=0x200000001 @0x1D4D5E0 ver=3 lid=0x300000002 sn=0x100000000 an=0x200000001
+[MODE]   raw64@0x1D4D5E0: 01 00 00 00 02 00 00 00 | 02 00 00 00 02 00 00 00
+[MODE]   raw64@0x1D4D5F0: 01 00 00 00 02 00 00 00 | 03 00 00 00 00 00 00 00
+[MODE]   raw64@0x1D4D600: 02 00 00 00 03 00 00 00 | 00 00 00 00 01 00 00 00
+[MODE]   raw64@0x1D4D610: 03 00 00 00 00 00 00 00 | 01 00 00 00 02 00 00 00
+[MODE]   cand klass=0x200000004 @0x1D4E300 ver=5 lid=0x100000000 sn=0xA00000002 an=0xB00000003
+[MODE]   cand klass=0x200000001 @0x1D4F7A0 ver=3 lid=0x100000003 sn=0x200000003 an=0x400000003
+[MODE]   cand klass=0x200000001 @0x1D4FCC0 ver=3 lid=0x100000003 sn=0x200000003 an=0x400000003
+[MODE]   cand klass=0x200000001 @0x1D501E0 ver=3 lid=0x100000003 sn=0x200000003 an=0x400000003
+[MODE]   cand klass=0x200000001 @0x1D50700 ver=3 lid=0x100000003 sn=0x200000003 an=0x400000003
+[MODE]   cand klass=0x200000001 @0x1D50C20 ver=3 lid=0x100000003 sn=0x200000003 an=0x400000003
+[MODE]   cand klass=0x200000001 @0x1D51140 ver=3 lid=0x100000003 sn=0x200000003 an=0x400000003
+[MODE]   cand klass=0x200000002 @0x1D51DA0 ver=4 lid=0x600000005 sn=0x600000006 an=0x1FFFFFFFF
+[MODE]     arrfail stage=1 on '$' @0x20117FD40
+[MODE] Triggered from MoveNext (attempt 2) -- running synchronous scan

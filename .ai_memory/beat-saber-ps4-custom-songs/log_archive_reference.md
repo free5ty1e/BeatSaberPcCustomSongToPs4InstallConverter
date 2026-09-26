@@ -1,5 +1,11 @@
 # Archived Log Reference
 
+> **Note (2026-08-01):** Raw PS4 logs are now archived directly in
+> `.ai_memory/experiment_logs/` (version-specific filenames like
+> `v0.8047_<desc>.txt`) — the download IS the archival copy, per workflow rules.
+> Per-feature experiment documentation archives live in
+> `experiment_log_archive/` in this directory.
+
 | File | Version | Date | Key Content | Result |
 |------|---------|------|-------------|--------|
 | `v0.69_klass_not_found.txt` | v0.69 | 2026-07-17 | First memory injection test, mincore | "Class string not found" |
