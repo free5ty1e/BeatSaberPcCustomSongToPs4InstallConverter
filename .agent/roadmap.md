@@ -244,6 +244,13 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 ### Completed (Exp 217) — Multi-Pack Cross-Pack Deploy Fix
 - [x] **Multi-pack deploys wiped other packs' custom songs (v0.5337):** Running one pack's install script deleted all other packs' custom songs (case-sensitive slot matching made every slot lookup fail → "empty slot scope" deleted all song redirects; deploy_slots also only scoped the target pack). Fixed: case-insensitive matching in `_ensure_mass_song_redirects` + `patch_pack_bundle`; `deploy_slots`/`deploy_packs` now collect ALL existing custom songs and their packs from the PS4 `redirects.json` so cross-pack state is preserved and re-deployed. Hardware-verified: 4 songs across 2 packs (Camelia + Billie Eilish), 7 redirects, catalog CRC/size OK for both packs, surgical patching intact. 581/581 tests.
 
+### Completed (Exp 234) — Alpha Release Audited + Real-PS4 Validated
+- [x] Release zip + notes audited: all artifacts present (69 examples w/ --no-prompt, FSELF binaries, ps4_dump disclaimer).
+- [x] Live validation from the extracted copy: verify PASSED; build-only → correct charts (NoArrows all-dots, OneSaber blue-dots); idempotent deploy preserved 5 packs + 47 songs, PASSED; plugin untouched.
+- [x] Procedure doc: .agent/docs/release-validation-test-procedure.md (user walks it pre-merge).
+- [ ] Pre-merge (user): screenshots + demo videos for README/PR.
+- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults; build_plugin fallback to bundled prx when no Makefile.
+
 ### Completed (Exp 233) — The Real 3-File Deletion Bug + --no-prompt + Last CI Gates
 - [x] **3-file deletion ACTUALLY fixed:** relative-vs-absolute Path comparison in the wipe (git ls-files emits repo-relative; rglob yields absolute; `item not in tracked` never matched — every file unlinked, log lied "preserved"). Both layers normalized to resolved-absolute strings; NEW E2E test runs the real wipe against a scratch git repo.
 - [x] **--no-prompt on all 34 example scripts** — unattended chained runs.

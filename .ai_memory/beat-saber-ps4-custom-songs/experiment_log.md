@@ -1007,3 +1007,21 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **PR description:** updated per `.claude/prompts/update-pr-description.prompt` — surgical diff (Exps 160→233, V4 bullet, clean-slate honesty bullet, Exp 232 bullet, --no-prompt bullet, 634→644 tests + gate note, hardware verification additions) generated at `.pr_temp/updated_pr_description.md` with diff at `.pr_temp/pr_description_diff.md`; awaiting user approval before `gh api PATCH --raw-field` push.
 - **Version:** 0.5349 → **0.5350**.
 - **Status:** Staged pending suite green.
+
+---
+
+### Experiment 234 — Alpha Release Audit + Real-PS4 Validation from the Extracted Zip
+- **Date:** 2026-09-26
+- **Context:** user tagged `v0.8047-pipeline-0.5350-alpha01` (pre-merge test release), downloaded the zip, and asked for: (1) audit of release notes + zip contents, (2) validation of the release against the REAL PS4 in a temp folder (symlinked dump, real config), (3) a reusable procedure doc capturing everything so they can re-walk it themselves before merging.
+- **Static audit — all PASS:** release notes carry the full artifact inventory + ps4_dump disclaimer; zip contains README ×2, changelogs ×2, VERSION 0.5350, beat_saber_song_ids.json, requirements.txt, features.json + empty redirects.json templates, plugins.ini, ps4_config.example.json, both plugin binaries (FSELF magic 4f153d1d, v0.8047 strings present), tools/ (14 scripts), coverage-report, docs (3 feature docs + 2 examples + **all 69 example_*.* files with --no-prompt**).
+- **Live-PS4 validation (release copy at /workspace/temp/release-validation, dump symlinked, config localized):**
+  - A. `--verify-ps4` after pulling the live state: 🎉 PASSED — 57 AFR files, 53 redirects all present, catalog dataIndexes valid.
+  - B. Build-only 4dea2/Oxytocin from the shipped tools: 5/5 beatmaps; bundle quality verified — NoArrows 5/5 all-dots, OneSaber 5/5 blue-dots (Exp 231/218 fixes confirmed IN the shipped code).
+  - C. Idempotent `--deploy-full --skip-plugin-deployment` over the live loadout: **preserved all 4 other packs + all other songs** ("Preserving existing packs... therollingstones, camellia, lizzo, britneyspears"), processed all 5 packs, catalog CRCs patched for all 5, validation PASSED. The Exp 232/226/227 preservation stack works from the shipped code.
+  - D. Post-deploy: 5 pack redirects, 47 songs (47 bundles on PS4 — consistent, no ghosts), catalog present; PS4 plugin untouched (v0.8047, skip-plugin honored).
+- **Findings (documented in the procedure doc; neither blocks the alpha):**
+  1. Pipeline DEFAULT_CONFIG paths are devcontainer-absolute (`/workspace/beat_saber_deluxe/...`) — a consumer extracting anywhere else must localize ~7 path values (procedure step 4b) or pack-mode ops fail. Recommended: PROJECT_ROOT-relative defaults in a post-merge pipeline version.
+  2. `--deploy-full` attempts `make` for the plugin, but the zip ships no src//Makefile → the release-notes quick-start fails from the zip alone. Workaround: `--skip-plugin-deployment` (the shipped prx == the deployed build). Recommended: fall back to the bundled prx when no Makefile exists.
+  3. Cosmetic: zip requirements.txt = repo requirements-test.txt (includes pytest/ruff).
+- **Deliverable:** `.agent/docs/release-validation-test-procedure.md` — full download → extract → audit → symlink → config-localize → 4-validation procedure with expected outputs, plus the findings table. User will walk it themselves pre-merge.
+- **Status:** ✅ Alpha validated against real hardware. Procedure doc staged. Screenshots/demo videos remain the user's pre-merge items; findings 1–2 queued for post-merge pipeline work.

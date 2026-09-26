@@ -298,3 +298,16 @@ pitfalls:
   - V3 beatmap uses field 'c' for note color (not 'a' which is V2)
   - Song metadata: artist is intentionally blanked for single-artist packs; name+artist combined on name line
   - Bundle naming: deployed as {slot}_v3.bundle (canonical casing + suffix); redirect VALUES must byte-match (Exp 187)
+
+# Release Validation (Exp 234)
+release_validation:
+  procedure_doc: ".agent/docs/release-validation-test-procedure.md"
+  alpha_tag: "v0.8047-pipeline-0.5350-alpha01"
+  key_steps: >
+    extract zip to temp folder; symlink ps4_dump into it; copy ps4_config.json
+    and LOCALIZE ~7 absolute paths (game_dump_dir, output_dir, pack_modes.build_dir/
+    song_ids_path/dump_dir/patched_catalog_local, mass_deploy.bundle_dir) — pipeline
+    defaults are devcontainer-absolute until fixed post-merge; pull live redirects.json
+    (rm template first — lftp no-clobber); then --verify-ps4, build-only, idempotent
+    --deploy-full --skip-plugin-deployment (zip has no src//Makefile — plugin build
+    would fail; shipped prx == deployed build).
