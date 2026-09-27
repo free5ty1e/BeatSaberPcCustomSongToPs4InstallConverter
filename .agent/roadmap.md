@@ -250,7 +250,8 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] Procedure doc: .agent/docs/release-validation-test-procedure.md (user walks it pre-merge).
 - [ ] Pre-merge (user): screenshots + demo videos for README/PR.
 - [x] **(Exp 235, v0.5351) build_plugin bundled-prx fallback DONE** — release --deploy-full deploys the plugin end-to-end (canonical plugins.ini entry; --debug-logging swaps the variant in place). Docs + 5 regression tests. Verified live from the alpha zip.
-- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (release finding #1).
+- [x] **(Exp 236) alpha01 fully validated** — 13 functional groups PASS against live PS4; procedure doc rewritten to full coverage; companion automation script created + self-tested. New post-merge finding: --verify-ps4 blind to catastrophic shrinkage (0-redirect state passes when local is also empty).
+- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236 finding); requirements.txt split (cosmetic).
 
 ### Completed (Exp 233) — The Real 3-File Deletion Bug + --no-prompt + Last CI Gates
 - [x] **3-file deletion ACTUALLY fixed:** relative-vs-absolute Path comparison in the wipe (git ls-files emits repo-relative; rglob yields absolute; `item not in tracked` never matched — every file unlinked, log lied "preserved"). Both layers normalized to resolved-absolute strings; NEW E2E test runs the real wipe against a scratch git repo.
