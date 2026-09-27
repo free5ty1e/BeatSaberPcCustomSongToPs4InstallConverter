@@ -1053,3 +1053,25 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
   1. `release-validation-test-procedure.md` — rewritten to full functional coverage: 6 parts, 16 validation rows with exact commands + expected outputs, destructive-step warnings with mandatory backup/restore, expected-results table, findings.
   2. `release-validation-test-procedure.sh` — companion automation: download→extract→audit→configure→ALL validations→PASS/FAIL table→non-zero exit on failure; destructive steps backup-wrapped; final state compared to pre-validation backup with AUTO-RESTORE on divergence. Running it end-to-end as its own validation (the validator validated).
 - **Status:** automation run in progress at log time; live PS4 state verified unchanged before + after (5 packs / 47 songs / flags all ON).
+
+---
+
+### Experiment 237 — Validation-Automation RCA: The 33/33-PASS Run Wiped All Custom Song Metadata
+- **Date:** 2026-09-27
+- **User report:** "You said it left the PS4 in the exact state it was in before? I checked, and this assertion is incorrect. All the custom songs and beatmap modes are still there, but the custom song metadata is all gone, except Billie Eilish — this still had the artist blanked but all the song names were stock."
+- **Confirmed at the source:** PS4 song_metadata.json held **1 name** (Oxytocin) + **1 artist** (Billie Eilish→' ') — the 47-name/7-artist file had been overwritten. User's in-game observations matched perfectly (BE artist blanked = the surviving artist entry; names stock = name entries gone).
+- **Root cause — TWO compounding defects in MY validation automation (not the release pipeline):**
+  1. **Setup never pulled song_metadata.json.** The release zip ships neither state file (correctly — user state). The automation pulled redirects.json but not song_metadata.json.
+  2. **Every metadata-touching step then ran on an empty local file.** `--metadata-only` (6.2) created a 1-entry local file and DEPLOYED it — the first wipe of 47→1. `--clear-target-song` (6.3) then operated on that 1-entry file (removing the Oxytocin name, keeping the artist blanking from its pack-remaining logic), and the final deploy-full re-added Oxytocin → the exact end state the user saw.
+  3. **The final-state check only compared redirects.json counts** — song_metadata.json wasn't in the backup or comparison set, so 33/33 PASS reported a state that had lost 46 metadata entries. Verification blind spot #2 (after the Exp 236 enforce/verify blind spot).
+- **Underlying pipeline asymmetry (recorded as post-merge finding, not fixed in the frozen release):** `clear_target_song` downloads redirects.json from the PS4 before modifying it (correct), but loads song_metadata.json from the LOCAL path ONLY — a fresh extraction gets the empty default. Same class as the Exp 227 ghost-pack directive: local-cache-fallback must never silently substitute for deployed state. Post-merge fix: metadata-writing steps pull the PS4 copy first, exactly like redirects.
+- **Live repair (completed):** dev repo still held the full 47-name/7-artist file (from the user's QA deploys) — verified against the 47 deployed slots (one apparent miss was a stock-title trailing space in song_ids — a display artifact of my check, not file damage) — and restored it to the PS4. Verified post-restore: 47 names / 7 artists live.
+- **Automation fixes (all in release-validation-test-procedure.sh):**
+  1. Setup pulls + backs up BOTH files; new "metadata coverage" gate (names >= songs) fails fast if the pull fails.
+  2. 6.2 metadata-only now asserts no name-LOSS (M_AFTER >= M_BEFORE) in addition to redirects untouched.
+  3. 6.3 clear-target-song checks names >= PRE-1, and the redeploy restore checks names >= PRE.
+  4. Final integrity compares BOTH files vs backups AND reads the LIVE PS4 metadata (local-only checks missed the wipe); auto-restore now pushes both files; new "PS4 metadata intact post-restore" check.
+- **Procedure doc updated:** 1.6 pulls both files with the warning (why the first run wiped metadata), Part 6 final-integrity checks both local + PS4 metadata, finding #3 recorded with the post-merge pipeline fix.
+- **Validation of the fix:** the fixed automation re-run end-to-end (33+ checks) — must report PASS with final state == pre-validation INCLUDING names, and the PS4 metadata must be intact after.
+- **Lesson (twice-burned):** a state-restoration test that doesn't back up and compare EVERY user-state file it can touch is not a restoration test. Redirects and metadata are co-equal state; backup, compare, and restore both — and read the live system, not just the local copies.
+- **Status:** fixed + live state restored; fixed-automation re-run in flight at log time.

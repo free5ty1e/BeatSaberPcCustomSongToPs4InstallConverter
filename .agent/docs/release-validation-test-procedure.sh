@@ -107,13 +107,31 @@ EOF
 [ -f ps4_config.json ] && mark PASS "config localized" || mark FAIL "config localized"
 
 echo "── [4/8] Pull + back up live state"
-rm -f redirects.json
+# BOTH state files must be pulled and backed up: redirects.json AND
+# song_metadata.json. The release zip ships NEITHER (both are user state) —
+# if song_metadata.json is missing locally, any pipeline step that loads
+# 'local' metadata starts from an EMPTY file and, on deploy, WIPES the
+# PS4's metadata (Exp 237: the 33/33 'green' run destroyed all 47 custom
+# song names because nothing pulled or restored this file).
+rm -f redirects.json song_metadata.json
 timeout 60 lftp -u anonymous:anonymous -e "get /data/GoldHEN/AFR/CUSA12878/redirects.json -o redirects.json; quit" "$PS4_IP:2121" >/dev/null 2>&1
+timeout 60 lftp -u anonymous:anonymous -e "get /data/GoldHEN/AFR/CUSA12878/song_metadata.json -o song_metadata.json; quit" "$PS4_IP:2121" >/dev/null 2>&1
 PRE_SONGS=$(python3 -c "import json; print(len([k for k in json.load(open('redirects.json'))['redirects'] if k.startswith('BeatmapLevelsData/')]))" 2>/dev/null || echo 0)
 PRE_PACKS=$(python3 -c "import json; print(len([k for k in json.load(open('redirects.json'))['redirects'] if '_pack_assets_' in k]))" 2>/dev/null || echo 0)
+PRE_NAMES=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_names']))" 2>/dev/null || echo 0)
+PRE_ARTISTS=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_artists']))" 2>/dev/null || echo 0)
 cp redirects.json redirects.pre-validation.bak
-[ "$PRE_PACKS" -ge 1 ] && mark PASS "live state pulled ($PRE_PACKS packs / $PRE_SONGS songs)" \
-                        || mark FAIL "live state pulled (0 packs)"
+cp song_metadata.json song_metadata.pre-validation.bak
+if [ "$PRE_PACKS" -ge 1 ]; then
+    mark PASS "live state pulled ($PRE_PACKS packs / $PRE_SONGS songs / $PRE_NAMES names / $PRE_ARTISTS artists)"
+else
+    mark FAIL "live state pulled (0 packs)"
+fi
+if [ "$PRE_NAMES" -ge "$PRE_SONGS" ]; then
+    mark PASS "metadata coverage (names >= songs)"
+else
+    mark FAIL "metadata coverage ($PRE_NAMES names for $PRE_SONGS songs — pull may have failed)"
+fi
 
 # ---------------------------------------------------------------------------
 echo "── [5/8] Core validations"
@@ -174,22 +192,45 @@ PIPE --features-only --set-feature enable_plugin=true --set-feature enable_beatm
 LFTP_CAT /data/GoldHEN/AFR/CUSA12878/features.json | grep -q '"enable_plugin": true' \
     && mark PASS "flags restored ON" || mark FAIL "flags restored ON"
 
-# 6.2 metadata-only (redirect count unchanged)
+# 6.2 metadata-only (redirects untouched AND no metadata loss)
+# NOTE (Exp 237): the local song_metadata.json was pulled at setup; this step
+# ADDS/updates one entry in it and deploys — safe ONLY because the full file
+# is present locally. Without the setup pull this step single-handedly wipes
+# the PS4's metadata (a 1-entry local file over 47 live entries).
 R_BEFORE=$(python3 -c "import json; print(len(json.load(open('redirects.json'))['redirects']))")
+M_BEFORE=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_names']))")
 PIPE --metadata-only --target Oxytocin --song-name "Kiss Me More" --artist "Doja Cat" --deploy >/dev/null 2>&1
 R_AFTER=$(python3 -c "import json; print(len(json.load(open('redirects.json'))['redirects']))")
-[ "$R_BEFORE" = "$R_AFTER" ] && mark PASS "metadata-only (redirects untouched)" || mark FAIL "metadata-only changed redirects"
+M_AFTER=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_names']))")
+if [ "$R_BEFORE" = "$R_AFTER" ] && [ "$M_AFTER" -ge "$M_BEFORE" ]; then
+    mark PASS "metadata-only (redirects untouched, names $M_BEFORE→$M_AFTER)"
+else
+    mark FAIL "metadata-only (redirects $R_BEFORE→$R_AFTER, names $M_BEFORE→$M_AFTER)"
+fi
 
-# 6.3 clear-target-song (surgical) + restore
+# 6.3 clear-target-song (surgical: redirects AND metadata) + restore
 PIPE --clear-target-song Oxytocin >/dev/null 2>&1
-POST_CLEAR=$(python3 -c "import json; r=json.load(open('redirects.json'))['redirects']; print(len([k for k in r if k.startswith('BeatmapLevelsData/')]), len([k for k in r if '_pack_assets_' in k]))")
-CLEAR_SONGS=$(echo "$POST_CLEAR" | cut -d' ' -f1); CLEAR_PACKS=$(echo "$POST_CLEAR" | cut -d' ' -f2)
-[ "$CLEAR_PACKS" = "$PRE_PACKS" ] && [ "$CLEAR_SONGS" = "$((PRE_SONGS-1))" ] \
-    && mark PASS "clear-target-song surgical ($CLEAR_SONGS songs, $CLEAR_PACKS packs)" \
-    || mark FAIL "clear-target-song surgical (got $CLEAR_SONGS/$CLEAR_PACKS, want $((PRE_SONGS-1))/$PRE_PACKS)"
+POST_CLEAR=$(python3 -c "
+import json
+r = json.load(open('redirects.json'))['redirects']
+m = json.load(open('song_metadata.json'))
+print(len([k for k in r if k.startswith('BeatmapLevelsData/')]),
+      len([k for k in r if '_pack_assets_' in k]),
+      len(m.get('song_names', {})))")
+CLEAR_SONGS=$(echo "$POST_CLEAR" | cut -d' ' -f1); CLEAR_PACKS=$(echo "$POST_CLEAR" | cut -d' ' -f2); CLEAR_NAMES=$(echo "$POST_CLEAR" | cut -d' ' -f3)
+if [ "$CLEAR_PACKS" = "$PRE_PACKS" ] && [ "$CLEAR_SONGS" = "$((PRE_SONGS-1))" ] && [ "$CLEAR_NAMES" -ge "$((PRE_NAMES-1))" ]; then
+    mark PASS "clear-target-song surgical ($CLEAR_SONGS songs, $CLEAR_PACKS packs, $CLEAR_NAMES names)"
+else
+    mark FAIL "clear-target-song surgical (got $CLEAR_SONGS/$CLEAR_PACKS/$CLEAR_NAMES, want $((PRE_SONGS-1))/$PRE_PACKS/>=$((PRE_NAMES-1)))"
+fi
 PIPE --download-beat-saver-song 4dea2 --target Oxytocin --pcm16 --no-pad --convert-to-v3 --deploy-full >/dev/null 2>&1
 R_NOW=$(python3 -c "import json; r=json.load(open('redirects.json'))['redirects']; print(len([k for k in r if k.startswith('BeatmapLevelsData/')]))")
-[ "$R_NOW" = "$PRE_SONGS" ] && mark PASS "clear+redeploy restore ($R_NOW songs)" || mark FAIL "restore songs ($R_NOW vs $PRE_SONGS)"
+M_NOW=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_names']))")
+if [ "$R_NOW" = "$PRE_SONGS" ] && [ "$M_NOW" -ge "$PRE_NAMES" ]; then
+    mark PASS "clear+redeploy restore ($R_NOW songs, $M_NOW names)"
+else
+    mark FAIL "restore (songs $R_NOW vs $PRE_SONGS, names $M_NOW vs $PRE_NAMES)"
+fi
 
 # 6.4 sync-config
 OUT=$(PIPE --verify-ps4 --sync-config 2>&1)
@@ -223,14 +264,22 @@ PIPE --verify-ps4 --target-ip "$PS4_IP" 2>&1 | grep -q "PASSED" \
 
 # ---------------------------------------------------------------------------
 echo "── [7/8] Final state integrity"
+# BOTH state files compared against the pre-validation backups, and the LIVE
+# PS4 metadata compared too (local-only checks missed the Exp 237 wipe: the
+# local file and the PS4 file must BOTH hold the full name set).
 FINAL_SONGS=$(python3 -c "import json; print(len([k for k in json.load(open('redirects.json'))['redirects'] if k.startswith('BeatmapLevelsData/')]))")
 FINAL_PACKS=$(python3 -c "import json; print(len([k for k in json.load(open('redirects.json'))['redirects'] if '_pack_assets_' in k]))")
-if [ "$FINAL_PACKS" = "$PRE_PACKS" ] && [ "$FINAL_SONGS" = "$PRE_SONGS" ]; then
-    mark PASS "final state == pre-validation ($FINAL_PACKS packs / $FINAL_SONGS songs)"
+FINAL_NAMES=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_names']))" 2>/dev/null || echo 0)
+PS4_NAMES=$(LFTP_CAT /data/GoldHEN/AFR/CUSA12878/song_metadata.json | python3 -c "import json,sys; print(len(json.load(sys.stdin)['song_names']))" 2>/dev/null || echo 0)
+if [ "$FINAL_PACKS" = "$PRE_PACKS" ] && [ "$FINAL_SONGS" = "$PRE_SONGS" ] \
+   && [ "$FINAL_NAMES" -ge "$PRE_NAMES" ] && [ "$PS4_NAMES" -ge "$PRE_NAMES" ]; then
+    mark PASS "final state == pre-validation ($FINAL_PACKS packs / $FINAL_SONGS songs / $PS4_NAMES PS4 names)"
 else
-    mark FAIL "final state diverged ($FINAL_PACKS/$FINAL_SONGS vs $PRE_PACKS/$PRE_SONGS) — AUTO-RESTORING"
+    mark FAIL "final state diverged (packs $FINAL_PACKS/$PRE_PACKS, songs $FINAL_SONGS/$PRE_SONGS, names $FINAL_NAMES local / $PS4_NAMES PS4 vs $PRE_NAMES) — AUTO-RESTORING"
     cp redirects.pre-validation.bak redirects.json
+    cp song_metadata.pre-validation.bak song_metadata.json
     PIPE --verify-ps4 --deploy-config >/dev/null 2>&1
+    timeout 60 lftp -u anonymous:anonymous -e "put song_metadata.json -o /data/GoldHEN/AFR/CUSA12878/song_metadata.json; quit" "$PS4_IP:2121" >/dev/null 2>&1
 fi
 if PIPE --verify-ps4 2>&1 | grep -q "PASSED"; then mark PASS "final verify-ps4"; else mark FAIL "final verify-ps4"; fi
 LFTP_CAT /data/GoldHEN/AFR/CUSA12878/features.json | python3 -c "
@@ -238,6 +287,11 @@ import json,sys
 d = json.load(sys.stdin)
 sys.exit(0 if all(d.values()) else 1)" 2>/dev/null \
     && mark PASS "features.json all ON" || mark FAIL "features.json not all ON"
+LFTP_CAT /data/GoldHEN/AFR/CUSA12878/song_metadata.json | python3 -c "
+import json,sys
+d = json.load(sys.stdin)
+sys.exit(0 if len(d.get('song_names', {})) >= int(sys.argv[1]) else 1)" "$PRE_NAMES" 2>/dev/null \
+    && mark PASS "PS4 metadata intact post-restore" || mark FAIL "PS4 metadata still damaged"
 
 # ---------------------------------------------------------------------------
 echo "── [8/8] RESULTS"

@@ -251,7 +251,8 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [ ] Pre-merge (user): screenshots + demo videos for README/PR.
 - [x] **(Exp 235, v0.5351) build_plugin bundled-prx fallback DONE** — release --deploy-full deploys the plugin end-to-end (canonical plugins.ini entry; --debug-logging swaps the variant in place). Docs + 5 regression tests. Verified live from the alpha zip.
 - [x] **(Exp 236) alpha01 fully validated** — 13 functional groups PASS against live PS4; procedure doc rewritten to full coverage; companion automation script created + self-tested. New post-merge finding: --verify-ps4 blind to catastrophic shrinkage (0-redirect state passes when local is also empty).
-- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236 finding); requirements.txt split (cosmetic).
+- [x] **(Exp 237) validation-automation metadata-wipe RCA'd + fixed** — both state files pulled/backed up/compared now; name-loss gates; live PS4 metadata restored (47 names / 7 artists).
+- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236); **metadata steps must pull song_metadata.json from the PS4 like clear_target_song already does for redirects (Exp 237)**; requirements.txt split (cosmetic).
 
 ### Completed (Exp 233) — The Real 3-File Deletion Bug + --no-prompt + Last CI Gates
 - [x] **3-file deletion ACTUALLY fixed:** relative-vs-absolute Path comparison in the wipe (git ls-files emits repo-relative; rglob yields absolute; `item not in tracked` never matched — every file unlinked, log lied "preserved"). Both layers normalized to resolved-absolute strings; NEW E2E test runs the real wipe against a scratch git repo.

@@ -116,17 +116,35 @@ EOF
 
 ### 1.6 Pull the live PS4 state (live-loadout validation)
 
+⚠️ **Pull BOTH state files** (Exp 237): redirects.json AND song_metadata.json.
+The release zip ships NEITHER (both are user state). If song_metadata.json is
+absent locally, the first pipeline step that loads "local" metadata starts
+from an EMPTY file and — on deploy — WIPES every custom song name off the
+PS4. That is exactly how the first automated run destroyed 47 metadata
+entries while reporting 33/33 PASS.
+
 ```bash
-rm redirects.json   # remove the empty template (lftp won't clobber)
+rm redirects.json song_metadata.json   # remove templates (lftp won't clobber)
 timeout 60 lftp -u anonymous:anonymous \
     -e "get /data/GoldHEN/AFR/CUSA12878/redirects.json -o redirects.json; quit" \
     192.168.100.117:2121
-python3 -c "import json; print('pulled', len(json.load(open('redirects.json'))['redirects']), 'redirects')"
-# EXPECT: your live count (e.g. 53)
-cp redirects.json redirects.pre-validation.bak   # safety net for Part 3
+timeout 60 lftp -u anonymous:anonymous \
+    -e "get /data/GoldHEN/AFR/CUSA12878/song_metadata.json -o song_metadata.json; quit" \
+    192.168.100.117:2121
+python3 - <<'EOF'
+import json
+r = json.load(open('redirects.json'))['redirects']
+m = json.load(open('song_metadata.json'))
+names = len(m['song_names'])
+songs = len([k for k in r if k.startswith('BeatmapLevelsData/')])
+print(f"pulled {len(r)} redirects; {names} names / {len(m['song_artists'])} artists")
+assert names >= songs, f"metadata pull failed? ({names} names for {songs} songs)"
+EOF
+cp redirects.json redirects.pre-validation.bak       # safety nets for Parts 3-6
+cp song_metadata.json song_metadata.pre-validation.bak
 ```
 
-> Fresh PS4: skip the pull; the empty template is then correct.
+> Fresh PS4: skip the pulls; the empty templates are then correct.
 
 ### 1.7 Smoke-test the shipped pipeline
 
@@ -401,11 +419,21 @@ timeout 120 python3 tools/full_custom_song_pipeline.py --verify-ps4 2>&1 | grep 
 python3 -c "
 import json
 r = json.load(open('redirects.json'))['redirects']
+m = json.load(open('song_metadata.json'))
 packs = sorted(k.split('_')[0] for k in r if '_pack_assets_' in k)
 songs = [k for k in r if k.startswith('BeatmapLevelsData/')]
 print(f'{len(packs)} packs {packs}'); print(f'{len(songs)} songs'); print('catalog:', 'aa/catalog.json' in r)
+print(f"metadata: {len(m['song_names'])} names / {len(m['song_artists'])} artists")
 "
 # EXPECT: identical pack list + song count to Part 1.6's pull; validation PASSED
+# AND metadata name-count >= the pre-validation pull (Exp 237: check BOTH
+# the local file AND the live PS4 copy):
+timeout 60 lftp -u anonymous:anonymous \
+    -e "cat /data/GoldHEN/AFR/CUSA12878/song_metadata.json; quit" 192.168.100.117:2121 \
+    | python3 -c "import json,sys; raw=sys.stdin.read(); d=json.loads(raw[raw.find('{'):]); print('PS4 names:', len(d['song_names']))"
+# If either metadata count dropped: restore from the backup —
+#   cp song_metadata.pre-validation.bak song_metadata.json
+#   lftp ... put song_metadata.json -o /data/GoldHEN/AFR/CUSA12878/song_metadata.json
 timeout 60 lftp -u anonymous:anonymous -e "cat /data/GoldHEN/AFR/CUSA12878/features.json; quit" 192.168.100.117:2121 \
     | python3 -c "import json,sys; raw=sys.stdin.read(); d=json.loads(raw[raw.find('{'):]); assert all(d.values()); print('all flags ON')"
 ```
@@ -435,4 +463,5 @@ timeout 60 lftp -u anonymous:anonymous -e "cat /data/GoldHEN/AFR/CUSA12878/featu
 
 1. **Devcontainer-absolute default paths** (carried over from alpha00): consumers MUST localize config paths (step 1.5). Post-merge: PROJECT_ROOT-relative defaults.
 2. **`--enforce-config` + verify blind spot**: enforce pushed a zeroed local file over live state during testing (restored from backup); `--verify-ps4` PASSED against the wiped PS4 because both sides were empty. Post-merge: verify should flag catastrophic shrinkage (pack redirects present locally but absent on PS4).
+3. **song_metadata.json local-load asymmetry (Exp 237 — the run that "passed" 33/33 while wiping 47 metadata entries)**: `clear_target_song` downloads redirects.json from the PS4 before modifying it, but loads song_metadata.json from the LOCAL file ONLY. In a fresh extraction the local file doesn't exist → empty default → every entry removed → the 1-entry file deployed over the PS4's 47. The validation now pulls + backs up + checks BOTH files. **Post-merge pipeline fix: clear_target_song (and every metadata-writing step) must pull song_metadata.json from the PS4 first, exactly like it already does for redirects.json.**
 3. Cosmetic: zip `requirements.txt` includes test-only deps (pytest/ruff).
