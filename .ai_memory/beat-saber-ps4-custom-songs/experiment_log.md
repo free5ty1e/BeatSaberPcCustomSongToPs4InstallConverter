@@ -1025,3 +1025,18 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
   3. Cosmetic: zip requirements.txt = repo requirements-test.txt (includes pytest/ruff).
 - **Deliverable:** `.agent/docs/release-validation-test-procedure.md` — full download → extract → audit → symlink → config-localize → 4-validation procedure with expected outputs, plus the findings table. User will walk it themselves pre-merge.
 - **Status:** ✅ Alpha validated against real hardware. Procedure doc staged. Screenshots/demo videos remain the user's pre-merge items; findings 1–2 queued for post-merge pipeline work.
+
+---
+
+### Experiment 235 — Release Plugin Deployment: Bundled-PRX Fallback (Exp 234 Finding #2 Resolved)
+- **Date:** 2026-09-26
+- **User report:** "The release should most certainly include a pre-built set of plugins — one with debugging enabled, one without. CI should build it... we should be able to use the release to run a full deploy end to end for our test song on the real PS4, including the plugin deployment."
+- **Clarification established:** the release ALREADY ships both CI-built plugins (`plugins/beat_saber_deluxe.prx` 88,752 B + `plugins/beat_saber_deluxe_debug.prx` 88,816 B, FSELF magic 4f153d1d, v0.8047 strings) — CI's "Build plugin (release)/(debug)" steps build them into the zip. The REAL defect was the inverse: the zip's pipeline REFUSED to use them (`build_plugin` unconditionally ran `make`, which fails with no src//Makefile in the zip; plugin-only mode hardcoded the repo path).
+- **Fixes:**
+  1. `build_plugin`: no Makefile present → fall back to the bundled `plugins/<variant>.prx` with an explicit log line (`No Makefile (packaged release) — using bundled plugin`); raises a clear error only when neither source nor bundle exists.
+  2. `deploy_plugin`: remote filename is ALWAYS the canonical `beat_saber_deluxe.prx` — a debug deploy REPLACES the single plugins.ini entry instead of forking a second entry GoldHEN would also load (the live PS4 entry confirmed as `/data/GoldHEN/plugins/beat_saber_deluxe.prx` under `[CUSA12878]`).
+  3. Plugin-only mode routes through `build_plugin` (bundled fallback applies there too).
+- **Live verification (from the extracted alpha zip, real PS4):** `--deploy-full` (no skip flag) → bundled prx deployed, plugins.ini entry confirmed, song+pack+catalog deployed, **post-deploy validation PASSED**. PS4 plugin download carries v0.8047 strings (byte-compare invalid by design: GoldHEN FTPD unpacks FSELF on download — ELF magic locally vs FSELF remotely, documented since Exp 221).
+- **Docs updated:** release-validation-test-procedure.md (section 8 + findings: #2 marked RESOLVED, expected output now shows the bundled-plugin lines), CI_RELEASE.md (plugin table documents both CI-built binaries + automatic deploy + `--debug-logging` swap semantics), README (deploy-full flag docs).
+- **Tests:** 5 new (TestBundledPluginFallback: no-Makefile→bundled release prx, no-Makefile→bundled debug prx, neither→RuntimeError, canonical remote name via FTP capture, plugin-only-mode resolver source-audit). VERSION → **0.5351**.
+- **Status:** ✅ Fixed + verified end-to-end from the release zip. Remaining pre-merge: user screenshots/videos + procedure walk. Remaining post-merge: finding #1 (PROJECT_ROOT-relative config defaults).

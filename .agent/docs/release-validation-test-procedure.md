@@ -211,17 +211,21 @@ Re-deploys a song that is ALREADY live: no state change, but exercises FTP
 uploads, incremental pack patching, catalog regeneration, and redirect
 preservation from the release copy.
 
-⚠️ **Use `--skip-plugin-deployment`.** The release zip ships tools only — no
-`src/`, no Makefile — so `--deploy-full`'s plugin build step fails from the
-extracted copy (see Findings #2). The shipped `plugins/beat_saber_deluxe.prx`
-is the same v0.8047 build already on the PS4.
+Since pipeline v0.5351 the plugin build step falls back to the **bundled
+CI-built binary** when no Makefile is present (the packaged release ships
+`plugins/beat_saber_deluxe.prx` + `plugins/beat_saber_deluxe_debug.prx`):
+`--deploy-full` deploys the plugin end-to-end from the zip alone. Pass
+`--debug-logging` to deploy the verbose-logging variant (it replaces the same
+`beat_saber_deluxe.prx` plugins.ini entry — re-deploy without the flag to
+restore the quiet build).
 
 ```bash
 timeout 590 python3 tools/full_custom_song_pipeline.py \
     --download-beat-saver-song 4dea2 --target Oxytocin \
-    --pcm16 --no-pad --convert-to-v3 --deploy-full \
-    --skip-plugin-deployment 2>&1 | grep -E "Preserving|Processing pack|PASSED|FAILED" | head -12
+    --pcm16 --no-pad --convert-to-v3 --deploy-full 2>&1 | grep -E "Preserving|Processing pack|plugin|PASSED|FAILED" | head -14
 # EXPECT:
+#   No Makefile (packaged release) — using bundled plugin: plugins/beat_saber_deluxe.prx
+#   ✅ Plugin uploaded / plugins.ini updated
 #   Preserving existing packs with custom songs: <all your other packs>
 #   Preserving existing custom songs: <all your other slots>
 #   📦 Processing pack: <one line per deployed pack — ALL of them>
@@ -286,13 +290,12 @@ rm -rf /workspace/temp/release-validation /workspace/temp/beat-saber-deluxe-*.zi
    errors. **Recommended fix (pipeline change → v0.5351+): make defaults relative
    to PROJECT_ROOT** so an extracted release works with only the symlink +
    ps4 IP entered. Until then, step 4b of this procedure is REQUIRED.
-2. **`--deploy-full` tries to build the plugin from source, but the release
-   ships no `src/` or Makefile** → the documented quick-start command fails
-   from the zip alone (`RuntimeError: Plugin build failed`). Workaround today:
-   always pass `--skip-plugin-deployment` from an extracted release (the shipped
-   .prx is the same build CI deployed). **Recommended fix: `build_plugin` falls
-   back to the bundled `plugins/beat_saber_deluxe.prx` when no Makefile exists**
-   (or bundle src/ + Makefile in the zip).
+2. ~~`--deploy-full` fails to build the plugin from the zip~~ **RESOLVED (v0.5351,
+   Exp 235):** `build_plugin` falls back to the bundled CI-built binary when no
+   Makefile is present, and debug deploys replace the canonical
+   `beat_saber_deluxe.prx` plugins.ini entry (no forked entry). Verified live:
+   `--deploy-full` from the extracted alpha zip deploys song + pack + catalog +
+   **plugin** end-to-end, validation PASSED.
 3. Cosmetic: `requirements.txt` in the zip is the repo's `requirements-test.txt`
    (includes pytest/ruff). Fine for a dev-oriented release; a consumer-only
    variant would list just UnityPy/soundfile/numpy.

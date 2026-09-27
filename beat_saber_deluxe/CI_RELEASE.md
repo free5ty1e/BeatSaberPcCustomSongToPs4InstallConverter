@@ -10,10 +10,10 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 
 | File                          | Description                                                        |
 | ----------------------------- | ------------------------------------------------------------------ |
-| `beat_saber_deluxe.prx`       | Release build — no verbose logging, minimal file size              |
-| `beat_saber_deluxe_debug.prx` | Debug build — verbose ps4 logging (`bs_log.txt`), larger file size |
+| `plugins/beat_saber_deluxe.prx`       | **CI-built release build** — no verbose logging, minimal file size. Deployed automatically by `--deploy-full` (the pipeline uses this bundled binary when no source tree/Makefile is present) |
+| `plugins/beat_saber_deluxe_debug.prx` | **CI-built debug build** — verbose ps4 logging (`bs_log.txt`); deploy with `--deploy-full --debug-logging` (replaces the same plugins.ini entry — re-deploy without the flag to restore quiet logging) |
 | `plugins.ini`                 | GoldHEN configuration for CUSA12878                                |
-| `redirects.json`              | Song redirect config                                               |
+| `redirects.json`              | Empty song-redirect template — the pipeline regenerates the real file on every deploy |
 
 ### 🎵 Song Conversion Pipeline
 
@@ -71,8 +71,9 @@ python3 tools/full_custom_song_pipeline.py \
     --deploy-full
 ```
 
-Each `--deploy-full` is self-contained: it builds and deploys the latest plugin,
-deploys only that song's bundle, surgically patches that song's music pack (with
+Each `--deploy-full` is self-contained: it deploys the plugin (built from source
+in a repo checkout, or the bundled CI build in this extracted release), deploys
+only that song's bundle, surgically patches that song's music pack (with
 a matching Addressables catalog so the pack passes Unity's CRC check), regenerates
 `redirects.json` scoped to exactly what is deployed (existing custom songs in
 other packs are preserved), and runs post-deploy validation. **A failed validation

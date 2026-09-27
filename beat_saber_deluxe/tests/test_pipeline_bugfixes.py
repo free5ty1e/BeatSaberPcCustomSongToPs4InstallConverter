@@ -1541,3 +1541,74 @@ class TestChainedPackRedirectAccumulation:
         data = {'redirects': {ghost_key: 'ghost_pack_modes_assets_all_ffffffffffffffffffffffffffffffff.bundle'}}
         fcp._ensure_pack_bundle_redirects(data, cfg, packs=['billieeilish'])
         assert ghost_key not in data['redirects'], "true-stale pack redirect must still be removed"
+
+
+# ======================================================================
+# Exp 235 — Release-zip plugin deployment (bundled-prx fallback)
+# ======================================================================
+
+class TestBundledPluginFallback:
+    """
+    The packaged release ships tools only (no src/, no Makefile) but bundles
+    BOTH CI-built plugins in plugins/. --deploy-full must work end-to-end
+    from the release zip alone — plugin deployment included — so build_plugin
+    falls back to the bundled binary when no Makefile exists, and deploys it
+    under the CANONICAL remote name (a debug deploy must replace the single
+    plugins.ini entry, never fork a second one GoldHEN would also load).
+    """
+
+    def test_no_makefile_uses_bundled_prx(self, tmp_path):
+        import full_custom_song_pipeline as fcp
+        # Packaged-release layout: plugins/beat_saber_deluxe.prx, no Makefile
+        (tmp_path / 'plugins').mkdir()
+        (tmp_path / 'plugins' / 'beat_saber_deluxe.prx').write_bytes(b'PRX-REL')
+        (tmp_path / 'plugins' / 'beat_saber_deluxe_debug.prx').write_bytes(b'PRX-DBG')
+        prx = fcp.build_plugin(str(tmp_path), debug=False)
+        assert prx == str(tmp_path / 'plugins' / 'beat_saber_deluxe.prx')
+
+    def test_no_makefile_debug_uses_bundled_debug_prx(self, tmp_path):
+        import full_custom_song_pipeline as fcp
+        (tmp_path / 'plugins').mkdir()
+        (tmp_path / 'plugins' / 'beat_saber_deluxe.prx').write_bytes(b'PRX-REL')
+        (tmp_path / 'plugins' / 'beat_saber_deluxe_debug.prx').write_bytes(b'PRX-DBG')
+        prx = fcp.build_plugin(str(tmp_path), debug=True)
+        assert prx == str(tmp_path / 'plugins' / 'beat_saber_deluxe_debug.prx')
+
+    def test_no_makefile_no_bundle_raises(self, tmp_path):
+        import full_custom_song_pipeline as fcp
+        with pytest.raises(RuntimeError):
+            fcp.build_plugin(str(tmp_path), debug=False)
+
+    def test_deploy_plugin_uses_canonical_remote_name(self, tmp_path, monkeypatch):
+        """Whatever binary variant is deployed, the remote filename must stay
+        beat_saber_deluxe.prx — the plugins.ini entry must never fork."""
+        import full_custom_song_pipeline as fcp
+        captured = {}
+        def fake_ftp_run(host, port, user, password, cmds, timeout=60):
+            captured['cmds'] = cmds
+            return 0, '', ''
+        monkeypatch.setattr(fcp, '_ftp_run', fake_ftp_run)
+        def fake_ensure_ini(config, remote):
+            captured['ini_remote'] = remote
+        monkeypatch.setattr(fcp, 'ensure_plugins_ini', fake_ensure_ini)
+        dbg = tmp_path / 'beat_saber_deluxe_debug.prx'
+        dbg.write_bytes(b'PRX-DBG')
+        fcp.deploy_plugin(str(dbg), {'ps4': {'ip': 'x'}, 'title': {'id': 'CUSA12878'}})
+        # The put's REMOTE TARGET (-o side) must be the canonical name even
+        # when the local source is the debug binary.
+        put_cmd = ' '.join(captured['cmds'])
+        target = put_cmd.split('-o')[-1].strip().strip('"')
+        assert target == '/data/GoldHEN/plugins/beat_saber_deluxe.prx', \
+            f"remote target must stay canonical, got: {target}"
+        assert captured['ini_remote'] == '/data/GoldHEN/plugins/beat_saber_deluxe.prx'
+
+    def test_plugin_only_mode_routes_through_resolver(self):
+        """Source audit: plugin-only mode must call build_plugin (bundled-prx
+        fallback), not a hardcoded PROJECT_ROOT/beat_saber_deluxe.prx path."""
+        src = open(os.path.join(os.path.dirname(__file__), '..', 'tools',
+                                'full_custom_song_pipeline.py')).read()
+        assert re.search(
+            r"if args\.deploy_plugin and not args\.song_dir:\s*\n\s*prx_path = build_plugin\(",
+            src), "plugin-only mode must resolve the prx via build_plugin"
+        assert "os.path.join(PROJECT_ROOT, 'beat_saber_deluxe.prx')" not in src, \
+            "hardcoded prx path must be gone (bundled fallback would be bypassed)"

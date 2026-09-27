@@ -249,7 +249,8 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] Live validation from the extracted copy: verify PASSED; build-only → correct charts (NoArrows all-dots, OneSaber blue-dots); idempotent deploy preserved 5 packs + 47 songs, PASSED; plugin untouched.
 - [x] Procedure doc: .agent/docs/release-validation-test-procedure.md (user walks it pre-merge).
 - [ ] Pre-merge (user): screenshots + demo videos for README/PR.
-- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults; build_plugin fallback to bundled prx when no Makefile.
+- [x] **(Exp 235, v0.5351) build_plugin bundled-prx fallback DONE** — release --deploy-full deploys the plugin end-to-end (canonical plugins.ini entry; --debug-logging swaps the variant in place). Docs + 5 regression tests. Verified live from the alpha zip.
+- [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (release finding #1).
 
 ### Completed (Exp 233) — The Real 3-File Deletion Bug + --no-prompt + Last CI Gates
 - [x] **3-file deletion ACTUALLY fixed:** relative-vs-absolute Path comparison in the wipe (git ls-files emits repo-relative; rglob yields absolute; `item not in tracked` never matched — every file unlinked, log lied "preserved"). Both layers normalized to resolved-absolute strings; NEW E2E test runs the real wipe against a scratch git repo.

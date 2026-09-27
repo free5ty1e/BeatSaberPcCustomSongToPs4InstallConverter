@@ -2230,19 +2230,41 @@ def inject_beatmap_level_so(
 
 def build_plugin(project_root: str, debug: bool = False) -> str:
     """
-    Build the GoldHEN plugin.
+    Build the GoldHEN plugin — or fall back to the bundled release binaries.
+
+    A source tree (repo checkout) builds via make. The PACKAGED RELEASE ships
+    tools only (no src/, no Makefile) but bundles BOTH pre-built plugins in
+    plugins/ (CI-built: beat_saber_deluxe.prx + beat_saber_deluxe_debug.prx) —
+    when no Makefile is present, that bundled binary is the plugin to deploy
+    (Exp 234 finding #2 / Exp 235: --deploy-full must work end-to-end from
+    the release zip alone, plugin deployment included).
 
     Args:
         project_root: Path to the plugin project root (contains Makefile)
-        debug: If True, builds with VERBOSE_LOG enabled
+        debug: If True, builds/uses the VERBOSE_LOG-enabled binary
 
     Returns:
-        Path to the built .prx file
+        Path to the .prx file to deploy
 
     Raises:
-        RuntimeError: If the build fails
+        RuntimeError: If neither a build nor a bundled binary is available
     """
     import subprocess as sp
+
+    prx_name = "beat_saber_deluxe_debug.prx" if debug else "beat_saber_deluxe.prx"
+    bundled = os.path.join(project_root, 'plugins', prx_name)
+    has_makefile = os.path.isfile(os.path.join(project_root, 'Makefile'))
+
+    if not has_makefile:
+        # Packaged-release layout: no source, use the bundled CI-built binary.
+        if os.path.isfile(bundled):
+            log.info(f"No Makefile (packaged release) — using bundled plugin: {bundled}")
+            log.info(f"  ✅ Plugin: {bundled} ({os.path.getsize(bundled)} bytes)")
+            return bundled
+        log.error(f"Plugin build impossible: no Makefile at {project_root} and no bundled "
+                  f"plugin at {bundled}. The release zip ships plugins/{prx_name}; a source "
+                  f"checkout builds it via make.")
+        raise RuntimeError("Plugin build failed (no Makefile, no bundled plugin)")
 
     log.info(f"Building plugin (debug={'yes' if debug else 'no'})...")
     env = os.environ.copy()
@@ -2257,7 +2279,6 @@ def build_plugin(project_root: str, debug: bool = False) -> str:
         raise RuntimeError("Plugin build failed")
 
     # Determine output filename based on debug flag
-    prx_name = "beat_saber_deluxe_debug.prx" if debug else "beat_saber_deluxe.prx"
     prx_path = os.path.join(project_root, prx_name)
 
     if not os.path.isfile(prx_path):
@@ -2596,9 +2617,15 @@ def deploy_plugin(prx_path: str, config: dict, debug: bool = False):
     user = ps4_cfg.get('ftp_user', 'anonymous')
     password = ps4_cfg.get('ftp_password', '')
 
-    # Plugin remote path — name matches the binary type
-    prx_name = os.path.basename(prx_path)
+    # Plugin remote path — ALWAYS the canonical release name so the
+    # plugins.ini entry stays single regardless of which binary variant
+    # (debug/release) is being deployed (Exp 235: a debug deploy must REPLACE
+    # the entry, not fork a second one — GoldHEN would load both).
+    prx_name = "beat_saber_deluxe.prx"
     plugin_remote = f"/data/GoldHEN/plugins/{prx_name}"
+    if os.path.basename(prx_path) != prx_name:
+        log.info(f"  ℹ️  Deploying {os.path.basename(prx_path)} as {prx_name} "
+                 f"(canonical entry — re-deploy the release build to restore quiet logging)")
 
     log.info(f"Deploying plugin to PS4: {plugin_remote}")
 
@@ -4706,8 +4733,9 @@ Examples:
 
     # Plugin-only mode: deploy plugin and exit
     if args.deploy_plugin and not args.song_dir:
+        prx_path = build_plugin(PROJECT_ROOT, debug=args.debug_logging)
         deploy_plugin(
-            os.path.join(PROJECT_ROOT, 'beat_saber_deluxe.prx'),
+            prx_path,
             {'ps4': cfg_ps4, 'title': cfg_title},
             debug=args.debug_logging
         )
