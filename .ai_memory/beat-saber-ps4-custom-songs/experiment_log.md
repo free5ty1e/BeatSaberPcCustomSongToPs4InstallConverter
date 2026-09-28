@@ -1075,3 +1075,14 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **Validation of the fix:** the fixed automation re-run end-to-end (33+ checks) — must report PASS with final state == pre-validation INCLUDING names, and the PS4 metadata must be intact after.
 - **Lesson (twice-burned):** a state-restoration test that doesn't back up and compare EVERY user-state file it can touch is not a restoration test. Redirects and metadata are co-equal state; backup, compare, and restore both — and read the live system, not just the local copies.
 - **Status:** fixed + live state restored; fixed-automation re-run in flight at log time.
+
+---
+
+### Experiment 238 — --log Flag for the Validation Automation + README/Procedure Documentation
+- **Date:** 2026-09-27
+- **User request:** (1) confirm the automation is idempotent/restores state via backups; (2) provide a command that runs the validation live on console AND saves output to a logfile for later review; (3) add the command to the top of the script + the procedure doc; (4) document the automated test's usage in the main README ("so that users know that is how I validated each release").
+- **Idempotence answer (documented):** both state files pulled + backed up before anything runs; destructive steps backup-wrapped; clear-song test re-deploys immediately; final integrity compares BOTH files vs backups AND the live PS4 with auto-restore. Net effect on a healthy PS4: functionally unchanged (rebuilt bundle bytes may differ by gzip nondeterminism; the bundled plugin re-uploads — same CI build).
+- **Command design:** first attempted the `bash -c 'set -o pipefail; ... | tee $LOG'` form — TESTED IT and caught two problems: the positional-arg juggling was fragile (broke in a live test: `tee: '': No such file or directory`), and hand-rolled pipe wrapping invites the Exp 229 tee-swallows-exit-code trap. Better design: `--log <file>` built INTO the script via `exec > >(tee "$LOGFILE") 2>&1` — one simple command, console + log simultaneously, and the script's own exit code is untouched. Argument parsing (`--log <file>` + optional TAG) unit-tested in three forms (both args, tag only, bare).
+- **Validated live:** full run with `--log` → 35/35 PASS; logfile captured all 56 lines including the complete results table; console showed live progress throughout.
+- **Documentation:** script header now carries the recommended command + idempotence notes; procedure doc gained a "Running the automated validation (recommended)" section with the command, TAG/PS4_IP overrides, and the idempotence statement; README gained a "Release Validation (hardware, against a real PS4)" subsection under Unit Testing documenting the release-acceptance test with the command + link to the procedure doc.
+- **Status:** ✅ Delivered + live-validated. Staged.

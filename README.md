@@ -769,6 +769,32 @@ class TestMyFeature:
 | `@pytest.mark.requires_audio` | Needs real audio files on disk | WAV/OGG processing tests |
 | `@pytest.mark.integration` | Needs game bundles on disk | Bundle loading/patching tests |
 
+### Release Validation (hardware, against a real PS4)
+
+Every release is validated end-to-end on a real PS4 before tagging — this is
+the release-acceptance test. The automated validator downloads the release
+zip, audits it statically, then exercises **all functionality** against the
+live console: read-only state verification, song build quality, end-to-end
+`--deploy-full` (including the bundled plugin), `--skip-plugin-deployment`,
+`--debug-logging` plugin swap + restore, feature-flag and kill-switch
+round-trips, `--metadata-only`, `--clear-target-song` surgical revert +
+restore, config sync/enforce, pack-mode scoping, and final state-integrity
+checks against the pre-run backups (both `redirects.json` AND
+`song_metadata.json` are backed up and compared — divergence auto-restores,
+so a healthy PS4 is left functionally unchanged).
+
+```bash
+# Live console output as it works + a timestamped logfile for later review.
+# Exit code 0 = every check PASSED.
+bash .agent/docs/release-validation-test-procedure.sh \
+    --log /workspace/temp/release-validation-$(date +%Y%m%d-%H%M%S).log \
+    v0.8047-pipeline-0.5351-alpha01
+```
+
+Full per-step commands and expected results:
+[`.agent/docs/release-validation-test-procedure.md`](.agent/docs/release-validation-test-procedure.md)
+(the `.sh` companion is the automated form of that same procedure).
+
 ---
 
 ## 10. Roadmap

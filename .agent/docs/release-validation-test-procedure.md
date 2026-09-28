@@ -15,6 +15,35 @@ state-integrity checks.
 **Time required (manual):** ~45–60 min. Automated: ~25 min (dominated by two
 song builds + deploys).
 
+## Running the automated validation (recommended)
+
+One command runs the ENTIRE procedure: live console output as it works (no
+blank screen) plus a timestamped logfile for detailed review afterwards.
+`--log` preserves the script's exit code — 0 = every check PASSED.
+
+```bash
+bash /workspace/.agent/docs/release-validation-test-procedure.sh \
+    --log /workspace/temp/release-validation-$(date +%Y%m%d-%H%M%S).log \
+    v0.8047-pipeline-0.5351-alpha01
+echo "exit=$? (0 = all checks PASSED)"
+```
+
+- TAG argument is optional (defaults to the current release tag) — pass a
+  different tag to validate another release; the zip is downloaded fresh.
+- Override the PS4 address with the environment: `PS4_IP=<ip> bash ...`
+- The logfile lives next to the extracted release in `/workspace/temp/` for
+  later review; each run's folder is kept for inspection at
+  `/workspace/temp/release-validation/`.
+
+**Idempotence / state restoration** (what "PASS" means for your PS4): both
+PS4 state files (redirects.json + song_metadata.json) are pulled and backed
+up before anything runs; destructive steps are backup-wrapped; the clear-song
+test re-deploys the cleared song immediately; and the final integrity step
+compares end-state against the backups for BOTH files AND the live PS4 —
+divergence auto-restores. Net effect on a healthy PS4: functionally unchanged
+(song bundles may be re-uploaded with functionally-identical rebuilt bytes;
+the bundled plugin re-uploads — same CI build).
+
 Validated against: `v0.8047-pipeline-0.5351-alpha01` (Exps 234–236).
 
 ## Prerequisites

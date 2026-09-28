@@ -5,10 +5,32 @@
 # Runs the FULL functional validation of a Beat Saber Deluxe release zip
 # against a REAL PS4, per release-validation-test-procedure.md.
 #
-# Usage:
+# Usage (bare, prints to console only):
 #   bash /workspace/.agent/docs/release-validation-test-procedure.sh [TAG]
 #
-#   TAG defaults to v0.8047-pipeline-0.5351-alpha01.
+# Usage (console output AND a timestamped logfile for later review —
+# RECOMMENDED, this is how each release is validated):
+#
+#   bash /workspace/.agent/docs/release-validation-test-procedure.sh \
+#       --log /workspace/temp/release-validation-$(date +%Y%m%d-%H%M%S).log [TAG]
+#
+#   Console shows progress live (no blank screen); the logfile receives the
+#   exact same output for detailed review afterwards. The script's exit code
+#   is preserved: 0 = every check PASSED, 1 = failures (see the table).
+#
+#   TAG defaults to v0.8047-pipeline-0.5351-alpha01. Override the PS4 with:
+#   PS4_IP=<ip> bash ... (environment variable, default 192.168.100.117)
+#
+# Idempotence / state restoration:
+#   - Pulls and backs up BOTH PS4 state files (redirects.json AND
+#     song_metadata.json) before touching anything (Exp 237).
+#   - Destructive steps are backup-wrapped; --clear-target-song re-deploys
+#     the cleared song immediately after testing it.
+#   - The final integrity step compares end-state vs backups for BOTH files
+#     AND the live PS4; any divergence AUTO-RESTORES both files.
+#   - Net effect on a healthy PS4: functionally unchanged (song bundles may
+#     be re-uploaded with functionally-identical rebuilt bytes; the bundled
+#     plugin is re-uploaded — same CI build).
 #
 # What it does:
 #   1. Downloads + extracts the release into /workspace/temp/release-validation
@@ -20,16 +42,37 @@
 #      round-trips + kill switch, metadata-only, clear-target-song + restore,
 #      sync-config, enforce-config (backup-wrapped), pack-modes scoping,
 #      metadata overrides, target-ip
-#   6. Final state integrity vs the pre-validation backup
+#   6. Final state integrity vs the pre-validation backup (both files + live)
 #   7. Prints a PASS/FAIL table; exits non-zero on any failure
 #
-# Destructive-step safety: redirects.json is backed up before anything that
-# can change it, and the final step compares live state to the backup and
-# auto-restores if they diverge.
+# Destructive-step safety: BOTH state files are backed up before anything
+# that can change them, and the final step compares live state to the
+# backups and auto-restores if they diverge.
 # ============================================================================
 set -u   # no set -e: we collect failures and report at the end
 
-TAG="${1:-v0.8047-pipeline-0.5351-alpha01}"
+# ── Argument parsing: [--log <file>] [TAG] ─────────────────────────────────
+LOGFILE=""
+TAG="v0.8047-pipeline-0.5351-alpha01"
+ARGS=("$@")
+i=0
+while [ $i -lt ${#ARGS[@]} ]; do
+    if [ "${ARGS[$i]}" = "--log" ]; then
+        i=$((i+1)); LOGFILE="${ARGS[$i]:-}"
+    else
+        TAG="${ARGS[$i]}"
+    fi
+    i=$((i+1))
+done
+
+if [ -n "$LOGFILE" ]; then
+    mkdir -p "$(dirname "$LOGFILE")"
+    # process substitution: console + logfile, and the script's own exit code
+    # is preserved (no tee in a pipeline that would swallow $? — Exp 229 lesson)
+    exec > >(tee "$LOGFILE") 2>&1
+    echo "[release-validation] console output is also being logged to: $LOGFILE"
+fi
+
 REPO="free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter"
 PS4_IP="${PS4_IP:-192.168.100.117}"
 TEMP="/workspace/temp"
