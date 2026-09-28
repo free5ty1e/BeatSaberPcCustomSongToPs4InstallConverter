@@ -312,3 +312,9 @@ release_validation:
     (rm template first — lftp no-clobber); then --verify-ps4, build-only, idempotent
     --deploy-full --skip-plugin-deployment (zip has no src//Makefile — plugin build
     would fail; shipped prx == deployed build).
+
+# Session Transcripts (CLAUDE.md §0.5, Exp 239)
+session_transcripts:
+  rule: "MANDATORY: before EVERY response, update a full session transcript under .agent/transcripts/<date>_<slug>.md"
+  contents: "user/assistant messages, reasoning, commands+outputs, changed files, experiment + version numbers"
+  lifecycle: "one file per session (append each cycle); new file when the topic changes"

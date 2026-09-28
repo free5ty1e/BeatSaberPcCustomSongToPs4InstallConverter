@@ -7,6 +7,25 @@ enforced by the files they reference — read them if you haven't already.
 - **Any changes to this file MUST be mirrored in `.opencode/rules.md`.**
 - If an agent or user asks for a rule change, ensure both files are updated to maintain consistency.
 
+## 0.5 Session Transcripts (MANDATORY, every development cycle)
+- **Before sending ANY response message to the user, store/maintain/update a
+  full session transcript under `.agent/transcripts/` as a markdown file named
+  for the session** (e.g. `.agent/transcripts/2026-09-27_release-validation-hardening.md`).
+- Transcripts preserve ALL context so nothing is lost across sessions and any
+  past decision can be referenced back. Include:
+  - All user messages and assistant responses (summarized quotes are fine for
+    long ones, but keep the substance verbatim where it matters)
+  - Your thought processes / reasoning at each decision point
+  - Console commands you ran and their outputs/results (trim lengthy noise,
+    keep everything meaningful)
+  - Every file you changed and what changed in it
+  - Experiment numbers and version numbers touched
+- **Update the SAME file throughout a session** (one file per session, not per
+  message); append each cycle's new work before responding.
+- A session = a coherent stretch of work on one feature/topic; when the topic
+  changes substantially (new feature, new milestone), start a new transcript
+  file. Name files `<date>_<short-session-slug>.md`.
+
 ## 1. MANDATORY Documentation Before Performing Work
 
 **Rule file:** `/workspace/.ai_memory/project-summary-update-rule.md`

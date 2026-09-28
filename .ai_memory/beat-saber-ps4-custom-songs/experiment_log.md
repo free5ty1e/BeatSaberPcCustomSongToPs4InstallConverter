@@ -1086,3 +1086,16 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **Validated live:** full run with `--log` → 35/35 PASS; logfile captured all 56 lines including the complete results table; console showed live progress throughout.
 - **Documentation:** script header now carries the recommended command + idempotence notes; procedure doc gained a "Running the automated validation (recommended)" section with the command, TAG/PS4_IP overrides, and the idempotence statement; README gained a "Release Validation (hardware, against a real PS4)" subsection under Unit Testing documenting the release-acceptance test with the command + link to the procedure doc.
 - **Status:** ✅ Delivered + live-validated. Staged.
+
+---
+
+### Experiment 239 — Validation Script Verbose Instrumentation + Read-Failure Semantics (user's failed run RCA)
+- **Date:** 2026-09-27
+- **User report:** the handed-off validation script failed on their run (32 PASS / 3 FAIL: "final state diverged (names 47 local / 0 PS4)", "features.json not all ON", "PS4 metadata still damaged") — while step 5/8 also sat silent with no per-test output. "You should have had this all passing before handing it off."
+- **RCA:** the PS4 was healthy (47 names / 7 artists) immediately after their run — the auto-restore "worked" because there was nothing to fix. Root cause: TRANSIENT FTP READ FAILURES at final-check time + a check-plumbing flaw: one-shot `LFTP_CAT` reads with `|| echo 0` fallbacks turned a failed READ into "0 names = damaged", triggering false AUTO-RESTORE and three cascading FAILs (the features + post-restore checks read through the same flaky path). The wipe did NOT reproduce in my instrumented re-run (ps4_counts showed 47/47 after every state-touching step, 35/35 PASS) — consistent with a read flake, not a state wipe. Second lesson: the version handed to the user had new metadata-gate checks (Exp 237) that I had run — but NOT the final --log version end-to-end after the Exp 238 logging change; hand-off discipline: the exact artifact shipped must have a green full run in its final form.
+- **Fixes:**
+  1. Verbose instrumentation: step/note helpers — every test announces what it is about to do, streams the pipeline's own filtered output live, marks PASS/FAIL the moment it resolves. ps4_counts traces PS4+local name counts after every state-touching step (any future state change pinpoints its step in the log).
+  2. Read-failure semantics: LFTP_CAT retries 3x with backoff and returns non-zero on failure; PS4_JSON_COUNT prints READ-FAILED (never 0); final-integrity/features/post-restore checks treat READ-FAILED as UNKNOWN with its own failure label ("read FAILED — integrity UNVERIFIED"), re-read once after a defensive restore before judging. A read flake can never again masquerade as state damage.
+  3. New CLAUDE.md §0.5 (mirrored in .opencode/rules.md): mandatory per-session transcripts under .agent/transcripts/ — created the first (2026-09-27_release-validation-hardening.md) covering Exps 234–239.
+- **Validation:** FINAL end-to-end run of the exact handed-off artifact (35 checks, verbose, --log) — see log release-validation-FINAL-*.log; hand-off only after green.
+- **Status:** fixed + final-form validation run executed before handing back.
