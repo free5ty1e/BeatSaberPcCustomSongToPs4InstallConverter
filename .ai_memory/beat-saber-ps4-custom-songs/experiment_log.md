@@ -1122,3 +1122,17 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **Audit track 4 — PR:** body was at Exps 160-233 (stale: missing bundled-prx fix, validation automation, --log, transcripts). Surgical diff DRAFTED and presented for approval: Exp range → 160-240, tests 644→649, NEW "Hardware release validation" section (the 35-check release-acceptance test + alpha01's 35/35 pass), transcripts pointer. Title also flagged for the same range bump.
 - **Also verified:** ps4_dump disclaimer present in all three entry docs; version strings consistent (v0.8047 / 0.5351); changelogs complete; CI green on branch (all three checks); OUTDATED markers intact.
 - **Status:** audit complete; findings fixed; PR update pending user approval. RELEASE-READY pending: user's screenshots/videos, PR body push, final-tag validation + tag push.
+
+---
+
+### Experiment 242 — Roadmap M9 + Detailed Web-App Plan (post-release next item)
+- **Date:** 2026-09-28
+- **User request:** add to the roadmap as the VERY NEXT item after this release: a web app interface for the pipeline — included with the release and deployable on GitHub Pages; folder-picker for ps4_dump, BeatSaver/local-folder/map-ID song selection, all pipeline options, feature-flag manipulation, PS4 config + connection test, full validation tests — then write the detailed plan doc.
+- **Deliverables:**
+  1. Roadmap: new **M9 milestone section** placed immediately after the current release work, before the post-merge queue — core UX items verbatim from the user's list + architecture bullets.
+  2. Plan doc: `.agent/plans/web-app-song-conversion-pipeline-interface.md` — grounded in the current pipeline surface (56 CLI params). Key design positions:
+     - **Thin-layer principle**: the UI calls the pipeline (subprocess argv for deploys — mechanically prevents drift and global-state corruption); zero re-implementation; ZERO pipeline-code changes in scope.
+     - **Two deployment modes**: local FastAPI backend (full function — needs local FS/FTP/the dump, which browsers and Pages fundamentally cannot do) + static GitHub Pages build (wizard + command-builder that emits exact CLI invocations; BeatSaver search client-side). One UI codebase; backend heartbeat toggles sections.
+     - **Hard-won lessons wired in**: banner-free FTP transport everywhere (lftp-ftp-pitfalls mandatory reading), single-job executor (state files are a transaction — the Exp 227/232 race lesson), config-localization as a mandatory wizard step (release finding #1), read-failures rendered as "couldn't read" never as empty-truth (Exp 237/239/240).
+     - 7 UI pages spec'd (Wizard/SongPicker/Deploy/Flags/PS4/Validate/Logs), 4 delivery phases with exit criteria, risk table, open questions, explicit out-of-scope list.
+- **Status:** roadmap + plan written; no code (this is the post-release next item). Staged with the audit batch.
