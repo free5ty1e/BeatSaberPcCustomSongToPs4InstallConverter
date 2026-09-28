@@ -1099,3 +1099,14 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
   3. New CLAUDE.md §0.5 (mirrored in .opencode/rules.md): mandatory per-session transcripts under .agent/transcripts/ — created the first (2026-09-27_release-validation-hardening.md) covering Exps 234–239.
 - **Validation:** FINAL end-to-end run of the exact handed-off artifact (35 checks, verbose, --log) — see log release-validation-FINAL-*.log; hand-off only after green.
 - **Status:** fixed + final-form validation run executed before handing back.
+
+---
+
+### Experiment 240 — REAL Root Cause of the Validation FAILs: lftp `cat` Banner Contamination (Exp 239 misdiagnosis corrected)
+- **Date:** 2026-09-28
+- **User report:** third failed run — every `[state]` trace showed `PS4 names=READ-FAILED` from the FIRST check onward; 3 FAILs, all read-failure labeled. The verbose 6.1 line exposed the smoking gun: `PS4 features.json now: {...}156bytestransferred` — lftp's transfer-report banner glued to the JSON content.
+- **Real root cause:** lftp's `cat` appends transfer banners ("N bytes transferred") to file CONTENT on transfers slow enough to emit progress (the Exp 221 banner-chatter class — the pipeline's own JSON reads already handle it via raw_decode). The validation script's `LFTP_CAT` extracted from the first `{` but left TRAILING chatter → `json.loads` failed on EVERY read. Deterministic on a banner-emitting link (the user's), never on fast transfers (mine) — the Exp 239 "transient flake" diagnosis was WRONG; the instrumentation added then made the true cause visible this run.
+- **Fixes:** (1) `LFTP_CAT` now uses `get` into a fresh `mktemp -d` directory — `get` never mixes banners into content (the pipeline's own redirect-sync transport). First attempt used `mktemp` (a pre-existing file) and lftp's no-clobber returned 0 bytes — caught by testing BEFORE hand-off. (2) `PS4_JSON_COUNT` extracts from first `{` to LAST `}` (leading+trailing chatter immunity). (3) 6.1 flag reads routed through PS4_JSON_COUNT.
+- **Verification:** contamination unit test (user's exact `}155bytestransferred` — parses OK); live PS4 via the script's sourced helpers (47 names / features all-ON); full end-to-end FIXED run executed before hand-off.
+- **Lessons:** (a) environment-dependent bugs look "transient" from a fast test rig — test from the failing environment's conditions when possible, or make transports provably immune (banner-free `get` vs banner-carrying `cat`); (b) the verbose instrumentation requirement was itself the diagnostic that cracked the case — the user's log did what my passing runs never could.
+- **Status:** fixed; final-form run validated before hand-off.

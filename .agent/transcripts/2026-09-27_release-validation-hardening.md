@@ -144,3 +144,28 @@ My 35/35 at Exp 237/238 was the script BEFORE the metadata gates; the version ha
 
 ### FINAL validation of the handed-off artifact (this cycle's close)
 `release-validation-FINAL-20260927-223850.log`: **35/35 PASS, exit 0.** Verbose output confirmed throughout — every step announced, pipeline output streamed, per-check PASS/FAIL immediate, `[state] PS4 names=47 | local names=47` traced after each state-touching step. The read-failure hardening never fired (reads held) — but its READ-FAILED semantics now guarantee a future FTP flake reports "integrity UNVERIFIED" instead of falsely triggering AUTO-RESTORE + FAIL cascades.
+
+---
+
+## Cycle 9 (same session) — the REAL root cause found: lftp cat banner contamination
+
+### User report
+Third failed run, this time WITH the read-failure labels: every `[state]` trace showed `PS4 names=READ-FAILED` from the very first check, and 3 FAILs (`final state diverged ... PS4=READ-FAILED`, `features.json read FAILED`, `PS4 metadata read FAILED`). Crucially the log also showed `PS4 features.json now: {...}156bytestransferred` — banner text GLUED to the JSON in the 6.1 verbose line.
+
+### RCA (Exp 240)
+1. The 6.1 line exposed it: **lftp's `cat` appends transfer-report banners ("156 bytes transferred") to the file content on slow transfers** (documented behavior class since Exp 221 — "cat/get output carries banner chatter" — which the pipeline's own JSON reads handle via `raw_decode`).
+2. My old `LFTP_CAT` extracted from the FIRST `{` but left TRAILING chatter → `json.loads` failed on EVERY read in the user's run (their PS4 link emitted banners consistently; my fast devcontainer runs emitted none — hence my 35/35 vs their 3 FAILs; the Exp 239 "transient flake" diagnosis was wrong — it was deterministic given a banner-emitting link).
+3. The 6.1 flag checks "passed" only because grep doesn't care about trailing garbage — masked the transport bug while PS4_JSON_COUNT correctly refused to parse.
+
+### Fixes (release-validation-test-procedure.sh)
+1. `LFTP_CAT`: switched transport from `cat` to **`get` into a fresh temp DIRECTORY** (get never mixes banners into content — same transport the pipeline's redirect-sync uses). First attempt used `mktemp` (a FILE) → lftp's no-clobber made every read return 0 bytes — CAUGHT BY TESTING before hand-off; fixed with `mktemp -d` + `$tmpd/f`.
+2. `PS4_JSON_COUNT`: extract from first `{` to LAST `}` — immune to leading AND trailing chatter (defense in depth).
+3. 6.1 flag reads routed through PS4_JSON_COUNT (was raw LFTP_CAT + tr + grep).
+
+### Verification before hand-off
+- Contamination unit test: user's exact `}155bytestransferred` case parses OK
+- Live PS4 transport test: 47 names / features all-ON via the script's actual sourced helpers
+- Full end-to-end FIXED run in flight — hand-off only after green
+
+### Lesson
+"Transient flake" was a misdiagnosis of a deterministic-but-environment-dependent bug. The instrumentation paid off: the user's verbose log (with `156bytestransferred` visible) pinpointed what two rounds of my passing runs couldn't.

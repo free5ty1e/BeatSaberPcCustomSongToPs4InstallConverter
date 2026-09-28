@@ -79,21 +79,32 @@ TEMP="/workspace/temp"
 VAL="$TEMP/release-validation"
 CFG_VAL="$VAL/ps4_config.json"
 PIPE() { python3 "$VAL/tools/full_custom_song_pipeline.py" "$@"; }
-# LFTP_CAT <remote-path> — read a remote file, retrying transient FTP failures.
-# Exp 239: one-shot reads flaked in real runs and downstream "|| echo 0" turned
-# a failed READ into "state damaged" — triggering false AUTO-RESTORE + FAILs.
-# This helper retries up to 3x and returns non-zero if the read never succeeds
-# so callers can distinguish READ-FAILED from READ-OK-but-empty.
+# LFTP_CAT <remote-path> — robustly read a remote file to stdout.
+# Exp 240 — the REAL root cause of the "READ-FAILED everywhere + 3 FAILs"
+# runs: lftp's `cat` appends transfer banners ("156 bytes transferred") to the
+# FILE CONTENT on slow transfers, and the old first-'{' extraction left that
+# trailing garbage glued to the JSON — json.loads() then failed on EVERY read.
+# The user's runs (slow PS4 link → banner on every read) failed 100% of the
+# reads; my fast devcontainer runs emitted no banners and passed — the
+# intermittency that misdirected the Exp 239 "transient flake" diagnosis.
+# Fix: download to a TEMP FILE via `get` (the same transport the pipeline's
+# own redirect-sync uses — proven across hundreds of deploys; get never
+# mixes banners into content), then print the file. Retries remain for
+# genuine connection flakes.
 LFTP_CAT() {
-    local path="$1" attempt out
+    local path="$1" attempt tmpd
+    tmpd=$(mktemp -d)   # lftp get -o REFUSES to clobber an existing file —
+                        # the target must not pre-exist (mktemp FILE does);
+                        # a fresh DIRECTORY per attempt sidesteps that
     for attempt in 1 2 3; do
-        out=$(timeout 60 lftp -u anonymous:anonymous -e "cat $path; quit" "$PS4_IP:2121" 2>/dev/null | sed -n '/{/,$p')
-        if [ -n "$out" ]; then
-            printf '%s' "$out"
+        if timeout 60 lftp -u anonymous:anonymous -e "get $path -o $tmpd/f; quit" "$PS4_IP:2121" >/dev/null 2>&1 && [ -s "$tmpd/f" ]; then
+            cat "$tmpd/f"
+            rm -rf "$tmpd"
             return 0
         fi
         sleep $((attempt * 2))
     done
+    rm -rf "$tmpd"
     return 1
 }
 # PS4_JSON_COUNT <remote-path> <python-expr> — robustly read a remote JSON file
@@ -106,10 +117,16 @@ PS4_JSON_COUNT() {
     printf '%s' "$out" | python3 -c "
 import json, sys
 raw = sys.stdin.read()
+# Extract from the FIRST '{' to the LAST '}' — immune to both leading
+# (banner) and trailing (transfer-report) chatter.
+start = raw.find('{')
+end = raw.rfind('}')
+if start < 0 or end <= start:
+    print('READ-FAILED'); sys.exit(1)
 try:
-    d = json.loads(raw[raw.find('{'):])
+    d = json.loads(raw[start:end+1])
     print($expr)
-except Exception as e:
+except Exception:
     print('READ-FAILED'); sys.exit(1)"
 }
 
@@ -297,7 +314,7 @@ step "[6/8] Feature flags, kill switch, surgical ops"
 note "6.1 feature-flag toggles via --features-only (each verified by reading the PS4 back)"
 note "     toggling enable_beatmap_mode_mapping=false..."
 PIPE --features-only --set-feature enable_beatmap_mode_mapping=false >/dev/null 2>&1
-PS4_FLAGS=$(LFTP_CAT /data/GoldHEN/AFR/CUSA12878/features.json | tr -d '[:space:]' || echo READ-FAILED)
+PS4_FLAGS=$(PS4_JSON_COUNT /data/GoldHEN/AFR/CUSA12878/features.json "json.dumps(d, separators=(',',':'))" 2>/dev/null || echo READ-FAILED)
 note "     PS4 features.json now: $PS4_FLAGS"
 if echo "$PS4_FLAGS" | grep -q '"enable_beatmap_mode_mapping":false'; then
     mark PASS "feature-flag toggle (mode mapping off)"
@@ -306,13 +323,13 @@ else
 fi
 note "     toggling enable_plugin=false (kill switch)..."
 PIPE --features-only --set-feature enable_plugin=false >/dev/null 2>&1
-PS4_FLAGS=$(LFTP_CAT /data/GoldHEN/AFR/CUSA12878/features.json | tr -d '[:space:]' || echo READ-FAILED)
+PS4_FLAGS=$(PS4_JSON_COUNT /data/GoldHEN/AFR/CUSA12878/features.json "json.dumps(d, separators=(',',':'))" 2>/dev/null || echo READ-FAILED)
 note "     PS4 features.json now: $PS4_FLAGS"
 echo "$PS4_FLAGS" | grep -q '"enable_plugin":false' \
     && mark PASS "kill switch OFF written" || mark FAIL "kill switch OFF written"
 note "     restoring both flags ON..."
 PIPE --features-only --set-feature enable_plugin=true --set-feature enable_beatmap_mode_mapping=true >/dev/null 2>&1
-PS4_FLAGS=$(LFTP_CAT /data/GoldHEN/AFR/CUSA12878/features.json | tr -d '[:space:]' || echo READ-FAILED)
+PS4_FLAGS=$(PS4_JSON_COUNT /data/GoldHEN/AFR/CUSA12878/features.json "json.dumps(d, separators=(',',':'))" 2>/dev/null || echo READ-FAILED)
 note "     PS4 features.json now: $PS4_FLAGS"
 echo "$PS4_FLAGS" | grep -q '"enable_plugin":true' \
     && mark PASS "flags restored ON" || mark FAIL "flags restored ON"

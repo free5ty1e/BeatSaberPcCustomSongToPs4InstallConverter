@@ -303,7 +303,7 @@ pitfalls:
 release_validation:
   procedure_doc: ".agent/docs/release-validation-test-procedure.md"
   alpha_tag: "v0.8047-pipeline-0.5350-alpha01"
-  automation_script: ".agent/docs/release-validation-test-procedure.sh [--log <file>] [TAG] — console + logfile, exit 0 = all PASS, auto-restore"
+  automation_script: ".agent/docs/release-validation-test-procedure.sh [--log <file>] [TAG] — console + logfile, exit 0 = all PASS, auto-restore; reads use banner-free get-transport (Exp 240: lftp cat appends 'N bytes transferred' to content on slow links — NEVER parse lftp cat output directly)"
   key_steps: >
     extract zip to temp folder; symlink ps4_dump into it; copy ps4_config.json AND pull+back up BOTH state files (redirects.json AND song_metadata.json — the zip ships neither; a missing local metadata file makes the first metadata step deploy an empty/1-entry file over the PS4's, Exp 237)
     and LOCALIZE ~7 absolute paths (game_dump_dir, output_dir, pack_modes.build_dir/
