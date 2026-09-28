@@ -318,3 +318,9 @@ session_transcripts:
   rule: "MANDATORY: before EVERY response, update a full session transcript under .agent/transcripts/<date>_<slug>.md"
   contents: "user/assistant messages, reasoning, commands+outputs, changed files, experiment + version numbers"
   lifecycle: "one file per session (append each cycle); new file when the topic changes"
+
+# Release Readiness (Exp 241)
+release_readiness:
+  validated: "v0.8047-pipeline-0.5351-alpha01: 35/35 on maintainer console, state preserved exactly"
+  remaining: "user screenshots/videos; PR body push (draft at .pr_temp/updated_pr_description.md, awaiting approval); release-day checklist at the bottom of the procedure doc (default-TAG bump, final-tag validation, tag+push, spot-check)"
+  release_zip_now_includes: "validation-procedure .md + .sh (docs/) — consumers can validate their own deployment"

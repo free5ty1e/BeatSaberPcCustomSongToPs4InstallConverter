@@ -263,8 +263,11 @@ timeout 300 python3 tools/full_custom_song_pipeline.py --deploy-plugin --debug-l
 # EXPECT: uses plugins/beat_saber_deluxe_debug.prx, deploys AS the canonical name
 
 # Verify live + no forked plugins.ini entry:
-timeout 60 lftp -u anonymous:anonymous -e "cat /data/GoldHEN/plugins.ini; quit" 192.168.100.117:2121 \
-    | grep -c beat_saber_deluxe_debug
+# (read via get-to-file: lftp `cat` mixes transfer banners into output on
+#  slow links — see the KB page lftp-ftp-pitfalls)
+TMPD=$(mktemp -d)
+timeout 60 lftp -u anonymous:anonymous -e "get /data/GoldHEN/plugins.ini -o $TMPD/ini; quit" 192.168.100.117:2121
+grep -c beat_saber_deluxe_debug "$TMPD/ini"
 # EXPECT: 0 (single canonical entry)
 
 # RESTORE the quiet build (do not skip):
@@ -286,8 +289,10 @@ timeout 300 python3 tools/full_custom_song_pipeline.py --deploy-plugin 2>&1 | gr
 timeout 120 python3 tools/full_custom_song_pipeline.py \
     --features-only --set-feature enable_beatmap_mode_mapping=false 2>&1 | grep "✅ Features"
 # verify on the PS4:
+TMPD=$(mktemp -d)
 timeout 60 lftp -u anonymous:anonymous \
-    -e "cat /data/GoldHEN/AFR/CUSA12878/features.json; quit" 192.168.100.117:2121
+    -e "get /data/GoldHEN/AFR/CUSA12878/features.json -o $TMPD/f; quit" 192.168.100.117:2121
+cat "$TMPD/f"
 # EXPECT: "enable_beatmap_mode_mapping": false
 ```
 
@@ -457,14 +462,25 @@ print(f"metadata: {len(m['song_names'])} names / {len(m['song_artists'])} artist
 # EXPECT: identical pack list + song count to Part 1.6's pull; validation PASSED
 # AND metadata name-count >= the pre-validation pull (Exp 237: check BOTH
 # the local file AND the live PS4 copy):
+TMPD=$(mktemp -d)
 timeout 60 lftp -u anonymous:anonymous \
-    -e "cat /data/GoldHEN/AFR/CUSA12878/song_metadata.json; quit" 192.168.100.117:2121 \
-    | python3 -c "import json,sys; raw=sys.stdin.read(); d=json.loads(raw[raw.find('{'):]); print('PS4 names:', len(d['song_names']))"
+    -e "get /data/GoldHEN/AFR/CUSA12878/song_metadata.json -o $TMPD/m; quit" 192.168.100.117:2121
+python3 -c "
+import json
+raw = open('$TMPD/m').read()
+d = json.loads(raw[raw.find('{'):raw.rfind('}')+1])   # first-{ to LAST-}: banner-immune
+print('PS4 names:', len(d['song_names']))"
 # If either metadata count dropped: restore from the backup —
 #   cp song_metadata.pre-validation.bak song_metadata.json
 #   lftp ... put song_metadata.json -o /data/GoldHEN/AFR/CUSA12878/song_metadata.json
-timeout 60 lftp -u anonymous:anonymous -e "cat /data/GoldHEN/AFR/CUSA12878/features.json; quit" 192.168.100.117:2121 \
-    | python3 -c "import json,sys; raw=sys.stdin.read(); d=json.loads(raw[raw.find('{'):]); assert all(d.values()); print('all flags ON')"
+TMPD=$(mktemp -d)
+timeout 60 lftp -u anonymous:anonymous -e "get /data/GoldHEN/AFR/CUSA12878/features.json -o $TMPD/f; quit" 192.168.100.117:2121
+python3 -c "
+import json
+raw = open('$TMPD/f').read()
+d = json.loads(raw[raw.find('{'):raw.rfind('}')+1])
+assert all(d.values()), d
+print('all flags ON')"
 ```
 
 ## Expected-results summary
@@ -494,3 +510,17 @@ timeout 60 lftp -u anonymous:anonymous -e "cat /data/GoldHEN/AFR/CUSA12878/featu
 2. **`--enforce-config` + verify blind spot**: enforce pushed a zeroed local file over live state during testing (restored from backup); `--verify-ps4` PASSED against the wiped PS4 because both sides were empty. Post-merge: verify should flag catastrophic shrinkage (pack redirects present locally but absent on PS4).
 3. **song_metadata.json local-load asymmetry (Exp 237 — the run that "passed" 33/33 while wiping 47 metadata entries)**: `clear_target_song` downloads redirects.json from the PS4 before modifying it, but loads song_metadata.json from the LOCAL file ONLY. In a fresh extraction the local file doesn't exist → empty default → every entry removed → the 1-entry file deployed over the PS4's 47. The validation now pulls + backs up + checks BOTH files. **Post-merge pipeline fix: clear_target_song (and every metadata-writing step) must pull song_metadata.json from the PS4 first, exactly like it already does for redirects.json.**
 3. Cosmetic: zip `requirements.txt` includes test-only deps (pytest/ruff).
+
+## Release-day checklist (when tagging the real release)
+
+1. **Update the validator's default TAG** in `release-validation-test-procedure.sh`
+   (`TAG="${1:-v0.8047-pipeline-0.5351-alpha01}"`) and the live examples in this
+   doc + the README's Release Validation section to the final tag (e.g.
+   `v0.8047-pipeline-0.5351`), then commit + push so CI builds the zip with them.
+2. **Run the full validation against the final tag** (the command above with the
+   new tag) — expect 35/35 PASS and "live state unchanged".
+3. **Tag + push** — the release workflow builds the zip (now including these
+   validation docs) and publishes with the CI_RELEASE.md body.
+4. **Post-publish spot-check**: download the zip, confirm
+   `docs/release-validation-test-procedure.*` are present, run the static-audit
+   section (1.3) manually.

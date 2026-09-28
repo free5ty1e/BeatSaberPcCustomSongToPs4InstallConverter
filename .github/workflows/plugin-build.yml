@@ -174,6 +174,12 @@ jobs:
           # 34 packs x (.md command doc + .sh script))
           cp .agent/docs/example_* release-zip/docs/example-scripts/
 
+          # Release validation procedure (how this release was validated on
+          # real hardware + the automated validator itself — lets a user
+          # validate their own deployment the same way)
+          cp .agent/docs/release-validation-test-procedure.md release-zip/docs/
+          cp .agent/docs/release-validation-test-procedure.sh release-zip/docs/
+
           # Test coverage report
           if [ -d "beat_saber_deluxe/htmlcov" ]; then
             cp -r beat_saber_deluxe/htmlcov release-zip/coverage-report

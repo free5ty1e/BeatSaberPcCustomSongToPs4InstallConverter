@@ -169,3 +169,32 @@ Third failed run, this time WITH the read-failure labels: every `[state]` trace 
 
 ### Lesson
 "Transient flake" was a misdiagnosis of a deterministic-but-environment-dependent bug. The instrumentation paid off: the user's verbose log (with `156bytestransferred` visible) pinpointed what two rounds of my passing runs couldn't.
+
+---
+
+## Cycle 10 (same session) — user-confirmed green + full pre-release audit (Exp 241)
+
+### User report
+> "this time the automated test passed ... I just checked my PS4 to see how it left the state after the test, and it is exactly as I left it and working perfectly. Excellent job! Audit our knowledge base and documentation one more time ... audit our CI builds and release pipeline for any gaps ... audit the PR description and changes ... really be sure this is absolutely ready for a release. I will add my screenshots and videos later."
+
+### Audit findings + fixes (4 tracks)
+1. **KB gap**: no page covered the lftp pitfalls that bit this project 3+ times (banner contamination, no-clobber get, lying exit codes, & paths, FSELF unpacking). CREATED `lftp-ftp-pitfalls.md` (7 documented traps with robust patterns) + index entry.
+2. **Doc gap**: the manual procedure doc still taught banner-vulnerable `lftp cat` reads (4 sites) — FIXED to get-to-file + first-{-to-last-} extraction, matching the script's Exp 240 fix.
+3. **CI gap**: release zip didn't ship the validation docs (procedure .md + .sh) — FIXED in plugin-build.yml (both files into release-zip/docs/) + CI_RELEASE artifact table row. This matters: consumers can validate their deployment the same way.
+4. **PR staleness**: body at Exps 160-233, missing the bundled-prx/validation-automation/--log story. Surgical diff drafted (Exp range → 160-240; test counts 644→649; NEW "Hardware release validation" section describing the 35-check release-acceptance test + alpha01's 35/35 pass; transcripts pointer). AWAITING USER APPROVAL to push via `gh api PATCH --raw-field` per the prompt-file flow. Title also needs "Exps 160-233" → "160-240".
+5. **Release-day checklist** added to the procedure doc (default TAG bump, final-tag validation run, tag+push, post-publish spot-check) so release day depends on a list, not memory.
+
+### Verified
+- All entry docs carry the ps4_dump disclaimer (README prerequisites, CI_RELEASE bolded warning, procedure doc step 1.4 note)
+- Version strings consistent everywhere (v0.8047 / 0.5351); changelogs complete through v0.5351 + v0.8047
+- CI green on branch (Lint + Unit Tests + Build Plugin all success)
+- deploy_all.sh OUTDATED marker intact (historical only)
+- Post-merge queue recorded: PROJECT_ROOT-relative config defaults, verify-ps4 shrinkage guard, metadata-pull symmetry, requirements.txt split
+
+### Files changed this cycle
+- NEW: .agent/llm-wiki-knowledge-base/lftp-ftp-pitfalls.md (+ index.md entry)
+- .agent/docs/release-validation-test-procedure.md (4 read fixes + release-day checklist)
+- .github/workflows/plugin-build.yml (validation docs into the zip)
+- beat_saber_deluxe/CI_RELEASE.md (artifact table row)
+- .pr_temp/updated_pr_description.md (staged draft, pending approval)
+- experiment_log.md Exp 241, project_summary.md, transcript (this file)

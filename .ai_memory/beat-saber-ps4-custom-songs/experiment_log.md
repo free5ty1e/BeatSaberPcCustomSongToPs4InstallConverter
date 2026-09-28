@@ -1110,3 +1110,15 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
 - **Verification:** contamination unit test (user's exact `}155bytestransferred` — parses OK); live PS4 via the script's sourced helpers (47 names / features all-ON); full end-to-end FIXED run executed before hand-off.
 - **Lessons:** (a) environment-dependent bugs look "transient" from a fast test rig — test from the failing environment's conditions when possible, or make transports provably immune (banner-free `get` vs banner-carrying `cat`); (b) the verbose instrumentation requirement was itself the diagnostic that cracked the case — the user's log did what my passing runs never could.
 - **Status:** fixed; final-form run validated before hand-off.
+
+---
+
+### Experiment 241 — Full Pre-Release Audit (KB / Docs / CI / PR) After User-Confirmed Green
+- **Date:** 2026-09-28
+- **User report:** the automated validation passed on their console (35/35, log release-validation-20260928-095248.log) and the PS4 was left exactly as they left it — "Excellent job!" Requested a final full audit: KB + documentation, CI + release pipeline, PR description + changes — "really be sure this is absolutely ready for a release" (screenshots/videos to be added later by the user).
+- **Audit track 1 — Knowledge base:** version references checked (all historical, correctly version-when-introduced). GAP: no page documented the lftp/FTPD pitfall class that bit this project 3+ times (banner contamination Exp 221/240, no-clobber get -o, exit-0 lies, & path splits, FSELF unpacking). CREATED `lftp-ftp-pitfalls.md` (7 traps + robust patterns) + index entry.
+- **Audit track 2 — Documentation:** GAP: the manual procedure doc still taught banner-vulnerable `lftp cat` reads at 4 sites — FIXED to get-to-file + first-{-to-last-} extraction (mirrors the script's Exp 240 fix). Added a Release-day checklist (default-TAG bump, final-tag validation, tag+push, post-publish spot-check).
+- **Audit track 3 — CI/release pipeline:** workflows verified sound (tag gating, body_path, needs-build, asset retention). GAP: the release zip did not ship the validation procedure docs — FIXED in plugin-build.yml (procedure .md + .sh into release-zip/docs/) + CI_RELEASE artifact-table row. Post-merge queue unchanged: PROJECT_ROOT-relative config defaults, verify-ps4 shrinkage guard, metadata-pull symmetry, requirements.txt split.
+- **Audit track 4 — PR:** body was at Exps 160-233 (stale: missing bundled-prx fix, validation automation, --log, transcripts). Surgical diff DRAFTED and presented for approval: Exp range → 160-240, tests 644→649, NEW "Hardware release validation" section (the 35-check release-acceptance test + alpha01's 35/35 pass), transcripts pointer. Title also flagged for the same range bump.
+- **Also verified:** ps4_dump disclaimer present in all three entry docs; version strings consistent (v0.8047 / 0.5351); changelogs complete; CI green on branch (all three checks); OUTDATED markers intact.
+- **Status:** audit complete; findings fixed; PR update pending user approval. RELEASE-READY pending: user's screenshots/videos, PR body push, final-tag validation + tag push.
