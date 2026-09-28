@@ -57,10 +57,19 @@ var      36*N    difficulty data                    36 bytes per entry
 | Mode | pathID |
 |---|---|
 | Standard | -7286399427822119286 |
-| OneSaber | -8583864861369561029 |
-| NoArrows | -5623662769225589684 |
-| 90Degree | 4533580413116749821 |
-| 360Degree | 1189643819550092755 |
+| OneSaber | -5623662769225589684 |
+| NoArrows | -8583864861369561029 |
+| 90Degree | -5995858427784384822 |
+| 360Degree | 4533580413116749821 |
+
+> **Warning:** These pathIDs were historically swapped/mislabeled (OneSaber↔NoArrows,
+> 90Degree pointed at the 360Degree characteristic). The table above was verified
+> against the BeatmapCharacteristicSO objects in
+> `sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle`
+> (CAB `cb38b3e2985c65d4cf8a63437da74a89`). 90Degree (`containsRotation=1, requires360=0`,
+> sortingOrder=5) MUST point to `-5995858427784384822`; pointing it at the 360Degree
+> characteristic (`4533580413116749821`) hides the button because 360Degree requires
+> the 360-degree gameplay feature. See [[pack-bundle-patching]].
 
 ## Usage in Pipeline
 
@@ -95,6 +104,15 @@ When these flags are not provided, values are auto-derived from Info.dat (local 
 - **PPtr serialization**: 4-byte fileID + 8-byte pathID matches pack bundle layout
 - **BPM double precision**: IEEE 754 double matches pack bundle output
 - **Preview array layout**: count(4) + [16 bytes per mode x 5] correctly structured
+- **Mode-aware blob (v0.5310, Exp 177)**: `_build_beatmap_level_so_blob()` now emits the preview array with ONLY the enabled modes (Standard, OneSaber, NoArrows, 90Degree — 360Degree purged). `drop pop candy` blob = 1,010 B, saved to `_beatmap_level_so_drop pop candy.blob` (not injected).
+
+### UnityPy 1.25.0 Injection Blocker (Exp 177 — CONFIRMED)
+Two read paths to inject the preview blob or construct a new TextAsset into the CAB are both blocked:
+
+1. **`env.create_object` does not exist** in UnityPy 1.25.0 (the add-object API from newer versions is absent).
+2. **`ObjectReader` constructed over a bare `EndianBinaryReader`** fails with `ValueError: read_str out of bounds` — `ObjectReader` is bound to the parent `SerializedFile`'s stream (bytePosition/byteSize offsets) and cannot read an independent blob.
+
+Remaining candidate (next): byte-level SerializedFile surgery — append the object entry + update the object/type tables and m_Data offsets, then re-save the UnityFS with correct block layout. See Options A/B below.
 
 ### What's Needed Before PS4 Testing ⚠️
 The blob can be constructed and written to disk (saved as `_beatmap_level_so_<song>.blob` for inspection), but **injection into the actual CAB file** requires:

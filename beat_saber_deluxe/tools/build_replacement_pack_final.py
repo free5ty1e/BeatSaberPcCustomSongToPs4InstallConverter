@@ -38,14 +38,13 @@ SONG_OVERRIDES = {
     "wholewideworld":("EverybodysGay", "(G)I-DLE", ""),
 }
 
-NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+NEW_MODES = ["Standard", "OneSaber", "NoArrows", "90Degree"]
 
 CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
-    "OneSaber":  -8583864861369561029,
-    "NoArrows":   -5623662769225589684,
-    "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
+    "OneSaber":  -5623662769225589684,
+    "NoArrows":  -8583864861369561029,
+    "90Degree":  -5995858427784384822,
 }
 
 
@@ -114,7 +113,7 @@ def main():
         pos += 4
         first_diff_data = bytes(raw[pos:pos + diff_count * 36])
 
-        # Build new 5-mode preview data (reusing Standard's difficulty data)
+        # Build new 4-mode preview data (reusing Standard's difficulty data)
         new_sets_data = b''
         for mode in NEW_MODES:
             path_id = CHAR_PATH_IDS[mode]
@@ -123,7 +122,7 @@ def main():
 
         # Calculate sizes
         old_array_data_size = arr_offset + 4 + 12 + 4 + diff_count * 36  # count(4) + charPtr(12) + diffs
-        new_array_data_size = 4 + (12 + 4 + diff_count * 36) * 5  # count(4) + 5 × set
+        new_array_data_size = 4 + (12 + 4 + diff_count * 36) * 4  # count(4) + 4 × set
 
         growth = new_array_data_size - old_array_data_size
         total_growth += growth
@@ -135,14 +134,14 @@ def main():
         new_raw = bytearray(raw)
         # Pad the rest of the blob with zeros (unused space in object)
         remaining = len(raw) - arr_offset - 4
-        new_data = struct.pack('<i', 5) + bytes(new_sets_data[:remaining])
+        new_data = struct.pack('<i', 4) + bytes(new_sets_data[:remaining])
         if len(new_sets_data) > remaining:
             # Need more space — this is where we hit the size change problem
             print(f"    GROWTH: +{growth}B for {override[0] or level_id}")
         new_raw[arr_offset:] = new_data + b'\x00' * (len(raw) - arr_offset - len(new_data))
 
         obj.set_raw_data(bytes(new_raw))
-        print(f"  ✓ {override[0]}: 1->{5} preview sets, growth +{growth}B")
+        print(f"  ✓ {override[0]}: 1->{4} preview sets, growth +{growth}B")
         patched_count += 1
 
     print(f"\nPatched {patched_count}/{len([o for o in env.objects if o.type.name == 'MonoBehaviour'])} objects")

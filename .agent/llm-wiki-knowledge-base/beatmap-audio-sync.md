@@ -76,15 +76,27 @@ Contains exact sample-to-beat mappings with multiple regions for BPM changes:
 ```
 Directly maps to PS4 bpmData format — just rename fields.
 
-### 2. Info.dat (Fallback)
-Has `_beatsPerMinute` (constant BPM for the song). For songs with BPM changes,
-use `_customData._BPMInfo` if available.
+### 2. Info.dat `_beatsPerMinute` (the authoritative grid, Exp 218)
+Notes are placed on the editor's grid, which IS Info.dat's `_beatsPerMinute`.
+`eb = duration × bpm / 60`. This holds regardless of trailing silence —
+a 117 BPM map ending at beat 404 in 214s of audio has ~9s of outro; beat
+404 still falls at 404×60/117 = 207.3s, NOT at the audio end.
 
 ### 3. Manual Fallback
-If neither exists, assume 120 BPM and compute:
-```python
-eb = sample_count / 44100 * bpm / 60.0
-```
+If no Info.dat BPM is available, assume 120 BPM (or derive from the beatmap's
+last note — last resort only).
+
+### ⚠️ Retired: the "effective BPM" heuristic (v0.52–v0.5337)
+`eff_bpm = max_beat × 60 / audio_duration` — the v0.52 fix that scanned
+beatmaps for the last note and stretched the grid to the audio end. It
+**undershoots BPM by the trailing-tail fraction** of every map whose chart
+ends before its audio (outros, extended lighting tails): 'Roni deployed at
+112.1 vs the true 117 (−4.2% — notes 9s late by song end), Green Light
+−3.8%, FANCY −2.0%. Its original justification ("mappers use a slightly
+different effective BPM... 3-6% desync") was a misdiagnosis from the same
+era as the empty-`bpmEvents` BPM=60 bug — those songs' desync was the
+bpmEvents bug, not grid drift. The max-beat scan survives only as a guard:
+extend `eb` when a note actually lands beyond the Info.dat grid.
 
 ## Implementation
 

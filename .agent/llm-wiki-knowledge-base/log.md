@@ -72,3 +72,13 @@ metadata:
 - Updated [[beatmap-conversion-pipeline.md]] — cross-reference added (see also)
 - Plugin version bumped to v0.51 (12-song redirect table + beatmap fallback fix)
 
+## [2026-08-01] update | v0.8045-47 — signal-free scan, klass-not-found, pack-bundle-data candidates
+- Updated [[structural-beatmaplevelso-scan.md]]:
+  - v0.8045: signal-free reads via `sceKernelQueryMemoryProtection`; System.String len_14 pitfall (v0.8046 fix)
+  - v0.8046 test finding: scan candidates at 0x1C2-0x1D5xxxxx with lid=packed floats are **serialized pack-bundle data in RAM**, not live managed objects (arrfail=25443, strfail=0). Added diagnostic lesson: 100% arrfail + float-valued "pointer" fields = matching bundle bytes, not objects. Tighten pointer window, run string check before array check, bucket klass by module vs 8GB.
+  - v0.8047: v0.77-proven pointer window [16MB, 512GB]; `mode_preview_arr_ok` failure stages (1-8); raw64 dumps. Added "plugin loads twice per launch" note.
+- Updated [[memory-injection-addressables-bypass.md]] — added revival note: the OLD exact-klass/content scans remain dead, but the REVISED structural scan is ACTIVE for Mode Mapping Phase 2 (point to [[structural-beatmaplevelso-scan]]).
+- Updated [[feature-flags.md]] — added `enable_beatmap_mode_mapping`, marked `enable_song_metadata_modification` active, synced with pipeline `DEFAULT_FEATURES`.
+- Updated [[index.md]] — structural-scan entry bumped to v0.8047+ with bundle-data finding; feature-flags entry lists all 3 flags.
+- Per-feature experiment log rotation introduced (see rules §3.0): Exp 1-159 archived, active log = Beatmap Mode Mapping.
+

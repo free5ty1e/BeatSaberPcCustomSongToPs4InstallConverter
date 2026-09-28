@@ -38,10 +38,9 @@ SONG_METADATA = {
 # Mode PPtr pathIDs for BeatmapCharacteristicSO objects in sharedassets2.assets
 CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
-    "OneSaber":  -8583864861369561029,
-    "NoArrows":   -5623662769225589684,
-    "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
+    "OneSaber":  -5623662769225589684,
+    "NoArrows":  -8583864861369561029,
+    "90Degree":  -5995858427784384822,
 }
 
 # Characteristic serialized names (for BeatmapCharacteristicCollection)
@@ -50,7 +49,6 @@ CHAR_SERIALIZED_NAMES = {
     "OneSaber":  "BeatmapCharacteristicPack_OneSaber",
     "NoArrows":   "BeatmapCharacteristicPack_NoArrows",
     "90Degree":   "BeatmapCharacteristicPack_90Degree",
-    "360Degree":  "BeatmapCharacteristicPack_360Degree",
 }
 
 

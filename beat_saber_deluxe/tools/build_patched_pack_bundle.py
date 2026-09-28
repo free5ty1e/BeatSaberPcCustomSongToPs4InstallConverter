@@ -21,10 +21,9 @@ OUT_BUNDLE = "/workspace/beat_saber_deluxe/rollingstones_pack_patched.bundle"
 SCRIPT_PATHID_CORRECT = 2140275054477726686  # MonoScript, NOT BeatmapCharacteristicSO!
 CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
-    "OneSaber":  -8583864861369561029,
-    "NoArrows":   -5623662769225589684,
-    "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
+    "OneSaber":  -5623662769225589684,
+    "NoArrows":  -8583864861369561029,
+    "90Degree":  -5995858427784384822,
 }
 
 def encode_utf8_string(s):
@@ -37,7 +36,7 @@ def encode_utf8_string(s):
     return struct.pack('<i', len(data)) + data + b'\x00'  # size=char_count, content, then null
 
 def build_blob(song_name="Espresso", artist="Sabrina Carpenter", bpm=126.5, level_id="custom/espresso"):
-    """Build BeatmapLevelSO blob with 5 modes and correct m_Script PPtr. Returns 1257 bytes."""
+    """Build BeatmapLevelSO blob with 4 modes and correct m_Script PPtr. Returns 1061 bytes."""
     b = bytearray()
     b += struct.pack('<i', 0)                                      # m_GameObject fileID
     b += struct.pack('<q', 0)                                      # m_GameObject pathID
@@ -65,9 +64,9 @@ def build_blob(song_name="Espresso", artist="Sabrina Carpenter", bpm=126.5, leve
     b.extend(encode_utf8_string("TheRollingStonesEnvironment"))
     b += struct.pack('<i', 0)
 
-    # 5 modes
-    b += struct.pack('<i', 5)
-    for mode in ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]:
+    # 4 modes (360Degree unsupported on PS4)
+    b += struct.pack('<i', 4)
+    for mode in ["Standard", "OneSaber", "NoArrows", "90Degree"]:
         b += struct.pack('<i', 3)                                   # fileID = 3 (external)
         b += struct.pack('<q', CHAR_PATH_IDS[mode])                 # pathID
         b += struct.pack('<i', 5)                                   # diff_count = 5

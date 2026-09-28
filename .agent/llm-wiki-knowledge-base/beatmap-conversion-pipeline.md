@@ -295,3 +295,10 @@ This removes the size cap, allowing full-length audio (verified up to 224s+).
 See [[development-workflow]] for the complete cycle.
 
 See also: [[beatmap-format-v3]], [[m-script-gzip-format]], [[unitypy-serialization]], [[assetbundle-structure]], [[development-workflow]]
+
+## V3 maps entering bundles MUST be full-schema (Exp 200)
+
+The PS4 game crashes (CE-34878-0) at gameplay load when a beatmap TextAsset lacks any of the standard V3.2.0 arrays. Hardware-proven-good maps carry 17 keys: `version, colorNotes, bombNotes, obstacles, sliders, burstSliders, basicBeatmapEvents, colorBoostBeatmapEvents, bpmEvents, rotationEvents, basicEventTypesWithKeywords, useNormalEventsAsCompatibleEvents, customData, waypoints, lightColorEventBoxGroups, lightRotationEventBoxGroups, lightTranslationEventBoxGroups` (+ optional arcs/chains in 3.2.0). The Chromeo V4-to-V3 reconstruction emitted 8-key maps -> instant gameplay crash; RS/lizzo/billie customs with full schema played fine.
+
+Since v0.5328 `normalize_v3_schema()` fills missing fields at BOTH injection points (`replace_beatmaps`, mode-beatmap injection) — every map entering a bundle passes through it. `beatmap_is_empty()` + `_find_populated_beatmap()` rescue zero-note difficulties by cloning the closest populated Standard donor (accepts `Normal.dat` and `NormalStandard.dat` naming).
+

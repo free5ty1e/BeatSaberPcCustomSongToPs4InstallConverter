@@ -73,8 +73,10 @@ metadata:
 
 **2. `/workspace/.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`** (EVERY test cycle)
 
+> **NOTE:** `experiment_log.md` is the **PER-FEATURE** active log — it holds ONLY the current feature's experiments. Prior features are archived in `experiment_log_archive/` (e.g. `experiment_log_exp001-159_prior-features_...md`). Before appending, confirm the file is still the active log for the CURRENT feature; if a new feature has started, rotate per the rules in CLAUDE.md / `.opencode/rules.md` §3.0.
+
 - Add a new entry for each test/experiment with:
-  - Test number (sequential)
+  - Test number (sequential, **globally unique across the whole project** — check the active log AND the newest archive for the last number)
   - What changed
   - Result (✅ success / ❌ failed / ⏳ pending)
   - What was learned

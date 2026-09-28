@@ -7,9 +7,19 @@ metadata:
 
 # Memory Injection — Addressables Catalog Bypass Approach
 
-## 🔴🔴🔴 STATUS: DEAD END — Do Not Pursue (2026-07-23)
+## 🔴🔴🔴 STATUS (2026-07-23): The OLD approach is DEAD — Do Not Pursue
 
-**After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, memory injection is conclusively abandoned.**
+**After 14+ plugin versions (v0.66–v0.8024) and 18+ experiments, the string-scan / klass-pointer-scan memory injection is conclusively abandoned.**
+
+## 🔴🔴🔴 PHASE 2 STRUCTURAL SCAN ALSO CONCLUDED DEAD END (2026-08-03)
+
+> **UPDATE (Exp 170–173):** The revived structural scan approach (v0.8042–v0.8049) to patch `BeatmapLevelSO._previewDifficultyBeatmapSets` in RAM at runtime has also been **conclusively abandoned as a dead end**. 
+
+### Why Phase 2 Runtime RAM Patching Failed (Lessons Learned)
+1. **Timing Barrier (Asynchronous Addressables Unloading):** Addressables pack bundles unhide and deserialize asynchronously. When the song selection UI (`MoveNext` cell population) renders, the `BeatmapLevelSO` managed objects for custom song packs are **simply not present in the GC heap yet**. 
+2. **Performance Penalty / Freezes:** Scanning 64GB of address space (even via safe `sceKernelQueryMemoryProtection` page probes) takes 15–30 seconds per attempt, causing severe multi-minute stalls and freezes when entering Solo mode.
+3. **Hardware Constraints:** Non-standard modes like 360Degree are physically impossible on PS4 due to single-camera 90-degree tracking constraints, making full mode parity unviable regardless.
+4. **Resolution:** Mode mapping is fully and robustly handled via **Phase 1 (Pipeline bundle patching)** — injecting `_difficultyBeatmapSets` directly into per-song bundles (`{target}_v3`), which works reliably without runtime memory scans or UI freezes.
 
 ### Why It Failed
 

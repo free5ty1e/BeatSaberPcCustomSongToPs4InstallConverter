@@ -61,20 +61,39 @@ class TestEncodeUTF8String:
 class TestCharacteristicPathIDs:
     """Test that characteristic path IDs are defined."""
 
-    def test_has_5_modes(self):
-        assert len(_CHAR_PATH_IDS) == 5
+    def test_has_4_modes(self):
+        assert len(_CHAR_PATH_IDS) == 4
 
     def test_standard_mode(self):
         assert "Standard" in _CHAR_PATH_IDS
 
     def test_all_modes_present(self):
-        expected = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
+        expected = ["Standard", "OneSaber", "NoArrows", "90Degree"]
         for mode in expected:
             assert mode in _CHAR_PATH_IDS
+
+    def test_no_360degree(self):
+        assert "360Degree" not in _CHAR_PATH_IDS
 
     def test_values_are_integers(self):
         for mode, pid in _CHAR_PATH_IDS.items():
             assert isinstance(pid, int)
+
+    def test_verified_characteristic_pids(self):
+        """PIDs must match the real BeatmapCharacteristicSO objects (Exp 182, verified
+        from sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle, CAB
+        cb38b3e2985c65d4cf8a63437da74a89). 90Degree points at the 90Degree characteristic
+        (requires360=0) — NOT the 360Degree one, which the game hides from the selector."""
+        verified = {
+            "Standard": -7286399427822119286,
+            "OneSaber": -5623662769225589684,
+            "NoArrows": -8583864861369561029,
+            "90Degree": -5995858427784384822,
+        }
+        for mode, pid in verified.items():
+            assert _CHAR_PATH_IDS[mode] == pid, (
+                f"{mode} pid changed to {_CHAR_PATH_IDS[mode]} (expected {pid})"
+            )
 
 
 # ======================================================================
@@ -150,20 +169,20 @@ class TestBuildBeatmapLevelSOBlob:
         assert blob[version_offset] == 0x78
 
     def test_preview_modes_count(self):
-        """Should have 5 preview difficulty beatmap sets."""
+        """Should have 4 preview difficulty beatmap sets."""
         blob = build_beatmap_levelso_blob("Song", "Artist", 120.0, "id")
         # Count is at the very end (before mode data)
-        # 5 modes: each has 4+8+4+5*36 = 196 bytes
-        total_mode_data = 5 * (4 + 8 + 4 + 5 * 36)
+        # 4 modes: each has 4+8+4+5*36 = 196 bytes
+        total_mode_data = 4 * (4 + 8 + 4 + 5 * 36)
         count_offset = len(blob) - total_mode_data - 4
         count = struct.unpack_from('<i', blob, count_offset)[0]
-        assert count == 5
+        assert count == 4
 
     def test_all_characteristic_modes_present(self):
         """Each mode's pathID should match the _CHAR_PATH_IDS."""
         blob = build_beatmap_levelso_blob("Song", "Artist", 120.0, "id")
-        modes = ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]
-        total_mode_data = 5 * (4 + 8 + 4 + 5 * 36)
+        modes = ["Standard", "OneSaber", "NoArrows", "90Degree"]
+        total_mode_data = 4 * (4 + 8 + 4 + 5 * 36)
         start = len(blob) - total_mode_data
         for i, mode in enumerate(modes):
             offset = start + i * (4 + 8 + 4 + 5 * 36)
@@ -175,9 +194,9 @@ class TestBuildBeatmapLevelSOBlob:
     def test_diff_count_per_mode(self):
         """Each mode should have 5 difficulties."""
         blob = build_beatmap_levelso_blob("Song", "Artist", 120.0, "id")
-        total_mode_data = 5 * (4 + 8 + 4 + 5 * 36)
+        total_mode_data = 4 * (4 + 8 + 4 + 5 * 36)
         start = len(blob) - total_mode_data
-        for i in range(5):
+        for i in range(4):
             offset = start + i * (4 + 8 + 4 + 5 * 36) + 12  # skip fileID + pathID
             diff_count = struct.unpack_from('<i', blob, offset)[0]
             assert diff_count == 5

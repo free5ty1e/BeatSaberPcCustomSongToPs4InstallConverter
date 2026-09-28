@@ -27,10 +27,9 @@ _CORRECT_MONOSCRIPT_PATHID = 2140275054477726686
 
 _CHAR_PATH_IDS = {
     "Standard":  -7286399427822119286,
-    "OneSaber":  -8583864861369561029,
-    "NoArrows":   -5623662769225589684,
-    "90Degree":    4533580413116749821,
-    "360Degree":  1189643819550092755,
+    "OneSaber":  -5623662769225589684,
+    "NoArrows":  -8583864861369561029,
+    "90Degree":  -5995858427784384822,
 }
 
 
@@ -85,9 +84,9 @@ def build_beatmap_levelso_blob(song_name, song_artist, bpm, level_id):
 
     blob.extend(struct.pack('<i', 0))                      # _colorSchemes (empty)
 
-    # _previewDifficultyBeatmapSets: 5 modes
-    blob += struct.pack('<i', 5)
-    for mode in ["Standard", "OneSaber", "NoArrows", "90Degree", "360Degree"]:
+    # _previewDifficultyBeatmapSets: 4 modes (360Degree unsupported on PS4)
+    blob += struct.pack('<i', 4)
+    for mode in ["Standard", "OneSaber", "NoArrows", "90Degree"]:
         path_id = _CHAR_PATH_IDS[mode]
         blob += struct.pack('<i', 3)                       # fileID
         blob += struct.pack('<q', path_id)                 # pathID

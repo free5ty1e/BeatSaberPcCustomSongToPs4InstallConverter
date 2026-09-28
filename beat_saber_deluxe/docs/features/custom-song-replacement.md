@@ -20,9 +20,15 @@ If a redirect is found, the plugin redirects the file open to the custom song bu
 
 ```
 Game requests: /archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup
-Plugin checks: redirects.json → "startmeup" → "startmeup_v3"
-Plugin redirects to: /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+Plugin checks: redirects.json → "BeatmapLevelsData/startmeup" → "startmeup_v3.bundle"
+Plugin redirects to: /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle
 ```
+
+> ⚠️ **Naming rule (Exp 187):** the redirect VALUE is the exact filename the plugin opens
+> (`AFR_BASE/TITLE_ID/` + value), and `open()` is case-sensitive. The value MUST byte-match
+> the deployed bundle filename — `<canonical slot casing>` + `_v3.bundle`. The pipeline's
+> `_deployed_bundle_name()` + `_ensure_mass_song_redirects()` enforce this on every config
+> save, so regenerating the config can never silently point at a stale `_v3` file again.
 
 ## How It Appears In-Game
 
@@ -49,15 +55,15 @@ This approach:
 | `redirects.json` | `/data/GoldHEN/AFR/CUSA12878/redirects.json` | PS4 copy — read by plugin at runtime |
 | `main.cpp` | `beat_saber_deluxe/src/main.cpp` | Plugin source — file I/O hooks + redirect logic |
 | `full_custom_song_pipeline.py` | `beat_saber_deluxe/tools/full_custom_song_pipeline.py` | Pipeline — builds custom song bundles |
-| `deploy_all.sh` | `beat_saber_deluxe/deploy_all.sh` | Deployment script — uploads everything to PS4 |
+| `--deploy-full` | `tools/full_custom_song_pipeline.py` | Self-contained per-song deploy (bundle + pack patch + catalog + plugin + redirects + validation). `deploy_all.sh` is OUTDATED (13 hardcoded slots) |
 
 ## Redirect Config Format
 
 ```json
 {
   "redirects": {
-    "BeatmapLevelsData/startmeup": "startmeup_v3",
-    "BeatmapLevelsData/angry": "angry_v3"
+    "BeatmapLevelsData/startmeup": "startmeup_v3.bundle",
+    "BeatmapLevelsData/angry": "angry_v3.bundle"
   }
 }
 ```
@@ -115,6 +121,6 @@ grep "loaded.*redirects" ps4_log.txt
 Expected output:
 ```
 loaded 32 redirects from config
-  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3
+  e.g. BeatmapLevelsData/startmeup -> /data/GoldHEN/AFR/CUSA12878/startmeup_v3.bundle
 [OPEN #123] /archive/mount/point/Media/StreamingAssets/BeatmapLevelsData/startmeup -> REDIRECTED
 ```

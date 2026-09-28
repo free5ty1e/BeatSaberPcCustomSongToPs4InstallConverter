@@ -53,10 +53,10 @@ class TestBuildBlob:
         # Should be a reasonable size for a BeatmapLevelSO blob
         assert len(blob1) > 200
 
-    def test_returns_1257_bytes_production(self):
-        """The production blob (Espresso) should be exactly 1257 bytes."""
+    def test_returns_1061_bytes_production(self):
+        """The production blob (Espresso) should be exactly 1061 bytes (4 modes)."""
         blob = build_blob("Espresso", "Sabrina Carpenter", 126.5, "custom/espresso")
-        assert len(blob) == 1257
+        assert len(blob) == 1061
 
     def test_starts_with_zero_gameobject(self):
         """m_GameObject (first 12 bytes) should be zeroed."""
@@ -105,26 +105,26 @@ class TestBuildBlob:
 
     def test_preview_modes_count(self):
         blob = build_blob("Song", "A", 120.0, "id")
-        total_mode_data = 5 * (4 + 8 + 4 + 5 * 36)
+        total_mode_data = 4 * (4 + 8 + 4 + 5 * 36)
         count_offset = len(blob) - total_mode_data - 4
         count = struct.unpack_from('<i', blob, count_offset)[0]
-        assert count == 5
+        assert count == 4
 
     def test_all_modes_use_fileid_3(self):
         """All characteristic PPtrs should use fileID=3."""
         blob = build_blob("Song", "A", 120.0, "id")
-        total_mode_data = 5 * (4 + 8 + 4 + 5 * 36)
+        total_mode_data = 4 * (4 + 8 + 4 + 5 * 36)
         start = len(blob) - total_mode_data
-        for i in range(5):
+        for i in range(4):
             file_id = struct.unpack_from('<i', blob, start + i * 196)[0]
             assert file_id == 3
 
-    def test_1257_is_consistent(self):
-        """Blob size should be consistent for same inputs, and 1257 for production args."""
+    def test_1061_is_consistent(self):
+        """Blob size should be consistent for same inputs, and 1061 for production args."""
         # Same inputs produce same size
         b1 = build_blob("Espresso", "Sabrina Carpenter", 126.5, "custom/espresso")
         b2 = build_blob("Espresso", "Sabrina Carpenter", 126.5, "custom/espresso")
-        assert len(b1) == len(b2) == 1257
+        assert len(b1) == len(b2) == 1061
         # Shorter inputs produce smaller blobs (strings vary in length)
         b3 = build_blob("A", "B", 120.0, "id")
         assert len(b3) < len(b1)

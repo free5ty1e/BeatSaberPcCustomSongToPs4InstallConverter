@@ -16,7 +16,7 @@
 
     "paths": {
         "afr_base": "/data/GoldHEN/AFR",
-        "afr_target_suffix": "_v3",
+        "afr_target_suffix": "_v3.bundle",
         "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
         "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
         "output_dir": "/workspace/beat_saber_deluxe/custom_songs"

@@ -56,8 +56,8 @@ When writing memory scanning code for PS4:
 1. **Always check bounds before spending time on probing** — VERBOSE_LOG the actual segment addresses first
 2. **Module segments can be anywhere** — Don't assume they're above 4 GB on a 64-bit FreeBSD variant
 3. **Use VERBOSE_LOG in debug builds** `(DEBUG=1)` to dump segment addresses, sizes, and per-chunk read status
-4. **Signal handling works for safe probing** — `sigaction(SIGSEGV)` + `sigaction(SIGBUS)` + `sigsetjmp/siglongjmp` does work on PS4 for catching page faults from `memcpy`
-5. **Syscall stubs are common** — On PS4's stripped FreeBSD kernel, many syscalls like `mincore` and potentially `msync` are stubs. Don't rely on them for memory validation.
+4. **Prefer `sceKernelQueryMemoryProtection` for safe probing (v0.8045)** — `sigaction(SIGSEGV)` + `sigaction(SIGBUS)` + `sigsetjmp/siglongjmp` works on PS4 for catching faults, but the handlers are process-wide and hijack Unity's GC page-protection faults during song-list rendering (v0.8043/44 crashes). The query-memory-protection syscall reads mapped range + protection WITHOUT faulting and is the safe default. Self-test once and fail-closed if it's a stub.
+5. **Syscall stubs are common** — On PS4's stripped FreeBSD kernel, many syscalls like `mincore` and `msync` are stubs. Don't rely on them for memory validation (but `sceKernelQueryMemoryProtection` is real and commonly used).
 6. **Keep all bounds checks in sync** — When changing `try_read_mem()`'s bounds, update ALL places that validate pointer ranges (pattern matcher, object validation, klass search). Inconsistent bounds between the low-level read function and the high-level validation caused the pattern matcher to correctly read pages but reject every object on them (v0.75 bug: try_read_mem accepted 16MB+, but pattern validation rejected <4GB).
 7. **The IL2CPP GC heap is NOT guaranteed at any specific address** — On PS4, the managed heap may be below 4GB. Validate this empirically by scanning a wide range (16MB-64GB) at coarse granularity.
 
