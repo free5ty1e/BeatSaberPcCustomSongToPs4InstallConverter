@@ -325,7 +325,15 @@ release_readiness:
   remaining: "user screenshots/videos; PR body push (draft at .pr_temp/updated_pr_description.md, awaiting approval); release-day checklist at the bottom of the procedure doc (default-TAG bump, final-tag validation, tag+push, spot-check)"
   release_zip_now_includes: "validation-procedure .md + .sh (docs/) — consumers can validate their own deployment"
 
+# Current Branch (post-release): feature/web-app-song-conversion-pipeline
+current_feature:
+  branch: "feature/web-app-song-conversion-pipeline (fresh off merged main, Exp 243)"
+  transcript: ".agent/transcripts/2026-09-28_web-app-interface-m9.md (this feature's session transcript)"
+  release_state: "v0.8047-pipeline-0.5351 MERGED + TAGGED + VALIDATED 35/35 (final form, zero anomalies)"
+
 # Next Milestone — Web App Interface (roadmap M9)
 webapp_next_milestone:
-  plan: ".agent/plans/web-app-song-conversion-pipeline-interface.md"
+  plan: ".agent/plans/web-app-song-conversion-pipeline-interface.md (ACTIVE — includes §9 Implementation Context: operating rules, env facts, config schema, reference map, invariants, definition-of-done — written to survive context compaction; read §9 before Phase 1)"
   core: "two modes: local FastAPI backend (full deploys via subprocess argv calls — thin layer over the pipeline) + static GitHub Pages build (command builder). Zero pipeline-code changes. Phases: 1 wizard+deploy slice / 2 state+flags+validation / 3 local-songs+Pages+shipping / 4 polish."
+
+webapp_dump_guide: "M9 plan §4.1b: dump recipe + ready-made dumper.cfg download (split=3) + live structural validation with per-missing-piece errors + DLC-found confidence list + copy/import placement"

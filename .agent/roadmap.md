@@ -261,6 +261,10 @@ Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent
 
 ### Core UX (the user's requirements)
 - [ ] Select the local `ps4_dump` folder via a native folder picker
+- [ ] **Guide the user through obtaining the decrypted dump** — step-by-step
+      recipe, ready-made `dumper.cfg` download (split=3), live structural
+      validation with per-missing-piece errors + which DLC packs were found,
+      and dump-copy/import placement help (see plan §4.1b)
 - [ ] Select a song from BeatSaver (search/browse), pick a local folder, OR enter a BeatSaver ID directly
 - [ ] Configure all pipeline options (target slot, audio codec, mode generation, difficulty fill...)
 - [ ] Manipulate feature flags (kill switch, mode mapping, metadata...) with live PS4 state display

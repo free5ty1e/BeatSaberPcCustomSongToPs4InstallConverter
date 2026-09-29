@@ -1136,3 +1136,13 @@ Takes effect on next boot (features.json read at plugin startup). Plugin v0.8043
      - **Hard-won lessons wired in**: banner-free FTP transport everywhere (lftp-ftp-pitfalls mandatory reading), single-job executor (state files are a transaction — the Exp 227/232 race lesson), config-localization as a mandatory wizard step (release finding #1), read-failures rendered as "couldn't read" never as empty-truth (Exp 237/239/240).
      - 7 UI pages spec'd (Wizard/SongPicker/Deploy/Flags/PS4/Validate/Logs), 4 delivery phases with exit criteria, risk table, open questions, explicit out-of-scope list.
 - **Status:** roadmap + plan written; no code (this is the post-release next item). Staged with the audit batch.
+
+---
+
+### Experiment 243 — FINAL Release Validated (v0.8047-pipeline-0.5351, 35/35) + Dump Guide Added to M9 Plan + New Feature Branch
+- **Date:** 2026-09-28
+- **Context:** PR #4 merged to main; user added screenshots/demo video to the README; tagged `v0.8047-pipeline-0.5351` (build+release jobs green); started fresh branch `feature/web-app-song-conversion-pipeline` off merged main.
+- **Final-release validation:** full automated run against the published tag — **35/35 PASS, exit 0** (log: release-validation-20260928-144217.log). Static audit 7/7; **the zip ships both validation-procedure docs for the first time** (Exp 241 CI fix live); core 5/5 (deploy-full incl. bundled plugin); flags/surgical 9/9 (clear-target-song 47→46→47 surgical + restored); state integrity 4/4 — **all six [state] traces 47/47, ZERO read failures** (banner-free transport solid across runs and environments now). PS4 left exactly as it stands (5 packs / 47 songs / full metadata / flags on). No auto-restores, no anomalies of any kind. THE RELEASE IS VALIDATED IN FINAL FORM.
+- **M9 plan addition (user request):** Game Dump Guide (plan §4.1b) — informational (all modes): step-by-step dump recipe + **ready-made dumper.cfg download** (ours, split=3 — verified against /workspace/ps4_dump/dumper.cfg), line-by-line config explanation, external links via links.json, pitfalls (missing 2.04 patch, DLC-after-dump, no-split, FAT32 space). Functional (local backend): live structural validation with per-missing-piece errors + found-DLC confidence list; dump copy/import placement help. Roadmap M9 checkbox + plan risk row + Phase-1 exit criterion updated.
+- **Session governance:** new transcript started per CLAUDE.md §0.5: `.agent/transcripts/2026-09-28_web-app-interface-m9.md` (the beatmap-mode-mapping feature's transcript `2026-09-27_release-validation-hardening.md` is closed with the release).
+- **Status:** ✅ RELEASE COMPLETE AND VALIDATED. M9 (web app) work begins on this branch per the plan's Phase 1.
