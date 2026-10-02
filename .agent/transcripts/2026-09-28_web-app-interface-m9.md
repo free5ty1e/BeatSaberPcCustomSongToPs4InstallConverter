@@ -65,3 +65,62 @@ The plan carried design context (architecture, pages, phases, risks) but NOT the
 
 ### Post-compaction entry point
 `.agent/plans/web-app-song-conversion-pipeline-interface.md` §9 → Phase 1 (§5). Transcript: this file. Branch: feature/web-app-song-conversion-pipeline.
+
+---
+
+## Cycle 3 — M9 Phase 1 BUILT: webapp skeleton (vertical slice) — Exp 244
+
+### User
+> "please proceed with our plan '/workspace/.agent/plans/web-app-song-conversion-pipeline-interface.md'"
+
+### Ground-truth verification (plan §9 discipline, before any code)
+- Read the full plan (§1-9). Branch confirmed: `feature/web-app-song-conversion-pipeline` @ c9b11c6 (user committed the staged plan-audit batch), clean tree.
+- **All 56 pipeline flags** confirmed via `--help` (both halves); `--deploy-full` semantics verified (build song+pack modes, deploy, redirects, post-deploy validation; exit-nonzero-on-failed-validation confirmed at pipeline L5218-5232).
+- **Catalog**: `beat_saber_song_ids.json` = {meta, albums[36]}; album keys pack/packBundle/songs[]; song keys songID (= --target slot), songName, songAuthorName, difficulties…; meta.templateDir notes devcontainer-absolute.
+- **Dump** (invariant §9.4.7): `ps4_dump/CUSA12878-app` + `-patch` present; `aa/catalog.json` present; `aa/PS4/` has 272 `_pack_assets_all_*.bundle` files across all 36 packs (30 unique pack prefixes seen — billieeilish, britneyspears, bts, camellia, daftpunk, …). `dumper.cfg` split=3 confirmed → shipped into webapp/static/.
+- **BeatSaver API probed live**: search + maps/id return 200 with `Origin: https://free5ty1e.github.io` → CORS OK → Pages-mode client-side search viable. Shape matches §9.2 (docs[].metadata/versions[0].diffs[].notes/downloadURL; stats.downloads; note votes/score sometimes 0/None → never sort on them).
+- **FastAPI 0.136.3 + uvicorn 0.49 + httpx/TestClient** already in devcontainer; **tkinter absent** (headless) → wizard ships manual-path entry now; native dialog probes arrive Phase 3 (plan §7.2).
+- Pipeline does `logging.basicConfig()` at import + `sys.exit()` everywhere → subprocess design mechanically confirmed (invariant 1). `--verify-ps4` guard confirmed: `if (… or args.verify_ps4) and not args.song_dir:` deploy-only branch (L4762).
+- CI: ci.yml (test 649 + lint `ruff check tools/`), plugin-build.yml (release zip packaging; requirements-test.txt → zip requirements.txt). pyproject ruff: line-length 120, E/F/W/I (E501/E402 ignored).
+- **No `input()` calls in the pipeline** → subprocess runs can't hang on prompts.
+- §3.0 rotation DONE: archived Exp 188-243 log (`experiment_log_generalized-pack-patch_exp188-243_2026-08-14_to_2026-09-28.md`); fresh log opened at Exp 244.
+
+### What was built — `beat_saber_deluxe/webapp/` (webapp 0.1.0, own VERSION + CHANGELOG-WEBAPP.md)
+- **server.py** — FastAPI, binds 127.0.0.1:8765 default (`--port`, `--host`, `--no-browser`; auto-opens browser). 20 routes: ping (mode heartbeat), dump/validate + dump/default-location, config GET/POST(save), catalog (slimmed albums→songs), beatsaver search + map/id (404→"may have been deleted"), ps4/test + ps4/state, jobs/{deploy,flags,clear-target,verify,cancel,status,lines}, stream (SSE), command-preview (works in both modes). Job endpoints gated on wizard config existing (devcontainer-absolute-default protection).
+- **adapters/paths.py** — release-root-relative resolution (works from extracted zip or dev checkout).
+- **adapters/config.py** — validate_dump: per-missing-piece errors (app/patch presence, eboot.bin, origin catalog, DLC confidence list from `<pack>_pack_assets_all_<hash>.bundle` scan), warnings for no-DLC; build_wizard_config: ALL paths localized (game_dump_dir/dump_dir→user's dump; output/build/song_ids/patched_catalog→this release's beat_saber_deluxe/; packs:[] auto-discover per Exp 224).
+- **adapters/beatsaver.py** — search + map_by_id; slim projection with nativeDifficulties badge (E/N/H present check); BeatSaverError(status) for 404-deleted handling.
+- **adapters/deploy.py** — DeployOptions typed builder → argv. Safe default = example script command byte-for-byte: `--download-beat-saver-song <ID> --target <SLOT> --pcm16 --no-pad --convert-to-v3 --deploy-full`. Also flags_only_command (--features-only --set-feature name=bool), clear_target_command (--clear-target-song), verify_command (--verify-ps4), pipeline_command (release-root-relative render).
+- **adapters/ps4.py** — READ-ONLY live state: _run_lftp (anonymous:anonymous form, pitfall 6), fetch_remote_json (get-to-mktemp -d + retries), **_extract_json_object = raw_decode scanning** (see bug below), read_features (enable_plugin defaults-TRUE when absent — the only one), read_redirects_summary (song/pack/catalog counts), read_song_metadata, test_connection. ReadResult(ok,error) — failures are explicit, never empty-truth.
+- **adapters/runner.py** — SingleJobRunner: one job at a time (409 on second start), subprocess with CWD=release root, own process group (cancel = killpg), line-buffered drain thread into a 20k-line buffer, lines_since(after) long-poll contract, status/job JSON.
+- **static/** — index.html (5 pages: Wizard, Picker, Deploy, PS4, Dump Guide), app.js (mode detect via /api/ping → local-backend vs pages; wizard flow: check-dump → test-conn → save-config; BeatSaver search UI with E/N/H filter + badges; map-ID lookup; deploy: pack→slot cascading dropdowns from catalog, option panel, live command preview, confirm dialog (PS4-is-production), long-poll log streaming, PASSED/FAILED verdict + post-deploy Verify button; PS4 read-only dashboard), style.css, **dumper.cfg** (copied from /workspace/ps4_dump/dumper.cfg, split=3) + inline Dump Guide with line-by-line cfg explanation + external links + pitfalls.
+
+### THE BUG the new tests caught (Exp-240-class, fixed pre-field)
+First-`{`-to-LAST-`}` extraction (`text.find('{')..text.rfind('}')`) **breaks when a trailing banner itself starts with `}`** — real lftp banners look like `}156 bytes transferred` → rfind grabs the banner's brace → slice = `<json>}more banner after` → JSONDecodeError on every read. Deterministic on slow links, invisible on fast rigs (the exact Exp 240 signature). Fixed with the KB's proven pattern (Exp 221 / ps4_state.py): `json.JSONDecoder().raw_decode()` scanning each `{` position until one parses; test proves clean/leading/trailing/both-side banners + 0-byte + retry-count + mktemp-d transport shape.
+
+### Tests — 65 new, ALL mocked, zero PS4 contact (hardware-gate pattern)
+- test_webapp_config.py (13): every per-missing-piece error path, DLC-list sorting, no-DLC-is-warning, wizard-config localization (all seven path keys), save/load roundtrip (scratch CONFIG_PATH — dev config untouched), paths resolution.
+- test_webapp_deploy.py (18): safe-default argv == example-script command; every flag asserted present in live `--help` output (thin-layer proof); option permutations; validation errors; **single-job runner**: busy-refuses-second, lines stream + exit 0, cancel-on-finished no-op.
+- test_webapp_server.py (18): TestClient endpoints; dump-validate paths; config-save roundtrip; catalog shape (36 packs); BeatSaver 404→"deleted" message; **ps4 test unreachable → explicit ok:false+error (never fake success)**; deploy-requires-config (Setup Wizard message); flags rejects unknown flag (delete_everything); command-preview safe default; index + dumper.cfg served.
+- test_webapp_ps4_adapter.py (16): FakeLftp (writes remote content into the -o target, records commands); banner survival ×4; 0-byte = failure; retries=3 = 3 calls; temp-dir transport shape; enable_plugin default-TRUE; flat-features-format; redirects summary counts.
+
+### Full suite + regression gates
+- `python3 -m pytest tests/ -q` → **714 passed** (649 existing + 65 new), 2:30.
+- `git diff HEAD -- beat_saber_deluxe/tools/` → **EMPTY** (pipeline untouched; no pipeline/plugin version bump — webapp has its own scheme).
+- ruff: tools/ clean, webapp/ clean (4 auto-fixed: unused imports), tests clean.
+
+### Live smoke test (server booted on :8799)
+- /api/ping → local-backend ✓; /api/dump/validate?path=/workspace/ps4_dump → ok:true, 30 DLC packs listed ✓; /api/command-preview → byte-exact example-script command ✓; /api/beatsaver/search?q=take+on+me → "Take on Me - a-ha", native E/N/H ✓.
+- /api/ps4/test → ok:false + explicit error — **PS4 currently in rest mode / no route from the Docker-bridge container** (192.168.100.117:2121 → No route to host, confirmed by direct TCP probe). The failure path behaved exactly as designed (explicit unreachable, error text shown, never empty-truth). Live test-connection validation happens on the user's hardware run.
+
+### Docs
+- README: Web App row in Features table + new §3.1b "Web App — deploy without the CLI (M9, Phase 1)" (usage, capabilities, status, 127.0.0.1-only note).
+- roadmap M9: header → IN PROGRESS (Phase 1 built); checked off 5 Core UX items + 3 Architecture items (with Phase-3 notes on picker/dialog/local-songs).
+- context.yml: webapp_m9 block (phase1_state, version scheme, the banner-bug finding, awaiting=user hardware run).
+- Experiment log: Exp 244 in the fresh M9 log.
+- webapp/VERSION 0.1.0 + CHANGELOG-WEBAPP.md (new component scheme per plan §9.1 recommendation).
+
+### Open items carried forward
+- Phase 1 exit criterion needs the user's hardware run: wizard → test connection (PS4 awake) → pick song → deploy to a slot → see PASSED.
+- Native folder-dialog probe (pywebview) + local-folder song tab + advanced options panel → Phase 3 per plan.
+- Pages command-builder build + bundling webapp/ into the release zip (plugin-build.yml) → Phase 3 shipping step.

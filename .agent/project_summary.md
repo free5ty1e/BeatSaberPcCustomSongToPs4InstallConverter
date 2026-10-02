@@ -150,6 +150,7 @@ See [[ps4-file-system-redirects]] for deploy path details.
 
 | Exp | Version | What | Result |
 |-----|---------|------|--------|
+| **244** | **webapp 0.1.0** | **M9 Phase 1: web app skeleton** — FastAPI server + adapters (config/dump-validation, BeatSaver, deploy argv, banner-free ps4 reads, single-job runner) + UI (Wizard/SongPicker/Deploy/PS4/DumpGuide). 65 mocked tests, full suite 714/714; pipeline untouched (diff tools/ = 0). Banner tests caught a real Exp-240-class bug pre-field (raw_decode scanning replaces rfind-'}' slicing). | 🔄 Awaiting user hardware run (wizard→deploy→PASSED), then Phase 2 |
 | 167 | v0.66 | Initial memory injection implementation | ✅ Code complete, PC prototype verified |
 | 168 | v0.67 | Thread removed → hook-triggered, mincore added | ✅ CE-34878-0 fixed, but "Class string not found" |
 | 169 | v0.68 | Static log_write, removed pack bundle redirect | ✅ Boots fine, still "Class string not found" |

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beat Saber Deluxe — Web App</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>🎵 Beat Saber Deluxe</h1>
+  <nav id="nav">
+    <button data-page="wizard" class="active">Setup Wizard</button>
+    <button data-page="picker">Pick a Song</button>
+    <button data-page="deployPage">Deploy</button>
+    <button data-page="ps4Page">PS4</button>
+    <button data-page="guide">Dump Guide</button>
+  </nav>
+  <span id="mode-badge" title="local-backend = full function; pages = command builder">checking…</span>
+</header>
+
+<main>
+  <!-- ================= Setup Wizard ================= -->
+  <section id="page-wizard" class="page">
+    <h2>Setup Wizard</h2>
+    <p class="muted">One-time setup: point the app at your decrypted game dump and your PS4.
+    The wizard writes <code>ps4_config.json</code> with every path localized for this release.</p>
+
+    <div class="card">
+      <h3>1. Game dump folder</h3>
+      <p class="muted">The folder that contains <code>CUSA12878-app/</code> and
+      <code>CUSA12878-patch/</code> (usually <code>ps4_dump</code>). Bring your own dump —
+      it is copyrighted and cannot ship with the release. Not sure how? See the
+      <a href="#" data-nav="guide">Dump Guide</a>.</p>
+      <div class="row">
+        <input id="dump-path" type="text" placeholder="/path/to/ps4_dump"
+               style="flex:1">
+        <button id="btn-dump-check">Validate</button>
+      </div>
+      <div id="dump-result" class="result"></div>
+      <button id="btn-dump-default" class="link">Check the default location (<span id="dump-default-path">…</span>)</button>
+    </div>
+
+    <div class="card">
+      <h3>2. PS4 connection</h3>
+      <div class="row">
+        <label>IP <input id="ps4-ip" type="text" value="192.168.100.117"></label>
+        <label>Port <input id="ps4-port" type="number" value="2121" style="width:6em"></label>
+        <button id="btn-conn-test">Test Connection</button>
+      </div>
+      <div id="conn-result" class="result"></div>
+    </div>
+
+    <div class="card">
+      <h3>3. Save configuration</h3>
+      <p class="muted">Writes <code>beat_saber_deluxe/ps4_config.json</code> (gitignored —
+      per-machine paths). Deploys refuse to run without it.</p>
+      <button id="btn-save-config" class="primary" disabled>Save ps4_config.json</button>
+      <div id="save-result" class="result"></div>
+    </div>
+  </section>
+
+  <!-- ================= Song Picker ================= -->
+  <section id="page-picker" class="page hidden">
+    <h2>Pick a Song</h2>
+    <div class="card">
+      <div class="row">
+        <input id="bs-query" type="text" placeholder="Search BeatSaver — song, artist, or mapper"
+               style="flex:1">
+        <button id="btn-bs-search">Search</button>
+      </div>
+      <label class="filter"><input type="checkbox" id="bs-filter-enh"> Only maps with native Easy/Normal/Hard
+        <span class="muted">(Expert/E+ get auto-filled by the pipeline)</span></label>
+      <div id="bs-results"></div>
+    </div>
+
+    <div class="card">
+      <h3>Or paste a BeatSaver map ID</h3>
+      <div class="row">
+        <input id="bs-mapid" type="text" placeholder="e.g. 1d6c7c2" style="flex:1">
+        <button id="btn-bs-lookup">Look up</button>
+      </div>
+      <div id="bs-mapid-result" class="result"></div>
+    </div>
+
+    <div id="picked-song" class="card hidden">
+      <h3>Selected song</h3>
+      <div id="picked-song-body"></div>
+    </div>
+  </section>
+
+  <!-- ================= Deploy ================= -->
+  <section id="page-deployPage" class="page hidden">
+    <h2>Deploy</h2>
+
+    <div class="card">
+      <h3>1. Target slot (the stock song you're replacing)</h3>
+      <div class="row">
+        <select id="deploy-pack" style="max-width:16em"><option value="">Pack…</option></select>
+        <select id="deploy-slot" style="flex:1"><option value="">Slot…</option></select>
+      </div>
+      <div id="deploy-slot-info" class="muted"></div>
+    </div>
+
+    <div class="card">
+      <h3>2. Options (safe defaults)</h3>
+      <div class="grid2">
+        <label>Audio codec
+          <select id="opt-audio">
+            <option value="pcm16" selected>PCM16 (lossless, default)</option>
+            <option value="vorbis">Vorbis</option>
+            <option value="hevag">HEVAG (legacy)</option>
+          </select>
+        </label>
+        <label class="chk"><input type="checkbox" id="opt-v3" checked> Convert to V3</label>
+        <label class="chk"><input type="checkbox" id="opt-skip-plugin"> Skip plugin deployment
+          <span class="muted">(pin an installed plugin)</span></label>
+        <label class="chk danger"><input type="checkbox" id="opt-pad"> Pad FSB5 to 12MB
+          <span class="muted">⚠ truncates songs longer than the slot</span></label>
+      </div>
+      <div class="row">
+        <label style="flex:1">Song display name override
+          <input id="opt-songname" type="text" placeholder="(from BeatSaver/Info.dat)">
+        </label>
+        <label style="flex:1">Artist override
+          <input id="opt-artist" type="text" placeholder="(from BeatSaver/Info.dat)">
+        </label>
+      </div>
+      <div id="deploy-command" class="command muted"></div>
+    </div>
+
+    <div class="card">
+      <h3>3. Deploy</h3>
+      <p id="deploy-warning" class="muted">Replacing <b id="deploy-slot-label">…</b> —
+      the other songs in its pack and every other pack stay untouched.</p>
+      <button id="btn-deploy" class="primary big">Deploy to PS4</button>
+      <button id="btn-deploy-cancel" class="danger hidden">Cancel job</button>
+      <pre id="deploy-log" class="log hidden"></pre>
+      <div id="deploy-status" class="result"></div>
+      <div class="row">
+        <button id="btn-verify" class="hidden">Verify PS4</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PS4 ================= -->
+  <section id="page-ps4Page" class="page hidden">
+    <h2>PS4 State</h2>
+    <p class="muted">Read-only view of the live deployment (banner-free FTP reads).
+    Changes happen only through deploys.</p>
+    <button id="btn-ps4-refresh">Refresh</button>
+    <div id="ps4-state" class="result">Not loaded yet.</div>
+  </section>
+
+  <!-- ================= Dump Guide ================= -->
+  <section id="page-guide" class="page hidden">
+    <h2>Game Dump Guide</h2>
+    <p class="muted">Beat Saber Deluxe replaces songs in your own copy of the game —
+    it never distributes game content. You need a decrypted dump of
+    <b>Beat Saber CUSA12878 patch 2.04</b>.</p>
+
+    <div class="card">
+      <h3>What you need</h3>
+      <ul>
+        <li>A jailbroken PS4 with <b>GoldHEN</b> (the same setup the plugin requires).</li>
+        <li><b>Beat Saber v2.04</b> (CUSA12878) with patch 2.04 installed.</li>
+        <li>The <b>music packs you want to modify, installed BEFORE dumping</b> —
+            their bundles live in the patch dump. Installing DLC after dumping is the
+            #1 setup problem.</li>
+        <li>A USB stick with enough free space (the dump is several GB).</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>The recipe</h3>
+      <ol>
+        <li>Download <a id="dumper-cfg-link" href="/static/dumper.cfg" download>dumper.cfg</a>
+            and copy it to the <b>root of your USB stick</b>.
+            It sets <code>split=3</code>: app and patch are dumped into
+            separate <code>CUSA12878-app/</code> and <code>CUSA12878-patch/</code> folders.
+            <details><summary>What each line means</summary>
+              <pre>; 0 — one combined folder     (don't use)
+; 1 — app only
+; 2 — patch only
+; 3 — app AND patch, split folders  ← what we want
+split=3
+
+; Progress notification every 30 s
+notify=30
+
+; Shut the console down when done
+shutdown=1</pre>
+            </details></li>
+        <li>With the USB stick inserted, run the dumper homebrew (GoldHEN → PS4 Dumper).</li>
+        <li>Copy <b>both</b> <code>CUSA12878-app/</code> and <code>CUSA12878-patch/</code>
+            from the stick into a <code>ps4_dump</code> folder on this machine — or just
+            point the wizard at wherever you put them.</li>
+        <li>Back in the <a href="#" data-nav="wizard">Setup Wizard</a>, validate the folder:
+            it should report <code>patch 2.04</code> contents, <code>eboot.bin</code>,
+            the origin catalog, and a confidence list of found DLC packs.</li>
+      </ol>
+      <p class="muted">Useful links: <a href="https://github.com/GoldHEN/GoldHEN" target="_blank" rel="noopener">GoldHEN</a>
+      · <a href="https://github.com/Al-Azif/ps4-dumper" target="_blank" rel="noopener">PS4 Dumper (Al-Azif)</a>
+      · the release README's Prerequisites section.</p>
+    </div>
+
+    <div class="card">
+      <h3>If validation fails</h3>
+      <ul>
+        <li><b>No <code>-app</code>/<code>-patch</code> split</b> — your dumper.cfg wasn't
+            on the stick root or lacked <code>split=3</code>.</li>
+        <li><b>Patch dump missing <code>eboot.bin</code>/<code>Media/</code></b> — the dumper
+            produced packed blobs instead of unpacked files; re-dump with a current dumper.</li>
+        <li><b>No DLC packs found</b> — install the packs on the PS4 <i>first</i>, then dump again.</li>
+        <li><b>Wrong game version</b> — this pipeline targets patch <b>2.04</b> specifically.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

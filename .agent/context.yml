@@ -327,13 +327,17 @@ release_readiness:
 
 # Current Branch (post-release): feature/web-app-song-conversion-pipeline
 current_feature:
-  branch: "feature/web-app-song-conversion-pipeline (fresh off merged main, Exp 243)"
+  branch: "feature/web-app-song-conversion-pipeline (fresh off merged main, Exp 243+)"
   transcript: ".agent/transcripts/2026-09-28_web-app-interface-m9.md (this feature's session transcript)"
   release_state: "v0.8047-pipeline-0.5351 MERGED + TAGGED + VALIDATED 35/35 (final form, zero anomalies)"
 
-# Next Milestone — Web App Interface (roadmap M9)
-webapp_next_milestone:
-  plan: ".agent/plans/web-app-song-conversion-pipeline-interface.md (ACTIVE — includes §9 Implementation Context: operating rules, env facts, config schema, reference map, invariants, definition-of-done — written to survive context compaction; read §9 before Phase 1)"
+# Current Milestone — Web App Interface (roadmap M9) — Phase 1 BUILT (Exp 244)
+webapp_m9:
+  plan: ".agent/plans/web-app-song-conversion-pipeline-interface.md (ACTIVE — includes §9 Implementation Context: operating rules, env facts, config schema, reference map, invariants, definition-of-done — written to survive context compaction)"
   core: "two modes: local FastAPI backend (full deploys via subprocess argv calls — thin layer over the pipeline) + static GitHub Pages build (command builder). Zero pipeline-code changes. Phases: 1 wizard+deploy slice / 2 state+flags+validation / 3 local-songs+Pages+shipping / 4 polish."
+  phase1_state: "BUILT (Exp 244) — beat_saber_deluxe/webapp/: server.py (FastAPI 127.0.0.1:8765, 20 routes, --no-browser), adapters/{paths,config,beatsaver,deploy,ps4,runner}, static/{index.html,app.js,style.css,dumper.cfg}. 65 webapp tests (all mocked; hardware-gate pattern), full suite 714/714. Run: python3 beat_saber_deluxe/webapp/server.py"
+  phase1_version: "webapp 0.1.0 — own VERSION + CHANGELOG-WEBAPP.md (pipeline/plugin untouched: no bump)"
+  phase1_bug_found: "banner-extraction fix: raw_decode scanning (trailing '}156 bytes transferred' breaks rfind-'}' slicing — Exp-240-class, caught by the new banner tests pre-field)"
+  awaiting: "user hardware run (PS4 awake): wizard → test connection → pick song → deploy → PASSED; then Phase 2"
 
 webapp_dump_guide: "M9 plan §4.1b: dump recipe + ready-made dumper.cfg download (split=3) + live structural validation with per-missing-piece errors + DLC-found confidence list + copy/import placement"
