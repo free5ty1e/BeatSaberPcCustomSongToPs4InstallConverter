@@ -365,6 +365,199 @@ async function cancelJob() {
   catch (e) { /* runner gone — poll loop will notice */ }
 }
 
+// ---------------------------------------------------------------- manage + loadout
+let loadoutData = null;   // last /api/loadout payload (re-render on filter change)
+
+async function fetchLoadout() {
+  const errs = [];
+  try {
+    loadoutData = await api("/api/loadout");
+  } catch (e) {
+    loadoutData = null;
+    errs.push(e.message);
+  }
+  return loadoutData;
+}
+
+function renderReadErrors(status, el) {
+  if (!status) { el.innerHTML = ""; return; }
+  const bits = [];
+  if (status.redirectsReadError)
+    bits.push(`<span class="result bad">⚠ Couldn't read redirects.json from the PS4
+      (${esc(status.redirectsReadError)}). "Served" status unknown — check the
+      connection and refresh.</span>`);
+  if (status.afrReadError)
+    bits.push(`<span class="result warn">⚠ Couldn't list the AFR folder on the PS4
+      (${esc(status.afrReadError)}). Stale-bundle detection unavailable.</span>`);
+  if (status.metadataReadError)
+    bits.push(`<span class="result warn">⚠ Couldn't read song_metadata.json from the PS4
+      (${esc(status.metadataReadError)}). Custom names unavailable — showing slots only.</span>`);
+  el.innerHTML = bits.join(" ");
+}
+
+function customCell(row) {
+  if (row.customDeployed) {
+    const name = row.customName || "(name unavailable)";
+    const artist = row.customArtist || "";
+    return `<td><span class="badge ok">custom</span></td>
+            <td><b>${esc(name)}</b>${artist ? ` <span class="muted">/ ${esc(artist)}</span>` : ""}</td>`;
+  }
+  if (row.staleBundle) {
+    return `<td><span class="badge miss" title="Bundle file on PS4 but no redirect — uploaded by an earlier deploy, not currently served">stale</span></td>
+            <td class="muted">bundle on PS4, not served (no redirect)</td>`;
+  }
+  if (row.customName) {
+    return `<td><span class="badge miss" title="Name/artist relabeled in the UI but no custom bundle is served over this slot">label only</span></td>
+            <td><b>${esc(row.customName)}</b>${row.customArtist ? ` <span class="muted">/ ${esc(row.customArtist)}</span>` : ""}</td>`;
+  }
+  return `<td class="muted">—</td><td class="muted">stock</td>`;
+}
+
+function clearButton(row, refreshFn) {
+  if (!row.customDeployed && !row.staleBundle && !row.customName) return "<td></td>";
+  return `<td><button class="clear-slot danger" data-slot="${esc(row.songID)}"
+      data-stock="${esc(row.songName)}">Clear</button></td>`;
+}
+
+function wireClearButtons(container, refreshFn) {
+  container.querySelectorAll("button.clear-slot").forEach(b =>
+    b.addEventListener("click", async () => {
+      const slot = b.dataset.slot, stock = b.dataset.stock;
+      if (!confirm(
+        `Revert "${stock}" (${slot}) back to stock?\n\n` +
+        `This removes ONLY this song's custom bundle, redirect, and metadata — ` +
+        `the other songs in its pack and every other pack stay untouched.`))
+        return;
+      b.disabled = true;
+      try {
+        await api("/api/jobs/clear-target", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slot }),
+        });
+        b.textContent = "clearing…";
+        // poll the job, then refresh the table
+        pollIndex = 0;
+        const poll = async () => {
+          try {
+            const j = await api(`/api/jobs/lines?after=${pollIndex}`);
+            pollIndex = j.index || pollIndex;
+            if (j.running) { setTimeout(poll, 900); return; }
+            if (j.job && j.job.exit_code === 0) { await refreshFn(); }
+            else { b.disabled = false; b.textContent = "Clear";
+                   alert(`Clear failed (exit ${j.job ? j.job.exit_code : "?"}) — see the Deploy tab log for the pipeline's message.`); }
+          } catch { setTimeout(poll, 1500); }
+        };
+        poll();
+      } catch (e) {
+        b.disabled = false; b.textContent = "Clear";
+        alert("Couldn't start the clear job: " + e.message);
+      }
+    }));
+}
+
+async function manageRefresh() {
+  const packSel = $("manage-pack");
+  const body = $("manage-table").querySelector("tbody");
+  body.innerHTML = "<tr><td colspan='6' class='muted'>Reading PS4 state…</td></tr>";
+  await fetchLoadout();
+  if (!loadoutData) {
+    body.innerHTML = `<tr><td colspan='6' class='result bad'>Couldn't load: ${esc("see errors above")}</td></tr>`;
+    return;
+  }
+  renderReadErrors(loadoutData.readStatus, $("manage-read-errors"));
+  const pack = packSel.value;
+  const album = loadoutData.packs.find(p => p.pack === pack);
+  const named = album ? album.songs.filter(s => s.customName).length : 0;
+  $("manage-pack-title").textContent = album
+    ? `${album.pack} — ${album.deployedCount} served / ${named} labeled / ${album.songs.length} songs`
+    : "Songs";
+  if (!album) { body.innerHTML = ""; return; }
+  body.innerHTML = album.songs.map(row =>
+    `<tr class="${row.customDeployed ? "has-custom" : ""}">
+       <td><code>${esc(row.songID)}</code></td>
+       <td>${esc(row.songName)}</td>
+       <td>${esc(row.songAuthorName)}</td>
+       ${customCell(row)}
+       ${clearButton(row)}
+     </tr>`).join("");
+  wireClearButtons(body, manageRefresh);
+}
+
+async function loadManagePacks() {
+  const packSel = $("manage-pack");
+  try {
+    const j = await api("/api/loadout/packs");
+    packSel.innerHTML = "";
+    j.packs.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = `${p} (${j.songCounts[p]} songs)`;
+      packSel.appendChild(opt);
+    });
+  } catch (e) {
+    packSel.innerHTML = `<option value=''>couldn't load packs: ${esc(e.message)}</option>`;
+    return;
+  }
+  packSel.onchange = manageRefresh;
+  // default to the first pack with anything custom (served or labeled)
+  await fetchLoadout();
+  if (loadoutData) {
+    const withCustoms = loadoutData.packs.find(
+      p => p.deployedCount > 0 || p.songs.some(s => s.customName || s.staleBundle));
+    if (withCustoms) packSel.value = withCustoms.pack;
+  }
+  manageRefresh();
+}
+
+function renderLoadoutTables() {
+  const host = $("loadout-tables");
+  if (!loadoutData) { host.innerHTML = "<p class='result bad'>No data — refresh.</p>"; return; }
+  renderReadErrors(loadoutData.readStatus, $("loadout-read-errors"));
+  const onlyCustom = $("loadout-only-custom").checked;
+  const packs = onlyCustom
+    ? loadoutData.packs.filter(
+        p => p.deployedCount > 0 || p.songs.some(s => s.customName || s.staleBundle))
+    : loadoutData.packs;
+  $("loadout-summary").textContent =
+    `${loadoutData.redirectedSlotCount} custom songs served · ` +
+    `${loadoutData.staleBundleCount} stale bundles (uploaded, not served) · ` +
+    `${loadoutData.customNameCount} metadata entries · ${loadoutData.packs.length} packs total` +
+    (loadoutData.unmatchedMetadata.length
+      ? ` · ${loadoutData.unmatchedMetadata.length} metadata entries matched no slot` : "");
+  $("loadout-generated").textContent = new Date().toLocaleString();
+
+  host.innerHTML = packs.map(album => `
+    <div class="card loadout-pack">
+      <h3>${esc(album.pack)} <span class="muted">(${album.deployedCount} served /
+        ${album.songs.filter(s => s.customName).length} labeled / ${album.songs.length} songs)</span></h3>
+      <table class="loadout">
+        <thead><tr><th>Slot</th><th>Stock song</th><th>Stock artist</th>
+          <th>Custom?</th><th>Custom song / artist</th><th></th></tr></thead>
+        <tbody>
+          ${album.songs.map(row =>
+            `<tr class="${row.customDeployed ? "has-custom" : ""}">
+               <td><code>${esc(row.songID)}</code></td>
+               <td>${esc(row.songName)}</td>
+               <td>${esc(row.songAuthorName)}</td>
+               ${customCell(row)}
+               ${clearButton(row)}
+             </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`).join("")
+    || "<p class='muted'>No packs match the current filter.</p>";
+  wireClearButtons(host, async () => { await fetchLoadout(); renderLoadoutTables(); });
+}
+
+async function loadoutRefresh() {
+  const btn = $("btn-loadout-refresh");
+  btn.disabled = true; btn.textContent = "Reading PS4…";
+  await fetchLoadout();
+  renderLoadoutTables();
+  btn.disabled = false; btn.textContent = "Refresh from PS4";
+}
+
 // ---------------------------------------------------------------- ps4 page
 async function refreshPs4() {
   const el = $("ps4-state");
@@ -402,6 +595,7 @@ async function boot() {
       state.catalog = (await api("/api/catalog")).albums;
       loadCatalogIntoPicker();
     } catch { /* wizard-first flow */ }
+    loadManagePacks();   // Manage Songs dropdown (catalog-only — works offline)
   }
 }
 
@@ -428,5 +622,8 @@ document.addEventListener("DOMContentLoaded", () => {
       .catch(e => setResult("deploy-status", "❌ " + e.message, "bad"));
   });
   $("btn-ps4-refresh").addEventListener("click", refreshPs4);
+  $("btn-manage-refresh").addEventListener("click", manageRefresh);
+  $("btn-loadout-refresh").addEventListener("click", loadoutRefresh);
+  $("loadout-only-custom").addEventListener("change", renderLoadoutTables);
   showPage("wizard");
 });

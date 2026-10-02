@@ -22,7 +22,7 @@ import threading
 import time
 from pathlib import Path
 
-from adapters import beatsaver, config, deploy, paths, ps4, runner
+from adapters import beatsaver, config, deploy, loadout, paths, ps4, runner
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -182,6 +182,39 @@ def ps4_state():
     else:
         payload["song_metadata"] = {"ok": False, "error": meta.error}
     return payload
+
+
+# --------------------------------------------------------------------------
+# Loadout tables (Manage Songs + Full Loadout tabs)
+# --------------------------------------------------------------------------
+@app.get("/api/loadout")
+def loadout_state():
+    """
+    Full merge: every catalog pack/slot × live redirects × song metadata.
+
+    Read failures are explicit (never "nothing deployed"): the payload always
+    carries per-source read status the UI must surface when not ok.
+    """
+    res = ps4.read_deployment_state()
+    merged = loadout.loadout_from_state(res.data or {})
+    merged["readStatus"] = {
+        "redirectsOk": not (res.data or {}).get("redirects_read_error"),
+        "metadataOk": not (res.data or {}).get("metadata_read_error"),
+        "afrOk": not (res.data or {}).get("afr_read_error"),
+        "redirectsReadError": (res.data or {}).get("redirects_read_error"),
+        "metadataReadError": (res.data or {}).get("metadata_read_error"),
+        "afrReadError": (res.data or {}).get("afr_read_error"),
+    }
+    return merged
+
+
+@app.get("/api/loadout/packs")
+def loadout_packs():
+    """Pack list for the Manage-Songs dropdown (from the local catalog —
+    works even when the PS4 is offline)."""
+    catalog = loadout.load_catalog()
+    return {"packs": sorted(catalog.keys()),
+            "songCounts": {p: len(s) for p, s in catalog.items()}}
 
 
 # --------------------------------------------------------------------------

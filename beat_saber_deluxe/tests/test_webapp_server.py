@@ -126,6 +126,47 @@ class TestPs4Endpoints:
         assert j["song_metadata"]["ok"] is False
 
 
+class TestLoadoutEndpoints:
+    def test_packs_list_offline_capable(self):
+        """The Manage-Songs dropdown works without the PS4 (catalog only)."""
+        r = client.get("/api/loadout/packs")
+        assert r.status_code == 200
+        j = r.json()
+        assert len(j["packs"]) == 36
+        assert j["songCounts"]["billieeilish"] > 0
+
+    def test_loadout_carries_read_status(self, monkeypatch):
+        """Read failures must surface as readStatus, never as clean-empty."""
+        from adapters import ps4 as ps4_mod
+        monkeypatch.setattr(
+            server.ps4, "read_deployment_state",
+            lambda: ps4_mod.ReadResult(ok=False, data={
+                "redirects_read_error": "get: timeout"}, error="get: timeout"))
+        r = client.get("/api/loadout")
+        j = r.json()
+        assert j["readStatus"]["redirectsOk"] is False
+        assert j["readStatus"]["redirectsReadError"] == "get: timeout"
+        # rows still render (catalog merge), but flagged unknown
+        assert j["redirectedSlotCount"] == 0
+
+    def test_loadout_happy_path_shape(self, monkeypatch):
+        from adapters import ps4 as ps4_mod
+        monkeypatch.setattr(
+            server.ps4, "read_deployment_state",
+            lambda: ps4_mod.ReadResult(ok=True, data={
+                "redirects": {"BeatmapLevelsData/BadGuy": "BadGuy_v3.bundle"},
+                "song_names": {"bad guy": "Odo / Ado"},
+                "song_artists": {"Billie Eilish": " "}}))
+        r = client.get("/api/loadout")
+        j = r.json()
+        assert j["readStatus"]["redirectsOk"] and j["readStatus"]["metadataOk"]
+        billie = [p for p in j["packs"] if p["pack"] == "billieeilish"][0]
+        badguy = [s for s in billie["songs"] if s["songID"] == "BadGuy"][0]
+        assert badguy["customDeployed"] is True
+        assert badguy["customName"] == "Odo"
+        assert billie["deployedCount"] == 1
+
+
 class TestJobGuards:
     def test_deploy_requires_config(self, monkeypatch, tmp_path):
         monkeypatch.setattr(server.paths, "CONFIG_PATH", tmp_path / "none.json")

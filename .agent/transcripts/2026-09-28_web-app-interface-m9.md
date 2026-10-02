@@ -124,3 +124,48 @@ First-`{`-to-LAST-`}` extraction (`text.find('{')..text.rfind('}')`) **breaks wh
 - Phase 1 exit criterion needs the user's hardware run: wizard → test connection (PS4 awake) → pick song → deploy to a slot → see PASSED.
 - Native folder-dialog probe (pywebview) + local-folder song tab + advanced options panel → Phase 3 per plan.
 - Pages command-builder build + bundling webapp/ into the release zip (plugin-build.yml) → Phase 3 shipping step.
+
+---
+
+## Cycle 4 — Manage Songs + Full Loadout tabs; deployed-truth model; CI/release audit; Pages (Exp 245)
+
+### User
+> "Wow, excellent job - you nailed it! This web app works perfectly here locally at least. Exactly what I wanted! Can we add two new tabs... a tab that is for managing custom songs currently on the PS4... choose a music pack from a dropdown to get a populated table showing each song and its custom status (artist / name of target stock song, artist / name of custom song installed in this slot if any) with a button to uninstall / clear each song. Then another tab that generates a full table showing every music pack and song in the game, along with the custom songs installed over each slot... 'save' the webpage as a simple HTML file or print this page to PDF... Then let's audit the CI and release pipelines and ensure we have full test coverage, and make sure that everything required is included in the release including documentation and instructions. Then we can also try to deploy this to github pages for this repo, enable github pages so we can deploy to a docs folder or something like that."
+
+### Ground truth read FIRST (the join keys, before any code)
+- song_metadata.json: `song_names[<stock songName>] = "<Custom> / <Artist>"`, `song_artists[<pack artist>] = " "`; keys are STOCK songNames — NOT songIDs.
+- redirects.json: `redirects["BeatmapLevelsData/<songID>"] = "<songID>_v3.bundle"` + pack redirects + `aa/catalog.json`.
+- **Join-key quirk found:** catalog `'You Should See Me In A Crown '` (trailing space) vs song_metadata `'You Should See Me In A Crown'` → merge uses case/space normalization.
+- CI/release: ci.yml (test installs requirements-test.txt; lint `ruff check tools/` ONLY), plugin-build.yml (test + zip + release; zip has no webapp/).
+
+### THE deployed-truth discovery (live PS4 audit — the cycle's key finding)
+Built the first cut of the merge using redirects as "deployed", smoke-tested against the live PS4, and got **1 served / 47 labeled** — which contradicted the user's known-good state (5 packs, 47 songs). Investigated instead of shipping:
+- Live redirects.json = 948 bytes, **ONE song redirect** (MessItUp) + 5 pack + catalog.
+- AFR dir listing = **48 `<slot>_v3.bundle` files**.
+- Plugin source (main.cpp open_hook): the game serves a custom ONLY when a redirects key substring-matches the open path. No fallback. Bundle-without-redirect is NEVER loaded.
+- **bs_log.txt (983KB, spans multiple boots) proved it:** earlier boots loaded "47 songs, 5 packs, 1 catalog" (the full loadout, working); the LATEST boot loaded "7 redirects — 1 songs, 5 packs, 1 catalog". The current-boot section redirects only `messitup`.
+- **Conclusion:** the deployed-truth model is THREE signals: SERVED (redirect present), STALE (bundle in AFR, no redirect), LABEL ONLY (metadata name, no redirect/bundle). The live PS4 is in a transitional state left by the release-validation `--clear-target-song` round-trip (restore rebuilt metadata, never re-added the 46 song redirects) — surfaced to the user as a real finding: **the current boot serves only MessItUp as a custom song; redeploy the loadout to restore.**
+- Modeled all three distinctly in the merge + UI badges (`custom`/`stale`/`label only`/stock), with live-truth regression tests pinning the exact live shape (1 served, 46 stale, 47 labeled).
+
+### Built (webapp 0.2.0)
+- adapters/loadout.py: pure merge (catalog × redirects × metadata × AFR listing), normalized metadata join, unmatchedMetadata + unmatchedBundles reporting.
+- adapters/ps4.py: `list_deployed_slot_bundles()` (AFR `<slot>_v3.bundle` stems); `read_deployment_state()` now reads redirects + metadata + AFR in one call with per-source read errors.
+- server.py: `/api/loadout` (merge + readStatus incl. afrOk), `/api/loadout/packs` (catalog-only, PS4-offline capable).
+- UI: Manage Songs tab (pack dropdown → per-song table: slot, stock name/artist, custom name/artist, status badge, Clear button → `--clear-target-song` job → poll → refresh); Full Loadout tab (all 36 packs × songs, "only packs with customs" filter, per-row Clear, print stylesheet: light theme, chrome hidden, break-inside avoid, generated-date footer; Ctrl+S / Ctrl+P → PDF instructions in the intro).
+- Pages: webapp/build_pages.py (same UI bundle + `data-mode="pages"` stamp + command-builder banner + instant mode switch in app.js) → /tmp build verified; .github/workflows/pages.yml (push-to-main + manual; build → bundle smoke-test → deploy-pages; concurrency group; OIDC permissions).
+
+### CI/release audit findings + fixes
+1. requirements-test.txt had no fastapi/uvicorn/httpx → **CI test job would have failed on the next push**. Fixed (+ release zip requirements.txt inherits them).
+2. ci.yml lint covered tools/ only → now `tools/ webapp/ tests/`; plugin-build.yml gained the same ruff step before pytest.
+3. Release zip never bundled webapp/ → added rsync (excl. __pycache__) + count echo; release workflow gained a webapp smoke-test step (imports server, asserts /api/ping,/api/loadout,/api/jobs/deploy routes + static files).
+4. CI_RELEASE.md: webapp artifact table + "no terminal? start the web app" + Pages note. README §3.1b: the two new tabs + Pages command-builder paragraph; title de-phased ("M9", no longer "Phase 1").
+
+### Verification
+- New tests: 16 (merge incl. three-signal pins, live-truth-model class with the exact 1/46/47 shape, readStatus propagation, stale/unmatched-bundle cases). Full suite **730/730** (2:27). Lint clean (2 auto-fixed unused imports). app.js + pages bundle parse.
+- Live smoke: /api/loadout → reads ok ×3; served 1 | stale 46 | labeled 47 | unmatched 0; crown-song join works on live data.
+
+### Surfaced to the user (real state, not webapp)
+The PS4 currently serves only MessItUp as a custom song (1 song redirect in the live table; the other 46 bundles are stale in AFR; metadata still labels all 47). Recommendation: re-run the chained example scripts to restore the full loadout, then the Loadout tab will show 47 served.
+
+### Files
+webapp/adapters/{loadout.py NEW, ps4.py, }, webapp/server.py, webapp/static/{index.html, app.js, style.css}, webapp/build_pages.py NEW, webapp/VERSION → 0.2.0, webapp/CHANGELOG-WEBAPP.md, tests/test_webapp_{loadout.py NEW, server.py, ps4_adapter.py}, .github/workflows/{ci.yml, plugin-build.yml, pages.yml NEW}, requirements-test.txt, CI_RELEASE.md, README.md, docs/experiment log Exp 245, this transcript, context.yml, roadmap.

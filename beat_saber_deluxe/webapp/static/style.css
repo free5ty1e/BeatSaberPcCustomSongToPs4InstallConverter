@@ -169,3 +169,37 @@ details pre {
 #ps4-state th { color: var(--muted); font-weight: 600; }
 
 footer { text-align: center; color: var(--muted); font-size: 0.8em; padding: 1.5rem; }
+
+/* ---------------- Loadout tables (Manage Songs + Full Loadout) ---------------- */
+table.loadout { border-collapse: collapse; width: 100%; font-size: 0.88em; }
+table.loadout th, table.loadout td {
+  text-align: left; padding: 0.35rem 0.55rem;
+  border-bottom: 1px solid #2b3145; vertical-align: top;
+}
+table.loadout th { color: var(--muted); font-weight: 600; font-size: 0.92em; }
+table.loadout tr.has-custom td { background: #18202e; }
+table.loadout tr:hover td { background: var(--card2); }
+.loadout-pack h3 { position: sticky; top: 0; }
+.print-footer { margin-top: 2rem; }
+
+/* ---------------- Print / save-as-PDF (Full Loadout tab) ----------------
+ * The goal: a clean, self-contained reference document. Dark theme flips
+ * to white, interactive chrome (nav, filters, buttons) disappears, and
+ * tables break cleanly across pages. */
+@media print {
+  :root { --bg: #fff; --card: #fff; --card2: #fff; --text: #111;
+          --muted: #555; --accent: #a03060; --accent2: #2563a8; }
+  body { background: #fff !important; color: #111 !important; }
+  header, .no-print, nav, button { display: none !important; }
+  main { max-width: none; margin: 0; }
+  .card { border: 1px solid #999; break-inside: avoid; }
+  .page.hidden { display: none; }
+  #page-loadoutPage { display: block !important; }
+  table.loadout { font-size: 9.5pt; }
+  table.loadout th, table.loadout td { border-bottom: 1px solid #bbb; padding: 2pt 4pt; }
+  table.loadout tr.has-custom td { background: #f0f0f5 !important; }
+  .badge.ok { background: #e0f5e8 !important; color: #14532d !important;
+              border: 1px solid #14532d; }
+  code { color: #333; }
+  .print-footer { color: #555; font-size: 9pt; }
+}

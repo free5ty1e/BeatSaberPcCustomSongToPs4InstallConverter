@@ -180,6 +180,63 @@ def read_song_metadata() -> ReadResult:
     return fetch_remote_json(PS4_SONG_METADATA)
 
 
+def list_deployed_slot_bundles() -> ReadResult:
+    """
+    List every `<slot>_v3.bundle` file in the AFR dir (the deployed payloads).
+
+    Deployed-truth model (verified against live state + plugin source):
+    - the game serves a custom song ONLY when redirects.json carries
+      `BeatmapLevelsData/<slot>` → the bundle (open_hook matches on the
+      redirect table — nothing else);
+    - a `<slot>_v3.bundle` present WITHOUT a redirect entry is a STALE
+      payload: uploaded by an earlier flow but not currently served.
+      The loadout table distinguishes served (redirect) vs stale (file only)
+      instead of hiding either.
+    """
+    res = list_afr_dir()
+    if not res.ok:
+        return res
+    files = (res.data or {}).get("files", {})
+    suffix = load_config().get("paths", {}).get("afr_target_suffix", "_v3.bundle")
+    bundles = sorted(name[: -len(suffix)] for name in files
+                     if name.endswith(suffix) and not name.startswith("."))
+    res.data = {"slot_bundles": bundles, "count": len(bundles)}
+    return res
+
+
+def read_deployment_state() -> ReadResult:
+    """
+    One read for BOTH state files (the loadout tables need them together).
+
+    Returns data={"redirects": {...}, "song_metadata": {...}} — each inner
+    value is the RAW parsed file (redirects dict; song_names/song_artists
+    dicts) so the pure merge in loadout.py never does I/O. A failed half
+    carries {"ok": false, "error": ...} (never rendered as empty-truth).
+    """
+    red = fetch_remote_json(PS4_REDIRECTS)
+    meta = fetch_remote_json(PS4_SONG_METADATA)
+    data: dict = {}
+    if red.ok:
+        data["redirects"] = (red.data or {}).get("redirects", {})
+    else:
+        data["redirects_read_error"] = red.error
+    if meta.ok:
+        md = meta.data or {}
+        data["song_names"] = md.get("song_names", {})
+        data["song_artists"] = md.get("song_artists", {})
+    else:
+        data["metadata_read_error"] = meta.error
+    # AFR file listing (third truth signal: deployed bundles on disk)
+    afr = list_deployed_slot_bundles()
+    if afr.ok:
+        data["slot_bundles"] = (afr.data or {}).get("slot_bundles", [])
+    else:
+        data["afr_read_error"] = afr.error
+    return ReadResult(ok=red.ok or meta.ok,
+                      data=data,
+                      error="; ".join(e for e in (red.error, meta.error, afr.error) if e))
+
+
 def test_connection() -> ReadResult:
     """Reachability probe: anonymous login + AFR dir listing."""
     res = list_afr_dir()

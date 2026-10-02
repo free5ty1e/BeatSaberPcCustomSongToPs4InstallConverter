@@ -361,7 +361,7 @@ and chain several packs unattended:
 > pack-mode patching). It remains only for historical reference — do not use it
 > for new deployments.
 
-### 3.1b Web App — deploy without the CLI (M9, Phase 1)
+### 3.1b Web App — deploy without the CLI (M9)
 
 The same pipeline, point-and-click. The web app is a **thin layer**: every
 Deploy button press runs the exact `--deploy-full` command above as a
@@ -384,13 +384,28 @@ python3 beat_saber_deluxe/webapp/server.py
 - **Deploy** — pick a target slot grouped by music pack, review the exact
   command before running, watch the live log stream, and get the pipeline's
   own PASSED/FAILED verdict.
+- **Manage Songs** — pick a music pack from a dropdown to see every stock song
+  in it and what custom song (name / artist) is deployed over each slot, with a
+  per-row **Clear** button (surgical: only that song reverts; its pack's other
+  songs and every other pack stay untouched).
+- **Full Loadout** — every music pack and song in the game with its custom
+  status, in one table. **Save the page (Ctrl+S) or print it to PDF (Ctrl+P)**
+  to keep a reference of your PS4's song loadout. Same per-row Clear button.
 - **PS4 page** — read-only live state (redirects, feature flags, custom-song
   metadata counts).
+- **Game Dump Guide** — also built into the web app.
 
-Status: Phase 1 (wizard + picker + deploy). The dashboard's full slot table,
-feature-flag toggles, the 35-check release validator, local-folder songs, and
-a GitHub Pages command-builder mode arrive in Phases 2-3. No PS4 credentials
-leave your machine — the server binds to `127.0.0.1` only.
+**GitHub Pages command-builder:** the same UI is hosted online (deployed by
+`.github/workflows/pages.yml` from `webapp/build_pages.py`) at the repo's Pages
+URL. There, the app detects it has no backend and switches to command-builder
+mode: configure your dump folder, song, and slot visually, then copy the
+generated `python3 tools/full_custom_song_pipeline.py …` command and run it on
+the machine with your PS4 + game dump. The hosted page can never touch your
+PS4 — deploys need the local backend or the CLI.
+
+No PS4 credentials leave your machine — the local server binds to `127.0.0.1`
+only. Local-folder song deploys, saved presets, and the built-in 35-check
+validator page arrive in later phases.
 
 ### 3.2 Manual deploy (individual components)
 

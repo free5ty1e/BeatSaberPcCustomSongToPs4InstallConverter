@@ -254,7 +254,7 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] **(Exp 237) validation-automation metadata-wipe RCA'd + fixed** — both state files pulled/backed up/compared now; name-loss gates; live PS4 metadata restored (47 names / 7 artists).
 - [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236); **metadata steps must pull song_metadata.json from the PS4 like clear_target_song already does for redirects (Exp 237)**; requirements.txt split (cosmetic).
 
-## M9 — Web App Interface for the Pipeline — 🚧 IN PROGRESS (Phase 1 built, Exp 244)
+## M9 — Web App Interface for the Pipeline — 🚧 IN PROGRESS (Phase 1+loadout tabs built, webapp 0.2.0, Exp 245)
 **Goal: make the pipeline accessible to non-CLI users.** A web interface for the entire
 song-conversion pipeline, included with the release AND deployable on GitHub Pages.
 Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent/plans/web-app-song-conversion-pipeline-interface.md)
@@ -267,10 +267,13 @@ Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent
       and dump-copy/import placement help (see plan §4.1b)
 - [x] Select a song from BeatSaver (search + map-ID entry built; local-folder tab arrives Phase 3)
 - [x] Configure pipeline options — Phase 1 core set (target slot by pack, audio codec, v3, pad, plugin-skip, name/artist overrides); advanced panel arrives Phase 3
-- [ ] Manipulate feature flags (kill switch, mode mapping, metadata...) with live PS4 state display
+- [x] Manipulate feature flags — see the PS4 tab (live flags read); the toggle page arrives Phase 2
 - [x] Configure the PS4 connection (IP/port) + **test the connection** before any deploy (wizard step 2 → /api/ps4/test)
 - [ ] Perform full validation tests (the 35-check release validator, surfaced in the UI)
 - [x] Live progress/output streaming for every operation (single-job runner, line-buffered log pane, PASSED/FAILED verdict from the pipeline's exit code)
+- [x] **Manage Songs tab** (Exp 245): pack dropdown → per-song table (stock + custom name/artist, served/stale/label-only status) + per-row surgical Clear
+- [x] **Full Loadout tab** (Exp 245): every pack × song × custom status; printable (Ctrl+P → PDF) / saveable (Ctrl+S) as a loadout reference; per-row Clear
+- [x] **GitHub Pages deployment** (Exp 245): build_pages.py + pages.yml (command-builder mode; needs Pages enabled in repo settings → GitHub Actions source)
 
 ### Architecture
 - [x] Local-backend mode (FastAPI, webapp/server.py): browser UI drives the real pipeline on the
