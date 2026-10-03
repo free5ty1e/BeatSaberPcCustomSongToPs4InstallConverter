@@ -395,6 +395,15 @@ python3 beat_saber_deluxe/webapp/server.py
   metadata counts).
 - **Game Dump Guide** — also built into the web app.
 
+- **Feature Flags** — live read of the four runtime flags (kill switch
+  first) with detailed descriptions; the Apply button diffs against the live
+  PS4 state and deploys only what changed, through the pipeline's
+  `--features-only` path.
+- **Backup / Restore** — wraps `backup-beat-saber-deluxe-files.py` (the same
+  script the CLI uses): one-click backup (optionally clean the PS4 after,
+  behind a hard confirm), browse `ps4_backups/`, per-row restore, live job log.
+- **Feature Request** — composes a prefilled GitHub issue for this repo;
+  opens it on GitHub for you to review and submit.
 **GitHub Pages command-builder:** the same UI is hosted online (deployed by
 `.github/workflows/pages.yml` from `webapp/build_pages.py`) at the repo's Pages
 URL. There, the app detects it has no backend and switches to command-builder

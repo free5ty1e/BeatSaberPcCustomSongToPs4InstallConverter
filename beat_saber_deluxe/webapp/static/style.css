@@ -170,6 +170,38 @@ details pre {
 
 footer { text-align: center; color: var(--muted); font-size: 0.8em; padding: 1.5rem; }
 
+/* ---------------- Feature flags page ---------------- */
+.flag-row {
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid #2b3145;
+}
+.flag-row:last-child { border-bottom: none; }
+.flag-row label.chk { font-size: 1rem; }
+.flag-desc { margin: 0.2rem 0 0 2.2rem; }
+.log-out {
+  margin-top: 0.6rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: #0a0c10;
+  border: 1px solid #2b3145;
+  border-radius: 8px;
+  padding: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.82em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-out:empty { display: none; }
+textarea {
+  background: var(--bg);
+  border: 1px solid #3a4160;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.95rem;
+  margin-top: 0.3rem;
+}
+
 /* ---------------- Loadout tables (Manage Songs + Full Loadout) ---------------- */
 table.loadout { border-collapse: collapse; width: 100%; font-size: 0.88em; }
 table.loadout th, table.loadout td {

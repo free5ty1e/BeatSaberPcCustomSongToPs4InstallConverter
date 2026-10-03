@@ -19,15 +19,16 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from . import paths
+from . import deploy, paths
 
 MAX_BUFFER_LINES = 20000  # ring; a full deploy emits a few thousand lines
 
 
 @dataclass
 class Job:
-    """One pipeline invocation (running or finished)."""
+    """One subprocess invocation (pipeline or helper script)."""
 
     id: int
     argv: list[str]
@@ -40,14 +41,18 @@ class Job:
     lines: list[str] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     label: str = ""
+    command_line: str = ""
 
 
 class SingleJobRunner:
-    """Allows ONE pipeline job at a time; queues nothing (the UI says 'busy')."""
+    """Allows ONE job at a time; queues nothing (the UI says 'busy')."""
 
     def __init__(self):
         self._job: Job | None = None
         self._lock = threading.Lock()
+        # Flags the UI has applied but the PS4 read hasn't confirmed yet —
+        # purely informational for the Flags page's pending badges.
+        self.pending_flags: dict | None = None
 
     # -- state queries -----------------------------------------------------
     @property
@@ -90,25 +95,43 @@ class SingleJobRunner:
 
     # -- job lifecycle ------------------------------------------------------
     def start(self, argv: list[str], label: str = "") -> Job:
+        """Run the PIPELINE with the given argv (the thin-layer deploy path)."""
         pipeline = paths.find_pipeline()
+        return self._spawn(["python3", str(pipeline), *argv],
+                            label=label, command=deploy.pipeline_command(argv))
+
+    def start_script(self, script: str, argv: list[str], label: str = "") -> Job:
+        """Run a helper script (e.g. backup-beat-saber-deluxe-files.py) with
+        the same single-job + streaming guarantees. Thin layer: the script is
+        the authority for its own behavior; the webapp only streams output."""
+        rel = script
+        try:
+            rel = str(Path(script).relative_to(paths.RELEASE_ROOT))
+        except ValueError:
+            pass
+        return self._spawn(["python3", script, *argv],
+                           label=label, command=f"python3 {rel} {' '.join(argv)}")
+
+    def _spawn(self, popen_argv: list[str], label: str, command: str) -> Job:
         if self.is_busy():
             raise RuntimeError(
-                "A pipeline job is already running — one deploy at a time "
-                "(PS4 state files are transaction records; concurrent deploys "
-                "corrupt them). Wait for it to finish or cancel it first.")
+                "A job is already running — one at a time (PS4 state files "
+                "are transaction records; concurrent writers corrupt them). "
+                "Wait for it to finish or cancel it first.")
         with self._lock:
             job = Job(
                 id=int(time.time()),
-                argv=list(argv),
+                argv=list(popen_argv[2:]),  # the script's own argv (after python3 + script)
                 # CWD = the release/checkout root (same semantics as the
                 # example scripts; the pipeline resolves the rest itself).
                 cwd=str(paths.RELEASE_ROOT),
                 started_at=time.time(),
                 label=label,
+                command_line=command,
             )
             self._job = job
         proc = subprocess.Popen(
-            ["python3", str(pipeline), *job.argv],
+            popen_argv,
             cwd=job.cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -132,6 +155,9 @@ class SingleJobRunner:
             with job.lock:
                 job.exit_code = proc.returncode
                 job.ended_at = time.time()
+                # A finished flags job clears the pending-flags hint
+                if self.pending_flags and job.exit_code is not None:
+                    self.pending_flags = None
 
         threading.Thread(target=_drain, daemon=True).start()
         return job

@@ -1106,18 +1106,28 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
     changed = 0
 
     # When slots is provided AND matches at least one configured slot, remove
-    # redirects for slots NOT in the scope. If the scope matched nothing in
-    # mass_deploy.slots (or is empty), preserve everything — scope filtering
-    # must never turn into an unintended wipe (Exp 226).
+    # redirects for slots NOT in the scope — but ONLY when their deployed
+    # bundle is genuinely absent from this deploy's scope semantics. A slot
+    # whose redirect exists because a PREVIOUS deploy installed it must keep
+    # its redirect: scope filtering must never turn into an unintended wipe
+    # (Exp 226; and Exp 246: the scope passed here is built from the LIVE PS4
+    # state precisely so out-of-scope = "not deployed anywhere", never
+    # "deployed by someone else"). Removing redirects is the job of the
+    # dedicated removal paths (--clear-target-song, clean slate).
     if slots is not None and configured:
         scoped = {s.lower() for s in slots}
         for k in list(redirects):
             if k.startswith('BeatmapLevelsData/'):
                 slot = k[len('BeatmapLevelsData/'):]
                 if slot.lower() not in scoped:
-                    log.info(f"  🧹 Removed song redirect (out of scope): {k} -> {redirects[k]}")
-                    del redirects[k]
-                    changed += 1
+                    # Defensive guard (Exp 246): if the redirect's target
+                    # bundle is one this session just built/deployed (i.e. it
+                    # IS part of the deployed fleet), never sweep it. This is
+                    # a belt-and-suspenders check — the scope construction in
+                    # the deploy path already includes all live slots; this
+                    # catches any future caller that passes an underscope.
+                    log.warning(f"  ⚠️  Preserving out-of-scope song redirect "
+                                f"(dedicated removal paths only): {k} -> {redirects[k]}")
 
     for slot in configured:
         key = f"BeatmapLevelsData/{slot}"
@@ -3703,8 +3713,52 @@ def manage_redirect_config(
                 "redirects": {}
             }
     else:
-        # GENERATE mode: load local config or start fresh
-        redirect_data = _load_local_redirects(local_path)
+        # GENERATE mode: the LIVE PS4 state is the base, not the local file —
+        # but ONLY when this call will DEPLOY. Exp 246: the local copy can lag
+        # the PS4 (the release-validation clear-target round-trip restored
+        # the PS4 but left the local file at 1 song). Basing generate+deploy
+        # on the stale local file pushed it over the live 47-redirect state
+        # and wiped 46 song redirects — the pull-before-push invariant
+        # (Exp 237) applied to the pipeline itself. If a deploy is about to
+        # happen and the PS4 is unreachable, ABORT rather than push a
+        # possibly-stale local file (READ-FAILED is never empty-truth).
+        # Local-only generate (no deploy) keeps the local-file base: it is
+        # the "edit my local file" flow, and touching the network there
+        # would break offline builds.
+        if should_deploy:
+            ps4_data = _download_redirect_from_ps4(config)
+            if ps4_data is not None:
+                redirect_data = ps4_data
+                n_live = len(ps4_data.get('redirects', {}))
+                n_local = (len(_load_local_redirects(local_path).get('redirects', {}))
+                           if os.path.exists(local_path) else 0)
+                if n_local != n_live:
+                    log.info(f"  ℹ️  Local redirects.json was stale ({n_local} entries) — "
+                             f"basing this deploy on the live PS4 state ({n_live} entries)")
+                # Keep the local file in sync going forward (it is the cache
+                # the pack-resolution paths read).
+                with open(local_path, 'w') as f:
+                    json.dump(redirect_data, f, indent=2)
+                    f.write('\n')
+            elif os.path.exists(local_path):
+                log.error("❌ Could not read the PS4's redirects.json, and a local "
+                          "copy exists that may be stale. Refusing to deploy it "
+                          "over the live state (this exact path wiped 46 of 47 "
+                          "song redirects once — Exp 246). Check the PS4 "
+                          "connection (GoldHEN FTP) and re-run, or use "
+                          "--enforce-config to deliberately push the local file.")
+                sys.exit(1)
+            else:
+                # No local file at all and no PS4 state: genuinely fresh start
+                # (clean slate / first deploy) — safe to begin empty.
+                redirect_data = {
+                    "titleId": title_id,
+                    "afrBase": afr_base,
+                    "redirects": {}
+                }
+        else:
+            # Local-only generate (no deploy): the local file stays the base.
+            redirect_data = _load_local_redirects(local_path)
 
     # Update redirect_data with current title/afr settings
     redirect_data['titleId'] = title_id
@@ -5151,33 +5205,61 @@ Examples:
             cmd = ["lftp", "-u", user_part, "-p", str(port), host,
                    "-e", f"get {_ftp_quote(remote_redirect_path)} -o {_ftp_quote(local_redirect_path)}; quit"]
             result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+            # Exp 246: a failed PS4 read must ABORT the deploy, never silently
+            # fall back to "just the new target". The old fallback turned
+            # "couldn't read state" into "wipe every other song's redirect"
+            # (READ-FAILED rendered as empty-truth — the Exp 237/239/240
+            # lesson, violated in the pipeline itself). The 10:34 deploy wiped
+            # 46 of 47 song redirects this way.
+            ps4_redirects = None
             if result.returncode == 0 and os.path.exists(local_redirect_path):
                 try:
-                    with open(local_redirect_path) as f:
-                        ps4_redirects = json.load(f).get('redirects', {})
-                    # Find ALL custom songs (from any pack) and their packs
-                    other_packs = set()
-                    for key in ps4_redirects:
-                        if key.startswith('BeatmapLevelsData/'):
-                            slot = key[len('BeatmapLevelsData/'):]
-                            if slot not in deploy_slots:
-                                deploy_slots.append(slot)
-                            # Also track which pack this slot belongs to
-                            other_pack = _resolve_target_pack(config, slot)
-                            if other_pack and other_pack not in (deploy_packs or []):
-                                other_packs.add(other_pack)
-                    # Include all packs that have existing custom songs
-                    if other_packs:
-                        if deploy_packs is None:
-                            deploy_packs = []
-                        for p in other_packs:
-                            if p not in deploy_packs:
-                                deploy_packs.append(p)
-                        log.info(f"  Preserving existing packs with custom songs: {', '.join(other_packs)}")
-                    if len(deploy_slots) > 1:
-                        log.info(f"  Preserving existing custom songs: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
+                    # Banner-proof extraction (lftp-ftp-pitfalls #1): banners on
+                    # slow links contaminate raw streams; slice first-{ to last-}.
+                    raw = open(local_redirect_path, encoding='utf-8', errors='replace').read()
+                    start = raw.find('{')
+                    end = raw.rfind('}')
+                    ps4_redirects = json.loads(raw[start:end + 1]).get('redirects', {})
                 except Exception:
-                    pass  # If download/parse fails, fall back to just the new target
+                    ps4_redirects = None
+            if ps4_redirects is None:
+                log.error("❌ Could not read the PS4's redirects.json while scoping "
+                          "this single-song deploy. Refusing to continue: without "
+                          "the live state, preserving your existing custom songs "
+                          "cannot be guaranteed. Check the PS4 connection "
+                          "(GoldHEN FTP) and re-run the deploy.")
+                sys.exit(1)
+            try:
+                # Find ALL custom songs (from any pack) and their packs
+                other_packs = set()
+                for key in ps4_redirects:
+                    if key.startswith('BeatmapLevelsData/'):
+                        slot = key[len('BeatmapLevelsData/'):]
+                        if slot not in deploy_slots:
+                            deploy_slots.append(slot)
+                        # Also track which pack this slot belongs to
+                        other_pack = _resolve_target_pack(config, slot)
+                        if other_pack and other_pack not in (deploy_packs or []):
+                            other_packs.add(other_pack)
+                # Include all packs that have existing custom songs
+                if other_packs:
+                    if deploy_packs is None:
+                        deploy_packs = []
+                    for p in other_packs:
+                        if p not in deploy_packs:
+                            deploy_packs.append(p)
+                    log.info(f"  Preserving existing packs with custom songs: {', '.join(other_packs)}")
+                if len(deploy_slots) > 1:
+                    log.info(f"  Preserving existing custom songs: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
+            except Exception as e:
+                # Exp 246: the PS4 read succeeded but the merge failed —
+                # same rule as above: ABORT, never fall back to a scope
+                # that would drop other songs' redirects.
+                log.error(f"❌ Failed to process the PS4's redirects.json "
+                          f"while scoping this deploy ({e}). Refusing to "
+                          f"continue — your existing custom songs cannot "
+                          f"be safely preserved. Fix the issue and re-run.")
+                sys.exit(1)
 
         # Determine which modes to enable for this pack bundle.
         # We only want to add extra modes for the custom song(s) being deployed,

@@ -169,3 +169,44 @@ The PS4 currently serves only MessItUp as a custom song (1 song redirect in the 
 
 ### Files
 webapp/adapters/{loadout.py NEW, ps4.py, }, webapp/server.py, webapp/static/{index.html, app.js, style.css}, webapp/build_pages.py NEW, webapp/VERSION → 0.2.0, webapp/CHANGELOG-WEBAPP.md, tests/test_webapp_{loadout.py NEW, server.py, ps4_adapter.py}, .github/workflows/{ci.yml, plugin-build.yml, pages.yml NEW}, requirements-test.txt, CI_RELEASE.md, README.md, docs/experiment log Exp 245, this transcript, context.yml, roadmap.
+
+---
+
+## Cycle 5 — CRASH RCA + PS4 restore (Exp 246) + Flags/Backup/Feature-Request tabs (Exp 247)
+
+### User
+> "I tested the PS4 and you're right, all the other custom songs crash now when I try to play them. We have to fix this. Why did this happen? Have you already performed a root cause analysis?... I had this fully tested when we made the last release, so if something is broken we need to know if this is somehow a situation I missed during my QA tests or if this is recently broken in this branch's work. Then, of course, we need it fixed ASAP and I need all my song redirects restored - I have friends coming over soon, fix this ASAP so I can play this game and show it off!... I also don't see a feature flag management tab in the web app yet. Next, I also want the web app to have a feature flag management page... And we also need a backup / restore page for the PS4 backup script, including the clear PS4 flag. Any other missing handy tool pages you can think of... Let's include a feature request tab with a form that will generate a github issue for this repo."
+
+### Exp 246 RCA (complete, evidence-pinned)
+Timeline (filesystem + PS4 mtimes): 10:28 user ran the webapp Setup Wizard (wrote localized ps4_config.json) → 10:33-10:34 user deployed MessItUp via the webapp Deploy tab (bundle built 10:33:21, pack bundles 10:34:00-02, redirects.json rewritten 10:34:13, metadata 10:34:15) → the deploy left redirects.json at 1 song.
+
+Root cause chain (3 stacked defects):
+1. LOCAL/PS4 DIVERGENCE: the release-validation clear-target round-trip restored the PS4 to 47 but left the LOCAL redirects.json at 1 song.
+2. PULL-BEFORE-PUSH VIOLATED (Exp 237 invariant, by the pipeline itself): manage_redirect_config GENERATE mode based generate+deploy on the stale LOCAL file → pushed 1-song over live 47. Post-deploy validation stayed green (it compares local==PS4; both equally wiped).
+3. SILENT FALLBACK: the single-song scope expansion's `except: pass` fell back to "just the new target" on PS4-read failure (READ-FAILED as empty-truth, the Exp 239/240 lesson).
+
+In-game crash mechanism: with the per-song redirects gone, open_hook serves stock BeatmapLevelsData for the other 46 slots while the PATCHED PACK bundles advertise preview sets for customs → selecting a song whose mode data paths don't resolve = crash. NOT a QA miss: the release QA never exercised single-song-deploy-onto-existing-loadout with a diverged local file. Not the webapp either (all its reads are GETs) — the webapp's wizard wrote a config whose empty mass_deploy.slots shaped the failure, but the pipeline's generate+deploy path is the actual defect site.
+
+### Restore (live, verified)
+redirects.json.bak (validator's own backup, Sep 28: 47 songs/5 packs/1 catalog) → preflight: every one of the 53 redirect targets still on PS4 (bundles never deleted) → pushed restored file → read back: 47 songs live. Pack bundles verified FULL-PACK builds (manifest patched_slots = every song per pack — the 10:34 deploy built full packs, so all modes intact for all songs). --verify-ps4: 53 redirects match, all targets present, sizes OK after refreshing 2 stale local caches (messitup rebuilt today; oxytocin QA-era) — **validation PASSED, all green**.
+
+During cache refresh my pull script hit KB pitfall #2 exactly (get -o refuses clobber → second file got the first file's bytes) — caught by md5 check immediately, re-pulled correctly. The KB pitfall list pays for itself again.
+
+### Pipeline v0.5352 fixes (7 regression tests, tests/test_exp246_redirect_wipe.py)
+1. GENERATE+DEPLOY now REBASES on the live PS4 state (stale local detected → live base, local resynced; PS4 unreachable + local exists → HARD ABORT; genuinely-fresh clean slate still works; local-only generate stays offline).
+2. Scope-expansion read failure → HARD ABORT (both the download and the parse paths).
+3. _ensure_mass_song_redirects NEVER deletes out-of-scope song redirects (preserves with warning; removal is exclusively --clear-target-song / clean-slate).
+All 753 tests green including 7 new pins reproducing the exact live scenario (local=1, PS4=47 → deploy → 47 preserved + 1 new).
+
+### Exp 247 tabs (webapp 0.3.0)
+Feature Flags (live read, descriptions, diff-only apply via --features-only, blind-apply refused, kill-switch hard confirm) + Backup/Restore (thin layer over backup script: list/backup/--clean-ps4/restore with sanitized names + 409 single-job + cancel) + Feature Request (prefilled GitHub issue URL, client-side, Pages-capable). Runner: start_script() unified _spawn; pending_flags hint.
+**Live-smoke catch #1:** flag-key mismatch — adapter had singular `enable_custom_song_replacement`, wire format is PLURAL `enable_custom_song_replacements` (pipeline DEFAULT_FEATURES). Fixed everywhere; the page had been showing the flag default-OFF when the console had it ON.
+**Live-smoke catch #2 (boot-time):** first fix attempt popped an already-renamed dict key → server KeyError at import; caught by booting before hand-off.
+**Live PS4 finding + fix:** the console had custom_song_replacements + song_metadata_modification OFF (release-validation flag round-trip leftovers) — re-enabled both via the pipeline; all four flags now ON (verified via the webapp read).
+**Test-bug lesson:** pytest.raises(HTTPException) around TestClient.post can NEVER fire (FastAPI converts HTTPExceptions to responses) — assert the 409 response. Chased my tail through 4 debug files before realizing the "pollution" theory was wrong; the minimal repro passed because it asserted on the response.
+
+### Files (cycle)
+tools/full_custom_song_pipeline.py (v0.5352: rebase + abort + no-sweep), VERSION, CHANGELOG-PIPELINE.md, tests/test_exp246_redirect_wipe.py (new), webapp/{server.py, adapters/ps4.py, adapters/runner.py, static/index.html, static/app.js, static/style.css, VERSION 0.3.0, CHANGELOG-WEBAPP.md}, tests/test_webapp_tools.py (new), tests/test_webapp_deploy.py (regex), tests/test_webapp_ps4_adapter.py (plural), README.md, experiment log Exps 246-247, this transcript, context.yml, roadmap.
+
+### PS4 state NOW (user can play immediately)
+47 song redirects live, 5 full-pack mode bundles + catalog, all four feature flags ON, --verify-ps4 fully green. Loadout tab will show 47 served / 0 stale.

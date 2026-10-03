@@ -5,6 +5,35 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.3.0] — 2026-10-02 (Exp 247)
+### Added
+- **Feature Flags tab** — live per-flag read (kill switch first, with
+  detailed descriptions and the enable_plugin-defaults-TRUE rule), an Apply
+  button that diffs against the live PS4 state and deploys only CHANGED
+  flags through `--features-only` (refuses to apply blind if the live read
+  fails; unknown flags rejected), pending badges, live job log.
+- **Backup / Restore tab** — thin wrapper over
+  `backup-beat-saber-deluxe-files.py` (the same script the CLI uses): list
+  `ps4_backups/*.zip`, backup now (with optional `--clean-ps4` behind a hard
+  confirm), per-row restore (backup names sanitized — no path traversal),
+  cancel, live job log. The runner gained `start_script()` with the same
+  single-job/streaming/cancel guarantees as deploys.
+- **Feature Request tab** — composes a prefilled GitHub issue URL (title +
+  details + optional app-state footer: mode and deployed-pack summary, never
+  IPs or paths); preview then open on GitHub. Works in Pages mode (client-side).
+- Runner: `pending_flags` hint so the Flags page can show pending state while
+  a flags job runs.
+
+### Fixed
+- **Flag-key mismatch (live smoke catch):** the PS4 wire-format key is the
+  PLURAL `enable_custom_song_replacements` (the pipeline's DEFAULT_FEATURES
+  key); the adapter had the singular — the Flags page showed the flag
+  default-OFF when the console had it ON. Corrected across adapter + server
+  + tests.
+- Old runner test asserted the pre-unification error string; updated.
+
+## [0.2.0] — 2026-09-29 (Exp 245)
+
 ## [0.2.0] — 2026-09-29 (Exp 245)
 ### Added
 - **Manage Songs tab** — music-pack dropdown → a table of every stock song

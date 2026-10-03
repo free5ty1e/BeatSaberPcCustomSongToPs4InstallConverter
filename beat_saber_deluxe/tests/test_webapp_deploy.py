@@ -115,7 +115,7 @@ class TestSingleJobRunner:
         first = r.start(["--help"], label="first")
         # --help may already have finished; if busy, second must raise
         if r.is_busy():
-            with pytest.raises(RuntimeError, match="one deploy at a time"):
+            with pytest.raises(RuntimeError, match="one at a time"):
                 r.start(["--help"], label="second")
         # else the job finished and a second job is allowed
         else:

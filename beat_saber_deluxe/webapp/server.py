@@ -185,6 +185,146 @@ def ps4_state():
 
 
 # --------------------------------------------------------------------------
+# Feature flags (read live; apply via --features-only job)
+# --------------------------------------------------------------------------
+FLAG_DESCRIPTIONS = {
+    "enable_plugin": "Global kill switch. OFF = the plugin is fully inert and the game plays 100% official songs on the next boot — no uninstall needed. The only flag that defaults ON when absent.",
+    "enable_custom_song_replacements": "Gates all custom-song bundle redirects. OFF = every song loads its original stock audio and beatmaps (metadata labels stay).",
+    "enable_song_metadata_modification": "Gates the in-game song-list name/artist swaps. OFF = songs show their official titles even when customs are deployed.",
+    "enable_beatmap_mode_mapping": "Gates the extra game-mode buttons (OneSaber / NoArrows / 90Degree). OFF = the stock pack bundles + catalog are served (Standard only) — the safe posture while a pack is only partially deployed.",
+}
+
+
+@app.get("/api/flags")
+def flags_read():
+    """Live feature flags with descriptions + which are pending-apply."""
+    res = ps4.read_features()
+    pending = RUNNER.pending_flags if RUNNER.pending_flags else {}
+    out = {
+        "ok": res.ok,
+        "error": res.error,
+        "flags": [],
+    }
+    for name, value in (res.data or {}).items():
+        out["flags"].append({
+            "name": name,
+            "value": value,
+            "pending": pending.get(name, value) != value,
+            "pendingValue": pending.get(name),
+            "description": FLAG_DESCRIPTIONS.get(name, ""),
+        })
+    return out
+
+
+@app.post("/api/jobs/flags-apply")
+def jobs_flags_apply(body: dict):
+    """Apply a whole flag loadout: one --features-only call per CHANGED flag
+    would re-upload features.json repeatedly; instead build one argv with a
+    --set-feature per flag (the pipeline accepts repeats)."""
+    _require_config()
+    wanted = body.get("flags", {})
+    if not isinstance(wanted, dict) or not wanted:
+        raise HTTPException(400, "flags map required")
+    current_res = ps4.read_features()
+    if not current_res.ok:
+        raise HTTPException(502, f"Couldn't read live flags from the PS4 ({current_res.error}) "
+                                 "— refusing to apply blind. Check the connection and retry.")
+    current = current_res.data or {}
+    argv = ["--features-only"]
+    changed = 0
+    for name, value in wanted.items():
+        if name not in FLAG_DESCRIPTIONS:
+            raise HTTPException(400, f"unknown feature flag: {name!r}")
+        value = bool(value)
+        if bool(current.get(name, name == "enable_plugin")) != value:
+            argv += ["--set-feature", f"{name}={str(value).lower()}"]
+            changed += 1
+    if changed == 0:
+        return {"ok": True, "job_id": None, "changed": 0,
+                "message": "No changes — the PS4 flags already match this loadout."}
+    RUNNER.pending_flags = {k: bool(v) for k, v in wanted.items()}
+    try:
+        job = RUNNER.start(argv, label=f"flags apply ({changed} changed)")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "changed": changed,
+            "command": deploy.pipeline_command(argv)}
+
+
+# --------------------------------------------------------------------------
+# Backup / Restore (thin layer over backup-beat-saber-deluxe-files.py)
+# --------------------------------------------------------------------------
+BACKUP_SCRIPT = paths.RELEASE_ROOT / "backup-beat-saber-deluxe-files.py"
+BACKUP_DIR = paths.RELEASE_ROOT / "ps4_backups"
+
+
+@app.get("/api/backup/list")
+def backup_list():
+    """List available backups (name, size, when) — read-only."""
+    if not BACKUP_DIR.is_dir():
+        return {"backups": []}
+    out = []
+    for entry in sorted(BACKUP_DIR.iterdir(), reverse=True):
+        if entry.is_file() and entry.suffix == ".zip":
+            out.append({"name": entry.name, "size": entry.stat().st_size,
+                        "mtime": entry.stat().st_mtime})
+    return {"backups": out, "backup_dir": str(BACKUP_DIR)}
+
+
+@app.post("/api/jobs/backup")
+def jobs_backup(body: dict):
+    """Run the backup script as a job. body: {"clean_ps4": bool}"""
+    if not BACKUP_SCRIPT.exists():
+        raise HTTPException(500, f"backup script missing: {BACKUP_SCRIPT}")
+    clean = bool(body.get("clean_ps4", False))
+    argv = ["backup"] + (["--clean-ps4"] if clean else [])
+    try:
+        job = RUNNER.start_script(str(BACKUP_SCRIPT), argv,
+                                  label=f"backup{' + clean-ps4' if clean else ''}")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id,
+            "command": f"python3 backup-beat-saber-deluxe-files.py {' '.join(argv)}"}
+
+
+@app.post("/api/jobs/restore")
+def jobs_restore(body: dict):
+    """Restore a backup as a job. body: {"backup": name, "clean_ps4": bool}.
+    DANGEROUS: overwrites the PS4's BSD state — confirm posture in the UI."""
+    if not BACKUP_SCRIPT.exists():
+        raise HTTPException(500, f"backup script missing: {BACKUP_SCRIPT}")
+    name = str(body.get("backup", "")).strip()
+    if not name or ".." in name or "/" in name:
+        raise HTTPException(400, "backup name required (no paths)")
+    path = BACKUP_DIR / name
+    if not path.exists():
+        raise HTTPException(404, f"no such backup: {name}")
+    clean = bool(body.get("clean_ps4", False))
+    argv = ["restore", str(path)] + (["--clean-ps4"] if clean else [])
+    try:
+        job = RUNNER.start_script(str(BACKUP_SCRIPT), argv,
+                                  label=f"restore {name}{' + clean-ps4' if clean else ''}")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id,
+            "command": f"python3 backup-beat-saber-deluxe-files.py {' '.join(argv)}"}
+
+
+# --------------------------------------------------------------------------
+# Feature requests (GitHub issue builder — client-side, works in Pages mode)
+# --------------------------------------------------------------------------
+@app.get("/api/feature-request/template")
+def feature_request_template():
+    """Repo coordinates for the issue-builder (client composes the URL; in
+    Pages mode this is baked in — the endpoint exists for parity)."""
+    return {
+        "repo": "free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter",
+        "issue_url": "https://github.com/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/issues/new",
+        "labels": ["webapp feature request"],
+    }
+
+
+# --------------------------------------------------------------------------
 # Loadout tables (Manage Songs + Full Loadout tabs)
 # --------------------------------------------------------------------------
 @app.get("/api/loadout")

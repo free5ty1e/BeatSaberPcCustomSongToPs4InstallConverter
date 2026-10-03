@@ -558,6 +558,226 @@ async function loadoutRefresh() {
   btn.disabled = false; btn.textContent = "Refresh from PS4";
 }
 
+// ---------------------------------------------------------------- feature flags
+const FLAG_ORDER = ["enable_plugin", "enable_custom_song_replacements",
+                     "enable_song_metadata_modification", "enable_beatmap_mode_mapping"];
+// NOTE: the pipeline's canonical key is the PLURAL enable_custom_song_replacements.
+let flagsDirty = false;
+
+async function flagsRefresh() {
+  const host = $("flags-list");
+  host.innerHTML = "<p class='muted'>Reading flags from the PS4…</p>";
+  try {
+    const j = await api("/api/flags");
+    if (!j.ok) {
+      host.innerHTML = `<span class="result bad">Couldn't read flags from the PS4
+        (${esc(j.error)}). Check the connection, then refresh.</span>`;
+      $("btn-flags-apply").disabled = true;
+      return;
+    }
+    host.innerHTML = j.flags
+      .sort((a, b) => FLAG_ORDER.indexOf(a.name) - FLAG_ORDER.indexOf(b.name))
+      .map(f => `
+        <div class="flag-row">
+          <label class="chk">
+            <input type="checkbox" data-flag="${esc(f.name)}" ${f.value ? "checked" : ""}
+                   ${f.name === "enable_plugin" ? "data-killswitch='1'" : ""}>
+            <b>${esc(f.name)}</b> ${f.pending ? `<span class="badge miss">pending → ${f.pendingValue ? "ON" : "OFF"}</span>` : ""}
+          </label>
+          <div class="muted flag-desc">${esc(f.description)}</div>
+        </div>`).join("");
+    host.querySelectorAll("input[type=checkbox]").forEach(cb =>
+      cb.addEventListener("change", () => {
+        flagsDirty = true;
+        $("btn-flags-apply").disabled = false;
+        $("flags-apply-status").textContent = "";
+        if (cb.dataset.killswitch && !cb.checked) {
+          $("flags-apply-status").innerHTML =
+            "<span class='result warn'>⚠ Kill switch going OFF — the game will play 100% official songs next boot.</span>";
+        }
+      }));
+    flagsDirty = false;
+    $("btn-flags-apply").disabled = true;
+    $("flags-read-error").textContent = "";
+  } catch (e) {
+    host.innerHTML = `<span class="result bad">${esc(e.message)}</span>`;
+  }
+}
+
+async function flagsApply() {
+  const wanted = {};
+  $("flags-list").querySelectorAll("input[type=checkbox]").forEach(cb => {
+    wanted[cb.dataset.flag] = cb.checked;
+  });
+  const turningOff = wanted["enable_plugin"] === false;
+  const msg = turningOff
+    ? "Turn the ENTIRE plugin OFF?\n\nNext boot plays 100% official songs (your customs stay deployed and come back the moment you re-enable)."
+    : "Apply this flag loadout to the PS4?\n\nTakes effect on the next game boot.";
+  if (!confirm(msg)) return;
+  $("flags-apply-status").textContent = "Applying…";
+  try {
+    const j = await api("/api/jobs/flags-apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flags: wanted }),
+    });
+    if (j.job_id === null) {
+      $("flags-apply-status").innerHTML =
+        `<span class="result ok">✅ ${esc(j.message)}</span>`;
+      flagsRefresh();
+      return;
+    }
+    flagsDirty = false;
+    $("btn-flags-apply").disabled = true;
+    pollJobInto("flags-log", "flags-apply-status", () => flagsRefresh());
+  } catch (e) {
+    $("flags-apply-status").innerHTML = `<span class="result bad">❌ ${esc(e.message)}</span>`;
+  }
+}
+
+// shared job poller for flags/backup/restore (writes into a log element,
+// then a status line, then an optional refresh)
+function pollJobInto(logId, statusId, afterFn) {
+  let idx = 0;
+  const poll = async () => {
+    try {
+      const j = await api(`/api/jobs/lines?after=${idx}`);
+      if (j.lines && j.lines.length) {
+        const el = $(logId);
+        el.textContent += j.lines.join("\n") + "\n";
+        el.classList.remove("hidden");
+      }
+      idx = j.index || idx;
+      if (j.running) { setTimeout(poll, 900); return; }
+      if (j.job) {
+        const s = $(statusId);
+        if (j.job.cancelled) {
+          s.innerHTML = "<span class='result warn'>⛔ Job cancelled — the PS4 may hold partial state; run a backup or verify.</span>";
+        } else if (j.job.exit_code === 0) {
+          s.innerHTML = "<span class='result ok'>✅ Done.</span>";
+        } else {
+          s.innerHTML = `<span class='result bad'>❌ Job FAILED (exit ${j.job.exit_code}) — read the log above.</span>`;
+        }
+        $("btn-job-cancel") && $("btn-job-cancel").classList.add("hidden");
+        afterFn && afterFn();
+      }
+    } catch { setTimeout(poll, 1500); }
+  };
+  poll();
+}
+
+// ---------------------------------------------------------------- backup / restore
+async function backupRefresh() {
+  const body = $("backup-table").querySelector("tbody");
+  body.innerHTML = "<tr><td colspan='4' class='muted'>Listing backups…</td></tr>";
+  try {
+    const j = await api("/api/backup/list");
+    if (!j.backups.length) {
+      body.innerHTML = `<tr><td colspan='4' class='muted'>No backups yet in
+        <code>${esc(j.backup_dir)}</code> — make one before experimenting.</td></tr>`;
+      return;
+    }
+    body.innerHTML = j.backups.map(b => `
+      <tr>
+        <td><code>${esc(b.name)}</code></td>
+        <td>${(b.size / 1024).toFixed(0)} KB</td>
+        <td>${new Date(b.mtime * 1000).toLocaleString()}</td>
+        <td><button class="restore-backup" data-name="${esc(b.name)}">Restore</button></td>
+      </tr>`).join("");
+    body.querySelectorAll("button.restore-backup").forEach(btn =>
+      btn.addEventListener("click", () => backupRestore(btn.dataset.name)));
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan='4' class='result bad'>${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function backupNow() {
+  const clean = $("backup-clean-ps4").checked;
+  if (clean && !confirm(
+    "Backup AND clean the PS4?\n\nThe backup will be made first, then every BS " +
+    "Deluxe file is wiped from the console (fresh-slate redeploy posture). " +
+    "The backup zip is your only safety net — make sure it completes."))
+    return;
+  if (!clean && !confirm("Backup the PS4's BS Deluxe state now?")) return;
+  try {
+    await api("/api/jobs/backup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clean_ps4: clean }),
+    });
+    $("backup-log").textContent = "";
+    $("btn-job-cancel").classList.remove("hidden");
+    pollJobInto("backup-log", "backup-apply-status", () => backupRefresh());
+    $("backup-apply-status") || ($("backup-log").insertAdjacentHTML("afterend",
+      "<div id='backup-apply-status' class='result'></div>"));
+  } catch (e) {
+    alert("Couldn't start the backup: " + e.message);
+  }
+}
+
+async function backupRestore(name) {
+  if (!confirm(
+    `Restore "${name}" to the PS4?\n\n` +
+    `This overwrites the console's current BS Deluxe state (bundles, redirects, ` +
+    `metadata, features) with the backup's contents. The current state is NOT ` +
+    `saved automatically — make a fresh backup first if you might want it back.`))
+    return;
+  try {
+    await api("/api/jobs/restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backup: name, clean_ps4: false }),
+    });
+    $("backup-log").textContent = "";
+    $("btn-job-cancel").classList.remove("hidden");
+    pollJobInto("backup-log", "backup-apply-status", () => backupRefresh());
+  } catch (e) {
+    alert("Couldn't start the restore: " + e.message);
+  }
+}
+
+// ---------------------------------------------------------------- feature request
+const FR_REPO = "free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter";
+
+function frCompose() {
+  const title = $("fr-title").value.trim();
+  const body = $("fr-body").value.trim();
+  if (!title || !body) {
+    $("fr-status").textContent = "Fill in both the summary and the details first.";
+    return null;
+  }
+  let text = `### Feature request (from the web app)\n\n${body}\n`;
+  if ($("fr-include-state").checked) {
+    text += `\n---\n**App context:** web app mode=${state.mode}`;
+    if (loadoutData) {
+      const packs = loadoutData.packs.filter(p => p.deployedCount > 0)
+        .map(p => `${p.pack} (${p.deployedCount})`).join(", ");
+      text += ` · deployed packs: ${packs || "none read yet"}`;
+    }
+    text += `\n`;
+  }
+  return { title, body: text };
+}
+
+function frPreview() {
+  const issue = frCompose();
+  if (!issue) return;
+  $("fr-preview").textContent =
+    `Title: [webapp] ${issue.title}\n\n${issue.body}`;
+  $("fr-preview-box").classList.remove("hidden");
+  $("btn-fr-open").classList.remove("hidden");
+  $("fr-status").textContent = "";
+}
+
+function frOpen() {
+  const issue = frCompose();
+  if (!issue) return;
+  const url = `https://github.com/${FR_REPO}/issues/new`
+    + `?title=${encodeURIComponent("[webapp] " + issue.title)}`
+    + `&body=${encodeURIComponent(issue.body)}`;
+  window.open(url, "_blank", "noopener");
+}
+
 // ---------------------------------------------------------------- ps4 page
 async function refreshPs4() {
   const el = $("ps4-state");
@@ -625,5 +845,18 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btn-manage-refresh").addEventListener("click", manageRefresh);
   $("btn-loadout-refresh").addEventListener("click", loadoutRefresh);
   $("loadout-only-custom").addEventListener("change", renderLoadoutTables);
+  $("btn-flags-refresh").addEventListener("click", flagsRefresh);
+  $("btn-flags-apply").addEventListener("click", flagsApply);
+  $("btn-backup-now").addEventListener("click", backupNow);
+  $("btn-backup-refresh").addEventListener("click", backupRefresh);
+  $("btn-job-cancel").addEventListener("click", cancelJob);
+  $("btn-fr-preview").addEventListener("click", frPreview);
+  $("btn-fr-open").addEventListener("click", frOpen);
+  // lazy-load tab data on first visit
+  document.querySelectorAll("#nav button").forEach(b =>
+    b.addEventListener("click", () => {
+      if (b.dataset.page === "flagsPage") flagsRefresh();
+      if (b.dataset.page === "backupPage") backupRefresh();
+    }));
   showPage("wizard");
 });

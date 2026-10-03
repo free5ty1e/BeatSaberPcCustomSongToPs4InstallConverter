@@ -254,7 +254,7 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] **(Exp 237) validation-automation metadata-wipe RCA'd + fixed** — both state files pulled/backed up/compared now; name-loss gates; live PS4 metadata restored (47 names / 7 artists).
 - [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236); **metadata steps must pull song_metadata.json from the PS4 like clear_target_song already does for redirects (Exp 237)**; requirements.txt split (cosmetic).
 
-## M9 — Web App Interface for the Pipeline — 🚧 IN PROGRESS (Phase 1+loadout tabs built, webapp 0.2.0, Exp 245)
+## M9 — Web App Interface for the Pipeline — 🚧 IN PROGRESS (one-stop-shop tabs built, webapp 0.3.0, Exps 244-247; pipeline v0.5352 crash fix)
 **Goal: make the pipeline accessible to non-CLI users.** A web interface for the entire
 song-conversion pipeline, included with the release AND deployable on GitHub Pages.
 Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent/plans/web-app-song-conversion-pipeline-interface.md)
@@ -267,7 +267,9 @@ Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent
       and dump-copy/import placement help (see plan §4.1b)
 - [x] Select a song from BeatSaver (search + map-ID entry built; local-folder tab arrives Phase 3)
 - [x] Configure pipeline options — Phase 1 core set (target slot by pack, audio codec, v3, pad, plugin-skip, name/artist overrides); advanced panel arrives Phase 3
-- [x] Manipulate feature flags — see the PS4 tab (live flags read); the toggle page arrives Phase 2
+- [x] Manipulate feature flags (kill switch, mode mapping, metadata...) with live PS4 state display (Exp 247: Feature Flags tab — live read, descriptions, diff-only Apply via --features-only)
+- [x] **Backup / Restore page** (Exp 247): thin wrapper over backup-beat-saber-deluxe-files.py — backup (+ --clean-ps4 behind hard confirm), list ps4_backups/, per-row restore, sanitized names
+- [x] **Feature Request tab** (Exp 247): prefilled GitHub issue composer (client-side; Pages-capable)
 - [x] Configure the PS4 connection (IP/port) + **test the connection** before any deploy (wizard step 2 → /api/ps4/test)
 - [ ] Perform full validation tests (the 35-check release validator, surfaced in the UI)
 - [x] Live progress/output streaming for every operation (single-job runner, line-buffered log pane, PASSED/FAILED verdict from the pipeline's exit code)
