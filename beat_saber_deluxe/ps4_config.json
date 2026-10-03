@@ -15,5 +15,18 @@
     "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
     "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
     "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
+  },
+  "pack_modes": {
+    "packs": [],
+    "build_dir": "/workspace/beat_saber_deluxe/pack_modes_bundles",
+    "song_ids_path": "/workspace/beat_saber_deluxe/beat_saber_song_ids.json",
+    "dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+    "catalog_key": "aa/catalog.json",
+    "patched_catalog": "catalog_pack_modes.json",
+    "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_pack_modes.json"
+  },
+  "mass_deploy": {
+    "bundle_dir": "/workspace/beat_saber_deluxe/mass_bundles",
+    "slots": []
   }
 }

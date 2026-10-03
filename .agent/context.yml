@@ -324,3 +324,24 @@ release_readiness:
   validated: "v0.8047-pipeline-0.5351-alpha01: 35/35 on maintainer console, state preserved exactly"
   remaining: "user screenshots/videos; PR body push (draft at .pr_temp/updated_pr_description.md, awaiting approval); release-day checklist at the bottom of the procedure doc (default-TAG bump, final-tag validation, tag+push, spot-check)"
   release_zip_now_includes: "validation-procedure .md + .sh (docs/) — consumers can validate their own deployment"
+
+# Current Branch (post-release): feature/web-app-song-conversion-pipeline
+current_feature:
+  branch: "feature/web-app-song-conversion-pipeline (fresh off merged main, Exp 243+)"
+  transcript: ".agent/transcripts/2026-09-28_web-app-interface-m9.md (this feature's session transcript)"
+  release_state: "v0.8047-pipeline-0.5351 MERGED + TAGGED + VALIDATED 35/35 (final form, zero anomalies)"
+
+# Current Milestone — Web App Interface (roadmap M9) — Phase 1 BUILT (Exp 244)
+webapp_m9:
+  plan: ".agent/plans/web-app-song-conversion-pipeline-interface.md (ACTIVE — includes §9 Implementation Context: operating rules, env facts, config schema, reference map, invariants, definition-of-done — written to survive context compaction)"
+  core: "two modes: local FastAPI backend (full deploys via subprocess argv calls — thin layer over the pipeline) + static GitHub Pages build (command builder). Zero pipeline-code changes. Phases: 1 wizard+deploy slice / 2 state+flags+validation / 3 local-songs+Pages+shipping / 4 polish."
+  phase_state: "webapp 0.3.0 (Exps 244-247): 9 pages (Wizard, Picker, Deploy, PS4, Manage Songs, Full Loadout, Feature Flags, Backup/Restore, Feature Request, Dump Guide) + Pages builder. server.py 32 routes; adapters/{paths,config,beatsaver,deploy,ps4,runner,loadout}; runner has start_script() for helper scripts. 97 webapp tests; full suite 753/753. Run: python3 beat_saber_deluxe/webapp/server.py"
+  exp246_crash_fix: "PIPELINE v0.5352 (2026-10-02): single-song deploy wiped 46/47 song redirects (stale local file pushed over live state — pull-before-push violated + silent except:pass fallback). Fixes: generate+deploy REBASES on live PS4 state (abort if unreachable+local-exists), scope-read failure=abort, _ensure_mass_song_redirects never sweeps out-of-scope song redirects. 7 regression pins in tests/test_exp246_redirect_wipe.py. PS4 restored from redirects.json.bak + flags re-enabled: 47 redirects live, all 4 flags ON, --verify-ps4 green."
+  flag_key_note: "PS4 wire format uses PLURAL enable_custom_song_replacements (pipeline DEFAULT_FEATURES); the plugin parser accepts it; never use the singular in features.json writes"
+  pages_pr_state: "GitHub Pages ENABLED by user (Settings→Pages→GitHub Actions source); draft PR open on this branch; pages.yml deploys on push to main (so Pages goes live at merge)"
+  deployed_truth_model: "loadout 'deployed' = SERVED (redirects entry; the game only serves redirect-matched slots — verified vs open_hook + bs_log) vs STALE (AFR bundle without redirect) vs LABEL ONLY (song_metadata name). Live PS4 currently: 1 served (MessItUp) / 46 stale / 47 labeled — release-validation clear-target round-trip left it; user should redeploy the loadout."
+  metadata_join: "song_metadata keys by stock songName (case/space-normalized vs catalog — real quirk: 'You Should See Me In A Crown ' trailing space); redirects key by songID; AFR bundles are <songID>_v3.bundle stems"
+  ci_release_coverage: "requirements-test.txt has fastapi/uvicorn/httpx (webapp tests would have broken CI); lint covers tools/+webapp/+tests/ in both workflows; release zip bundles webapp/ + smoke-tests the server; CI_RELEASE.md documents the webapp"
+  awaiting: "user live run of the two tabs; enable GitHub Pages (Settings → Pages → Source: GitHub Actions); optionally redeploy the 47-song loadout (chained example scripts) so Loadout shows 47 served; Phase 2 remainder (Flags page, Validate page)"
+
+webapp_dump_guide: "M9 plan §4.1b: dump recipe + ready-made dumper.cfg download (split=3) + live structural validation with per-missing-piece errors + DLC-found confidence list + copy/import placement"

@@ -31,6 +31,7 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 | [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md)       | ✅ Working            | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection                                                                                                                                               |
 | [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working            | Display custom song names and artists in-game via IL2CPP MoveNext hook                                                                                                                                                           |
 | [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md)                 | ✅ Working (v0.5316+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection). Generated modes verified on-device (2026-08-11 boot test). |
+| [Web App Interface](beat_saber_deluxe/webapp/)                                               | 🚧 Phase 1 (M9)      | Point-and-click UI over the pipeline CLI: setup wizard (game-dump guide + live validation), BeatSaver song picker, guided deploys with live log streaming, PS4 state dashboard. Thin layer — every deploy is the same pipeline subprocess.                                                     |
 | Note Colors                                                                                 | ⏳ Planned            | Custom left/right saber colors per song                                                                                                                                                                                          |
 
 > **⚠️ Current limitations:**
@@ -359,6 +360,61 @@ and chain several packs unattended:
 > **`deploy_all.sh` is OUTDATED** (13 hardcoded Rolling Stones slots, pre-dating
 > pack-mode patching). It remains only for historical reference — do not use it
 > for new deployments.
+
+### 3.1b Web App — deploy without the CLI (M9)
+
+The same pipeline, point-and-click. The web app is a **thin layer**: every
+Deploy button press runs the exact `--deploy-full` command above as a
+subprocess — nothing is re-implemented in the browser.
+
+```bash
+python3 beat_saber_deluxe/webapp/server.py
+# opens http://127.0.0.1:8765 in your browser (--no-browser to skip)
+```
+
+- **Setup Wizard** — point it at your `ps4_dump` folder; it validates the dump
+  live (patch 2.04 files, eboot.bin, origin catalog, DLC-pack confidence list),
+  tests the PS4 connection, and writes a fully-localized `ps4_config.json`.
+- **Game Dump Guide** — never dumped a console? The built-in guide walks the
+  process (patch 2.04, DLC installed *before* dumping) and provides the
+  ready-made `dumper.cfg` (`split=3`) for your USB stick.
+- **Song Picker** — search BeatSaver (or paste a map ID); maps are badged with
+  native Easy/Normal/Hard availability (the pipeline auto-fills
+  Expert/E+ from lower difficulties).
+- **Deploy** — pick a target slot grouped by music pack, review the exact
+  command before running, watch the live log stream, and get the pipeline's
+  own PASSED/FAILED verdict.
+- **Manage Songs** — pick a music pack from a dropdown to see every stock song
+  in it and what custom song (name / artist) is deployed over each slot, with a
+  per-row **Clear** button (surgical: only that song reverts; its pack's other
+  songs and every other pack stay untouched).
+- **Full Loadout** — every music pack and song in the game with its custom
+  status, in one table. **Save the page (Ctrl+S) or print it to PDF (Ctrl+P)**
+  to keep a reference of your PS4's song loadout. Same per-row Clear button.
+- **PS4 page** — read-only live state (redirects, feature flags, custom-song
+  metadata counts).
+- **Game Dump Guide** — also built into the web app.
+
+- **Feature Flags** — live read of the four runtime flags (kill switch
+  first) with detailed descriptions; the Apply button diffs against the live
+  PS4 state and deploys only what changed, through the pipeline's
+  `--features-only` path.
+- **Backup / Restore** — wraps `backup-beat-saber-deluxe-files.py` (the same
+  script the CLI uses): one-click backup (optionally clean the PS4 after,
+  behind a hard confirm), browse `ps4_backups/`, per-row restore, live job log.
+- **Feature Request** — composes a prefilled GitHub issue for this repo;
+  opens it on GitHub for you to review and submit.
+**GitHub Pages command-builder:** the same UI is hosted online (deployed by
+`.github/workflows/pages.yml` from `webapp/build_pages.py`) at the repo's Pages
+URL. There, the app detects it has no backend and switches to command-builder
+mode: configure your dump folder, song, and slot visually, then copy the
+generated `python3 tools/full_custom_song_pipeline.py …` command and run it on
+the machine with your PS4 + game dump. The hosted page can never touch your
+PS4 — deploys need the local backend or the CLI.
+
+No PS4 credentials leave your machine — the local server binds to `127.0.0.1`
+only. Local-folder song deploys, saved presets, and the built-in 35-check
+validator page arrive in later phases.
 
 ### 3.2 Manual deploy (individual components)
 

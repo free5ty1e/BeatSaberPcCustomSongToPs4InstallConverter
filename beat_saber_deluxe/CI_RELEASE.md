@@ -23,8 +23,23 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder) |
 | `VERSION`                            | Pipeline version                                 |
 | `beat_saber_song_ids.json`           | Song-slot catalog: every pack, slot ID, stock song title, bundle name — the pipeline's targeting database |
-| `requirements.txt`                    | Python dependencies for the pipeline            |
+| `requirements.txt`                    | Python dependencies for the pipeline (incl. the web app's fastapi/uvicorn) |
 | `ps4_config.example.json`             | Copy to `ps4_config.json`, fill in your PS4's IP/FTP |
+
+### 🌐 Web App (`webapp/`) — the pipeline without the terminal
+
+| File | Description |
+| ---- | ----------- |
+| `webapp/server.py` | Local web UI (FastAPI, binds **127.0.0.1 only**) — run `python3 webapp/server.py` and open the browser it launches |
+| `webapp/adapters/` | Thin-layer adapters: every deploy is the same pipeline subprocess command, zero re-implemented logic |
+| `webapp/static/` | The UI: Setup Wizard (game-dump validation + PS4 connection test + config writer), BeatSaver song picker, guided deploys with a live log, **Manage Songs** (per-pack custom-status table + surgical clear), **Full Loadout** (every pack/song, printable to PDF as a loadout reference), PS4 state, Game Dump Guide with a ready-made `dumper.cfg` (`split=3`) |
+| `webapp/VERSION` / `webapp/CHANGELOG-WEBAPP.md` | Web app version + changelog (separate from pipeline/plugin) |
+| `webapp/requirements` | Needs `pip install -r requirements.txt` (fastapi, uvicorn) — already included there |
+
+> The same UI is also hosted on GitHub Pages (command-builder mode): configure
+> everything visually, copy the generated `python3 tools/full_custom_song_pipeline.py …`
+> command, and run it locally. Deploys need the local backend (or the CLI) —
+> browsers can't reach your PS4 or your game dump.
 
 ### 📚 Documentation
 
@@ -46,6 +61,15 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 - `pip install UnityPy` (see `requirements.txt` in this zip)
 - A PS4 with GoldHEN, FTP enabled (port 2121), configured in `ps4_config.json`
   (copy `ps4_config.example.json` and fill in your PS4's IP)
+
+**No terminal? Start the web app instead** — it writes `ps4_config.json` for
+you (Setup Wizard), validates your game dump, tests the PS4 connection, and
+deploys with live logs:
+
+```bash
+pip install -r requirements.txt
+python3 webapp/server.py
+```
 
 **⚠️ REQUIRED — bring your own decrypted game dump (`ps4_dump/`):**
 
