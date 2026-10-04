@@ -210,3 +210,36 @@ tools/full_custom_song_pipeline.py (v0.5352: rebase + abort + no-sweep), VERSION
 
 ### PS4 state NOW (user can play immediately)
 47 song redirects live, 5 full-pack mode bundles + catalog, all four feature flags ON, --verify-ps4 fully green. Loadout tab will show 47 served / 0 stale.
+
+---
+
+## Cycle 6 — RCA #2: "2/3 features" + vanished metadata (Exp 248); flags pull-before-push; test-suite PS4 fence; Pages guidance
+
+### User
+> "ok, i lost your github pages instructions, I went to the github page for this repo and enabled for github pages: 'Deploy from a branch' 'main' and '/docs' - is this the intended setup? Or did we set up github actions pages? I haven't used those before. Is that more appropriate for what we're doing here? How can we test it before merging to main? Tested on the PS4 to validate your claims, on startup the notification said 2/3 features enabled instead of 3/3 features enabled so something is going on there. Then in the song list, none of the custom song metadata is showing, but all the custom songs are still there and the beatmap mode selectors are still enabled and the nonstandard beatmap modes still work. So the song metadata is broken from the most recent work. I have not manually deployed anything else from the webapp yet, I want my PS4 to be in the known good stable state before proceeding. Please perform another RCA..."
+
+### RCA (conclusive — my own test suite mutated the user's PS4)
+Symptoms = enable_song_metadata_modification OFF in-game. Evidence chain:
+- Local + HEAD-committed features.json: `enable_song_metadata_modification: false` — but the Exp 246 restore had set it TRUE on the PS4 (20:13 log).
+- The pipeline's `apply_feature_flags` (`--features-only --set-feature`) based its write on the LOCAL features.json (stale from release-validation round-trips) and pushed it wholesale — the Exp 246 pull-before-push violation, on the FLAGS path (I fixed redirects but missed that features.json was the same class).
+- The AMPLIFIER: my `test_flags_apply_diffs_only_changes` webapp endpoint test mocked the live READ but NOT the runner → started a REAL pipeline `--features-only` subprocess → pushed the stale local file over the live console. And I then STAGED the poisoned features.json in the Exp 247 commit batch.
+- Not a QA miss; not the webapp's design. My own tests violated my documented "no test touches the real PS4" rule.
+
+### Restore (live)
+--set-feature enable_song_metadata_modification=true via the fixed path → live+local all four ON; --verify-ps4 PASSED (53 redirects/packs/catalog green). User expects 3/3 toast + metadata back on next boot.
+
+### Fixes (pipeline v0.5353 + webapp 0.3.1)
+1. `_download_features_from_ps4` (mktemp -d, raw_decode banner-proof, ABORT on read-fail, absent=clean-slate, Exp 221 materialization) + `apply_feature_flags` rewrite: parse diffs first → pull live → materialize defaults → apply ONLY diffs → resync local → deploy. Bad syntax aborts pre-I/O.
+2. ALL webapp job-starting tests mock the runner (FakeJob records argv — asserted; better coverage). conftest.py: suite-wide lftp-UPLOAD blocker (put/mirror -R → AssertionError).
+3. Caught ANOTHER Exp-240-class banner bug in my own new helper (first-{ to last-} breaks on '}156 bytes' trailing banners) — fixed with raw_decode scanning; third instance this month.
+
+### Tests
+9 new (test_exp248_flags_pull_before_push.py: live-base-not-stale-local [the exact scenario], diff-on-live, read-fail-aborts, clean-slate-defaults [fixed wrong expectation — DEFAULT_FEATURES has metadata ON], Exp 221 merge, bad-syntax-pre-IO, transport banner/absent/fail). Suite 763/763. tools-test debug detours: (a) pytest.raises(HTTPException) can't fire through TestClient (relearned); (b) lftp -o target lives INSIDE the single -e token (argv parse in fakes must split the -e string); (c) _ftp_quote wraps -o targets in literal quotes — strip in fakes.
+
+### GitHub Pages answer (delivered in-response)
+- User's current setting (branch: main /docs) = "legacy" build_type per gh api — would publish docs/developer-info.md and CONFLICT with pages.yml.
+- Directed: Settings → Pages → Source: "GitHub Actions" (one dropdown change). Our pages.yml builds (build_pages.py stamps data-mode="pages" + banner), smoke-tests, deploys on push to main; workflow_dispatch allows manual runs.
+- Pre-merge testing: (1) local preview — built + served on :8877, verified (data-mode=pages marker, all assets 200); (2) temporarily point pages.yml's push trigger at the feature branch + run from Actions tab (offered to stage that change on request).
+
+### Files
+tools/full_custom_song_pipeline.py (v0.5353), VERSION, CHANGELOG-PIPELINE.md, tests/test_exp248_flags_pull_before_push.py (NEW), tests/test_webapp_tools.py (mocked-runner rewrite), tests/conftest.py (lftp-upload blocker), webapp/VERSION 0.3.1, webapp/CHANGELOG-WEBAPP.md, experiment log Exp 248, this transcript, context.yml, roadmap, project_summary.

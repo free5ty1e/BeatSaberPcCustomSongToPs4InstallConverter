@@ -3894,38 +3894,115 @@ def _deploy_features_to_ps4(config: dict):
     else:
         log.warning(f"  ⚠️  Features config deploy failed: {result.stderr}")
 
+def _download_features_from_ps4(config: dict) -> dict | None:
+    """
+    Download features.json from the PS4 (banner-free transport).
+
+    Returns the parsed features dict, or None when the file is absent.
+    Raises RuntimeError on a read FAILURE (reachable-but-failed / parse
+    error) — callers must ABORT, never treat a failed read as "no flags"
+    (Exp 248: the READ-FAILED-as-empty-truth class).
+    """
+    import subprocess as sp
+    import tempfile
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    remote_path = _get_remote_features_path(config)
+    user_part = f"{user},{password}" if password else f"{user},"
+
+    with tempfile.TemporaryDirectory() as tmpdir:  # mktemp -d, never mktemp (pitfall 2)
+        local_tmp = os.path.join(tmpdir, "features.json")
+        cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+               "-e", f"get {_ftp_quote(remote_path)} -o {_ftp_quote(local_tmp)}; quit"]
+        result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            # Banner-proof extraction (pitfall 1): a trailing banner can START
+            # with '}' ('}156 bytes transferred'), so first-{ -to-last-} slicing
+            # is not sufficient — use raw_decode scanning (the Exp 240/221
+            # proven pattern): parse ONE complete object from each '{' until
+            # one succeeds.
+            raw = open(local_tmp, encoding='utf-8', errors='replace').read()
+            decoder = json.JSONDecoder()
+            pos = raw.find('{')
+            while pos != -1:
+                try:
+                    obj, _ = decoder.raw_decode(raw, pos)
+                    if isinstance(obj, dict):
+                        return obj
+                except json.JSONDecodeError:
+                    pass
+                pos = raw.find('{', pos + 1)
+            raise RuntimeError("could not parse the PS4's features.json")
+        if result.returncode == 0:
+            # reachable, but the file is absent — clean slate, not an error
+            return None
+        raise RuntimeError(
+            f"could not read features.json from the PS4 (lftp rc={result.returncode})")
+
+
 def apply_feature_flags(set_features: list, config: dict):
     """
     Apply feature flag changes from --set-feature arguments.
 
-    Args:
-        set_features: List of "key=value" strings (e.g. ["enable_song_metadata_modification=false"])
-        config: PS4 config dict
+    Exp 248 pull-before-push: the LIVE PS4 features.json is the base. The
+    local file may be stale (it previously served as the base and pushed a
+    stale `enable_song_metadata_modification=false` over the console's ON
+    value — the 2/3-features boot toast + missing song metadata). The
+    requested diffs apply ON TOP of the live state; the local file is then
+    resynced from the result. If the PS4 is reachable but the read fails,
+    ABORT — never apply blind.
     """
     if not set_features:
         return
 
     local_path = _get_local_features_path()
-    features = _load_local_features(local_path)
 
+    # Parse the requested diffs first (fail on bad syntax before any I/O)
+    diffs: dict[str, bool] = {}
     for entry in set_features:
         if '=' not in entry:
             log.error(f"  ❌ Invalid --set-feature format: '{entry}' (expected key=true/false)")
-            continue
+            return
         key, val_str = entry.split('=', 1)
         key = key.strip()
         val_str = val_str.strip().lower()
         if val_str in ('true', '1', 'yes', 'on'):
-            val = True
+            diffs[key] = True
         elif val_str in ('false', '0', 'no', 'off'):
-            val = False
+            diffs[key] = False
         else:
             log.error(f"  ❌ Invalid feature value: '{val_str}' (expected true/false)")
-            continue
-        features[key] = val
+            return
+
+    # Pull the live state (abort on failure — never blind-apply)
+    try:
+        live = _download_features_from_ps4(config)
+    except RuntimeError as e:
+        log.error(f"❌ Refusing to apply feature flags: {e}. The live state is "
+                  f"unknown — pushing the local file now could silently flip "
+                  f"flags you didn't ask to change (this exact path turned "
+                  f"the user's metadata flag off once — Exp 248). Fix the PS4 "
+                  f"connection and re-run.")
+        sys.exit(1)
+    if live is None:
+        log.info("  ℹ️  No features.json on the PS4 — starting from defaults")
+        live_flags = DEFAULT_FEATURES.copy()
+    else:
+        live_flags = live.get('features', live) if isinstance(live, dict) else {}
+
+    # Materialize any flag the live file predates (Exp 221 merge rule)
+    for k, v in DEFAULT_FEATURES.items():
+        live_flags.setdefault(k, v)
+
+    for key, val in diffs.items():
+        live_flags[key] = val
         log.info(f"  Feature flag: {key} = {val}")
 
-    _save_local_features(features, local_path)
+    _save_local_features(live_flags, local_path)
     _deploy_features_to_ps4(config)
 
 

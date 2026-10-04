@@ -5,6 +5,20 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.3.1] — 2026-10-02 (Exp 248)
+### Fixed
+- **Test-suite PS4 safety (the amplifier of the Exp 248 flags bug):** webapp
+  endpoint tests previously started REAL pipeline subprocesses; one
+  (`flags-apply`) pushed a stale local features.json over the user's live
+  console, turning the metadata flag off in-game. ALL job-starting endpoint
+  tests now run against a mocked runner that records argv (asserted —
+  better coverage than before), and `tests/conftest.py` blocks lftp
+  uploads suite-wide. The webapp itself needed no code change — its API
+  already diffs against the live state; the pipeline fix (v0.5353
+  pull-before-push for flags) closes the underlying hole.
+
+## [0.3.0] — 2026-10-02 (Exp 247)
+
 ## [0.3.0] — 2026-10-02 (Exp 247)
 ### Added
 - **Feature Flags tab** — live per-flag read (kill switch first, with

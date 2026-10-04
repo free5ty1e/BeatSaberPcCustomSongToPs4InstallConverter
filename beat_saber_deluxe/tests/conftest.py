@@ -1,12 +1,13 @@
 """
 Shared fixtures and helpers for Beat Saber Deluxe unit tests.
 """
-import os
-import sys
 import json
-import struct
-import tempfile
+import os
 import shutil
+import struct
+import sys
+import tempfile
+
 import pytest
 
 # Make sure the tools/ directory is importable
@@ -30,7 +31,6 @@ def tmp_dir():
 # ---------------------------------------------------------------------------
 def _write_wav(path: str, pcm_bytes: bytes, sample_rate: int = 44100, channels: int = 2):
     """Write a minimal PCM16 WAV file."""
-    data_size = len(pcm_bytes)
     import wave
     with wave.open(path, 'wb') as wf:
         wf.setnchannels(channels)
@@ -264,3 +264,39 @@ def song_ids_map():
         "Crystallized": "Crystallized",
         "BadGuy": "bad guy",
     }
+
+
+# ---------------------------------------------------------------------------
+# Exp 248: PS4-safety net for ALL tests
+# ---------------------------------------------------------------------------
+# A webapp endpoint test once started a REAL `--features-only` pipeline job
+# that pushed a stale local features.json over the user's live PS4 (turning
+# the metadata flag off in-game). Structural fix: the webapp tests mock the
+# runner (test_webapp_tools.py::no_real_jobs). This guard makes the RULE
+# executable suite-wide: any lftp UPLOAD from inside the test suite fails
+# loudly. Read-only lftp (get/ls/cls) is allowed — hardware-gated tests use
+# those legitimately. Real-write hardware tests must mark `real_ps4_write`.
+# ---------------------------------------------------------------------------
+import subprocess as _sp
+
+import pytest as _pytest
+
+
+@_pytest.fixture(autouse=True)
+def _block_real_ps4_uploads(monkeypatch):
+    real_run = _sp.run
+
+    def _guarded_run(cmd, *a, **kw):
+        tokens = [str(c) for c in cmd] if isinstance(cmd, list) else [str(cmd)]
+        if tokens and tokens[0] == "lftp":
+            joined = " ".join(tokens)
+            # uploads: put/push. Downloads + listings pass through.
+            if " put " in f" {joined} " or "mirror -R" in joined:
+                raise AssertionError(
+                    "BLOCKED (Exp 248): a test attempted a real PS4 UPLOAD via "
+                    f"lftp: {joined[:120]} — tests must mock state writes; "
+                    "deliberate hardware write-tests need the real_ps4_write marker.")
+        return real_run(cmd, *a, **kw)
+
+    monkeypatch.setattr(_sp, "run", _guarded_run)
+    yield
