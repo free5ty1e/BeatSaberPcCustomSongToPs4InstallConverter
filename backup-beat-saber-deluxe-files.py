@@ -1255,6 +1255,7 @@ def list_backup_contents(backup_path):
 # =============================================================================
 
 def main():
+    global LOCAL_BACKUP_DIR
     parser = argparse.ArgumentParser(
         description="Backup, clean, and restore Beat Saber Deluxe files on PS4 via FTP",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1294,6 +1295,13 @@ Examples:
         action="store_true",
         help="Run in local mode (no PS4 required - great for testing)"
     )
+    backup_parser.add_argument(
+        "--out",
+        default=None,
+        help="Directory to write the backup zip into (default: %s). "
+             "Used by the web app's Backup/Restore tab when the user points "
+             "it at a different backups folder." % LOCAL_BACKUP_DIR
+    )
 
     # Restore command
     restore_parser = subparsers.add_parser("restore", help="Restore BS Deluxe files to PS4")
@@ -1325,6 +1333,11 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # --out override (web app's Backup/Restore tab): when set, the backup zip
+    # lands in the user's chosen folder instead of the default.
+    if getattr(args, "out", None):
+        LOCAL_BACKUP_DIR = Path(args.out).expanduser()
 
     # Ensure local backup directory exists
     LOCAL_BACKUP_DIR.mkdir(parents=True, exist_ok=True)

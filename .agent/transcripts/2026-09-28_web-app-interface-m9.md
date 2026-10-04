@@ -243,3 +243,31 @@ Symptoms = enable_song_metadata_modification OFF in-game. Evidence chain:
 
 ### Files
 tools/full_custom_song_pipeline.py (v0.5353), VERSION, CHANGELOG-PIPELINE.md, tests/test_exp248_flags_pull_before_push.py (NEW), tests/test_webapp_tools.py (mocked-runner rewrite), tests/conftest.py (lftp-upload blocker), webapp/VERSION 0.3.1, webapp/CHANGELOG-WEBAPP.md, experiment log Exp 248, this transcript, context.yml, roadmap, project_summary.
+
+---
+
+## Cycle 7 — Backup-folder browse + feature-flag independence audit (Exp 249)
+
+### User
+> "Can we add a browse button with path display for where the backup tab is finding backups to restore? Right now it seems hardcoded. I tested by deploying a fresh custom with the web interface over mess it up and I performed the spot check of another custom song in another music pack, and I also tested the new Mess it up custom song and that worked too. I have not tested any of the other steps yet, so please reiterate them to me in your next message... I also would like for you to perform a thorough audit of each feature flag, its usages, and independence from the other flags; each flag should be entirely independent of the other flags (except the global enable, of course). I don't want disabling a flag to cause a crash or other issues."
+
+### Hardware validation received
+User's webapp deploy of Sandstorm→MessItUp: clean (log showed the 46-preserve lines + 53-redirect match — the v0.5352 anti-wipe fix proven on hardware); cross-pack spot check + the new custom both play. The restored-slot metadata residue (Sandstorm label over the old custom) explained last cycle; the redeploy resolved it.
+
+### Built (webapp 0.4.0)
+- webapp_state.py: per-machine settings (gitignored) — backup_dir.
+- /api/backup/dir GET/POST + /api/backup/browse (server-side folder browser, dirs only, parent navigation); backup jobs pass `--out` when folder ≠ default (backup script gained --out; restore already took absolute paths). UI: path display, Browse… panel, manual entry, use-default.
+- Debug detours: the Edit tool reported ENOENT on the backup script (transient — file existed; re-Read fixed); the --out flag argument turned out to already exist in the parser (added out-of-band) but was UNWIRED at runtime — I added the args.out override + `global LOCAL_BACKUP_DIR` in main().
+- 4 old tests migrated off the removed BACKUP_DIR constant; 7 new tests incl. --out-in-argv vs no-flag-at-default.
+
+### THE FLAG AUDIT (the cycle's main deliverable)
+Every g_feature_* site in plugin v0.8047 traced; all 16 combinations evaluated. Verdict:
+- **Crash-safety independence holds in ALL 16 combinations.** Proof: replacements ⊥ metadata (zero shared state); metadata ⊥ mode-mapping (zero shared sites); missing files safe everywhere (count-guarded, null-checked, logged); toast is diagnostic only.
+- **One designed coupling (documented, not a defect):** mode-mapping gates INSIDE the replacements loop (Exp 222 + the Exp 180 CRC invariant) — replacements OFF makes mode-mapping unobservable. It's a modifier of the redirect stream.
+- **One cosmetic hazard:** metadata OFF mid-session leaves stale swapped strings on already-built list cells (move_next mutates BeatmapLevel in-place) until list re-entry. Self-healing; no crash path. Mitigation: explanatory note in the Flags tab (chose UI note over plugin string-restoration — more state = more risk).
+- KB page: .agent/llm-wiki-knowledge-base/feature-flag-independence-audit.md (indexed after feature-flags).
+
+### Suite
+770/770. Lint clean. webapp 0.4.0 (CHANGELOG-WEBAPP.md). Pipeline/plugin untouched this cycle (no version bumps there — the backup script's --out is not the pipeline).
+
+### Re-iterated test procedure (Phases 0-6) delivered in the response with expected outcomes per phase.

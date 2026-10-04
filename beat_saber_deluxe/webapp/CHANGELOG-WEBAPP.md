@@ -5,6 +5,23 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.4.0] — 2026-10-03 (Exp 249)
+### Added
+- **Backups-folder browse button** (Backup/Restore tab): the path is now
+  displayed and changeable — a server-side folder browser (dirs only),
+  manual path entry, "use default" reset, and persistence across server
+  restarts (`webapp_state.json`, gitignored — same treatment as
+  `ps4_config.json`). Backup jobs pass `--out` to the backup script when the
+  folder differs from the default; restore already took absolute paths.
+  New endpoints: `/api/backup/dir` (GET/POST), `/api/backup/browse`.
+  The backup script gained the `--out` flag (its hardcoded default is
+  unchanged for CLI users).
+- **Feature-flag independence note** in the Flags tab: song-list labels
+  built before a metadata-flag change keep their old text until the list is
+  re-entered (from the Exp 249 audit — cosmetic, self-healing).
+
+## [0.3.1] — 2026-10-02 (Exp 248)
+
 ## [0.3.1] — 2026-10-02 (Exp 248)
 ### Fixed
 - **Test-suite PS4 safety (the amplifier of the Exp 248 flags bug):** webapp

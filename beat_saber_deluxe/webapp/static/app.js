@@ -672,6 +672,7 @@ async function backupRefresh() {
   body.innerHTML = "<tr><td colspan='4' class='muted'>Listing backups…</td></tr>";
   try {
     const j = await api("/api/backup/list");
+    $("backup-dir-display").textContent = j.backup_dir;
     if (!j.backups.length) {
       body.innerHTML = `<tr><td colspan='4' class='muted'>No backups yet in
         <code>${esc(j.backup_dir)}</code> — make one before experimenting.</td></tr>`;
@@ -688,6 +689,43 @@ async function backupRefresh() {
       btn.addEventListener("click", () => backupRestore(btn.dataset.name)));
   } catch (e) {
     body.innerHTML = `<tr><td colspan='4' class='result bad'>${esc(e.message)}</td></tr>`;
+  }
+}
+
+// backups-folder browser (server lists dirs; the picker is folder-only)
+let browsePath = null;
+
+async function browseLoad(path) {
+  try {
+    const j = await api(`/api/backup/browse?path=${encodeURIComponent(path || "")}`);
+    browsePath = j.path;
+    $("browse-crumbs").textContent = j.path;
+    $("browse-path-input").value = j.path;
+    $("browse-list").innerHTML = j.dirs.length
+      ? j.dirs.map(d =>
+          `<div class="browse-entry" data-path="${esc(d.path)}">📁 ${esc(d.name)}</div>`).join("")
+      : "<p class='muted' style='padding:.4rem'>No subfolders here.</p>";
+    $("browse-list").querySelectorAll(".browse-entry").forEach(el =>
+      el.addEventListener("click", () => browseLoad(el.dataset.path)));
+    $("btn-browse-up").disabled = !j.parent;
+    $("btn-browse-up").onclick = () => j.parent && browseLoad(j.parent);
+  } catch (e) {
+    $("browse-crumbs").textContent = "couldn't browse: " + e.message;
+  }
+}
+
+async function backupChooseFolder(path) {
+  try {
+    const j = await api("/api/backup/dir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+    $("backup-browser").classList.add("hidden");
+    $("backup-dir-display").textContent = j.backup_dir;
+    backupRefresh();
+  } catch (e) {
+    alert("Couldn't set the backups folder: " + e.message);
   }
 }
 
@@ -849,6 +887,21 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btn-flags-apply").addEventListener("click", flagsApply);
   $("btn-backup-now").addEventListener("click", backupNow);
   $("btn-backup-refresh").addEventListener("click", backupRefresh);
+  $("btn-backup-browse").addEventListener("click", () => {
+    const box = $("backup-browser");
+    box.classList.toggle("hidden");
+    if (!box.classList.contains("hidden")) browseLoad("");
+  });
+  $("btn-browse-go").addEventListener("click", () =>
+    browseLoad($("browse-path-input").value.trim()));
+  $("btn-browse-choose").addEventListener("click", () =>
+    browsePath && backupChooseFolder(browsePath));
+  $("btn-backup-reset-dir").addEventListener("click", async () => {
+    try {
+      const def = await api("/api/backup/dir");
+      await backupChooseFolder(def.default);
+    } catch (e) { alert(e.message); }
+  });
   $("btn-job-cancel").addEventListener("click", cancelJob);
   $("btn-fr-preview").addEventListener("click", frPreview);
   $("btn-fr-open").addEventListener("click", frOpen);

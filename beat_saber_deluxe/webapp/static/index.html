@@ -224,6 +224,10 @@
         <span id="flags-read-error" class="result"></span>
       </div>
       <div id="flags-list"></div>
+      <p class="muted">Note: song-list labels built <i>before</i> a
+      metadata-flag change keep their old text until you re-enter the song
+      list screen (the plugin swaps strings when the list is populated).
+      Flags are read at game boot — apply, then reboot the game.</p>
     </div>
 
     <div class="card">
@@ -258,6 +262,23 @@
 
     <div class="card">
       <h3>Available backups</h3>
+      <div class="row">
+        <span>Backups folder: <code id="backup-dir-display">…</code></span>
+        <button id="btn-backup-browse">Browse…</button>
+        <button id="btn-backup-reset-dir" class="link" title="Back to the default folder">use default</button>
+      </div>
+      <div id="backup-browser" class="hidden">
+        <div class="row">
+          <button id="btn-browse-up">⬆ parent</button>
+          <span id="browse-crumbs" class="muted"></span>
+        </div>
+        <div id="browse-list" class="browser-list"></div>
+        <div class="row">
+          <input id="browse-path-input" type="text" placeholder="/path/to/backups" style="flex:1">
+          <button id="btn-browse-go">Go</button>
+          <button id="btn-browse-choose" class="primary">Choose this folder</button>
+        </div>
+      </div>
       <button id="btn-backup-refresh">Refresh list</button>
       <table class="loadout" id="backup-table">
         <thead><tr><th>Backup</th><th>Size</th><th>Created</th><th></th></tr></thead>

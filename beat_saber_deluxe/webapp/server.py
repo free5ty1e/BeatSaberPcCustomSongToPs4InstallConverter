@@ -255,20 +255,73 @@ def jobs_flags_apply(body: dict):
 # Backup / Restore (thin layer over backup-beat-saber-deluxe-files.py)
 # --------------------------------------------------------------------------
 BACKUP_SCRIPT = paths.RELEASE_ROOT / "backup-beat-saber-deluxe-files.py"
-BACKUP_DIR = paths.RELEASE_ROOT / "ps4_backups"
+DEFAULT_BACKUP_DIR = paths.RELEASE_ROOT / "ps4_backups"
+
+
+def _backup_dir() -> Path:
+    """The effective backups dir: the user's persisted setting, else default."""
+    from adapters import webapp_state
+    return webapp_state.get_backup_dir()
 
 
 @app.get("/api/backup/list")
 def backup_list():
     """List available backups (name, size, when) — read-only."""
-    if not BACKUP_DIR.is_dir():
-        return {"backups": []}
+    backup_dir = _backup_dir()
+    if not backup_dir.is_dir():
+        return {"backups": [], "backup_dir": str(backup_dir)}
     out = []
-    for entry in sorted(BACKUP_DIR.iterdir(), reverse=True):
+    for entry in sorted(backup_dir.iterdir(), reverse=True):
         if entry.is_file() and entry.suffix == ".zip":
             out.append({"name": entry.name, "size": entry.stat().st_size,
                         "mtime": entry.stat().st_mtime})
-    return {"backups": out, "backup_dir": str(BACKUP_DIR)}
+    return {"backups": out, "backup_dir": str(backup_dir)}
+
+
+@app.get("/api/backup/dir")
+def backup_dir_get():
+    """Where backups are read from/written to (the browse-button display)."""
+    d = _backup_dir()
+    return {"backup_dir": str(d), "default": str(DEFAULT_BACKUP_DIR),
+            "is_default": d == DEFAULT_BACKUP_DIR, "exists": d.is_dir()}
+
+
+@app.post("/api/backup/dir")
+def backup_dir_set(body: dict):
+    """Point the Backup/Restore tab at another backups folder. No paths are
+    browsed arbitrarily: we accept any user-chosen path, list zips in it, and
+    pass the resolved zip path to the restore job verbatim (the script
+    handles its own validation)."""
+    from adapters import webapp_state
+    raw = str(body.get("path", "")).strip()
+    if not raw:
+        raise HTTPException(400, "path required")
+    resolved = webapp_state.set_backup_dir(raw)
+    # list immediately so the UI refreshes from the same call
+    return {"ok": True, "backup_dir": str(resolved),
+            **backup_list()}
+
+
+@app.get("/api/backup/browse")
+def backup_dir_browse(path: str = ""):
+    """Lightweight folder listing for the browse UI: child dirs only (never
+    files — the picker is for folders). Empty path = start at the current
+    backup dir's parent (or home when unset)."""
+    from adapters import webapp_state
+    try:
+        base = Path(path).expanduser() if path else webapp_state.get_backup_dir().parent
+        if not base.is_dir():
+            raise HTTPException(400, f"not a folder: {base}")
+    except (OSError, ValueError) as e:
+        raise HTTPException(400, f"invalid path: {e}")
+    try:
+        children = sorted(
+            (d for d in base.iterdir() if d.is_dir()),
+            key=lambda d: d.name.lower())
+    except PermissionError:
+        raise HTTPException(403, f"permission denied: {base}")
+    return {"path": str(base), "parent": str(base.parent) if base.parent != base else None,
+            "dirs": [{"name": d.name, "path": str(d)} for d in children]}
 
 
 @app.post("/api/jobs/backup")
@@ -278,6 +331,10 @@ def jobs_backup(body: dict):
         raise HTTPException(500, f"backup script missing: {BACKUP_SCRIPT}")
     clean = bool(body.get("clean_ps4", False))
     argv = ["backup"] + (["--clean-ps4"] if clean else [])
+    # Custom backups folder → the script's --out flag (default dir needs no flag)
+    backup_dir = _backup_dir()
+    if backup_dir != DEFAULT_BACKUP_DIR:
+        argv += ["--out", str(backup_dir)]
     try:
         job = RUNNER.start_script(str(BACKUP_SCRIPT), argv,
                                   label=f"backup{' + clean-ps4' if clean else ''}")
@@ -296,7 +353,7 @@ def jobs_restore(body: dict):
     name = str(body.get("backup", "")).strip()
     if not name or ".." in name or "/" in name:
         raise HTTPException(400, "backup name required (no paths)")
-    path = BACKUP_DIR / name
+    path = _backup_dir() / name
     if not path.exists():
         raise HTTPException(404, f"no such backup: {name}")
     clean = bool(body.get("clean_ps4", False))

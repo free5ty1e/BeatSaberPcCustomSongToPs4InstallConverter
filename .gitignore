@@ -44,3 +44,4 @@ temp/
 beat_saber_deluxe/.coverage
 song_metadata.json
 ps4_backups/
+beat_saber_deluxe/webapp/webapp_state.json

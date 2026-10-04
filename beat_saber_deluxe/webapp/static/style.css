@@ -235,3 +235,19 @@ table.loadout tr:hover td { background: var(--card2); }
   code { color: #333; }
   .print-footer { color: #555; font-size: 9pt; }
 }
+
+/* ---------------- Backup folder browser ---------------- */
+.browser-list {
+  max-height: 12rem;
+  overflow-y: auto;
+  border: 1px solid #2b3145;
+  border-radius: 8px;
+  margin: 0.4rem 0;
+  background: var(--bg);
+}
+.browse-entry {
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  border-bottom: 1px solid #232838;
+}
+.browse-entry:hover { background: var(--card2); }

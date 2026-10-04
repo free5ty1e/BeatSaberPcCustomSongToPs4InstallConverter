@@ -192,7 +192,7 @@ class TestFlagsEndpoints:
 
 class TestBackupEndpoints:
     def test_backup_list_reads_dir(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(server, "BACKUP_DIR", tmp_path)
+        monkeypatch.setattr(server, "_backup_dir", lambda: tmp_path)
         (tmp_path / "bsd_backup_20260101_000000.zip").write_bytes(b"x" * 100)
         (tmp_path / "notazip.txt").write_text("ignore me")
         r = client.get("/api/backup/list")
@@ -202,7 +202,7 @@ class TestBackupEndpoints:
         assert j["backups"][0]["size"] == 100
 
     def test_backup_list_empty_dir_ok(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(server, "BACKUP_DIR", tmp_path)
+        monkeypatch.setattr(server, "_backup_dir", lambda: tmp_path)
         assert client.get("/api/backup/list").json()["backups"] == []
 
     def test_backup_job_starts(self, monkeypatch):
@@ -220,14 +220,15 @@ class TestBackupEndpoints:
     def test_restore_rejects_path_traversal(self, monkeypatch):
         """backup names are sanitized: no paths, no .. — the zip dir is a jail."""
         monkeypatch.setattr(server, "BACKUP_SCRIPT", PROJECT / "VERSION")
-        monkeypatch.setattr(server, "BACKUP_DIR", PROJECT.parent / "ps4_backups")
+        monkeypatch.setattr(server, "_backup_dir",
+                            lambda: PROJECT.parent / "ps4_backups")
         r = client.post("/api/jobs/restore",
                         json={"backup": "../../etc/passwd", "clean_ps4": False})
         assert r.status_code == 400
 
     def test_restore_unknown_backup_404(self, monkeypatch, tmp_path):
         monkeypatch.setattr(server, "BACKUP_SCRIPT", PROJECT / "VERSION")
-        monkeypatch.setattr(server, "BACKUP_DIR", tmp_path)
+        monkeypatch.setattr(server, "_backup_dir", lambda: tmp_path)
         r = client.post("/api/jobs/restore",
                         json={"backup": "nope.zip", "clean_ps4": False})
         assert r.status_code == 404
@@ -268,3 +269,75 @@ class TestRunnerContract:
         assert r.status_code == 409
         assert "already running" in r.json()["detail"]
         assert started_jobs == [], "a blocked job must not be recorded as started"
+
+
+class TestBackupDirBrowse:
+    """The Backup/Restore tab's configurable backups folder (user request:
+    the hardcoded /workspace/ps4_backups was invisible/blocked from change)."""
+
+    def test_dir_get_reports_default(self, monkeypatch):
+        from adapters import webapp_state
+        monkeypatch.setattr(webapp_state, "STATE_PATH", None)  # force no-state path
+        monkeypatch.setattr(webapp_state, "load", lambda: {})
+        r = client.get("/api/backup/dir")
+        j = r.json()
+        assert j["is_default"] is True
+        assert j["backup_dir"].endswith("ps4_backups")
+
+    def test_dir_set_persists_and_lists(self, monkeypatch, tmp_path):
+        from adapters import webapp_state
+        state_file = tmp_path / "webapp_state.json"
+        monkeypatch.setattr(webapp_state, "STATE_PATH", state_file)
+        monkeypatch.setattr(webapp_state, "load", webapp_state.load)
+        # a fresh state file: set the dir, read it back
+        target = tmp_path / "my_backups"
+        target.mkdir()
+        r = client.post("/api/backup/dir", json={"path": str(target)})
+        j = r.json()
+        assert j["ok"] is True and j["backup_dir"] == str(target)
+        # the backup LIST now reflects the new dir (no zips in it)
+        assert j["backups"] == []
+        # and a second GET confirms persistence
+        assert client.get("/api/backup/dir").json()["backup_dir"] == str(target)
+
+    def test_dir_set_rejects_empty(self):
+        r = client.post("/api/backup/dir", json={"path": ""})
+        assert r.status_code == 400
+
+    def test_browse_lists_dirs_only(self, monkeypatch, tmp_path):
+        (tmp_path / "subdir").mkdir()
+        (tmp_path / "afile.txt").write_text("nope")
+        r = client.get("/api/backup/browse", params={"path": str(tmp_path)})
+        j = r.json()
+        assert [d["name"] for d in j["dirs"]] == ["subdir"]
+        assert j["parent"] == str(tmp_path.parent)
+
+    def test_browse_rejects_missing_folder(self):
+        r = client.get("/api/backup/browse", params={"path": "/definitely/not/here"})
+        assert r.status_code == 400
+
+    def test_backup_job_passes_out_for_custom_dir(self, monkeypatch, started_jobs, tmp_path):
+        """Custom backups folder → the backup job's argv carries --out."""
+        from adapters import webapp_state
+        monkeypatch.setattr(webapp_state, "STATE_PATH", tmp_path / "ws.json")
+        monkeypatch.setattr(webapp_state, "load", webapp_state.load)
+        client.post("/api/backup/dir", json={"path": str(tmp_path / "bk")})
+        monkeypatch.setattr(server, "BACKUP_SCRIPT", PROJECT / "VERSION")
+        r = client.post("/api/jobs/backup", json={})
+        assert r.status_code == 200
+        kind, argv, _ = started_jobs[0]
+        assert kind == "script"
+        # argv shape: ["backup", "--out", "<dir>"]
+        assert argv[0] == "backup"
+        out_i = argv.index("--out")
+        assert argv[out_i + 1] == str(tmp_path / "bk")
+
+    def test_backup_job_default_dir_no_out_flag(self, monkeypatch, started_jobs):
+        """Default folder → no --out (the script's own default applies)."""
+        from adapters import webapp_state
+        monkeypatch.setattr(webapp_state, "load", lambda: {})
+        monkeypatch.setattr(server, "BACKUP_SCRIPT", PROJECT / "VERSION")
+        r = client.post("/api/jobs/backup", json={})
+        assert r.status_code == 200
+        kind, argv, _ = started_jobs[0]
+        assert "--out" not in argv
