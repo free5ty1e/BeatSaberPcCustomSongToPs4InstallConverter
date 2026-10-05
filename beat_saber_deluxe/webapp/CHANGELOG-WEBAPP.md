@@ -5,6 +5,18 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.5.1] — 2026-10-04 (Exp 255)
+### Added
+- **Multi-pack batch deploys** (Batch tab, new section): a checkbox list of
+  all 34 example packs with per-pack song counts; check any combination
+  (e.g. the standard loadout: Rolling Stones, Billie Eilish, Britney
+  Spears, Lizzo, Camelia = 50 songs), select all/none shortcuts, a live
+  "N packs · M songs selected" counter, the deploy order previewed on the
+  button tooltip, and a **Deploy selected music packs** button that runs
+  them as ONE serial job — the web-app equivalent of chaining the example
+  scripts (`script1.sh --no-prompt && script2.sh --no-prompt && …`),
+  stopping at the first failure.
+
 ## [0.5.0] — 2026-10-04 (Exp 254)
 ### Added — the Batch tab
 - **Pre-defined packs dropdown**: all 34 example-script packs, parsed LIVE

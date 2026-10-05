@@ -355,6 +355,25 @@
       </details>
     </div>
 
+    <div class="card" id="multi-pack-card">
+      <h3>Deploy multiple music packs at once</h3>
+      <p class="muted">Check every pack you want in this run — each selected pack
+      deploys its full example-script loadout, one song at a time, in the order
+      shown. This is the web-app equivalent of chaining the example scripts
+      (<code>script1.sh --no-prompt && script2.sh --no-prompt && …</code>).</p>
+      <div class="row">
+        <button id="btn-multi-select-all" class="link">select all</button>
+        <button id="btn-multi-select-none" class="link">select none</button>
+        <span class="muted" id="multi-count">0 packs · 0 songs selected</span>
+      </div>
+      <div id="multi-pack-list" class="browser-list multi-pack-list">
+        <p class='muted' style='padding:.4rem'>Loading packs…</p>
+      </div>
+      <div class="row">
+        <button id="btn-multi-deploy" class="primary big" disabled>Deploy selected music packs</button>
+      </div>
+    </div>
+
     <details class="card">
       <summary class="link" style="cursor:pointer">Custom batch file format (for hand-editing)</summary>
       <p class="muted">Custom batches are plain JSON files — editable in any text

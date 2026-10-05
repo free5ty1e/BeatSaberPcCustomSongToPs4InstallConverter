@@ -954,6 +954,7 @@ async function batchRefresh() {
     oCustom.textContent = "＋ Build a custom batch…";
     sel.appendChild(oCustom);
     sel.onchange = batchSelectChanged;
+    multiRenderList();
   } catch (e) {
     sel.innerHTML = `<option value=''>couldn't load: ${esc(e.message)}</option>`;
   }
@@ -1187,6 +1188,75 @@ function batchFillSlotDropdown() {
   });
 }
 
+// ---------------------------------------------------------------- multi-pack batch
+let multiSelected = new Set();   // indexes into examplePacks
+
+function multiRenderList() {
+  const host = $("multi-pack-list");
+  if (!examplePacks.length) {
+    host.innerHTML = "<p class='muted' style='padding:.4rem'>Packs load on first visit — hit Refresh above.</p>";
+    return;
+  }
+  host.innerHTML = examplePacks.map((p, i) => `
+    <label class="multi-pack-row">
+      <input type="checkbox" data-i="${i}" ${multiSelected.has(i) ? "checked" : ""}>
+      <b>${esc(p.name)}</b>
+      <span class="muted">${p.songs.length} songs — ${p.songs[0].target}…${p.songs[p.songs.length - 1].target}</span>
+    </label>`).join("");
+  host.querySelectorAll("input[type=checkbox]").forEach(cb =>
+    cb.addEventListener("change", () => {
+      const i = parseInt(cb.dataset.i, 10);
+      if (cb.checked) multiSelected.add(i); else multiSelected.delete(i);
+      multiUpdateCount();
+    }));
+  multiUpdateCount();
+}
+
+function multiUpdateCount() {
+  const packs = multiSelected.size;
+  const songs = [...multiSelected].reduce(
+    (n, i) => n + examplePacks[i].songs.length, 0);
+  $("multi-count").textContent = `${packs} pack${packs === 1 ? "" : "s"} · ${songs} songs selected`;
+  $("btn-multi-deploy").disabled = packs === 0;
+  // order preview: the selection deploys in the order shown (pack index)
+  const ordered = [...multiSelected].sort((a, b) => a - b);
+  $("btn-multi-deploy").title = ordered.length
+    ? `Deploy order: ${ordered.map(i => examplePacks[i].name).join(" → ")}`
+    : "";
+}
+
+async function multiDeploy() {
+  if (!multiSelected.size) return;
+  const ordered = [...multiSelected].sort((a, b) => a - b);
+  const packNames = ordered.map(i => examplePacks[i].name);
+  const songs = ordered.flatMap(i =>
+    JSON.parse(JSON.stringify(examplePacks[i].songs)));
+  const n = songs.length;
+  if (!confirm(
+    `Deploy ${packNames.length} music pack${packNames.length > 1 ? "s" : ""} — ${n} songs total?\n\n` +
+    `Packs in order: ${packNames.join(", ")}\n\n` +
+    `Each song runs the full --deploy-full pipeline sequentially (this is the ` +
+    `web-app equivalent of chaining the example scripts). The run STOPS at the ` +
+    `first failure — everything before it stays deployed. Existing customs in ` +
+    `packs you have NOT selected are preserved. Expect this to take a while.`))
+    return;
+  try {
+    const j = await api("/api/jobs/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songs }),
+    });
+    showJobPanel("batch-job-panel", {
+      label: `multi-pack deploy — ${packNames.join(", ")}`,
+      command: j.command,
+    });
+    $("btn-batch-cancel").classList.remove("hidden");
+    runJobWithPanel("batch-job-panel", j);
+  } catch (e) {
+    alert("Couldn't start the multi-pack deploy: " + e.message);
+  }
+}
+
 // ---------------------------------------------------------------- feature request
 const FR_REPO = "free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter";
 
@@ -1388,6 +1458,15 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.value = "";
   });
   $("btn-batch-delete").addEventListener("click", batchDelete);
+  $("btn-multi-select-all").addEventListener("click", () => {
+    examplePacks.forEach((_, i) => multiSelected.add(i));
+    multiRenderList();
+  });
+  $("btn-multi-select-none").addEventListener("click", () => {
+    multiSelected.clear();
+    multiRenderList();
+  });
+  $("btn-multi-deploy").addEventListener("click", multiDeploy);
   $("btn-batch-cancel").addEventListener("click", () => {
     api("/api/jobs/cancel", { method: "POST" }).catch(() => {});
   });

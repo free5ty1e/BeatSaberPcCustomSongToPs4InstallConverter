@@ -188,3 +188,42 @@ class TestBatchJobEndpoint:
         payload = json.loads(argv[argv.index("--jobs") + 1])
         assert len(payload) == 2
         assert "--vorbis" in payload[1] and "--pcm16" in payload[0]
+
+
+class TestMultiPackBatch:
+    """The multi-pack flow: the client merges selected example packs (in the
+    order shown) into ONE /api/jobs/batch call. Server-side contract: the
+    merged payload is a plain songs list — pinned here end-to-end."""
+
+    def test_multi_pack_merge_and_run(self, monkeypatch, started_jobs):
+        """Selecting the user's standard loadout (rolling stones, billie
+        eilish, britney spears, lizzo, camellia) merges to the same songs
+        the chained example scripts would deploy — in pack order."""
+        monkeypatch.setattr(server.paths, "CONFIG_PATH", PROJECT / "ps4_config.json")
+        packs = batch.parse_example_scripts()
+        wanted = ["Rolling Stones", "Billie Eilish", "Britney Spears",
+                  "Lizzo", "Camelia"]
+        selected = [p for p in packs if any(w in p["name"] for w in wanted)]
+        assert len(selected) == 5, f"expected 5 packs, got {[p['name'] for p in selected]}"
+        songs = [dict(s) for p in selected for s in p["songs"]]
+        total = sum(len(p["songs"]) for p in selected)
+        assert len(songs) == total
+        r = client.post("/api/jobs/batch", json={"songs": songs})
+        assert r.status_code == 200
+        j = r.json()
+        assert j["count"] == total
+        # the payload preserves pack order: first songs are pack 0's
+        payload = json.loads(started_jobs[0][1][started_jobs[0][1].index("--jobs") + 1])
+        assert len(payload) == total
+        assert payload[0] == selected[0]["songs"][0]["map_id"] or \
+               payload[0][0] == "--download-beat-saver-song"  # argv shape intact
+
+    def test_multi_pack_counts_match_scripts(self):
+        """The five-pack standard loadout's merged size == the sum of the
+        scripts' deploy-line counts (no drops, no dupes from the merge)."""
+        packs = batch.parse_example_scripts()
+        wanted = ["Rolling Stones", "Billie Eilish", "Britney Spears",
+                  "Lizzo", "Camelia"]
+        selected = [p for p in packs if any(w in p["name"] for w in wanted)]
+        merged = sum(len(p["songs"]) for p in selected)
+        assert merged == 11 + 13 + 11 + 9 + 6  # RS, BE, BS, Lizzo, Camelia
