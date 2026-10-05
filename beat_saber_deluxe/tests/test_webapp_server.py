@@ -209,3 +209,20 @@ class TestUiServed:
         r = client.get("/static/dumper.cfg")
         assert r.status_code == 200
         assert b"split=3" in r.content
+
+
+class TestVersionBadge:
+    """The lower-corner version badge (user: 'so I can tell when your changes
+    have taken effect'). Ping carries all three component versions."""
+
+    def test_ping_carries_all_versions(self):
+        j = client.get("/api/ping").json()
+        assert j["webapp_version"] != "unknown" and j["webapp_version"] != "0.1.0"
+        assert j["pipeline_version"] != "unknown"
+        assert j["plugin_version"].startswith("v0.")
+
+    def test_index_has_version_badge(self):
+        html = client.get("/").text
+        assert "version-badge" in html
+        assert 'id="ver-webapp"' in html and 'id="ver-pipeline"' in html \
+            and 'id="ver-plugin"' in html

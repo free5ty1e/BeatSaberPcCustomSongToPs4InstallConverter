@@ -4,15 +4,10 @@ Unit tests for download_beatsaver_songs.py
 Tests the API client functions, song searching, and missing audio detection.
 Network-dependent functions are mocked.
 """
+import json
 import os
 import sys
-import json
-import struct
-import tempfile
-import shutil
-import pytest
-from unittest.mock import patch, MagicMock
-from io import BytesIO
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 

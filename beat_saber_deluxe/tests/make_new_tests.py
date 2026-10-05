@@ -4,7 +4,14 @@ Create two new tests that we haven't tried before:
 1. Original audio snippet (3s) in our FSB5 - tests bundle building process
 2. All-zero silence FSB5 - tests basic FSB5 structure compatibility
 """
-import UnityPy, json, gzip, struct, os, math, io, sys
+import gzip
+import io
+import json
+import os
+import struct
+import sys
+
+import UnityPy
 
 OUTPUT_DIR = "/workspace/beat_saber_deluxe/custom_songs"
 TEMPLATE = "/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/startmeup"
@@ -62,7 +69,8 @@ cab1 = bf1.files['CAB-6c9e66546e3e23434517417298a18b91']
 resource_key = 'CAB-6c9e66546e3e23434517417298a18b91.resource'
 
 new_res1 = EndianBinaryReader(fsb5_test1)
-new_res1.flags = 0; new_res1.BaseOffset = 0
+new_res1.flags = 0
+new_res1.BaseOffset = 0
 bf1.files[resource_key] = new_res1
 
 # Update AudioClip
@@ -128,7 +136,8 @@ bf2 = list(env2.files.values())[0]
 cab2 = bf2.files['CAB-6c9e66546e3e23434517417298a18b91']
 
 new_res2 = EndianBinaryReader(fsb5_test2)
-new_res2.flags = 0; new_res2.BaseOffset = 0
+new_res2.flags = 0
+new_res2.BaseOffset = 0
 bf2.files[resource_key] = new_res2
 
 # Update AudioClip
@@ -171,9 +180,9 @@ print(f"  Saved: {len(result2)} bytes -> {os.path.basename(t2_path)}")
 print("\n" + "=" * 60)
 print("NEW TESTS READY FOR PS4:")
 print(f"  1. {os.path.basename(t1_path)} - ORIGINAL audio (3s) in our FSB5 ({len(fsb5_test1)}b)")
-print(f"     -> Tests if our FSB5 BUILDING process is correct")
+print("     -> Tests if our FSB5 BUILDING process is correct")
 print(f"  2. {os.path.basename(t2_path)} - SILENCE (all zeros) ({len(fsb5_test2)}b)")
-print(f"     -> Tests if PS4 accepts our FSB5 structure at all")
+print("     -> Tests if PS4 accepts our FSB5 structure at all")
 print("=" * 60)
 print("\nDeploy command:")
 print("  lftp -u anonymous, -p 2121 192.168.100.117 \\")

@@ -27,7 +27,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI(title="Beat Saber Deluxe Web App", version="0.1.0")
+app = FastAPI(title="Beat Saber Deluxe Web App")
 RUNNER = runner.SingleJobRunner()
 STATIC_DIR = paths.WEBAPP_DIR / "static"
 
@@ -38,8 +38,39 @@ STATIC_DIR = paths.WEBAPP_DIR / "static"
 @app.get("/api/ping")
 def ping():
     """Backend heartbeat — the UI's local-backend/Pages mode switch."""
-    return {"mode": "local-backend", "webapp_version": "0.1.0",
+    return {"mode": "local-backend", "webapp_version": _webapp_version(),
+            "pipeline_version": _pipeline_version(),
+            "plugin_version": _plugin_version(),
             "pipeline_present": paths.PIPELINE.exists()}
+
+
+def _webapp_version() -> str:
+    v = paths.WEBAPP_DIR / "VERSION"
+    try:
+        return v.read_text(encoding="utf-8").strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+def _pipeline_version() -> str:
+    v = paths.PROJECT_DIR / "VERSION"
+    try:
+        return v.read_text(encoding="utf-8").strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+def _plugin_version() -> str:
+    """Parse #define PLUGIN_VERSION from the plugin source (or 'deployed' in
+    a release zip, where src/ is absent — the bundled .prx is the artifact)."""
+    src = paths.PROJECT_DIR / "src" / "main.cpp"
+    try:
+        for line in src.read_text(encoding="utf-8").splitlines():
+            if "PLUGIN_VERSION" in line and '"' in line:
+                return line.split('"')[1]
+    except OSError:
+        pass
+    return "bundled"
 
 
 @app.get("/")

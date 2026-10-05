@@ -22,13 +22,12 @@ These tests run the REAL wipe function end-to-end against a scratch git
 repository: tracked files must survive, untracked artifacts must be
 removed, and the comparison must be exercised (not the helper alone).
 """
+import contextlib
 import importlib.util
 import io
-import contextlib
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 

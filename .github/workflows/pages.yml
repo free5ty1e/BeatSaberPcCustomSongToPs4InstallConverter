@@ -41,9 +41,11 @@ jobs:
       - name: Smoke-test the built bundle
         run: |
           # The built index must carry the pages marker + banner, and every
-          # referenced static asset must exist in the bundle.
+          # referenced static asset must RESOLVE IN THE BUNDLE (the first
+          # shipped bundle 404'd its own JS/CSS — the UI looked dead).
           python3 - <<'PYEOF'
           from pathlib import Path
+          import re
           root = Path("_pages")
           html = (root / "index.html").read_text(encoding="utf-8")
           assert 'data-mode="pages"' in html, "pages mode marker missing"
@@ -52,6 +54,15 @@ jobs:
           assert "command builder" in js or "data-mode" in js, "mode switch missing"
           for asset in ("style.css", "app.js", "dumper.cfg"):
               assert (root / asset).is_file(), f"missing asset: {asset}"
+          # every href/src the index references must exist in the bundle
+          refs = re.findall(r'(?:href|src)="([^"#?]+)"', html)
+          for ref in refs:
+              if ref.startswith(("http", "javascript:")):
+                  continue
+              target = root / ref.lstrip("/")
+              assert target.is_file(), f"index references missing asset: {ref}"
+          assert "/static/" not in " ".join(refs), \
+              f"unrewritten /static/ refs remain: {[r for r in refs if r.startswith('/static/')]}"
           print("Pages bundle OK:", sorted(p.name for p in root.iterdir()))
           PYEOF
 

@@ -131,3 +131,40 @@ class TestPaths:
         monkeypatch.setattr(paths, "PIPELINE", tmp_path / "missing.py")
         with pytest.raises(FileNotFoundError):
             paths.find_pipeline()
+
+
+class TestPagesBuild:
+    """The Pages bundle must load its own assets (the first shipped bundle
+    404'd its own JS/CSS — the UI appeared dead at the Pages URL) and must
+    bake the component versions into the badge."""
+
+    def test_pages_bundle_assets_resolve(self, tmp_path):
+        import subprocess
+        out = tmp_path / "pages"
+        r = subprocess.run(
+            ["python3", str(PROJECT / "webapp" / "build_pages.py"),
+             "--out", str(out)],
+            capture_output=True, text=True, timeout=60)
+        assert r.returncode == 0, r.stderr
+        import re
+        html = (out / "index.html").read_text(encoding="utf-8")
+        assert 'data-mode="pages"' in html
+        # every local href/src resolves inside the bundle
+        refs = re.findall(r'(?:href|src)="([^"#?]+)"', html)
+        for ref in refs:
+            if ref.startswith(("http", "javascript:")):
+                continue
+            assert (out / ref.lstrip("/")).is_file(), f"missing asset: {ref}"
+        assert not any(r.startswith("/static/") for r in refs), \
+            "unrewritten /static/ refs remain — the Pages UI would 404 its own JS"
+
+    def test_pages_bundle_bakes_versions(self, tmp_path):
+        import subprocess
+        out = tmp_path / "pages"
+        subprocess.run(
+            ["python3", str(PROJECT / "webapp" / "build_pages.py"),
+             "--out", str(out)],
+            capture_output=True, text=True, timeout=60, check=True)
+        html = (out / "index.html").read_text(encoding="utf-8")
+        assert 'id="ver-webapp">web app <b>' in html
+        assert "<b>…</b>" not in html, "versions not baked into the badge"

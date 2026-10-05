@@ -419,7 +419,7 @@ function clearButton(row, refreshFn) {
       data-stock="${esc(row.songName)}">Clear</button></td>`;
 }
 
-function wireClearButtons(container, refreshFn) {
+function wireClearButtons(container, refreshFn, panelId) {
   container.querySelectorAll("button.clear-slot").forEach(b =>
     b.addEventListener("click", async () => {
       const slot = b.dataset.slot, stock = b.dataset.stock;
@@ -429,30 +429,37 @@ function wireClearButtons(container, refreshFn) {
         `the other songs in its pack and every other pack stay untouched.`))
         return;
       b.disabled = true;
+      b.textContent = "clearing…";
       try {
-        await api("/api/jobs/clear-target", {
+        const j = await api("/api/jobs/clear-target", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ slot }),
         });
-        b.textContent = "clearing…";
-        // poll the job, then refresh the table
-        pollIndex = 0;
-        const poll = async () => {
-          try {
-            const j = await api(`/api/jobs/lines?after=${pollIndex}`);
-            pollIndex = j.index || pollIndex;
-            if (j.running) { setTimeout(poll, 900); return; }
-            if (j.job && j.job.exit_code === 0) { await refreshFn(); }
-            else { b.disabled = false; b.textContent = "Clear";
-                   alert(`Clear failed (exit ${j.job ? j.job.exit_code : "?"}) — see the Deploy tab log for the pipeline's message.`); }
-          } catch { setTimeout(poll, 1500); }
-        };
-        poll();
+        if (panelId) {
+          showJobPanel(panelId, { label: `clear ${stock} (${slot})`, command: j.command });
+          await runJobWithPanel(panelId, j, { doneLabel: `${stock} reverted to stock` });
+          await refreshFn();
+        } else {
+          // legacy inline poll (no panel on this page)
+          pollIndex = 0;
+          const poll = async () => {
+            try {
+              const j2 = await api(`/api/jobs/lines?after=${pollIndex}`);
+              pollIndex = j2.index || pollIndex;
+              if (j2.running) { setTimeout(poll, 900); return; }
+              if (j2.job && j2.job.exit_code === 0) { await refreshFn(); }
+              else { b.disabled = false; b.textContent = "Clear";
+                     alert(`Clear failed (exit ${j2.job ? j2.job.exit_code : "?"}) — see the job output.`); }
+            } catch { setTimeout(poll, 1500); }
+          };
+          poll();
+        }
       } catch (e) {
         b.disabled = false; b.textContent = "Clear";
         alert("Couldn't start the clear job: " + e.message);
       }
+      b.disabled = false; b.textContent = "Clear";
     }));
 }
 
@@ -481,7 +488,7 @@ async function manageRefresh() {
        ${customCell(row)}
        ${clearButton(row)}
      </tr>`).join("");
-  wireClearButtons(body, manageRefresh);
+  wireClearButtons(body, manageRefresh, "manage-job-panel");
 }
 
 async function loadManagePacks() {
@@ -547,7 +554,7 @@ function renderLoadoutTables() {
       </table>
     </div>`).join("")
     || "<p class='muted'>No packs match the current filter.</p>";
-  wireClearButtons(host, async () => { await fetchLoadout(); renderLoadoutTables(); });
+  wireClearButtons(host, async () => { await fetchLoadout(); renderLoadoutTables(); }, "loadout-job-panel");
 }
 
 async function loadoutRefresh() {
@@ -563,6 +570,30 @@ const FLAG_ORDER = ["enable_plugin", "enable_custom_song_replacements",
                      "enable_song_metadata_modification", "enable_beatmap_mode_mapping"];
 // NOTE: the pipeline's canonical key is the PLURAL enable_custom_song_replacements.
 let flagsDirty = false;
+
+// Simulated PS4 launch toast — mirrors the plugin's exact format
+// (main.cpp module_start): "BS Deluxe vX (ON)\nBy Chris Primeish\n(N/3 features ON)"
+// — or "(OFF) … (official songs only)" when the kill switch is off.
+const TOAST_VERSION = "v0.8047";
+const FEATURE_FLAG_KEYS = ["enable_custom_song_replacements",
+                           "enable_song_metadata_modification",
+                           "enable_beatmap_mode_mapping"];
+
+function updateToastSim() {
+  const checks = $("flags-list").querySelectorAll("input[type=checkbox]");
+  if (!checks.length) return;
+  const state = {};
+  checks.forEach(cb => { state[cb.dataset.flag] = cb.checked; });
+  const on = state["enable_plugin"];
+  const count = FEATURE_FLAG_KEYS.filter(k => state[k]).length;
+  $("toast-title").textContent = `BS Deluxe ${TOAST_VERSION} ${on ? "(ON)" : "(OFF)"}`;
+  $("toast-count").textContent = on
+    ? `(${count}/3 features ON)`
+    : "(official songs only)";
+  $("toast-note").textContent = on
+    ? "With these toggles, the next boot shows this toast and the features above are active."
+    : "Kill switch OFF: the toast reads (official songs only) and the game is 100% stock — your deployments stay on the PS4 untouched.";
+}
 
 async function flagsRefresh() {
   const host = $("flags-list");
@@ -595,10 +626,12 @@ async function flagsRefresh() {
           $("flags-apply-status").innerHTML =
             "<span class='result warn'>⚠ Kill switch going OFF — the game will play 100% official songs next boot.</span>";
         }
+        updateToastSim();
       }));
     flagsDirty = false;
     $("btn-flags-apply").disabled = true;
     $("flags-read-error").textContent = "";
+    updateToastSim();
   } catch (e) {
     host.innerHTML = `<span class="result bad">${esc(e.message)}</span>`;
   }
@@ -614,7 +647,10 @@ async function flagsApply() {
     ? "Turn the ENTIRE plugin OFF?\n\nNext boot plays 100% official songs (your customs stay deployed and come back the moment you re-enable)."
     : "Apply this flag loadout to the PS4?\n\nTakes effect on the next game boot.";
   if (!confirm(msg)) return;
-  $("flags-apply-status").textContent = "Applying…";
+  const applyBtn = $("btn-flags-apply");
+  applyBtn.disabled = true;
+  applyBtn.innerHTML = '<span class="spinner spinning"></span> Applying…';
+  $("flags-apply-status").textContent = "";
   try {
     const j = await api("/api/jobs/flags-apply", {
       method: "POST",
@@ -622,21 +658,81 @@ async function flagsApply() {
       body: JSON.stringify({ flags: wanted }),
     });
     if (j.job_id === null) {
+      applyBtn.innerHTML = "Apply to PS4";
       $("flags-apply-status").innerHTML =
         `<span class="result ok">✅ ${esc(j.message)}</span>`;
       flagsRefresh();
       return;
     }
     flagsDirty = false;
-    $("btn-flags-apply").disabled = true;
-    pollJobInto("flags-log", "flags-apply-status", () => flagsRefresh());
+    pollJobInto("flags-log", "flags-apply-status", () => {
+      applyBtn.innerHTML = "Apply to PS4";
+      flagsRefresh();
+    });
   } catch (e) {
+    applyBtn.disabled = false;
+    applyBtn.innerHTML = "Apply to PS4";
     $("flags-apply-status").innerHTML = `<span class="result bad">❌ ${esc(e.message)}</span>`;
   }
 }
 
-// shared job poller for flags/backup/restore (writes into a log element,
-// then a status line, then an optional refresh)
+// ---------------------------------------------------------------- job panel
+// The shared live-output surface: every command the app launches (deploy,
+// verify, flags-apply, backup, restore, clear) renders here — spinner +
+// status + the exact command + a live console. One job at a time (the
+// runner enforces it; the UI makes it visible).
+function showJobPanel(panelId, { label, command }) {
+  const panel = $(panelId);
+  panel.classList.remove("hidden");
+  $(panelId + "-status").textContent = "Working…";
+  $(panelId + "-label").textContent = label || "";
+  $(panelId + "-spinner").classList.add("spinning");
+  $(panelId + "-command").textContent = command ? "→ " + command : "";
+  $(panelId + "-log").textContent = "";
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function finishJobPanel(panelId, job) {
+  const spinner = $(panelId + "-spinner");
+  spinner.classList.remove("spinning");
+  const status = $(panelId + "-status");
+  if (job.cancelled) {
+    status.textContent = "⛔ Cancelled — the PS4 may hold partial state; verify or re-run.";
+    status.className = "job-status warn";
+  } else if (job.exit_code === 0) {
+    status.textContent = "✅ Done";
+    status.className = "job-status ok";
+  } else {
+    status.textContent = `❌ FAILED (exit ${job.exit_code}) — read the output above`;
+    status.className = "job-status bad";
+  }
+}
+
+async function runJobWithPanel(panelId, startResponse, { doneLabel } = {}) {
+  // Poll the runner's shared job lines into the panel's console.
+  let idx = 0;
+  const logEl = $(panelId + "-log");
+  const poll = async () => {
+    try {
+      const j = await api(`/api/jobs/lines?after=${idx}`);
+      if (j.lines && j.lines.length) {
+        logEl.textContent += j.lines.join("\n") + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      idx = j.index || idx;
+      if (j.running) { setTimeout(poll, 900); return; }
+      if (j.job) {
+        finishJobPanel(panelId, j.job);
+        if (doneLabel && j.job.exit_code === 0) {
+          $(panelId + "-label").textContent = doneLabel;
+        }
+      }
+    } catch { setTimeout(poll, 1500); }
+  };
+  poll();
+}
+
+// shared job poller for legacy call sites (flags page)
 function pollJobInto(logId, statusId, afterFn) {
   let idx = 0;
   const poll = async () => {
@@ -737,18 +833,24 @@ async function backupNow() {
     "The backup zip is your only safety net — make sure it completes."))
     return;
   if (!clean && !confirm("Backup the PS4's BS Deluxe state now?")) return;
+  const btn = $("btn-backup-now");
+  btn.disabled = true; btn.textContent = "Backing up…";
   try {
-    await api("/api/jobs/backup", {
+    const j = await api("/api/jobs/backup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clean_ps4: clean }),
     });
-    $("backup-log").textContent = "";
-    $("btn-job-cancel").classList.remove("hidden");
-    pollJobInto("backup-log", "backup-apply-status", () => backupRefresh());
-    $("backup-apply-status") || ($("backup-log").insertAdjacentHTML("afterend",
-      "<div id='backup-apply-status' class='result'></div>"));
+    showJobPanel("backup-job-panel", {
+      label: clean ? "backup + clean PS4" : "backup",
+      command: j.command,
+    });
+    await runJobWithPanel("backup-job-panel", j, { doneLabel: "backup complete" });
+    // refresh the list when the job ends (poll resolves only at completion)
+    setTimeout(backupRefresh, 1500);
+    btn.disabled = false; btn.textContent = "Backup now";
   } catch (e) {
+    btn.disabled = false; btn.textContent = "Backup now";
     alert("Couldn't start the backup: " + e.message);
   }
 }
@@ -761,14 +863,14 @@ async function backupRestore(name) {
     `saved automatically — make a fresh backup first if you might want it back.`))
     return;
   try {
-    await api("/api/jobs/restore", {
+    const j = await api("/api/jobs/restore", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ backup: name, clean_ps4: false }),
     });
-    $("backup-log").textContent = "";
-    $("btn-job-cancel").classList.remove("hidden");
-    pollJobInto("backup-log", "backup-apply-status", () => backupRefresh());
+    showJobPanel("backup-job-panel", { label: `restore ${name}`, command: j.command });
+    await runJobWithPanel("backup-job-panel", j, { doneLabel: `restored ${name}` });
+    setTimeout(backupRefresh, 1500);
   } catch (e) {
     alert("Couldn't start the restore: " + e.message);
   }
@@ -854,7 +956,18 @@ async function boot() {
       loadCatalogIntoPicker();
     } catch { /* wizard-first flow */ }
     loadManagePacks();   // Manage Songs dropdown (catalog-only — works offline)
+    fillVersionBadge();  // live versions from the running server
   }
+}
+
+// ---------------------------------------------------------------- versions
+async function fillVersionBadge() {
+  try {
+    const j = await api("/api/ping");
+    if (j.webapp_version) $("ver-webapp").innerHTML = `web app <b>${esc(j.webapp_version)}</b>`;
+    if (j.pipeline_version) $("ver-pipeline").innerHTML = `pipeline <b>${esc(j.pipeline_version)}</b>`;
+    if (j.plugin_version) $("ver-plugin").innerHTML = `plugin <b>${esc(j.plugin_version)}</b>`;
+  } catch { /* pages mode bakes versions at build time; badge hidden if absent */ }
 }
 
 document.addEventListener("DOMContentLoaded", () => {

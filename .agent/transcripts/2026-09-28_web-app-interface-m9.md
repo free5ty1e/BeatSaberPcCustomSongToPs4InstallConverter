@@ -271,3 +271,47 @@ Every g_feature_* site in plugin v0.8047 traced; all 16 combinations evaluated. 
 770/770. Lint clean. webapp 0.4.0 (CHANGELOG-WEBAPP.md). Pipeline/plugin untouched this cycle (no version bumps there — the backup script's --out is not the pipeline).
 
 ### Re-iterated test procedure (Phases 0-6) delivered in the response with expected outcomes per phase.
+
+---
+
+## Cycle 8 — Pages diagnosis + CI lint recovery + live job feedback UI (Exp 250)
+
+### User
+> "I don't see how to test deploy the github pages, there is no matching controls for what you describe. Does this just build and deploy when I push these changes to the PR? I see a pages-build-deployment workflow that was run yesterday... and it says it deployed but my URL brings up a 404... I went through the test procedure phases 0 through 6, and I notice the backup process has no visual feedback... Can we throw up a loading spinner...? It would be best if we could also see the terminal output on the page. And for the feature flag page, the example notification text... does not update with the feature flag count... there should also be a simulated PS4 notification... Phase 6 shows another part of the interface with insufficient feedback during work... everywhere possible wherever we are launching a command, I want the user to be able to view the console output live."
+
+### Phases 0-6: COMPLETE on hardware (user-verified). The webapp's core flows are now all live-proven.
+
+### Pages: the full answer (evidence: gh api pages → build_type=workflow)
+- Config correct (Actions source). Our pages.yml exists ONLY on the feature branch → GitHub hasn't registered it (workflows register from the default branch) → no Run-workflow button, no runs. It deploys automatically at PR merge; afterwards the manual button exists for branch-testing.
+- The user's found run = the LEGACY /docs deploy from main (published developer-info.md only → root 404). Harmless history; replaced at merge.
+
+### CI lint recovery (the actual merge blocker)
+The PR's lint job failed: Exp 245 widened lint scope to tests/ which had ~180 never-linted findings. Fixed 179→0: 144 auto + hand-fixes (one-liners, unused locals, whitespace). TWO REAL BUGS: quick_validation.py corrupted (identifier + literal-\n — never parsed); hevag test asserted a typo'd var (NameError exactly on failure). Detour: my bulk splitter used stale line numbers and broke indentation in two files — ruff caught it, hand-repaired. Suite 770/770; lint clean everywhere.
+
+### Live job feedback (webapp 0.4.1) — the user's UX principle: "everywhere we launch a command, live console"
+- Shared job-panel: spinner + Working→✅/❌ + exact command + live console. Wired: Backup (btn disables + relabels), Restore, Clear (Manage + Loadout pages), Apply (Flags spinner). Deploy already streamed.
+- Simulated PS4 boot toast (Flags): exact plugin format, recomputes live per toggle; contextual note per kill-switch state.
+- Live-validated: real backup via endpoint — 30 lines streamed, exit 0, zip created.
+
+### Files
+webapp/static/{index.html, app.js, style.css} (panels, toast, spinner), webapp/VERSION 0.4.1, CHANGELOG-WEBAPP.md, tests/ (lint recovery: ~20 files touched — auto-fixes + 2 real bug repairs), experiment log Exp 250, this transcript, context.yml, project_summary.
+
+---
+
+## Cycle 9 — Version badge + the Pages-bundle asset bug (Exp 251)
+
+### User
+> "Can we have the web app display all version numbers in the lower corner or something out of the way? I want to see the pipeline version, the plugin version, and the web app version. That way I can tell when your changes have taken effect. Because right now, I don't see the updated feature flags page showing any notification preview of any kind as I'm toggling flag checkboxes. Is this change being served?"
+
+### The diagnosis (user's suspicion was exactly right)
+The PAGES bundle never worked: build_pages.py copies assets to the bundle ROOT but index.html referenced /static/* → 404 on every asset → zero JS ran at the Pages URL (no toggles, no preview, no mode badge — the whole UI inert). The LOCAL backend serves /static/* correctly, so the flags toast DOES work there (needs a server restart to pick up new code + Ctrl+Shift+R for the JS cache).
+
+### Fixes (webapp 0.4.2)
+1. Builder rewrites the 3 asset refs root-relative.
+2. pages.yml smoke-test: every href/src in the built index must resolve in-bundle; no /static/ remnants (the class-level blind spot that shipped the dead bundle — the old test checked markers, never asset resolution).
+3. Version badge (lower-right, both modes): ping carries webapp+pipeline+plugin versions (VERSION files + #define parse; "bundled" in release zips without src/); Pages build BAKES the numbers (no backend). Print-hidden. Stale FastAPI(version="0.1.0") removed — VERSION file is the truth.
+4. Tests +4 (ping versions, badge elements, pages-bundle asset resolution, baked versions). Suite 774/774. Live-verified both paths.
+
+### Answer to "is this change being served?"
+- Local backend: restart the server + hard-refresh (JS caching). The toast preview is in 0.4.1+, which you have committed — it works locally.
+- The hosted Pages page: was inert for EVERYONE until this fix; goes live at PR merge.

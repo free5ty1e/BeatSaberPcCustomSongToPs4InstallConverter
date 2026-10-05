@@ -22,14 +22,13 @@ The fixes:
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
-import pytest
 import full_custom_song_pipeline as pipeline  # noqa: E402
+import pytest
 
 
 @pytest.fixture
@@ -153,7 +152,7 @@ class TestBannerProofScopeRead:
             {"redirects": {"BeatmapLevelsData/X": "X_v3.bundle"}}) + "}more banner"
         f = tmp_path / "r.json"
         f.write_text(raw)
-        start, end = raw.find("{"), raw.rfind("}")
+        start, _end = raw.find("{"), raw.rfind("}")
         # the deployed code uses first-{ to LAST-} … which breaks on a
         # trailing banner that STARTS with }. Use raw-decode semantics here:
         dec = json.JSONDecoder()

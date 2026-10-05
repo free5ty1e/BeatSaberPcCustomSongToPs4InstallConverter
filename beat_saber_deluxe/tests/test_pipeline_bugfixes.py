@@ -6,23 +6,22 @@ Unit tests for recent pipeline bug fixes
 3. manage_song_metadata passthrough (None vs actual values)
 4. Note count standard initialization
 """
+import json
 import os
 import re
-import sys
-import json
-import tempfile
 import shutil
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from full_custom_song_pipeline import (
-    _scan_beatmap_max_beat,
-    load_bpm_regions,
-    _select_beatmap_file,
-    manage_song_metadata,
     DIFFICULTIES,
-    SAMPLE_RATE,
+    _scan_beatmap_max_beat,
+    _select_beatmap_file,
+    load_bpm_regions,
+    manage_song_metadata,
 )
 
 
@@ -832,10 +831,11 @@ class TestRoniSourceRegression:
 
     @pytest.mark.skipif(not os.path.isdir(RONI), reason="Chromeo backout sources not present")
     def test_roni_easy_gets_rescued(self, tmp_path):
-        import shutil
         from full_custom_song_pipeline import (
-            normalize_v3_schema, beatmap_is_empty, _find_populated_beatmap,
+            _find_populated_beatmap,
+            beatmap_is_empty,
             is_v2_beatmap,
+            normalize_v3_schema,
         )
         workdir = tmp_path / "roni"
         shutil.copytree(self.RONI, str(workdir))
@@ -1025,7 +1025,6 @@ class TestCameliaSyncRegression:
     def test_bpm_grid_matches_info_dat(self, tmp_path):
         """For every cached Camelia map, bpmData eb must equal the Info.dat grid
         (duration*BPM/60), NOT the old beatmap-derived underestimate."""
-        import shutil
         for name, (src, bpm, dur, max_beat) in self.CAMELIA_SOURCES.items():
             if not os.path.isdir(src):
                 continue
@@ -1253,7 +1252,7 @@ class TestV4BeatmapConversion:
     """
 
     def test_is_v4_beatmap_detection(self):
-        from full_custom_song_pipeline import is_v4_beatmap, is_v2_beatmap
+        from full_custom_song_pipeline import is_v2_beatmap, is_v4_beatmap
         v4 = {"version": "4.0.1", "colorNotes": [{"b": 4.0}],
               "colorNotesData": [{"x": 2, "c": 1, "d": 1}]}
         assert is_v4_beatmap(v4) is True
@@ -1372,9 +1371,7 @@ class TestV4NoArrowsClobberFix:
     def test_post_conversion_no_arrows_pass_restores_dots(self):
         """Re-applying _generate_no_arrows AFTER the v4 conversion yields
         all-dot charts regardless of the columnar clobber."""
-        from full_custom_song_pipeline import (convert_v4_to_v3,
-                                               normalize_v3_schema,
-                                               _generate_no_arrows)
+        from full_custom_song_pipeline import _generate_no_arrows, convert_v4_to_v3, normalize_v3_schema
         gen_noarrows = {
             "version": "4.0.1",
             "colorNotes": [{"b": 5.0, "d": 8}, {"b": 5.0, "i": 1, "d": 8},
@@ -1427,7 +1424,6 @@ class TestV4NoArrowsClobberFix:
         """443f3's ExpertPlus uses '<Diff>.beatmap.dat' (v4 bare tier) — the
         file selector must still resolve it with ignore_non_standard=True
         (the mode generators need a Standard source for every difficulty)."""
-        from full_custom_song_pipeline import _select_beatmap_file, DIFFICULTIES
         files = ['AudioData.dat', 'EasyStandard.dat', 'ExpertPlus.beatmap.dat',
                  'ExpertPlus.lightshow.dat', 'ExpertStandard.dat', 'HardStandard.dat',
                  'Info.dat', 'NormalStandard.dat']
@@ -1456,7 +1452,6 @@ class TestChainedPackRedirectAccumulation:
     """
 
     def _build_cfg(self, tmp_path, build_dir):
-        import full_custom_song_pipeline as fcp
         _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         albums = json.load(open(os.path.join(_root, 'beat_saber_song_ids.json')))['albums']
         cfg = {

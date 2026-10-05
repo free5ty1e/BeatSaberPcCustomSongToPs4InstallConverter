@@ -5,6 +5,49 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.4.2] — 2026-10-04 (Exp 251)
+### Added
+- **Version badge, lower-right corner** (user: "so I can tell when your
+  changes have taken effect"): web app + pipeline + plugin versions, live
+  from the server in local-backend mode (`/api/ping` now carries all three),
+  baked into the Pages bundle at build time. Hidden when printing the
+  loadout.
+
+### Fixed
+- **The Pages bundle 404'd its own JS/CSS** — `build_pages.py` copied assets
+  to the bundle root but the HTML still referenced `/static/*`, so the entire
+  app was dead at the Pages URL (the user's "is this change being served?"
+  was exactly right: no JS ran at all, so the flags page — and everything
+  else — was inert). The builder now rewrites the three references to
+  root-relative, and the workflow's smoke-test asserts every referenced
+  asset resolves in the bundle (this exact regression is pinned by tests).
+
+## [0.4.1] — 2026-10-04 (Exp 250)
+### Added
+- **Live job feedback everywhere** (user request after finding the backup
+  button silent mid-run): a shared job panel — spinner + Working… → ✅ Done /
+  ❌ Failed status + the exact command + a live-streamed console — wired into
+  Backup, Restore, and per-row Clear (Manage Songs + Full Loadout). The
+  Backup button also disables + relabels itself ("Backing up…") so it can't
+  be double-clicked; Apply (Flags) gets the same treatment. The Deploy page
+  already streamed; it now shares the same visual language.
+- **Simulated PS4 launch notification** (Flags page): a live toast preview in
+  the plugin's exact boot format — `BS Deluxe vX (ON) / (N/3 features ON)`
+  vs `(OFF) / (official songs only)` — recomputed as toggles flip, with a
+  note explaining what the next boot will do with the current state.
+
+### Fixed
+- **CI lint was red on the PR** (blocking the merge): the Exp 245 lint-scope
+  widening to `tests/` exposed ~180 pre-existing findings. All fixed
+  (144 auto + hand-fixes); includes two real finds: a corrupted dev helper
+  (`tests/quick_validation.py` — split `he vig_data` identifier, literal
+  `\n` in source; now parses) and a typo'd assertion variable
+  (`valid_rate` vs `validity_rate` in test_hevag_audio_compatibility — only
+  fired on failure, i.e. exactly when you need it). Suite 770/770 green,
+  lint clean across tools/ + webapp/ + tests/.
+- Live backup run validated end-to-end through the panel flow (30 lines
+  streamed, exit 0, zip created).
+
 ## [0.4.0] — 2026-10-03 (Exp 249)
 ### Added
 - **Backups-folder browse button** (Backup/Restore tab): the path is now

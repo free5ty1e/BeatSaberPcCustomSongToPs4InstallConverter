@@ -36,6 +36,24 @@ PAGES_BANNER = """\
 </div>"""
 
 
+def _read_version(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+def _plugin_version() -> str:
+    src = WEBAPP.parent / "src" / "main.cpp"
+    try:
+        for line in src.read_text(encoding="utf-8").splitlines():
+            if "PLUGIN_VERSION" in line and '"' in line:
+                return line.split('"')[1]
+    except OSError:
+        pass
+    return "bundled"
+
+
 def build(out_dir: Path) -> list[Path]:
     if not STATIC.is_dir():
         raise SystemExit(f"static UI not found: {STATIC}")
@@ -53,6 +71,13 @@ def build(out_dir: Path) -> list[Path]:
     html = html.replace(
         "<html lang=\"en\">",
         "<html lang=\"en\" data-mode=\"pages\">", 1)
+    # The local backend serves assets at /static/*; this bundle copies them
+    # to the ROOT — rewrite the references so the Pages site actually loads
+    # its JS/CSS (the original bundle silently 404'd every asset and the UI
+    # appeared dead: no mode badge, no toggles, no preview).
+    html = html.replace('href="/static/style.css"', 'href="style.css"')
+    html = html.replace('src="/static/app.js"', 'src="app.js"')
+    html = html.replace('href="/static/dumper.cfg"', 'href="dumper.cfg"')
     if "pages-banner" not in html:
         html = html.replace("<main>", PAGES_BANNER + "\n\n<main>", 1)
         html = html.replace(
@@ -66,6 +91,20 @@ def build(out_dir: Path) -> list[Path]:
             "  }", 1)
     index.write_text(html, encoding="utf-8")
     written.append(index)
+
+    # Version badge: no backend in Pages mode — bake the numbers into the
+    # index so the user can always tell which build they're looking at.
+    html = index.read_text(encoding="utf-8")
+    webapp_v = _read_version(WEBAPP / "VERSION")
+    pipeline_v = _read_version(WEBAPP.parent / "VERSION")
+    plugin_v = _plugin_version()
+    html = html.replace('<span id="ver-webapp">web app <b>…</b></span>',
+                        f'<span id="ver-webapp">web app <b>{webapp_v}</b></span>')
+    html = html.replace('<span id="ver-pipeline">pipeline <b>…</b></span>',
+                        f'<span id="ver-pipeline">pipeline <b>{pipeline_v}</b></span>')
+    html = html.replace('<span id="ver-plugin">plugin <b>…</b></span>',
+                        f'<span id="ver-plugin">plugin <b>{plugin_v}</b></span>')
+    index.write_text(html, encoding="utf-8")
 
     # app.js: honor the data-mode marker immediately (no ping wait)
     appjs = (out_dir / "app.js")

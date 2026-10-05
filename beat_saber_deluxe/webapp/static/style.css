@@ -251,3 +251,55 @@ table.loadout tr:hover td { background: var(--card2); }
   border-bottom: 1px solid #232838;
 }
 .browse-entry:hover { background: var(--card2); }
+
+/* ---------------- Job panel (live console for every launched command) ------ */
+.job-panel { border-color: var(--accent2); }
+.job-panel .command { margin-top: 0.5rem; }
+.spinner {
+  width: 1.05em; height: 1.05em;
+  display: inline-block;
+  border: 2px solid #3a4160;
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  vertical-align: -2px;
+}
+.spinner.spinning { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.job-status.ok { color: var(--ok); }
+.job-status.bad { color: var(--bad); }
+.job-status.warn { color: var(--warn); }
+
+/* ---------------- Simulated PS4 notification ---------------- */
+.ps4-toast-demo { display: flex; justify-content: center; padding: 1rem 0; }
+.ps4-toast {
+  background: linear-gradient(180deg, #1c1c22, #101014);
+  border: 1px solid #3a3a44;
+  border-radius: 10px;
+  padding: 0.9rem 1.4rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #f0f0f0;
+  min-width: 16rem;
+  box-shadow: 0 4px 18px rgba(0,0,0,.5);
+}
+.ps4-toast .toast-author { color: #9aa3b5; font-size: 0.85em; }
+
+/* ---------------- Version badge (lower corner) ---------------- */
+.version-badge {
+  position: fixed;
+  right: 0.6rem;
+  bottom: 0.4rem;
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  background: rgba(16, 18, 24, 0.88);
+  border: 1px solid #2b3145;
+  border-radius: 8px 0 0 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  z-index: 50;
+  user-select: none;
+}
+.version-badge b { color: var(--accent2); font-weight: 600; }
+@media print { .version-badge { display: none !important; } }
