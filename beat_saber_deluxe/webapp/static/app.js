@@ -332,6 +332,7 @@ function setDeployProgress(show, status, label) {
   const row = $("deploy-progress");
   if (!row) return;
   row.hidden = !show;
+  row.classList.toggle("hidden", !show);
   if (show) {
     $("deploy-progress-status").textContent = status || "Working…";
     $("deploy-progress-label").textContent = label || "";

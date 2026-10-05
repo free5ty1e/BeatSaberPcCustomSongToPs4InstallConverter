@@ -333,3 +333,6 @@ The PAGES bundle never worked: build_pages.py copies assets to the bundle ROOT b
 - User asks added: Deploy progress row + button relabel; Verify button spinner+console (was silent); PS4 tab read spinner.
 
 ### Suite 774/774; lint clean. User needs Ctrl+Shift+R (JS+CSS changed).
+
+## Cycle 10b — The hidden-attribute specificity trap (Exp 252b, webapp 0.4.4)
+User: deploy page still shows the spinner row on load + it persists after a deploy. RCA: the row used the hidden ATTRIBUTE; `.row{display:flex}` (author CSS) overrides the UA attribute default — yesterday's .hidden-CLASS fix didn't apply. Fix: `[hidden]{display:none !important}` + row carries class AND attribute + toggles both. Sweep: only element in the trap. Live-verified. Suite 774/774.

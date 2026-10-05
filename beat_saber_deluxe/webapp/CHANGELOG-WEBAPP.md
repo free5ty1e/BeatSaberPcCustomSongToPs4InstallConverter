@@ -5,6 +5,16 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.4.4] — 2026-10-04 (Exp 252b)
+### Fixed
+- **The Deploy progress row still showed permanently** (and stayed after a
+  deploy): it used the `hidden` ATTRIBUTE, but `.row { display: flex }`
+  overrode the UA's attribute default (any author `display` beats it — the
+  classic attribute-vs-specificity trap; yesterday's generic `.hidden`-class
+  fix didn't cover it). Added `[hidden] { display: none !important; }` and
+  the row now hides via BOTH class and attribute, toggled together. Sweep
+  confirmed it was the only element in the trap.
+
 ## [0.4.3] — 2026-10-04 (Exp 252)
 ### Fixed
 - **Job panels rendered permanently** ("Working…" + spinner on Full Loadout

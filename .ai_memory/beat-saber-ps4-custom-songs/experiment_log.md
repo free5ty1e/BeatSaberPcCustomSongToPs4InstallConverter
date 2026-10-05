@@ -146,3 +146,10 @@ into `experiment_log_archive/` with a feature+date name and open a fresh
 - **Lesson (durable):** the `.page.hidden`-only rule was a silent API: adding `hidden` to new elements "worked" in markup but did nothing — and the Pages/panel work never exercised non-page hidden elements until Exp 250 added three. A `.hidden` utility class must be global; panel child IDs must be derived, never hand-typed.
 - **Suite 774/774; lint clean; app.js parses.**
 - **Status:** ✅ shipped; user to hard-refresh (Ctrl+Shift+R) — the JS/CSS changed.
+
+### Experiment 252b: The hidden-ATTRIBUTE specificity trap (deploy progress row) (2026-10-04)
+- **User report:** deploy page STILL shows the progress row on load ("Working…" under the surgical-revert note) and it stays after a deploy ("Deploying Beverly Hills - Weezer → Mess it Up" persisted).
+- **RCA:** yesterday's fix added the generic `.hidden`-CLASS rule — but the deploy-progress row used the hidden ATTRIBUTE, and `.row { display:flex }` (author CSS) overrides the UA's `[hidden]` default for the attribute. Any author display rule beats the attribute; the class fix never covered it. setDeployProgress toggled only `row.hidden`, so show/hide both "worked" invisibly against the CSS.
+- **Fix (webapp 0.4.4):** `[hidden] { display:none !important; }` (attribute always wins, regardless of future display utilities) + the row carries BOTH class and attribute + setDeployProgress toggles both together. Codebase sweep: the row was the ONLY element in the trap. Live-served page verified carrying both.
+- **Durable lesson (appended to the KB-worthy note):** in this app, "hidden" must be the CLASS; if the attribute is ever used, the `[hidden]` !important rule is the safety net. The two-mechanism toggle (class+attribute) is deliberate belt-and-suspenders.
+- **Suite 774/774; lint clean.** User: Ctrl+Shift+R.
