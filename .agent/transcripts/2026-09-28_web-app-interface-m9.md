@@ -343,3 +343,10 @@ User: (1) clear's spinner/output below the table, invisible — put at top + jum
 RCA for (3): the loadout was CORRECT — the PS4 held both MessItUp_v3.bundle (webapp casing) and messitup_v3.bundle (script casing); the pipeline's clear rm'd only the literal-cased one. Pipeline v0.5354: clear LISTs the AFR dir and removes every case-insensitive match of <slot><suffix>; 2 regression tests. The UI's three-signal model did exactly its job — it surfaced a real state discrepancy the CLI had been silently leaving behind.
 
 (1)+(2): panels moved above the tables (Manage + Loadout) with window.scrollTo(0) + scrollIntoView(start) on job launch; Deploy progress row scrolls into view; runJobWithPanel now returns a completion promise so clear's refreshFn fires at job END (was fire-and-forget — refresh raced mid-job). Suite 776/776.
+
+## Cycle 12 — The Batch tab (Exp 254, webapp 0.5.0)
+User: v0.4.5 hardware-confirmed working. Request: Batch tab integrating the example_*.sh packs (dropdown → song table), custom batch builder (BeatSaver search + IDs), save/load, documented text-file format, platform-agnostic (Win/Mac/Linux).
+
+Built: adapters/batch.py (live regex parse of the 34 scripts — 296 entries, map IDs + slots + name/artist from the # Song comments; custom bsd-batch v1 JSON format with validation + unknown-field roundtrip; filename jail), batch_runner.py (serial driver, stop-at-first-failure = the && semantics, one single-job-runner job), server endpoints (examples + CRUD + batch job with validate-everything-first), full UI (dropdown/table/add-card/search/save/export/import/delete/deploy via the job panel). Batches dir gitignored (user data). 13 tests; suite 789/789; live roundtrip smoked.
+
+Design notes: the scripts stay the single source of truth (parsed, not duplicated); export/import via browser file APIs = the platform-agnostic path (works in Pages mode too — building batches needs no backend; deploying does, like everything else).

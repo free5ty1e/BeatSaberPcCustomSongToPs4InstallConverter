@@ -907,6 +907,286 @@ async function backupRestore(name) {
   }
 }
 
+// ---------------------------------------------------------------- batch
+let examplePacks = [];      // parsed from the example scripts
+let savedBatches = [];      // webapp/batches/*.json
+let batchSongs = [];        // the current working batch (array of entries)
+let batchMode = "example";  // example | custom | saved
+let batchFile = null;       // filename when a saved batch is loaded
+
+async function batchRefresh() {
+  const sel = $("batch-select");
+  try {
+    const [ex, cu] = await Promise.all([api("/api/batch/examples"),
+                                        api("/api/batch/custom")]);
+    examplePacks = ex.packs;
+    savedBatches = cu.batches;
+    sel.innerHTML = "";
+    const groupEx = document.createElement("optgroup");
+    groupEx.label = "Pre-defined packs (from the example scripts)";
+    examplePacks.forEach((p, i) => {
+      const o = document.createElement("option");
+      o.value = `ex:${i}`;
+      o.textContent = `${p.name} (${p.songs.length} songs)`;
+      groupEx.appendChild(o);
+    });
+    sel.appendChild(groupEx);
+    const groupCu = document.createElement("optgroup");
+    groupCu.label = "My saved batches";
+    if (!savedBatches.length) {
+      const o = document.createElement("option");
+      o.value = "none:saved";
+      o.textContent = "(none saved yet)";
+      o.disabled = true;
+      groupCu.appendChild(o);
+    } else {
+      savedBatches.forEach((b, i) => {
+        const o = document.createElement("option");
+        o.value = `sv:${i}`;
+        o.textContent = `${b.name} (${b.song_count} songs)`;
+        if (b.error) o.textContent += " ⚠ unreadable";
+        groupCu.appendChild(o);
+      });
+    }
+    sel.appendChild(groupCu);
+    const oCustom = document.createElement("option");
+    oCustom.value = "custom";
+    oCustom.textContent = "＋ Build a custom batch…";
+    sel.appendChild(oCustom);
+    sel.onchange = batchSelectChanged;
+  } catch (e) {
+    sel.innerHTML = `<option value=''>couldn't load: ${esc(e.message)}</option>`;
+  }
+}
+
+async function batchSelectChanged() {
+  const v = $("batch-select").value;
+  batchFile = null;
+  if (v === "custom") {
+    batchMode = "custom";
+    batchSongs = [];
+    batchRender("New custom batch", "", true);
+  } else if (v.startsWith("ex:")) {
+    batchMode = "example";
+    const pack = examplePacks[parseInt(v.slice(3), 10)];
+    batchSongs = JSON.parse(JSON.stringify(pack.songs));
+    batchRender(pack.name, pack.description, false);
+  } else if (v.startsWith("sv:")) {
+    const meta = savedBatches[parseInt(v.slice(3), 10)];
+    try {
+      const j = await api(`/api/batch/custom/${encodeURIComponent(meta.file)}`);
+      batchMode = "saved";
+      batchFile = meta.file;
+      batchSongs = j.batch.songs;
+      batchRender(j.batch.name, j.batch.description, true);
+    } catch (e) {
+      alert("Couldn't load the saved batch: " + e.message);
+    }
+  }
+}
+
+function batchRender(name, desc, editable) {
+  $("batch-title").textContent = name || "Batch";
+  $("batch-desc").textContent = desc || "";
+  const body = $("batch-table").querySelector("tbody");
+  if (!batchSongs.length) {
+    body.innerHTML = `<tr><td colspan='7' class='muted'>${
+      editable ? "No songs yet — use ＋ Add song below."
+               : "This pack has no songs (parse error?)"}</td></tr>`;
+  } else {
+    body.innerHTML = batchSongs.map((s, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td><code>${esc(s.map_id)}</code></td>
+        <td>${esc(s.song_name || "(name from BeatSaver)")}</td>
+        <td>${esc(s.artist || "")}</td>
+        <td><code>${esc(s.target)}</code></td>
+        <td>${esc(s.audio || "pcm16")}</td>
+        <td>${editable
+            ? `<button class="batch-remove" data-i="${i}">✕</button>`
+            : ""}</td>
+      </tr>`).join("");
+    body.querySelectorAll("button.batch-remove").forEach(b =>
+      b.addEventListener("click", () => {
+        batchSongs.splice(parseInt(b.dataset.i, 10), 1);
+        batchRender($("batch-title").textContent, $("batch-desc").textContent, true);
+      }));
+  }
+  const isEditable = editable || batchMode === "saved";
+  $("btn-batch-add").classList.toggle("hidden", !isEditable);
+  $("btn-batch-save").classList.toggle("hidden", !isEditable);
+  $("btn-batch-export").classList.toggle("hidden", !batchSongs.length);
+  $("btn-batch-import").classList.toggle("hidden", batchMode !== "custom");
+  $("btn-batch-delete").classList.toggle("hidden", batchMode !== "saved");
+  $("batch-edit-name-row").classList.toggle("hidden", !isEditable);
+  if (isEditable && !$("batch-name").value) $("batch-name").value = name || "";
+  $("btn-batch-deploy").disabled = !batchSongs.length;
+}
+
+function batchEntryFromSong(s, target) {
+  return { map_id: s.id, target,
+           song_name: s.songAuthorName ? s.name.split(" - ")[0] : s.name,
+           artist: s.songAuthorName || "",
+           audio: "pcm16", pad_fsb5: false, convert_to_v3: true };
+}
+
+async function batchSearch() {
+  const q = $("batch-search").value.trim();
+  if (!q) return;
+  $("batch-search-results").innerHTML = "<p class='muted'>Searching…</p>";
+  let docs;
+  try {
+    const j = await api(`/api/beatsaver/search?q=${encodeURIComponent(q)}&per_page=30`);
+    docs = j.docs;
+  } catch (e) {
+    $("batch-search-results").innerHTML =
+      `<p class='result bad'>Search failed: ${esc(e.message)}</p>`;
+    return;
+  }
+  if ($("batch-filter-enh").checked)
+    docs = docs.filter(s => s.nativeDifficulties.length === 3);
+  if (!docs.length) {
+    $("batch-search-results").innerHTML = "<p class='muted'>No results.</p>";
+    return;
+  }
+  $("batch-search-results").innerHTML = docs.map(s => `
+    <div class="song">
+      <div class="meta">
+        <b>${esc(s.name)}</b>
+        <span class="muted">${esc(s.songAuthorName || "?")} · mapped by ${esc(s.levelAuthorName || "?")} ·
+        BPM ${s.bpm ?? "?"} · ${s.downloads ?? "?"} downloads</span>
+      </div>
+      <div class="badges">${nativeDiffBadges(s)}</div>
+      <button class="batch-pick" data-mapid="${esc(s.id)}"
+              data-name="${esc(s.name)}" data-artist="${esc(s.songAuthorName || "")}">
+        Pick →</button>
+    </div>`).join("");
+  $("batch-search-results").querySelectorAll("button.batch-pick").forEach(b =>
+    b.addEventListener("click", () => {
+      // slot selection happens in a small prompt-driven flow: open the slot dropdown
+      const slot = $("batch-manual-slot");
+      const pending = batchEntryFromSong(
+        {id: b.dataset.mapid, name: b.dataset.name, songAuthorName: b.dataset.artist,
+         nativeDifficulties: ["Easy", "Normal", "Hard"]}, "");
+      pending._pickName = b.dataset.name;
+      batchPendingPick = pending;
+      $("batch-add-card").scrollIntoView({behavior: "smooth", block: "nearest"});
+      slot.focus();
+      setResult("batch-add-status", "Picked '" + b.dataset.name + "' — now choose the target slot below.", "");
+    }));
+}
+
+let batchPendingPick = null;
+
+async function batchDeploy() {
+  if (!batchSongs.length) return;
+  const n = batchSongs.length;
+  if (!confirm(
+    `Deploy this batch of ${n} song${n > 1 ? "s" : ""} to the PS4?\n\n` +
+    `Each song runs the full --deploy-full pipeline in sequence (download, ` +
+    `build all modes, deploy, validate). The batch STOPS at the first ` +
+    `failure — songs before it stay deployed. Existing customs in other ` +
+    `packs are preserved.`))
+    return;
+  try {
+    const j = await api("/api/jobs/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songs: batchSongs }),
+    });
+    showJobPanel("batch-job-panel", {
+      label: `batch deploy — ${j.count} songs`,
+      command: j.command,
+    });
+    $("btn-batch-cancel").classList.remove("hidden");
+    runJobWithPanel("batch-job-panel", j);
+  } catch (e) {
+    alert("Couldn't start the batch: " + e.message);
+  }
+}
+
+async function batchSave() {
+  const name = $("batch-name").value.trim();
+  if (!name) { alert("Give the batch a name first."); return; }
+  const doc = { format: "bsd-batch", version: 1, name,
+                description: $("batch-desc-input").value.trim(),
+                songs: batchSongs };
+  try {
+    const j = await api("/api/batch/custom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: batchFile, batch: doc }),
+    });
+    batchFile = j.file;
+    batchMode = "saved";
+    batchRender(name, doc.description, true);
+    await batchRefresh();
+    $("batch-select").value = `sv:${savedBatches.findIndex(b => b.file === batchFile)}`;
+  } catch (e) {
+    alert("Save failed: " + e.message);
+  }
+}
+
+function batchExport() {
+  // Browser download — platform-agnostic by design
+  const doc = { format: "bsd-batch", version: 1,
+                name: $("batch-name").value.trim() || $("batch-title").textContent,
+                description: $("batch-desc-input").value.trim(),
+                songs: batchSongs };
+  const blob = new Blob([JSON.stringify(doc, null, 2)], {type: "application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (doc.name.toLowerCase().replace(/[^a-z0-9]+/g, "_") || "batch") + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function batchImportFile(file) {
+  try {
+    const text = await file.text();
+    const doc = JSON.parse(text);
+    batchMode = "custom";
+    batchFile = null;
+    batchSongs = doc.songs || [];
+    $("batch-name").value = doc.name || file.name.replace(/\.json$/, "");
+    $("batch-desc-input").value = doc.description || "";
+    batchRender(doc.name || file.name, doc.description || "", true);
+  } catch (e) {
+    alert("Import failed (not valid batch JSON): " + e.message);
+  }
+}
+
+async function batchDelete() {
+  if (!batchFile || !confirm(`Delete the saved batch "${batchFile}"?\n\nThe working copy stays; only the saved file is removed.`))
+    return;
+  try {
+    await api(`/api/batch/custom/${encodeURIComponent(batchFile)}`, { method: "DELETE" });
+    batchFile = null;
+    batchMode = "custom";
+    await batchRefresh();
+    batchRender($("batch-name").value, $("batch-desc-input").value, true);
+  } catch (e) {
+    alert("Delete failed: " + e.message);
+  }
+}
+
+// slot dropdown for manual/picked adds — reuse the catalog
+function batchFillSlotDropdown() {
+  const sel = $("batch-manual-slot");
+  if (sel.options.length > 1) return;  // already filled
+  state.catalog.forEach(album => {
+    const g = document.createElement("optgroup");
+    g.label = album.pack;
+    album.songs.forEach(s => {
+      const o = document.createElement("option");
+      o.value = s.songID;
+      o.textContent = `${s.songID} — ${s.songName}`;
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  });
+}
+
 // ---------------------------------------------------------------- feature request
 const FR_REPO = "free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter";
 
@@ -1069,12 +1349,55 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("btn-job-cancel").addEventListener("click", cancelJob);
   $("btn-fr-preview").addEventListener("click", frPreview);
+  $("btn-batch-refresh").addEventListener("click", batchRefresh);
+  $("btn-batch-deploy").addEventListener("click", batchDeploy);
+  $("btn-batch-add").addEventListener("click", () => {
+    $("batch-add-card").classList.remove("hidden");
+    batchFillSlotDropdown();
+    $("batch-search").focus();
+  });
+  $("btn-batch-search").addEventListener("click", batchSearch);
+  $("batch-search").addEventListener("keydown", e => { if (e.key === "Enter") batchSearch(); });
+  $("batch-filter-enh").addEventListener("change", batchSearch);
+  $("batch-manual-slot").addEventListener("change", () => {
+    // completing a searched-song pick: attach the chosen slot
+    const slot = $("batch-manual-slot").value;
+    if (batchPendingPick && slot) {
+      batchPendingPick.target = slot;
+      batchSongs.push(batchPendingPick);
+      batchPendingPick = null;
+      $("batch-manual-slot").value = "";
+      batchRender($("batch-name").value || "Custom batch", $("batch-desc-input").value, true);
+      setResult("batch-add-status", "Added to the batch.", "ok");
+    }
+  });
+  $("btn-batch-manual-add").addEventListener("click", () => {
+    const id = $("batch-manual-id").value.trim();
+    const slot = $("batch-manual-slot").value;
+    if (!id || !slot) { alert("Enter both the map ID and the target slot."); return; }
+    batchSongs.push({ map_id: id, target: slot, song_name: "", artist: "",
+                      audio: "pcm16", pad_fsb5: false, convert_to_v3: true });
+    $("batch-manual-id").value = ""; $("batch-manual-slot").value = "";
+    batchRender($("batch-name").value || "Custom batch", $("batch-desc-input").value, true);
+  });
+  $("btn-batch-save").addEventListener("click", batchSave);
+  $("btn-batch-export").addEventListener("click", batchExport);
+  $("btn-batch-import").addEventListener("click", () => $("batch-import-file").click());
+  $("batch-import-file").addEventListener("change", e => {
+    if (e.target.files.length) batchImportFile(e.target.files[0]);
+    e.target.value = "";
+  });
+  $("btn-batch-delete").addEventListener("click", batchDelete);
+  $("btn-batch-cancel").addEventListener("click", () => {
+    api("/api/jobs/cancel", { method: "POST" }).catch(() => {});
+  });
   $("btn-fr-open").addEventListener("click", frOpen);
   // lazy-load tab data on first visit
   document.querySelectorAll("#nav button").forEach(b =>
     b.addEventListener("click", () => {
       if (b.dataset.page === "flagsPage") flagsRefresh();
       if (b.dataset.page === "backupPage") backupRefresh();
+      if (b.dataset.page === "batchPage") batchRefresh();
     }));
   showPage("wizard");
 });

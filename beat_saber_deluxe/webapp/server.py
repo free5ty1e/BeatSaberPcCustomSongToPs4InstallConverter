@@ -22,7 +22,7 @@ import threading
 import time
 from pathlib import Path
 
-from adapters import beatsaver, config, deploy, loadout, paths, ps4, runner
+from adapters import batch, beatsaver, config, deploy, loadout, paths, ps4, runner
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -396,6 +396,105 @@ def jobs_restore(body: dict):
         raise HTTPException(409, str(e))
     return {"ok": True, "job_id": job.id,
             "command": f"python3 backup-beat-saber-deluxe-files.py {' '.join(argv)}"}
+
+
+# --------------------------------------------------------------------------
+# Batch deployments (example-script packs + custom batches)
+# --------------------------------------------------------------------------
+@app.get("/api/batch/examples")
+def batch_examples():
+    """The 34 example-script packs, parsed live from the scripts themselves
+    (the scripts stay the single source of truth)."""
+    return {"packs": batch.parse_example_scripts()}
+
+
+@app.get("/api/batch/custom")
+def batch_custom_list():
+    """Saved custom batches (JSON files in webapp/batches/)."""
+    return {"batches": batch.list_custom_batches()}
+
+
+@app.get("/api/batch/custom/{filename}")
+def batch_custom_load(filename: str):
+    try:
+        return {"ok": True, "batch": batch.load_custom_batch(filename)}
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except (ValueError, json.JSONDecodeError) as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/batch/custom")
+def batch_custom_save(body: dict):
+    """Save (or overwrite) a custom batch. body: {"filename": optional,
+    "batch": {format/version/name/description/songs}}."""
+    try:
+        saved = batch.save_custom_batch(
+            body.get("batch", body),
+            body.get("filename") or None)
+        return {"ok": True, **saved}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.delete("/api/batch/custom/{filename}")
+def batch_custom_delete(filename: str):
+    try:
+        batch.delete_custom_batch(filename)
+        return {"ok": True}
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/jobs/batch")
+def jobs_batch(body: dict):
+    """Run a batch as a sequence of --deploy-full jobs (one at a time — the
+    runner's single-job rule; the client drives them serially and shows one
+    live console). body: {"songs": [{map_id, target, ...}]}."""
+    _require_config()
+    songs = body.get("songs", [])
+    if not isinstance(songs, list) or not songs:
+        raise HTTPException(400, "songs list required")
+    # validate every entry BEFORE starting anything (fail fast, deploy nothing)
+    for i, s in enumerate(songs):
+        if not str(s.get("map_id", "")).strip():
+            raise HTTPException(400, f"songs[{i}].map_id required")
+        if not str(s.get("target", "")).strip():
+            raise HTTPException(400, f"songs[{i}].target required")
+    argv = []
+    for s in songs:
+        opts = deploy.DeployOptions(
+            map_id=str(s["map_id"]).strip(),
+            target=str(s["target"]).strip(),
+            audio=s.get("audio", "pcm16"),
+            pad_fsb5=bool(s.get("pad_fsb5", False)),
+            convert_to_v3=bool(s.get("convert_to_v3", True)),
+            deploy_full=True,
+            skip_plugin=bool(s.get("skip_plugin", False)),
+            song_name=str(s.get("song_name", "")).strip(),
+            artist=str(s.get("artist", "")).strip(),
+        )
+        try:
+            argv.append(opts.build_argv())
+        except ValueError as e:
+            raise HTTPException(400, f"songs[{i}]: {e}")
+    # Run the batch as ONE shell-equivalent job: the runner gets a small
+    # driver script that executes each argv in sequence, stopping at the
+    # first failure (the exact semantics of the chained example scripts).
+    driver = paths.WEBAPP_DIR / "batch_runner.py"
+    if not driver.exists():
+        raise HTTPException(500, f"batch driver missing: {driver}")
+    payload = json.dumps(argv)
+    try:
+        job = RUNNER.start_script(
+            str(driver), ["--jobs", payload],
+            label=f"batch ({len(argv)} songs)")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "count": len(argv),
+            "command": f"batch deploy: {len(argv)} songs"}
 
 
 # --------------------------------------------------------------------------

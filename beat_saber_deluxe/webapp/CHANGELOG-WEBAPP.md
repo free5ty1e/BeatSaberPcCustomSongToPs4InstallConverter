@@ -5,6 +5,30 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.5.0] — 2026-10-04 (Exp 254)
+### Added — the Batch tab
+- **Pre-defined packs dropdown**: all 34 example-script packs, parsed LIVE
+  from `.agent/docs/example_*.sh` (296 song replacements — map IDs, target
+  slots, and the custom song/artist names from the scripts' own comments).
+  The scripts stay the single source of truth: the tab always shows exactly
+  what the CLI runs.
+- **Custom batch builder**: "Build a custom batch…" — add songs via the
+  integrated BeatSaver search (native E/N/H filter + badges) or a
+  map-ID + slot form; remove rows; name/describe; deploy.
+- **Save / Load / Delete** custom batches as JSON files
+  (`webapp/batches/`), with the format documented in the tab AND
+  hand-editable anywhere: `{"format": "bsd-batch", "version": 1, "name":
+  …, "songs": [{map_id, target, song_name, artist, audio, pad_fsb5,
+  convert_to_v3}]}`.
+- **Export / Import** via the browser's file dialogs — platform-agnostic by
+  design (Windows/macOS/Linux browsers; nothing depends on server-side
+  paths, so it also works in Pages mode for building batches).
+- **Batch deploys run as ONE serial job**: `webapp/batch_runner.py` executes
+  each song's `--deploy-full` in sequence through the single-job runner,
+  streaming every line into the live console, STOPPING at the first failure
+  (the exact `script1 && script2` semantics of the chained example scripts).
+  All entries validated BEFORE anything deploys (a bad row starts nothing).
+
 ## [0.4.5] — 2026-10-04 (Exp 253)
 ### Fixed
 - **Job panels now live at the TOP of long pages** (Manage Songs, Full

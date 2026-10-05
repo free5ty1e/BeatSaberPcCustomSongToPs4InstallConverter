@@ -17,6 +17,7 @@
     <button data-page="managePage">Manage Songs</button>
     <button data-page="loadoutPage">Full Loadout</button>
     <button data-page="flagsPage">Feature Flags</button>
+    <button data-page="batchPage">Batch</button>
     <button data-page="backupPage">Backup / Restore</button>
     <button data-page="requestPage">Feature Request</button>
     <button data-page="guide">Dump Guide</button>
@@ -279,6 +280,107 @@
       <p class="muted" id="toast-note">Reference format: the boot toast shows the
       plugin version, the kill-switch state, and the feature count.</p>
     </div>
+  </section>
+
+  <!-- ================= Batch ================= -->
+  <section id="page-batchPage" class="page hidden">
+    <h2>Batch Deploy</h2>
+    <p class="muted">Deploy a whole music pack of custom songs in one run —
+    the pre-defined packs are the <b>exact</b> QA-proven loadouts from the
+    example scripts (parsed live from them), or build your own.</p>
+
+    <div class="card">
+      <div class="row">
+        <select id="batch-select" style="min-width:20em"><option value="">Loading packs…</option></select>
+        <button id="btn-batch-refresh">Refresh</button>
+      </div>
+    </div>
+
+    <div id="batch-job-panel" class="card job-panel hidden">
+      <div class="row">
+        <span class="spinner" id="batch-job-panel-spinner"></span>
+        <b id="batch-job-panel-status">Working…</b>
+        <span class="muted" id="batch-job-panel-label"></span>
+      </div>
+      <div id="batch-job-panel-command" class="command"></div>
+      <pre id="batch-job-panel-log" class="log"></pre>
+      <div class="row">
+        <button id="btn-batch-cancel" class="danger hidden">Cancel batch</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="batch-title">Songs</h3>
+      <p class="muted" id="batch-desc"></p>
+      <table class="loadout" id="batch-table">
+        <thead><tr><th>#</th><th>BeatSaver ID</th><th>Custom song</th>
+          <th>Artist</th><th>Target slot</th><th>Codec</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" id="batch-actions">
+        <button id="btn-batch-deploy" class="primary big">Deploy batch</button>
+        <button id="btn-batch-add" class="hidden">+ Add song</button>
+        <button id="btn-batch-save" class="hidden">Save batch…</button>
+        <button id="btn-batch-export" class="hidden link">Export file</button>
+        <button id="btn-batch-import" class="hidden link">Import file</button>
+        <input type="file" id="batch-import-file" accept=".json,application/json" class="hidden">
+        <button id="btn-batch-delete" class="danger hidden link">Delete saved batch</button>
+      </div>
+      <div id="batch-edit-name-row" class="row hidden">
+        <label>Batch name <input id="batch-name" type="text" placeholder="e.g. My 80s pack"
+               style="min-width:16em"></label>
+        <label style="flex:1">Description <input id="batch-desc-input" type="text"
+               placeholder="optional"></label>
+      </div>
+    </div>
+
+    <div class="card hidden" id="batch-add-card">
+      <h3>Add a song</h3>
+      <div class="row">
+        <input id="batch-search" type="text" placeholder="Search BeatSaver — song, artist, or mapper"
+               style="flex:1">
+        <button id="btn-batch-search">Search</button>
+      </div>
+      <label class="filter"><input type="checkbox" id="batch-filter-enh">
+        Only maps with native Easy/Normal/Hard</label>
+      <div id="batch-search-results"></div>
+      <div id="batch-add-status" class="result"></div>
+      <details style="margin-top:.6rem">
+        <summary>Or paste a BeatSaver map ID + slot directly</summary>
+        <div class="row">
+          <input id="batch-manual-id" type="text" placeholder="map ID, e.g. c213" style="width:10em">
+          <select id="batch-manual-slot" style="flex:1"><option value="">Target slot…</option></select>
+          <button id="btn-batch-manual-add">Add</button>
+        </div>
+      </details>
+    </div>
+
+    <details class="card">
+      <summary class="link" style="cursor:pointer">Custom batch file format (for hand-editing)</summary>
+      <p class="muted">Custom batches are plain JSON files — editable in any text
+      editor on Windows, macOS, or Linux. Save them from this tab (or create your
+      own) with this structure:</p>
+      <pre class="code-doc">{
+  "format": "bsd-batch",
+  "version": 1,
+  "name": "My 80s pack",
+  "description": "optional free text",
+  "songs": [
+    {
+      "map_id": "c213",            // BeatSaver map ID (required)
+      "target": "Angry",           // stock slot to replace (required)
+      "song_name": "Rhythm Is A Dancer",   // optional display label
+      "artist": "Pegboard Nerds",          // optional display label
+      "audio": "pcm16",            // pcm16 (default) | vorbis | hevag
+      "pad_fsb5": false,           // keep false (true truncates long songs)
+      "convert_to_v3": true        // the recommended default
+    }
+  ]
+}</pre>
+      <p class="muted">Saved batches live in <code>webapp/batches/</code> — or
+      use Export/Import on this tab to move them between machines as files
+      (works everywhere; nothing depends on server-side paths).</p>
+    </details>
   </section>
 
   <!-- ================= Backup / Restore ================= -->
