@@ -315,3 +315,21 @@ The PAGES bundle never worked: build_pages.py copies assets to the bundle ROOT b
 ### Answer to "is this change being served?"
 - Local backend: restart the server + hard-refresh (JS caching). The toast preview is in 0.4.1+, which you have committed — it works locally.
 - The hosted Pages page: was inert for EVERYONE until this fix; goes live at PR merge.
+
+---
+
+## Cycle 10 — The missing .hidden rule + panel-ID mismatch (Exp 252, webapp 0.4.3)
+
+### User
+> "Full Loadout and Backup / Restore tabs now have a permanent 'working' section with a loading spinner, before I take any action. Then when I try the backup, I get a dialog error: Couldn't start the backup: Cannot set properties of null (setting 'textContent'). You might as well also add the loading spinner to the Deploy tab's working status... everywhere you have a loading spinner right now it shows at all times instead of only during work. Same with the deploy's Verify button, no feedback given on this either. Same on the PS4 state tab, could also use a loading spinner here."
+
+### RCA (two bugs, both introduced by me in Exp 250)
+1. Generic `hidden` class had NO CSS rule (only `.page.hidden` existed) → all three job panels (and every other non-page hidden element: cancel/verify buttons, browse panel, deploy log) rendered permanently. The panels' markup looked right; the CSS never had the utility.
+2. Backup panel children hand-typed `backup-job-*` while showJobPanel derives `panelId + "-*"` → `backup-job-panel-status` null → textContent throw → user's dialog. Manage/Loadout used the convention correctly by luck.
+
+### Fixes
+- Standalone `.hidden { display:none; }` (commented trap note); Backup IDs aligned to the convention.
+- NEW VERIFICATION DISCIPLINE: a static-audit script cross-checks every JS-referenced id (all panels × 5 children) against the served HTML — catches this class forever. Live serve check: panels carry hidden; backup E2E re-run green (30 lines, exit 0, zip).
+- User asks added: Deploy progress row + button relabel; Verify button spinner+console (was silent); PS4 tab read spinner.
+
+### Suite 774/774; lint clean. User needs Ctrl+Shift+R (JS+CSS changed).

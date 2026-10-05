@@ -5,6 +5,28 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.4.3] — 2026-10-04 (Exp 252)
+### Fixed
+- **Job panels rendered permanently** ("Working…" + spinner on Full Loadout
+  and Backup/Restore before any action): the stylesheet only had a
+  `.page.hidden` rule — the generic `hidden` class had NO rule, so every
+  non-page element relying on it displayed unconditionally. Added the
+  standalone `.hidden { display: none; }` rule.
+- **Backup dialog crash** (`Cannot set properties of null (setting
+  'textContent')`): the Backup page's panel children used
+  `backup-job-*` IDs while the shared panel machinery expects
+  `<panelId>-*` (`backup-job-panel-*`) — the status assignment hit null.
+  IDs aligned across the panel; all three panels' five children each now
+  verified by a static audit + live serve check.
+
+### Added
+- **Deploy tab working-status**: a progress row (spinner + Deploying… + the
+  song → slot label) shows during deploys; the Deploy button disables and
+  relabels itself ("Deploying…"); both clear on completion.
+- **Verify PS4 button feedback**: spinner + relabelled "Verifying…", the
+  progress row, and the live console (previously silent).
+- **PS4 tab loading spinner** while reading state.
+
 ## [0.4.2] — 2026-10-04 (Exp 251)
 ### Added
 - **Version badge, lower-right corner** (user: "so I can tell when your

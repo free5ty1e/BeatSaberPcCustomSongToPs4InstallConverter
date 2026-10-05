@@ -307,8 +307,11 @@ async function deploy() {
   setResult("deploy-status", "", "");
   $("deploy-log").classList.remove("hidden");
   $("deploy-log").textContent = "";
-  $("btn-deploy").disabled = true;
+  const deployBtn = $("btn-deploy");
+  deployBtn.disabled = true;
+  deployBtn.innerHTML = '<span class="spinner spinning"></span> Deploying…';
   $("btn-deploy-cancel").classList.remove("hidden");
+  setDeployProgress(true, "Deploying", `${state.pickedSong.name} → ${label}`);
   try {
     const j = await api("/api/jobs/deploy", {
       method: "POST",
@@ -318,8 +321,20 @@ async function deploy() {
     pollLog(0);
   } catch (e) {
     setResult("deploy-status", "❌ " + e.message, "bad");
-    $("btn-deploy").disabled = false;
+    deployBtn.disabled = false;
+    deployBtn.innerHTML = "Deploy to PS4";
     $("btn-deploy-cancel").classList.add("hidden");
+    setDeployProgress(false);
+  }
+}
+
+function setDeployProgress(show, status, label) {
+  const row = $("deploy-progress");
+  if (!row) return;
+  row.hidden = !show;
+  if (show) {
+    $("deploy-progress-status").textContent = status || "Working…";
+    $("deploy-progress-label").textContent = label || "";
   }
 }
 
@@ -344,7 +359,9 @@ function pollLog() {
 
 function finishJob(job) {
   $("btn-deploy").disabled = false;
+  $("btn-deploy").innerHTML = "Deploy to PS4";
   $("btn-deploy-cancel").classList.add("hidden");
+  setDeployProgress(false);
   if (job.cancelled) {
     setResult("deploy-status", "⛔ Cancelled. The PS4 may hold a partial deploy — " +
       "run Verify, or re-deploy to complete it.", "warn");
@@ -921,7 +938,8 @@ function frOpen() {
 // ---------------------------------------------------------------- ps4 page
 async function refreshPs4() {
   const el = $("ps4-state");
-  el.textContent = "Reading PS4 state (banner-free transport)…";
+  el.innerHTML = '<div class="row"><span class="spinner spinning"></span> ' +
+    'Reading PS4 state (banner-free transport)…</div>';
   try {
     const j = await api("/api/ps4/state");
     const rows = [];
@@ -987,10 +1005,30 @@ document.addEventListener("DOMContentLoaded", () => {
   $("opt-artist").addEventListener("input", updateDeployPreview);
   $("btn-deploy").addEventListener("click", deploy);
   $("btn-deploy-cancel").addEventListener("click", cancelJob);
-  $("btn-verify").addEventListener("click", () => {
-    api("/api/jobs/verify", { method: "POST" })
-      .then(() => { pollIndex = 0; $("deploy-log").classList.add("hidden"); pollLog(); })
-      .catch(e => setResult("deploy-status", "❌ " + e.message, "bad"));
+  $("btn-verify").addEventListener("click", async () => {
+    const btn = $("btn-verify");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner spinning"></span> Verifying…';
+    setDeployProgress(true, "Verifying", "read-only PS4 validation");
+    $("deploy-log").classList.remove("hidden");
+    $("deploy-log").textContent = "";
+    setResult("deploy-status", "", "");
+    try {
+      await api("/api/jobs/verify", { method: "POST" });
+      pollIndex = 0;
+      // pollLog's finishJob re-enables the deploy button; restore verify's too
+      const origFinish = finishJob;
+      pollLog();
+      const restore = setInterval(() => {
+        if (!btn.isConnected || btn.disabled === false) return;
+        btn.disabled = false; btn.innerHTML = "Verify PS4";
+      }, 1000);
+      setTimeout(() => clearInterval(restore), 120000);
+    } catch (e) {
+      btn.disabled = false; btn.innerHTML = "Verify PS4";
+      setDeployProgress(false);
+      setResult("deploy-status", "❌ " + e.message, "bad");
+    }
   });
   $("btn-ps4-refresh").addEventListener("click", refreshPs4);
   $("btn-manage-refresh").addEventListener("click", manageRefresh);

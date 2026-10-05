@@ -138,6 +138,11 @@
       <h3>3. Deploy</h3>
       <p id="deploy-warning" class="muted">Replacing <b id="deploy-slot-label">…</b> —
       the other songs in its pack and every other pack stay untouched.</p>
+      <div class="row" id="deploy-progress" hidden>
+        <span class="spinner spinning" id="deploy-progress-spinner"></span>
+        <b id="deploy-progress-status">Working…</b>
+        <span class="muted" id="deploy-progress-label"></span>
+      </div>
       <button id="btn-deploy" class="primary big">Deploy to PS4</button>
       <button id="btn-deploy-cancel" class="danger hidden">Cancel job</button>
       <pre id="deploy-log" class="log hidden"></pre>
@@ -295,12 +300,12 @@
 
     <div id="backup-job-panel" class="card job-panel hidden">
       <div class="row">
-        <span class="spinner" id="backup-job-spinner"></span>
-        <b id="backup-job-status">Working…</b>
-        <span class="muted" id="backup-job-label"></span>
+        <span class="spinner" id="backup-job-panel-spinner"></span>
+        <b id="backup-job-panel-status">Working…</b>
+        <span class="muted" id="backup-job-panel-label"></span>
       </div>
-      <div id="backup-job-command" class="command"></div>
-      <pre id="backup-job-log" class="log"></pre>
+      <div id="backup-job-panel-command" class="command"></div>
+      <pre id="backup-job-panel-log" class="log"></pre>
     </div>
 
     <div class="card">
