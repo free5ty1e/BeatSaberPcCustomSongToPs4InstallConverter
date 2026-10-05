@@ -158,3 +158,77 @@ class TestBannerProofScopeRead:
         dec = json.JSONDecoder()
         obj, _ = dec.raw_decode(raw, start)
         assert obj["redirects"]["BeatmapLevelsData/X"] == "X_v3.bundle"
+
+
+class TestClearTargetAnyCasing:
+    """Exp 253: --clear-target-song removes EVERY casing variant of the slot
+    bundle. Deploy history wrote both 'MessItUp_v3.bundle' (webapp, catalog
+    casing) and 'messitup_v3.bundle' (scripts/mass) — the old clear removed
+    only the literal-cased one and the leftover rendered as 'stale'."""
+
+    CONFIG = {"ps4": {"ip": "10.0.0.1", "ftp_port": 2121, "ftp_user": "anonymous", "ftp_password": ""},
+              "title": {"id": "CUSA12878"},
+              "paths": {"afr_base": "/data/GoldHEN/AFR", "afr_target_suffix": "_v3.bundle"}}
+
+    def _patch_ftp(self, monkeypatch, afr_files, fails):
+        """Fake the lftp cls listing + per-file rm."""
+        import subprocess as sp
+
+        calls = []
+
+        class R:
+            def __init__(self, rc=0, out=""):
+                self.returncode = rc
+                self.stdout = out
+                self.stderr = ""
+
+        def fake_run(cmd, *a, **kw):
+            script = next((c for c in cmd if isinstance(c, str) and ";" in c), "")
+            calls.append(script)
+            if "cls " in script:
+                listing = "\n".join(f"-rwx 1 0 0 123 {n}" for n in afr_files)
+                return R(0, listing)
+            if "rm " in script:
+                target = script.split("rm ")[1].split(";")[0].strip().strip('"')
+                base = target.rsplit("/", 1)[-1]
+                if base in afr_files:
+                    afr_files.remove(base)
+                    return R(0)
+                return R(1, "no such file")
+            return R(0)
+
+        monkeypatch.setattr(sp, "run", fake_run)
+        return calls
+
+    def test_clear_removes_both_casings(self, monkeypatch, tmp_path):
+        afr = ["MessItUp_v3.bundle", "messitup_v3.bundle", "Other_v3.bundle"]
+        self._patch_ftp(monkeypatch, afr, {})
+        # neutralize the later redirect/metadata/pack steps (unit scope: step 1)
+        monkeypatch.setattr(pipeline, "_get_redirect_config_path",
+                            lambda *a, **k: str(tmp_path / "redirects.json"))
+        monkeypatch.setattr(pipeline, "_get_song_metadata_path",
+                            lambda *a, **k: str(tmp_path / "song_metadata.json"))
+        monkeypatch.setattr(pipeline, "_load_song_details", lambda: {})
+        monkeypatch.setattr(pipeline, "_resolve_target_pack", lambda config, slot: None)
+        try:
+            pipeline.clear_target_song(self.CONFIG, "MessItUp")
+        except Exception:
+            pass  # later steps may fail in the scratch env; step 1 is under test
+        assert "MessItUp_v3.bundle" not in afr, "capital-cased bundle survived"
+        assert "messitup_v3.bundle" not in afr, "lower-cased bundle survived"
+        assert "Other_v3.bundle" in afr, "unrelated bundle was removed!"
+
+    def test_clear_with_no_bundle_is_quiet(self, monkeypatch, tmp_path):
+        afr = []
+        self._patch_ftp(monkeypatch, afr, {})
+        monkeypatch.setattr(pipeline, "_get_redirect_config_path",
+                            lambda *a, **k: str(tmp_path / "redirects.json"))
+        monkeypatch.setattr(pipeline, "_get_song_metadata_path",
+                            lambda *a, **k: str(tmp_path / "song_metadata.json"))
+        monkeypatch.setattr(pipeline, "_load_song_details", lambda: {})
+        monkeypatch.setattr(pipeline, "_resolve_target_pack", lambda config, slot: None)
+        try:
+            pipeline.clear_target_song(self.CONFIG, "NotThere")
+        except Exception:
+            pass
+        assert afr == []

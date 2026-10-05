@@ -5,6 +5,24 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.4.5] — 2026-10-04 (Exp 253)
+### Fixed
+- **Job panels now live at the TOP of long pages** (Manage Songs, Full
+  Loadout) — they sat below the tables, invisible while a clear ran. The
+  page scrolls to the panel on job start (spinner + live console in view
+  immediately), and the Deploy progress row scrolls into view too.
+- **Clear now refreshes the table at the right moment**: the panel's
+  completion promise was fire-and-forget, so the refresh fired while the job
+  was still running. `runJobWithPanel` now resolves when the job ENDS; the
+  clear's refresh happens at completion.
+
+### With pipeline v0.5354 (the "Stale" answer)
+- `--clear-target-song` now removes EVERY casing variant of the slot bundle
+  (deploy history wrote both `MessItUp_v3.bundle` and
+  `messitup_v3.bundle`; the old clear removed only the literal-cased one —
+  the leftover file, correctly detected, rendered as "stale" right after a
+  clear). A cleared slot now genuinely shows **stock**.
+
 ## [0.4.4] — 2026-10-04 (Exp 252b)
 ### Fixed
 - **The Deploy progress row still showed permanently** (and stayed after a

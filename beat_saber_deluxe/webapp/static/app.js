@@ -307,6 +307,7 @@ async function deploy() {
   setResult("deploy-status", "", "");
   $("deploy-log").classList.remove("hidden");
   $("deploy-log").textContent = "";
+  $("deploy-progress").scrollIntoView({ behavior: "smooth", block: "start" });
   const deployBtn = $("btn-deploy");
   deployBtn.disabled = true;
   deployBtn.innerHTML = '<span class="spinner spinning"></span> Deploying…';
@@ -707,7 +708,11 @@ function showJobPanel(panelId, { label, command }) {
   $(panelId + "-spinner").classList.add("spinning");
   $(panelId + "-command").textContent = command ? "→ " + command : "";
   $(panelId + "-log").textContent = "";
-  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  // The panels sit at the TOP of their pages (above long tables) so the
+  // spinner + live output are always in view while a job runs (Exp 253:
+  // they used to live below everything and the user saw nothing).
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function finishJobPanel(panelId, job) {
@@ -726,28 +731,36 @@ function finishJobPanel(panelId, job) {
   }
 }
 
-async function runJobWithPanel(panelId, startResponse, { doneLabel } = {}) {
+function runJobWithPanel(panelId, startResponse, { doneLabel } = {}) {
   // Poll the runner's shared job lines into the panel's console.
-  let idx = 0;
-  const logEl = $(panelId + "-log");
-  const poll = async () => {
-    try {
-      const j = await api(`/api/jobs/lines?after=${idx}`);
-      if (j.lines && j.lines.length) {
-        logEl.textContent += j.lines.join("\n") + "\n";
-        logEl.scrollTop = logEl.scrollHeight;
-      }
-      idx = j.index || idx;
-      if (j.running) { setTimeout(poll, 900); return; }
-      if (j.job) {
-        finishJobPanel(panelId, j.job);
-        if (doneLabel && j.job.exit_code === 0) {
-          $(panelId + "-label").textContent = doneLabel;
+  // Returns a Promise that resolves when the job ENDS — callers awaiting it
+  // (clear → refresh) act at the right moment (Exp 253: the fire-and-forget
+  // version resolved immediately and the table refreshed mid-job).
+  return new Promise((resolve) => {
+    let idx = 0;
+    const logEl = $(panelId + "-log");
+    const poll = async () => {
+      try {
+        const j = await api(`/api/jobs/lines?after=${idx}`);
+        if (j.lines && j.lines.length) {
+          logEl.textContent += j.lines.join("\n") + "\n";
+          logEl.scrollTop = logEl.scrollHeight;
         }
-      }
-    } catch { setTimeout(poll, 1500); }
-  };
-  poll();
+        idx = j.index || idx;
+        if (j.running) { setTimeout(poll, 900); return; }
+        if (j.job) {
+          finishJobPanel(panelId, j.job);
+          if (doneLabel && j.job.exit_code === 0) {
+            $(panelId + "-label").textContent = doneLabel;
+          }
+          resolve(j.job);
+        } else {
+          resolve(null);
+        }
+      } catch { setTimeout(poll, 1500); }
+    };
+    poll();
+  });
 }
 
 // shared job poller for legacy call sites (flags page)

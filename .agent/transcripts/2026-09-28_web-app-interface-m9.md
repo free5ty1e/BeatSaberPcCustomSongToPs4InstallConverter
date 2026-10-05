@@ -336,3 +336,10 @@ The PAGES bundle never worked: build_pages.py copies assets to the bundle ROOT b
 
 ## Cycle 10b — The hidden-attribute specificity trap (Exp 252b, webapp 0.4.4)
 User: deploy page still shows the spinner row on load + it persists after a deploy. RCA: the row used the hidden ATTRIBUTE; `.row{display:flex}` (author CSS) overrides the UA attribute default — yesterday's .hidden-CLASS fix didn't apply. Fix: `[hidden]{display:none !important}` + row carries class AND attribute + toggles both. Sweep: only element in the trap. Live-verified. Suite 774/774.
+
+## Cycle 11 — Clear-flow UX + the Stale-after-clear RCA (Exp 253, webapp 0.4.5 + pipeline v0.5354)
+User: (1) clear's spinner/output below the table, invisible — put at top + jump there; same on all long pages; (2) clear must refresh on completion; (3) why does clearing show "Stale" instead of "Stock"?
+
+RCA for (3): the loadout was CORRECT — the PS4 held both MessItUp_v3.bundle (webapp casing) and messitup_v3.bundle (script casing); the pipeline's clear rm'd only the literal-cased one. Pipeline v0.5354: clear LISTs the AFR dir and removes every case-insensitive match of <slot><suffix>; 2 regression tests. The UI's three-signal model did exactly its job — it surfaced a real state discrepancy the CLI had been silently leaving behind.
+
+(1)+(2): panels moved above the tables (Manage + Loadout) with window.scrollTo(0) + scrollIntoView(start) on job launch; Deploy progress row scrolls into view; runJobWithPanel now returns a completion promise so clear's refreshFn fires at job END (was fire-and-forget — refresh raced mid-job). Suite 776/776.

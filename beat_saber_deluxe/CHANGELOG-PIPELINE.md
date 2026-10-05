@@ -1,5 +1,9 @@
 # Pipeline Changelog
 
+## v0.5354 (2026-10-04)
+### Fixed
+- **`--clear-target-song` could leave the slot's bundle behind in another casing** (Exp 253: the loadout then correctly reported the slot as "stale" — bundle present, no redirect — right after a clear, and the user asked why it wasn't "Stock"). Root cause: the removal used the literal slot casing, but deploy paths have written slot bundles with different casings over time (webapp deploys use the catalog's `MessItUp`; example scripts/mass deploys used `messitup`), and GoldHEN FTP is case-sensitive. The clear now LISTs the AFR dir and removes EVERY file matching `<slot><suffix>` case-insensitively — a reverted slot leaves nothing behind in any casing. (Bundle version bump: pipeline v0.5354.)
+
 ## v0.5353 (2026-10-02)
 ### Fixed
 - **CRITICAL — `--features-only --set-feature` pushed a stale LOCAL features.json over the live PS4, silently turning `enable_song_metadata_modification` OFF in-game (Exp 248: the "2/3 features" boot toast + vanished custom-song metadata).** The exact Exp 246 redirects class, on the flags path: `apply_feature_flags` based its write on the local file (stale from the release-validation flag round-trips) and deployed it wholesale; any `--set-feature` diff rode along with every stale local value. **Fix: pull-before-push for flags** — `apply_feature_flags` now downloads the LIVE features.json first (new `_download_features_from_ps4`, banner-proof raw_decode extraction; ABORTS on read failure — never blind-apply; absent file = clean slate from DEFAULT_FEATURES), materializes defaults for flags the live file predates (Exp 221 rule preserved), applies ONLY the requested diffs, resyncs the local file, then deploys. Bad `--set-feature` syntax aborts before any I/O. 9 regression tests (`tests/test_exp248_flags_pull_before_push.py`), including the exact live scenario (stale local metadata=false, live ON, unrelated diff requested → live value preserved).

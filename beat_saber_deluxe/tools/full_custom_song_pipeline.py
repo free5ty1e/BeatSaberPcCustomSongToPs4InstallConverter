@@ -4354,19 +4354,41 @@ def clear_target_song(config: dict, slot_name: str):
     title_id = cfg_title.get('id', 'CUSA12878')
     suffix = cfg_paths.get('afr_target_suffix', '_v3.bundle')
 
-    # 1. Remove custom song bundle from PS4
-    bundle_name = f"{slot_name}{suffix}"
-    remote_path = f"{afr_base}/{title_id}/{bundle_name}"
-    log.info(f"  Removing {bundle_name} from PS4...")
-
+    # 1. Remove custom song bundle from PS4 — ALL casing variants of the slot.
+    # GoldHEN FTP is case-sensitive and different deploy paths have written
+    # the slot with different casing (webapp deploys used the catalog's
+    # 'MessItUp'; the example scripts/mass list used 'messitup'). A clear
+    # reverts the SLOT — nothing named <slot><suffix> in any casing may
+    # survive, or the loadout correctly reports the leftover as a stale
+    # bundle (user-visible: "why does it show Stale when I cleared it?",
+    # Exp 253).
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"rm {remote_path}; quit"]
+           "-e", f"cls {_ftp_quote(afr_base + '/' + title_id)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    remote_names = []
     if result.returncode == 0:
-        log.info(f"  ✅ Removed {bundle_name} from PS4")
-    else:
-        log.warning(f"  ⚠️  Could not remove {bundle_name} from PS4 (may not exist): {result.stderr}")
+        import re as _re
+        for line in result.stdout.splitlines():
+            m = _re.search(r"[^/\s]+\.(?:bundle|json)$", line.strip())
+            if m:
+                remote_names.append(m.group(0))
+    removed_any = False
+    for name in remote_names:
+        if name.lower() == f"{slot_name.lower()}{suffix.lower()}":
+            remote_path = f"{afr_base}/{title_id}/{name}"
+            rm_cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+                      "-e", f"rm {_ftp_quote(remote_path)}; quit"]
+            rm_result = sp.run(rm_cmd, capture_output=True, text=True, timeout=30)
+            if rm_result.returncode == 0:
+                removed_any = True
+                log.info(f"  ✅ Removed {name} from PS4")
+            else:
+                log.warning(f"  ⚠️  Could not remove {name} from PS4: {rm_result.stderr}")
+    if not removed_any and not remote_names:
+        log.info(f"  ℹ️  No {slot_name}{suffix} (any casing) found on PS4 — nothing to remove")
+    elif not removed_any:
+        log.warning(f"  ⚠️  No casing variant of {slot_name}{suffix} was removed (found files: {remote_names[:5]})")
 
     # 2. Remove redirect entry from redirects.json
     # Download current redirects.json from PS4 first (local may be stale)
