@@ -376,3 +376,14 @@ Suite 791/791 final; lint clean. All audit changes staged (14 files).
 
 ## Cycle 15b — PR description PUSHED (approved)
 User: "approved". Pushed via the established raw-field PATCH (gh api pulls/5 --method PATCH --raw-field). Post-push verification: body byte-identical to the approved draft (pushed == intended: True); all 12 screenshots intact in order; the 11-tabs + architecture + validation sections live. One honesty note: the version-banner sentence ("Plugin v0.8047 · Pipeline v0.5354 · Web app 0.5.2") that appeared in my audit summary was from the FIRST (failed) edit attempt; the final python-built draft — the one in the diff the user approved — begins at "## What's in it (11 tabs)" and carries the versions only in the v0.5352-54 section + validation section. Offered a one-line PATCH to add the banner; no action without the user's say-so.
+
+## Cycle 16 — alpha01 release audit (Exp 258, webapp 0.5.3)
+User: created + pushed test tag v0.8047-pipeline-0.5354-webapp-0.5.2-alpha01; audit on GitHub + download/audit assets + validate the webapp runs FROM the release + everything possible pre-merge (to test live Pages).
+
+GitHub side: tag build + release jobs success; PR CI green; asset 962KB; notes current.
+Zip: 157 entries — plugins (FSELF + v0.8047 strings), both VERSIONs, complete webapp/, 69 example files (BE fixed at 10), validation docs, README banner current.
+Live from the extracted zip: ping versions correct (plugin="bundled" — right for a release), assets 200, catalog 36, command-preview exact, release pipeline runs.
+
+THE FINDING: Batch tab EMPTY from the release — parser looked only at .agent/docs/; the zip ships scripts at docs/example-scripts/. Fixed 0.5.3: parse both layouts (3 paths), first-match wins. PROVEN from the actual extracted alpha01 zip: 34 packs / BE 10 / 5-pack = 47. 3 regression tests; suite 794/794; lint clean.
+
+Recommendation: re-tag alpha02 with the fix for a fully-clean consumer artifact before merge.

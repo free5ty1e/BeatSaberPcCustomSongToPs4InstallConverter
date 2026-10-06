@@ -227,3 +227,53 @@ class TestMultiPackBatch:
         selected = [p for p in packs if any(w in p["name"] for w in wanted)]
         merged = sum(len(p["songs"]) for p in selected)
         assert merged == 11 + 10 + 11 + 9 + 6  # RS, BE(10 — Lizzo-pack dupes removed), BS, Lizzo, Camelia
+
+
+class TestReleaseLayoutParsing:
+    """Exp 258 (alpha01 release audit): a consumer running the web app from
+    an EXTRACTED RELEASE ZIP gets the example scripts at
+    docs/example-scripts/ (the zip layout), not .agent/docs/ (the repo
+    layout). The parser must find them in both — the alpha01 zip's Batch
+    tab shipped EMPTY."""
+
+    def test_release_layout_finds_scripts(self, monkeypatch, tmp_path):
+        """Simulate the extracted zip: only docs/example-scripts/ exists."""
+        from adapters import batch as batch_mod
+        ziproot = tmp_path / "release"
+        scripts_dir = ziproot / "docs" / "example-scripts"
+        scripts_dir.mkdir(parents=True)
+        # copy three real scripts in (as the release zip does)
+        import shutil
+        src = Path("/workspace/.agent/docs")
+        for name in ["example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
+                     "example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh",
+                     "example_script_to_install_custom_songs_over_lizzo_music_pack.sh"]:
+            shutil.copy2(src / name, scripts_dir / name)
+        monkeypatch.setattr(batch_mod, "EXAMPLE_DIRS", [scripts_dir])
+        packs = batch_mod.parse_example_scripts()
+        assert len(packs) == 3, f"release layout not parsed: {len(packs)} packs"
+        names = sorted(p["name"] for p in packs)
+        assert "Rolling Stones" in names and "Billie Eilish" in names
+
+    def test_repo_layout_still_wins(self, monkeypatch):
+        """The dev layout (.agent/docs) keeps working unchanged."""
+        from adapters import batch as batch_mod
+        packs = batch_mod.parse_example_scripts()
+        assert len(packs) == 34
+
+    def test_both_layouts_no_duplicates(self, monkeypatch, tmp_path):
+        """When BOTH layouts exist (a repo checkout that also has a stray
+        docs/example-scripts), each script parses exactly once."""
+        import shutil
+
+        from adapters import batch as batch_mod
+        stray = tmp_path / "docs" / "example-scripts"
+        stray.mkdir(parents=True)
+        shutil.copy2("/workspace/.agent/docs/example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
+                     stray / "example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh")
+        monkeypatch.setattr(batch_mod, "EXAMPLE_DIRS",
+                            [Path("/workspace/.agent/docs"), stray])
+        packs = batch_mod.parse_example_scripts()
+        rs = [p for p in packs if "Rolling Stones" in p["name"]]
+        assert len(rs) == 1, "duplicate pack from two layouts"
+        assert len(packs) == 34

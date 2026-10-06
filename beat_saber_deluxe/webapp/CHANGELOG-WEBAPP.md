@@ -5,6 +5,16 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.5.3] — 2026-10-06 (Exp 258)
+### Fixed
+- **The Batch tab was EMPTY when run from an extracted release zip** (found
+  in the alpha01 release audit): the script parser looked only at the repo
+  layout (`.agent/docs/`), but the release zip ships the example scripts at
+  `docs/example-scripts/`. The parser now checks both layouts (and an
+  extracted zip's `beat_saber_deluxe/docs/example-scripts/`), first-match
+  wins, no duplicates. Verified from the actual extracted alpha01 zip:
+  34 packs, RS=11, BE=10, the 5-pack standard loadout = 47.
+
 ## [0.5.2] — 2026-10-04 (Exp 256)
 ### Fixed
 - **The 5-pack multi-batch now counts 47, matching the PS4** (was 50):

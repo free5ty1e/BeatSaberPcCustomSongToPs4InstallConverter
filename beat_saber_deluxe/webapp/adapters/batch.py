@@ -37,7 +37,18 @@ import re
 
 from . import paths
 
-EXAMPLE_DIR = paths.RELEASE_ROOT / ".agent" / "docs"
+# The example scripts live in the repo at .agent/docs/ but the RELEASE ZIP
+# ships them at docs/example-scripts/ (see plugin-build.yml's packaging step).
+# The parser must find them in BOTH layouts — a consumer running the web app
+# from an extracted release gets zero packs otherwise (found in the alpha01
+# release audit: the Batch tab was empty from the zip, Exp 258).
+EXAMPLE_DIRS = [
+    paths.RELEASE_ROOT / ".agent" / "docs",
+    paths.RELEASE_ROOT / "docs" / "example-scripts",
+    # an extracted release may be unpacked anywhere — the zip's docs/ sits
+    # NEXT TO beat_saber_deluxe/, and the release root is its parent
+    paths.PROJECT_DIR / "docs" / "example-scripts",
+]
 BATCH_DIR = paths.WEBAPP_DIR / "batches"
 BATCH_FORMAT = "bsd-batch"
 BATCH_VERSION = 1
@@ -77,7 +88,15 @@ def parse_example_scripts() -> list[dict]:
     --deploy-full on the same live line).
     """
     packs = []
-    for script in sorted(EXAMPLE_DIR.glob("example_script_*.sh")):
+    seen = set()
+    scripts = []
+    for d in EXAMPLE_DIRS:
+        if d.is_dir():
+            for script in d.glob("example_script_*.sh"):
+                if script.name not in seen:  # first layout wins (repo vs zip copy)
+                    seen.add(script.name)
+                    scripts.append(script)
+    for script in sorted(scripts, key=lambda s: s.name):
         try:
             text = script.read_text(encoding="utf-8")
         except OSError:
