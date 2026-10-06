@@ -244,9 +244,13 @@ class TestReleaseLayoutParsing:
         ziproot = tmp_path / "release"
         scripts_dir = ziproot / "docs" / "example-scripts"
         scripts_dir.mkdir(parents=True)
-        # copy three real scripts in (as the release zip does)
+        # copy three real scripts in (as the release zip does) — from the
+        # REPO's canonical location, resolved relative to this test file
+        # (NEVER absolute: /workspace/... exists only in the devcontainer —
+        # CI runners check out elsewhere and the tests went red, Exp 259b)
         import shutil
-        src = Path("/workspace/docs/example-scripts")
+        src = PROJECT.parent / "docs" / "example-scripts"
+        assert src.is_dir(), f"example scripts not found at {src}"
         for name in ["example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
                      "example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh",
                      "example_script_to_install_custom_songs_over_lizzo_music_pack.sh"]:
@@ -258,7 +262,7 @@ class TestReleaseLayoutParsing:
         assert "Rolling Stones" in names and "Billie Eilish" in names
 
     def test_repo_layout_still_wins(self, monkeypatch):
-        """The dev layout (.agent/docs) keeps working unchanged."""
+        """The dev layout (docs/example-scripts) keeps working unchanged."""
         from adapters import batch as batch_mod
         packs = batch_mod.parse_example_scripts()
         assert len(packs) == 34
@@ -269,12 +273,12 @@ class TestReleaseLayoutParsing:
         import shutil
 
         from adapters import batch as batch_mod
+        canonical = PROJECT.parent / "docs" / "example-scripts"
         stray = tmp_path / "docs" / "example-scripts"
         stray.mkdir(parents=True)
-        shutil.copy2("/workspace/docs/example-scripts/example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
+        shutil.copy2(canonical / "example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
                      stray / "example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh")
-        monkeypatch.setattr(batch_mod, "EXAMPLE_DIRS",
-                            [Path("/workspace/docs/example-scripts"), stray])
+        monkeypatch.setattr(batch_mod, "EXAMPLE_DIRS", [canonical, stray])
         packs = batch_mod.parse_example_scripts()
         rs = [p for p in packs if "Rolling Stones" in p["name"]]
         assert len(rs) == 1, "duplicate pack from two layouts"

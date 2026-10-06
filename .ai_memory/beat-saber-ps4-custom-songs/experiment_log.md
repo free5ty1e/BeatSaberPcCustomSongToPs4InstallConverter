@@ -220,3 +220,10 @@ into `experiment_log_archive/` with a feature+date name and open a fresh
 - **Verification:** batch parser reads the new location (34/10/47); Pages bundle smoke (no /static remnants, all assets resolve); lint clean tools/+webapp/+tests/; suite **794/794**; scripts bash -n clean; repo-wide stale-reference sweep: zero hits outside deliberately-preserved history (changelog/transcripts).
 - **Version bumps:** webapp 0.5.3 → **0.5.4** (CHANGELOG-WEBAPP). Pipeline/plugin untouched.
 - **Status:** ✅ ready for the user's alpha02 validation.
+
+### Experiment 259b: CI red — devcontainer-absolute paths in the new release-layout tests (2026-10-06)
+- **User report:** CI red on the PR (run 37406290094, tests step).
+- **RCA (mine, from Exp 259):** the two release-layout regression tests hardcoded `/workspace/docs/example-scripts/…` as the copy source — a devcontainer-absolute path. Passed locally (where /workspace exists), FileNotFoundError on CI runners (checkout at /home/runner/work/…). The exact class the pre-Exp-229 CI failures taught: tests must derive paths from `__file__`, never absolute.
+- **Fix:** both fixtures resolve the repo root via `PROJECT.parent` (PROJECT = the test-file-derived beat_saber_deluxe dir) → `docs/example-scripts/`. Also swept every new test file for other absolute `/workspace` strings: only inert conftest fixture data remains (never asserted — historically CI-green). Version note: webapp stays 0.5.4 (test-only change, no functional delta).
+- **Proof beyond the local suite:** re-ran the tests from a COPY of the repo at /tmp/ci-sim (a non-/workspace path — the CI condition) → 3/3 pass. Full suite 794/794; lint clean.
+- **Status:** ✅ fixed; CI will go green on the next push.
