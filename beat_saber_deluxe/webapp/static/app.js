@@ -35,6 +35,10 @@ async function detectMode() {
   badge.className = state.mode === "local-backend" ? "local" : "pages";
   if (state.mode === "pages") {
     document.querySelectorAll(".local-only").forEach(el => el.classList.add("hidden"));
+    // Command-builder mode: the Deploy button can't run anything — relabel
+    // it so the expectation is correct before the click.
+    const deployBtn = document.getElementById("btn-deploy");
+    if (deployBtn) deployBtn.textContent = "Copy deploy command";
   }
 }
 
@@ -281,6 +285,25 @@ async function updateDeployPreview() {
       : "→ pick a song first (Pick a Song tab)";
     return;
   }
+  if (state.mode === "pages") {
+    // Command-builder mode: build the exact pipeline argv LOCALLY (no
+    // backend exists). Mirrors adapters/deploy.py's build_argv order 1:1 —
+    // the local command path is validated by tests; keep both in sync.
+    const argv = ["--download-beat-saver-song", o.map_id,
+                  "--target", o.target];
+    argv.push(o.audio === "vorbis" ? "--vorbis"
+              : o.audio === "hevag" ? "--hevag" : "--pcm16");
+    argv.push(o.pad_fsb5 ? "--pad-fsb5" : "--no-pad");
+    if (o.convert_to_v3) argv.push("--convert-to-v3");
+    if (o.song_name) argv.push("--song-name", o.song_name);
+    if (o.artist) argv.push("--artist", o.artist);
+    if (o.deploy_full) argv.push("--deploy-full");
+    if (o.skip_plugin) argv.push("--skip-plugin-deployment");
+    $("deploy-command").textContent =
+      "→ python3 beat_saber_deluxe/tools/full_custom_song_pipeline.py " + argv.join(" ") +
+      "\n⚠ command-builder mode: copy this command and run it on the machine with your ps4_dump + PS4";
+    return;
+  }
   try {
     const j = await api(`/api/command-preview?map_id=${encodeURIComponent(o.map_id)}` +
       `&target=${encodeURIComponent(o.target)}&audio=${o.audio}` +
@@ -290,10 +313,44 @@ async function updateDeployPreview() {
   } catch (e) { $("deploy-command").textContent = "→ " + e.message; }
 }
 
+
+function copyDeployCommand() {
+  const cmd = $("deploy-command").textContent
+    .replace(/^→ /, "").split("\n⚠")[0].trim();
+  if (!cmd || cmd.startsWith("→")) {
+    setResult("deploy-status", "Pick a song and a target slot first.", "bad");
+    return;
+  }
+  const done = () => setResult("deploy-status",
+    "Command copied! Run it on the machine with your ps4_dump folder + PS4 " +
+    "(from the release root or a repo checkout).", "ok");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(cmd).then(done, () => fallbackCopy(cmd, done));
+  } else {
+    fallbackCopy(cmd, done);
+  }
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); done(); }
+  catch { setResult("deploy-status", "Copy failed — select the command above manually.", "bad"); }
+  document.body.removeChild(ta);
+}
+
 async function deploy() {
   const o = currentOpts();
   if (!o.map_id || !o.target) {
     setResult("deploy-status", "Pick a song and a target slot first.", "bad");
+    return;
+  }
+  if (state.mode === "pages") {
+    // Command-builder mode: cannot run anything (no backend, no PS4 access
+    // from a hosted page) — offer the copyable command instead.
+    copyDeployCommand();
     return;
   }
   const label = $("deploy-slot-label").textContent;

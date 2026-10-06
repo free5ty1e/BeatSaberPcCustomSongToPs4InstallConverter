@@ -120,6 +120,9 @@ def build(out_dir: Path) -> list[Path]:
             "    badge.className = \"pages\";\n"
             "    document.querySelectorAll(\".local-only\").forEach("
             "el => el.classList.add(\"hidden\"));\n"
+            "    // relabel the Deploy button — it copies the command instead\n"
+            "    const deployBtn = document.getElementById(\"btn-deploy\");\n"
+            "    if (deployBtn) deployBtn.textContent = \"Copy deploy command\";\n"
             "    return;\n"
             "  }", 1)
         appjs.write_text(js, encoding="utf-8")

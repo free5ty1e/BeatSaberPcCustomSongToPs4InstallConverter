@@ -402,3 +402,10 @@ User: alpha02 tagged for validation + release titles should match the tag exactl
 Title fix: workflow name: → ${{ github.ref_name }} (next releases); alpha02 renamed in place via the API (user-requested) — verified in the list pane.
 
 alpha02 validation: CI green on the tag AND the PR (the 259b fix proven in real CI). Zip: 157 entries, versions 0.5354/0.5.4, 69 examples, FSELF plugins, fixed BE script. THE alpha01 BUG FIXED IN THE ARTIFACT: Batch parses 34 packs from inside the zip (BE=10, 5-pack=47). Live boot: ping correct (0.5.4/0.5354/bundled), all assets 200, current UI elements served, release pipeline runs. Pages bundle smoke: all assets resolve, versions baked. READY TO MERGE.
+
+## Cycle 19 — Pages-mode expectation question → command-builder mode made real (Exp 261, webapp 0.5.5)
+User: "will the Pages deployment actually run this for people without downloading... They just need the ps4_dump folder and the website will work?"
+
+HONEST ANSWER: No — browsers can't read local folders / run Python / FTP to a PS4; static hosting. Hosted = plan/onboard; release's local backend = deploy. (This two-surface split was the plan's §2 design from the start.)
+
+The question exposed pages mode was INCOMPLETE: no local-only tagging (backend buttons rendered+failed), the Deploy preview called a nonexistent backend endpoint. Built 0.5.5: local argv builder in the preview (1:1 with deploy.py), Deploy→"Copy deploy command" (clipboard+fallback), backend-only tabs hidden, and a builder-injection bug found by a headless-DOM consumer test (early return skipped the relabel — now the injection carries the full setup). Verified headlessly against the BUILT bundle: mode→hidden→relabel→exact command. Local-mode tests green. Suite 794/794.

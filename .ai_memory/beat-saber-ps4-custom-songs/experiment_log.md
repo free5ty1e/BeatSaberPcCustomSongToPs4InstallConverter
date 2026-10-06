@@ -238,3 +238,14 @@ into `experiment_log_archive/` with a feature+date name and open a fresh
   - Live boot from the extracted zip: ping → webapp 0.5.4 / pipeline 0.5354 / plugin "bundled"; index + app.js + dumper.cfg all 200; the served UI carries batchPage + toast-sim + version-badge; the release's own pipeline executes (banner: 0.5354 from the extracted root).
   - Pages bundle (what merge deploys): all referenced assets resolve, zero /static remnants, versions baked (0.5.4/0.5354/v0.8047).
 - **Status:** ✅ alpha02 fully validated — ready to merge (Pages goes live on the merge push).
+
+### Experiment 261: Command-builder mode made REAL on the hosted Pages site (webapp 0.5.5) (2026-10-06)
+- **User question (expectation-setting, answered honestly):** "will the Pages deployment actually run this for people without downloading the repo/release? They just need the ps4_dump folder and the website will work?" — NO, and by design: browsers cannot read local folders, run Python, or open FTP to a PS4; GitHub Pages is static. The hosted site is the plan/onboard surface; the release's local backend is the doing surface. The user's question exposed that pages mode was INCOMPLETE: the banner promised command-builder mode but zero elements were tagged local-only (all backend buttons rendered and failed) and the Deploy preview called a nonexistent backend endpoint.
+- **Built (webapp 0.5.5):**
+  - Deploy preview in pages mode builds the exact pipeline argv LOCALLY (mirrors adapters/deploy.py 1:1; comment marks the sync requirement) + a "run it on the machine with your ps4_dump + PS4" note.
+  - Deploy button → "Copy deploy command" (clipboard + fallback); pages-mode branch short-circuits before any backend call.
+  - Backend-only tabs hidden in pages mode (PS4/Manage/Loadout/Flags/Batch/Backup nav buttons + the wizard's Save button tagged local-only).
+  - **Builder bug found by the headless test:** the injected pages-branch RETURNED EARLY, skipping the relabel (which lived in the shared code below). The injection now carries the full pages-mode setup.
+- **Verification:** headless-DOM consumer-flow test (minimal DOM shim + the BUILT pages bundle): mode detected → tabs hidden → button relabeled → the command built exactly (`--download-beat-saver-song c213 --target Angry --pcm16 --no-pad --convert-to-v3 --deploy-full`). Local-backend regression tests green (38). Suite **794/794**; lint clean.
+- **User-facing answer delivered:** what works hosted (search, dump guide + dumper.cfg, batch build/export, feature-request composer, command generation) vs what needs the release (any deploy, anything touching the PS4) — the two-surface architecture.
+- **Status:** ✅ pages mode complete; ready to merge.

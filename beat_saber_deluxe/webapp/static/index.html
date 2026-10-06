@@ -13,12 +13,12 @@
     <button data-page="wizard" class="active">Setup Wizard</button>
     <button data-page="picker">Pick a Song</button>
     <button data-page="deployPage">Deploy</button>
-    <button data-page="ps4Page">PS4</button>
-    <button data-page="managePage">Manage Songs</button>
-    <button data-page="loadoutPage">Full Loadout</button>
-    <button data-page="flagsPage">Feature Flags</button>
-    <button data-page="batchPage">Batch</button>
-    <button data-page="backupPage">Backup / Restore</button>
+    <button data-page="ps4Page" class="local-only">PS4</button>
+    <button data-page="managePage" class="local-only">Manage Songs</button>
+    <button data-page="loadoutPage" class="local-only">Full Loadout</button>
+    <button data-page="flagsPage" class="local-only">Feature Flags</button>
+    <button data-page="batchPage" class="local-only">Batch</button>
+    <button data-page="backupPage" class="local-only">Backup / Restore</button>
     <button data-page="requestPage">Feature Request</button>
     <button data-page="guide">Dump Guide</button>
   </nav>
@@ -61,7 +61,7 @@
       <h3>3. Save configuration</h3>
       <p class="muted">Writes <code>beat_saber_deluxe/ps4_config.json</code> (gitignored —
       per-machine paths). Deploys refuse to run without it.</p>
-      <button id="btn-save-config" class="primary" disabled>Save ps4_config.json</button>
+      <button id="btn-save-config" class="primary local-only" disabled>Save ps4_config.json</button>
       <div id="save-result" class="result"></div>
     </div>
   </section>

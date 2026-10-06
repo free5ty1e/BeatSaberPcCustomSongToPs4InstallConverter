@@ -5,6 +5,30 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.5.5] — 2026-10-06 (Exp 261)
+### Added — command-builder mode actually works on the hosted Pages site
+- **The Deploy preview builds the exact pipeline command LOCALLY in pages
+  mode** (the argv order mirrors `adapters/deploy.py` 1:1) — previously the
+  preview called a backend endpoint that doesn't exist on the hosted site,
+  so nothing appeared.
+- **The Deploy button becomes "Copy deploy command"** in pages mode: copies
+  the generated command (with clipboard fallback) + a note to run it on the
+  machine with the ps4_dump + PS4.
+- **Backend-only tabs hidden in pages mode** (PS4, Manage Songs, Full
+  Loadout, Feature Flags, Batch, Backup/Restore — all require the local
+  server), the wizard's Save-config button too, and the builder's injected
+  pages-branch now carries the full setup (it previously returned early,
+  skipping the relabel — found by a headless-DOM consumer-flow test).
+- BeatSaver search, the Dump Guide (with dumper.cfg download), batch
+  building + export, and the Feature Request composer all work hosted.
+
+### Why deploys can never run on the hosted site (by design)
+Browsers cannot read a local ps4_dump folder, run Python, or open FTP to
+a PS4 — and GitHub Pages is static hosting. The hosted site is the
+plan-and-onboard surface (find songs, learn the dump process, generate
+exact commands); the release's `python3 webapp/server.py` is the surface
+that actually deploys.
+
 ## [0.5.4] — 2026-10-06 (Exp 259)
 ### Changed
 - **The example scripts now live at `docs/example-scripts/` in the REPO as
