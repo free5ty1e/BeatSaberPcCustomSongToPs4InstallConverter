@@ -335,3 +335,19 @@ table.loadout tr:hover td { background: var(--card2); }
 .multi-pack-row:hover { background: var(--card2); }
 .multi-pack-row input { margin: 0; }
 .multi-pack-row .muted { font-size: 0.85em; }
+
+/* ---------------- Get Started (guided download) ---------------- */
+.start-steps { display: flex; flex-direction: column; gap: 0.8rem; }
+.start-step h3 { margin-bottom: 0.5rem; }
+.start-step ul.checks { list-style: none; padding: 0; margin: 0; }
+.start-step ul.checks li { padding: 0.3rem 0; border-bottom: 1px dashed #2b3145; }
+.start-step ul.checks li:last-child { border-bottom: none; }
+.start-step a.primary {
+  background: var(--accent); color: #fff; border-radius: 8px;
+  padding: 0.6rem 1.2rem; display: inline-block; font-weight: 600;
+  border: none; cursor: pointer; font-size: 1rem;
+}
+.start-step a.primary:hover { filter: brightness(1.1); }
+.os-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+.os-tab { padding: 0.35rem 0.9rem; }
+.os-tab.active { border-color: var(--accent); color: var(--accent2); font-weight: 600; }

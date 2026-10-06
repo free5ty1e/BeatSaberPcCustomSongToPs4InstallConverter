@@ -19,6 +19,7 @@
     <button data-page="flagsPage" class="local-only">Feature Flags</button>
     <button data-page="batchPage" class="local-only">Batch</button>
     <button data-page="backupPage" class="local-only">Backup / Restore</button>
+    <button data-page="startPage">Get Started</button>
     <button data-page="requestPage">Feature Request</button>
     <button data-page="guide">Dump Guide</button>
   </nav>
@@ -493,6 +494,110 @@
         <pre id="fr-preview"></pre>
       </details>
       <p class="muted" id="fr-status"></p>
+    </div>
+  </section>
+
+  <!-- ================= Get Started ================= -->
+  <section id="page-startPage" class="page hidden">
+    <h2>Get Started — full point-and-click in 5 steps</h2>
+    <p class="muted">This hosted page is the planning surface: search songs, build
+    batches, learn the dump process, and generate exact commands. To actually
+    <b>deploy</b> to your PS4 you need the app running on the machine that has
+    your <code>ps4_dump/</code> folder and can reach the PS4 — this page guides
+    you there in a couple of minutes.</p>
+
+    <div class="start-steps">
+      <div class="card start-step">
+        <h3>1 · Check your prerequisites</h3>
+        <ul class="checks">
+          <li><input type="checkbox"> <b>Python 3.8+</b> on the deploy machine
+            <span class="muted">(check: <code>python3 --version</code>)</span></li>
+          <li><input type="checkbox"> <b>A jailbroken PS4</b> with GoldHEN, FTP enabled (port 2121)</li>
+          <li><input type="checkbox"> <b>Beat Saber v2.04</b> (CUSA12878) with patch 2.04 installed</li>
+          <li><input type="checkbox"> <b>Your decrypted game dump</b> in a <code>ps4_dump/</code> folder —
+            don't have one? The <a href="#" data-nav="guide">Dump Guide</a> walks you through it
+            (with our ready-made <code>dumper.cfg</code>)</li>
+          <li><input type="checkbox"> Both machines on the <b>same network</b></li>
+        </ul>
+      </div>
+
+      <div class="card start-step">
+        <h3>2 · Download the release</h3>
+        <p>One zip contains everything: the pipeline, the plugin (pre-built,
+        release + debug), this web app, all docs.</p>
+        <div class="row">
+          <a class="primary big" style="text-decoration:none"
+             href="https://github.com/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/releases/latest"
+             target="_blank" rel="noopener">Download the latest release ↗</a>
+        </div>
+        <p class="muted">On the release page, expand <b>Assets</b> and download the
+        <code>beat-saber-deluxe-*.zip</code> file. (This link always points at the
+        newest stable release.)</p>
+      </div>
+
+      <div class="card start-step">
+        <h3>3 · Extract it</h3>
+        <ul>
+          <li><b>Windows:</b> right-click the zip → <i>Extract All…</i> (built-in) — or 7-Zip</li>
+          <li><b>macOS:</b> double-click the zip — done</li>
+          <li><b>Linux:</b> <code>unzip beat-saber-deluxe-*.zip</code></li>
+        </ul>
+        <p class="muted">Put it anywhere you like, e.g. <code>~/bs-deluxe/</code> or
+        <code>C:\bs-deluxe\</code>.</p>
+      </div>
+
+      <div class="card start-step">
+        <h3>4 · Install the two dependencies & run the app</h3>
+        <p class="os-tabs">
+          <button class="os-tab active" data-os="win">Windows</button>
+          <button class="os-tab" data-os="mac">macOS</button>
+          <button class="os-tab" data-os="linux">Linux</button>
+        </p>
+        <div class="os-pane" data-os="win">
+          <pre class="code-doc">cd C:\bs-deluxe
+python -m pip install -r requirements.txt
+python webapp\server.py</pre>
+          <p class="muted">Use <code>python</code> (not python3) on Windows. If
+          <code>python</code> opens the Microsoft Store, install Python from
+          python.org first.</p>
+        </div>
+        <div class="os-pane hidden" data-os="mac">
+          <pre class="code-doc">cd ~/bs-deluxe
+python3 -m pip install -r requirements.txt
+python3 webapp/server.py</pre>
+          <p class="muted">If Python 3 isn't installed:
+          <code>brew install python3</code> or get it from python.org.</p>
+        </div>
+        <div class="os-pane hidden" data-os="linux">
+          <pre class="code-doc">cd ~/bs-deluxe
+python3 -m pip install -r requirements.txt
+python3 webapp/server.py</pre>
+          <p class="muted">On Debian/Ubuntu:
+          <code>sudo apt install python3-pip</code> first if pip is missing.</p>
+        </div>
+        <p>Your browser opens automatically at
+        <code>http://127.0.0.1:8765</code> — the same app you're looking at now,
+        but with <b>everything enabled</b>: deploys, PS4 state, feature flags,
+        batches, backups.</p>
+      </div>
+
+      <div class="card start-step">
+        <h3>5 · Run the Setup Wizard (once)</h3>
+        <ol>
+          <li>Point it at your <code>ps4_dump/</code> folder — it validates the
+          dump live (patch version, eboot, catalog, found-DLC list)</li>
+          <li>Enter your PS4's IP → <b>Test Connection</b></li>
+          <li><b>Save configuration</b></li>
+          <li>Pick a song and deploy 🎉</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Prefer the terminal?</h3>
+      <p class="muted">Everything the app does is one pipeline command — build
+      yours on the <a href="#" data-nav="deployPage">Deploy tab</a> and run it
+      from the release folder instead. The CLI and the app are the same tool.</p>
     </div>
   </section>
 

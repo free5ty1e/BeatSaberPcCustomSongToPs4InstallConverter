@@ -5,6 +5,28 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.6.0] — 2026-10-06 (Exp 262)
+### Added — the Get Started tab: hosted → full app in 5 guided steps
+- **A guided download funnel for Pages visitors** (user request: "guide the
+  user through downloading the latest release, extracting it, and running
+  THAT web app for full functionality — as seamless as we can"): a new
+  **Get Started** tab with a prerequisite checklist (interactive
+  checkboxes: Python, jailbroken PS4 + GoldHEN FTP, Beat Saber 2.04, the
+  decrypted dump with a Dump-Guide handoff link, same-network), a
+  **Download the latest release** button (the `releases/latest` link —
+  always current, no version updates needed), per-OS extract instructions,
+  **per-OS run commands** (Windows/macOS/Linux tabs: `pip install -r
+  requirements.txt` + `python webapp/server.py`, with the python-vs-python3
+  and Store-redirect gotchas called out), and the wizard's 4-step finale.
+- **Hosted visitors land on it**: the Pages bundle auto-opens Get Started,
+  and the banner now leads with "Get Started takes you to the full app in
+  ~2 minutes" — the planning-mode note and the command-builder alternative
+  remain.
+- The local backend gets the same tab (the handoff instructions live there
+  for copy/paste convenience).
+- Verified with a headless-DOM consumer test against the built bundle: nav
+  wiring at load, auto-landing, relabel — plus local-mode regression.
+
 ## [0.5.5] — 2026-10-06 (Exp 261)
 ### Added — command-builder mode actually works on the hosted Pages site
 - **The Deploy preview builds the exact pipeline command LOCALLY in pages

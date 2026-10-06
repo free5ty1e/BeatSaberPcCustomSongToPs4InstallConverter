@@ -27,11 +27,11 @@ STATIC = WEBAPP / "static"
 
 PAGES_BANNER = """\
 <div id="pages-banner" class="pages-banner" hidden>
-  <b>Command-builder mode</b> — this hosted page cannot reach your PS4 or your
-  game dump. Configure your loadout here, then copy the generated command and
-  run it on the machine with your <code>ps4_dump/</code> + PS4. For the full
-  point-and-click experience, run the local backend from the release:
-  <code>python3 webapp/server.py</code>
+  <b>Planning mode</b> — this hosted page can't reach your PS4 or game dump
+  (browsers can't, by design). <b><a href="#" data-nav="startPage">Get
+  Started</a> takes you to the full app in ~2 minutes</b>: download the
+  release, extract, run <code>python3 webapp/server.py</code>. Or keep
+  planning here and copy the generated command from the Deploy tab.
   <button id="pages-banner-dismiss" class="link">hide</button>
 </div>"""
 
@@ -123,6 +123,10 @@ def build(out_dir: Path) -> list[Path]:
             "    // relabel the Deploy button — it copies the command instead\n"
             "    const deployBtn = document.getElementById(\"btn-deploy\");\n"
             "    if (deployBtn) deployBtn.textContent = \"Copy deploy command\";\n"
+            "    // land hosted visitors on the guided download funnel\n"
+            "    const startBtn = document.querySelector("
+            "\"#nav button[data-page='startPage']\");\n"
+            "    if (startBtn) startBtn.click();\n"
             "    return;\n"
             "  }", 1)
         appjs.write_text(js, encoding="utf-8")

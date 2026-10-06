@@ -1475,6 +1475,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) { alert(e.message); }
   });
   $("btn-job-cancel").addEventListener("click", cancelJob);
+  document.querySelectorAll(".os-tab").forEach(b =>
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".os-tab").forEach(x => x.classList.toggle("active", x === b));
+      document.querySelectorAll(".os-pane").forEach(p =>
+        p.classList.toggle("hidden", p.dataset.os !== b.dataset.os));
+    }));
   $("btn-fr-preview").addEventListener("click", frPreview);
   $("btn-batch-refresh").addEventListener("click", batchRefresh);
   $("btn-batch-deploy").addEventListener("click", batchDeploy);
