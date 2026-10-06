@@ -191,8 +191,10 @@ jobs:
 
           # EVERY example_*.* file (commands + scripts for each music pack —
           # ready-to-run reference deployments the user can adapt; 69 files:
-          # 34 packs x (.md command doc + .sh script))
-          cp .agent/docs/example_* release-zip/docs/example-scripts/
+          # 34 packs x (.md command doc + .sh script)). They live in the repo
+          # at docs/example-scripts/ (moved from .agent/docs/ so the repo and
+          # release layouts match — Exp 259).
+          cp docs/example-scripts/example_* release-zip/docs/example-scripts/
 
           # Release validation procedure (how this release was validated on
           # real hardware + the automated validator itself — lets a user

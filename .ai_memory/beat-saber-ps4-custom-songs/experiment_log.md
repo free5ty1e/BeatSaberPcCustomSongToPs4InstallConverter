@@ -208,3 +208,15 @@ into `experiment_log_archive/` with a feature+date name and open a fresh
 - **Suite 794/794** (3 new); lint clean across tools/+webapp/+tests/ (one import-sort fix). Webapp 0.5.2 → **0.5.3** (CHANGELOG-WEBAPP).
 - **Recommendation to the user:** the alpha01 zip is valid EXCEPT the Batch-tab layout bug — fixed in 0.5.3; commit + re-tag (alpha02) for a fully-clean consumer artifact before merge, or merge as-is and the fix rides the next release.
 - **Status:** ✅ audit complete; one release-blocking bug found + fixed + regression-pinned.
+
+### Experiment 259: Example scripts moved to docs/example-scripts/ (repo = release layout) (2026-10-06)
+- **User decision:** the example scripts "don't belong in .agent at all" — move them to docs/example-scripts/ so the repo and release-zip structures are identical; update every reference + the KB.
+- **Executed:** 69 files moved (.agent/docs/example_* → docs/example-scripts/; old paths deleted, staged as rename-equivalent adds+deletes). bash -n syntax-verified the moved scripts.
+- **References updated (full sweep performed):**
+  - .github/workflows/plugin-build.yml: the packaging step copies from docs/example-scripts/ (was .agent/docs/) — the zip layout is UNCHANGED (docs/example-scripts/), so the release artifact is byte-identical in structure.
+  - webapp/adapters/batch.py: canonical EXAMPLE_DIRS reordered — docs/example-scripts/ first (repo + PROJECT_DIR-relative), legacy .agent/docs/ last (old checkouts still parse; first-match wins, no dupes). Verified live: 34 packs, BE=10, 5-pack=47 from the new location.
+  - README (3 references: script path in the batch-deploy section, the chained --no-prompt examples, the Batch-tab description), plan doc reference table, 3 test fixtures (release-layout tests now copy from the new source), CHANGELOG-WEBAPP (0.5.0 entry's path note updated with history preserved; 0.5.3 entry gets the superseded note).
+  - KB: pipeline-single-song-deploy.md reference updated; development-workflow.md gained the "Example scripts location" section (the durable fact: 69 files, naming pattern, 34 packs, --no-prompt, why they moved).
+- **Verification:** batch parser reads the new location (34/10/47); Pages bundle smoke (no /static remnants, all assets resolve); lint clean tools/+webapp/+tests/; suite **794/794**; scripts bash -n clean; repo-wide stale-reference sweep: zero hits outside deliberately-preserved history (changelog/transcripts).
+- **Version bumps:** webapp 0.5.3 → **0.5.4** (CHANGELOG-WEBAPP). Pipeline/plugin untouched.
+- **Status:** ✅ ready for the user's alpha02 validation.

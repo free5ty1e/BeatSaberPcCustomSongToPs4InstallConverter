@@ -37,17 +37,15 @@ import re
 
 from . import paths
 
-# The example scripts live in the repo at .agent/docs/ but the RELEASE ZIP
-# ships them at docs/example-scripts/ (see plugin-build.yml's packaging step).
-# The parser must find them in BOTH layouts — a consumer running the web app
-# from an extracted release gets zero packs otherwise (found in the alpha01
-# release audit: the Batch tab was empty from the zip, Exp 258).
+# The example scripts live at docs/example-scripts/ in BOTH the repo and the
+# release zip (moved from .agent/docs/ so the layouts match — Exp 259). The
+# parser checks the canonical path first, then the legacy .agent/docs/ layout
+# (old checkouts) — first-match wins, no duplicates.
 EXAMPLE_DIRS = [
-    paths.RELEASE_ROOT / ".agent" / "docs",
     paths.RELEASE_ROOT / "docs" / "example-scripts",
-    # an extracted release may be unpacked anywhere — the zip's docs/ sits
-    # NEXT TO beat_saber_deluxe/, and the release root is its parent
     paths.PROJECT_DIR / "docs" / "example-scripts",
+    # legacy layout (pre-Exp 259 checkouts)
+    paths.RELEASE_ROOT / ".agent" / "docs",
 ]
 BATCH_DIR = paths.WEBAPP_DIR / "batches"
 BATCH_FORMAT = "bsd-batch"

@@ -362,14 +362,14 @@ exactly what is deployed, and runs post-deploy validation — **a failed
 validation exits non-zero** so a broken state can never look green.
 
 **Batch deploys:** for a whole music pack, use the ready-made scripts in
-`.agent/docs/example_script_to_install_custom_songs_over_<pack>_music_pack.sh`
+`docs/example-scripts/example_script_to_install_custom_songs_over_<pack>_music_pack.sh`
 (one `--deploy-full` per song, with a PS4-state check + confirmation prompt up
 front and error handling per song). Pass `--no-prompt` to skip the confirmation
 and chain several packs unattended:
 
 ```bash
-'/workspace/.agent/docs/example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh' --no-prompt && \
-'/workspace/.agent/docs/example_script_to_install_custom_songs_over_britney_spears_music_pack.sh' --no-prompt
+'/workspace/docs/example-scripts/example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh' --no-prompt && \
+'/workspace/docs/example-scripts/example_script_to_install_custom_songs_over_britney_spears_music_pack.sh' --no-prompt
 ```
 
 > **`deploy_all.sh` is OUTDATED** (13 hardcoded Rolling Stones slots, pre-dating
@@ -418,7 +418,7 @@ python3 beat_saber_deluxe/webapp/server.py
   script the CLI uses): one-click backup (optionally clean the PS4 after,
   behind a hard confirm), browse `ps4_backups/`, per-row restore, live job log.
 - **Batch** — deploy whole music packs point-and-click: all 34
-  example-script loadouts (parsed live from the `.agent/docs/example_*.sh`
+  example-script loadouts (parsed live from the `docs/example-scripts/example_*.sh`
   files, so the tab always matches the scripts), a multi-pack checkbox mode
   (e.g. the standard 5-pack loadout = 47 songs in one serial run), and a
   custom batch builder with BeatSaver search, save/load, and

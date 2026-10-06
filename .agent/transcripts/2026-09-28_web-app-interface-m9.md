@@ -387,3 +387,8 @@ Live from the extracted zip: ping versions correct (plugin="bundled" — right f
 THE FINDING: Batch tab EMPTY from the release — parser looked only at .agent/docs/; the zip ships scripts at docs/example-scripts/. Fixed 0.5.3: parse both layouts (3 paths), first-match wins. PROVEN from the actual extracted alpha01 zip: 34 packs / BE 10 / 5-pack = 47. 3 regression tests; suite 794/794; lint clean.
 
 Recommendation: re-tag alpha02 with the fix for a fully-clean consumer artifact before merge.
+
+## Cycle 17 — Example scripts → docs/example-scripts/ (Exp 259, webapp 0.5.4)
+User: "perhaps it makes sense to move those example scripts and docs over to the docs/example-scripts folder so that the release structure is the same. Maybe they don't belong in .agent at all... update all references... Update our knowledge base as well. Then I will cut a new alpha02."
+
+Moved the 69 files; zip layout unchanged (byte-identical structure). Updated: plugin-build.yml packaging source, batch.py EXAMPLE_DIRS (canonical=docs/example-scripts, legacy .agent/docs still parsed), README ×3, plan doc, 3 test fixtures, changelog notes (history preserved), KB (pipeline-single-song-deploy ref + development-workflow location section). Verified: parser 34/BE-10/5-pack-47 from the new location; bash -n on moved scripts; Pages bundle smoke; lint clean; suite 794/794; zero stale refs repo-wide (outside preserved history). webapp 0.5.4.

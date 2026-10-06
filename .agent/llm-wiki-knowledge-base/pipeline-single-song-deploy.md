@@ -62,7 +62,7 @@ A single `--deploy-full` for one song now:
 7. validates.
 
 It does **NOT** touch the other packs/songs — so you can rebuild custom songs one at a time
-and test in-game after each (see `example_commands_to_install_custom_songs_over_*_music_pack.md`).
+and test in-game after each (see `docs/example-scripts/example_commands_to_install_custom_songs_over_*_music_pack.md`).
 
 ## Keeping the Exp 180 Invariant
 

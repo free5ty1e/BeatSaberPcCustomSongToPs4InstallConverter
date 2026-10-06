@@ -237,14 +237,16 @@ class TestReleaseLayoutParsing:
     tab shipped EMPTY."""
 
     def test_release_layout_finds_scripts(self, monkeypatch, tmp_path):
-        """Simulate the extracted zip: only docs/example-scripts/ exists."""
+        """Simulate the extracted zip: only docs/example-scripts/ exists.
+        (docs/example-scripts/ is now the CANONICAL layout — Exp 259 — but
+        the parser must still find scripts wherever they live.)"""
         from adapters import batch as batch_mod
         ziproot = tmp_path / "release"
         scripts_dir = ziproot / "docs" / "example-scripts"
         scripts_dir.mkdir(parents=True)
         # copy three real scripts in (as the release zip does)
         import shutil
-        src = Path("/workspace/.agent/docs")
+        src = Path("/workspace/docs/example-scripts")
         for name in ["example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
                      "example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh",
                      "example_script_to_install_custom_songs_over_lizzo_music_pack.sh"]:
@@ -269,10 +271,10 @@ class TestReleaseLayoutParsing:
         from adapters import batch as batch_mod
         stray = tmp_path / "docs" / "example-scripts"
         stray.mkdir(parents=True)
-        shutil.copy2("/workspace/.agent/docs/example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
+        shutil.copy2("/workspace/docs/example-scripts/example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh",
                      stray / "example_script_to_install_custom_songs_over_rolling_stones_music_pack.sh")
         monkeypatch.setattr(batch_mod, "EXAMPLE_DIRS",
-                            [Path("/workspace/.agent/docs"), stray])
+                            [Path("/workspace/docs/example-scripts"), stray])
         packs = batch_mod.parse_example_scripts()
         rs = [p for p in packs if "Rolling Stones" in p["name"]]
         assert len(rs) == 1, "duplicate pack from two layouts"

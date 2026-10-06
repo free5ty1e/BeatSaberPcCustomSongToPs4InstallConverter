@@ -443,7 +443,7 @@ context compaction. Verify nothing here has drifted since (versions, paths).*
 | Feature-flag toggles | `--features-only --set-feature <name>=<true|false>` (repeatable) |
 | Surgical revert | `--clear-target-song <SLOT>` |
 | Metadata-only | `--metadata-only --target <SLOT> --song-name "X" --artist "Y" --deploy` |
-| Example pack scripts (69, with `--no-prompt`) | `.agent/docs/example_*` (shipped in release `docs/example-scripts/`) |
+| Example pack scripts (69, with `--no-prompt`) | `docs/example-scripts/example_*` (canonical since Exp 259 — repo and release layouts now match; legacy `.agent/docs/` still parsed for old checkouts) |
 | Release validation history | `.ai_memory/experiment_logs/release-validation-*.log` (the format the Validate page replicates) |
 | Prior transcript (release-validation saga, Exps 234-242) | `.agent/transcripts/2026-09-27_release-validation-hardening.md` |
 | This feature's transcript (append per cycle) | `.agent/transcripts/2026-09-28_web-app-interface-m9.md` |

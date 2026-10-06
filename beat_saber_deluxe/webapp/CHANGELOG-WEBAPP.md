@@ -5,6 +5,17 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.5.4] — 2026-10-06 (Exp 259)
+### Changed
+- **The example scripts now live at `docs/example-scripts/` in the REPO as
+  well as the release** (moved from `.agent/docs/` — they're user-facing
+  content and now the repo and release layouts are identical). The Batch
+  parser's canonical path follows them; the legacy `.agent/docs/` location
+  is still parsed for old checkouts (first-match wins). All references
+  updated: README (script paths + chained examples + Batch description),
+  the release packaging workflow (copies from the new location), the plan
+  doc, the regression tests. Knowledge base updated.
+
 ## [0.5.3] — 2026-10-06 (Exp 258)
 ### Fixed
 - **The Batch tab was EMPTY when run from an extracted release zip** (found
@@ -14,6 +25,8 @@ subprocess argv call to the pipeline (plan:
   extracted zip's `beat_saber_deluxe/docs/example-scripts/`), first-match
   wins, no duplicates. Verified from the actual extracted alpha01 zip:
   34 packs, RS=11, BE=10, the 5-pack standard loadout = 47.
+  (Superseded in 0.5.4/Exp 259: the scripts moved to docs/example-scripts/ in
+  the REPO too, making the layouts identical.)
 
 ## [0.5.2] — 2026-10-04 (Exp 256)
 ### Fixed
@@ -41,7 +54,8 @@ subprocess argv call to the pipeline (plan:
 ## [0.5.0] — 2026-10-04 (Exp 254)
 ### Added — the Batch tab
 - **Pre-defined packs dropdown**: all 34 example-script packs, parsed LIVE
-  from `.agent/docs/example_*.sh` (296 song replacements — map IDs, target
+  from the example scripts (`docs/example-scripts/example_*.sh`, moved there
+  from `.agent/docs/` in Exp 259; 296 song replacements — map IDs, target
   slots, and the custom song/artist names from the scripts' own comments).
   The scripts stay the single source of truth: the tab always shows exactly
   what the CLI runs.
