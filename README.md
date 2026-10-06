@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-**Plugin v0.8047 | Pipeline v0.5351** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
+**Plugin v0.8047 | Pipeline v0.5354 | Web app 0.5.2** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
 
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
@@ -11,6 +11,21 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 <img width="2048" height="1536" alt="beatsaberdeluxev08040-rollingstones" src="https://github.com/user-attachments/assets/0fd72ed3-122c-436f-8b77-b6fc2bb4982a" />
 <img width="1536" height="2048" alt="beatsaberdeluxev08040-billieeilish" src="https://github.com/user-attachments/assets/7a39af3e-d461-4ecf-b2df-e7b408ff0c21" />
 <img width="1536" height="2048" alt="beatsaberdeluxev08040-Lizzo" src="https://github.com/user-attachments/assets/795cc606-606e-438e-b65c-dcba45f6996f" />
+
+## Web UI Screenshots
+
+<img width="942" height="831" alt="image" src="https://github.com/user-attachments/assets/f77ada23-b167-4c38-ab06-a819e1faa2d9" />
+<img width="949" height="400" alt="image" src="https://github.com/user-attachments/assets/7cfd03f9-b7dd-4499-853c-21c5361c560a" />
+<img width="940" height="902" alt="image" src="https://github.com/user-attachments/assets/fe5693f7-561e-4aa8-bc49-60a2d5458ce6" />
+<img width="939" height="738" alt="image" src="https://github.com/user-attachments/assets/0924f8c1-8669-4394-8350-dba67c6e05ff" />
+<img width="952" height="277" alt="image" src="https://github.com/user-attachments/assets/82847d07-9a01-470e-9c10-e6ea4dd2007e" />
+<img width="943" height="792" alt="image" src="https://github.com/user-attachments/assets/dc7adb87-6e31-41de-b2c4-190e4f4f1755" />
+<img width="945" height="838" alt="image" src="https://github.com/user-attachments/assets/a8451469-5ef0-4789-9006-b086a7945436" />
+<img width="945" height="798" alt="image" src="https://github.com/user-attachments/assets/b960d728-b00f-4c5f-b442-9eb2a37a783e" />
+<img width="950" height="738" alt="image" src="https://github.com/user-attachments/assets/8592a353-fa3d-4f6f-beeb-8e5de2a502e6" />
+<img width="940" height="843" alt="image" src="https://github.com/user-attachments/assets/6ec2fac1-6824-4849-b5cf-3dc80872ecca" />
+<img width="944" height="518" alt="image" src="https://github.com/user-attachments/assets/68842306-c290-486a-8243-38c0da2f2616" />
+<img width="940" height="841" alt="image" src="https://github.com/user-attachments/assets/32f1d884-989b-47ff-99b7-0e233fd0333d" />
 
 > **📋 Prerequisites:**
 >
@@ -26,13 +41,13 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 
 ## Features
 
-| Feature                                                                                     | Status                | Description                                                                                                                                                                                                                      |
-| ------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md)       | ✅ Working            | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection                                                                                                                                               |
-| [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working            | Display custom song names and artists in-game via IL2CPP MoveNext hook                                                                                                                                                           |
-| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md)                 | ✅ Working (v0.5316+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection). Generated modes verified on-device (2026-08-11 boot test). |
-| [Web App Interface](beat_saber_deluxe/webapp/)                                               | 🚧 Phase 1 (M9)      | Point-and-click UI over the pipeline CLI: setup wizard (game-dump guide + live validation), BeatSaver song picker, guided deploys with live log streaming, PS4 state dashboard. Thin layer — every deploy is the same pipeline subprocess.                                                     |
-| Note Colors                                                                                 | ⏳ Planned            | Custom left/right saber colors per song                                                                                                                                                                                          |
+| Feature                                                                                     | Status                | Description                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Custom Song Replacement](beat_saber_deluxe/docs/features/custom-song-replacement.md)       | ✅ Working            | Replace DLC song audio and beatmaps with custom songs via GoldHEN file redirection                                                                                                                                                         |
+| [Song Metadata Modification](beat_saber_deluxe/docs/features/song-metadata-modification.md) | ✅ Working            | Display custom song names and artists in-game via IL2CPP MoveNext hook                                                                                                                                                                     |
+| [Extra Game Modes](beat_saber_deluxe/docs/features/beatmap-mode-mapping.md)                 | ✅ Working (v0.5316+) | OneSaber/NoArrows/90Degree mode selector support via catalog-redirect + pack-bundle patch (Phase 1 pipeline beatmap generation + Phase 2 pack preview-set injection). Generated modes verified on-device (2026-08-11 boot test).           |
+| [Web App Interface](beat_saber_deluxe/webapp/)                                              | 🚧 Phase 1 (M9)       | Point-and-click UI over the pipeline CLI: setup wizard (game-dump guide + live validation), BeatSaver song picker, guided deploys with live log streaming, PS4 state dashboard. Thin layer — every deploy is the same pipeline subprocess. |
+| Note Colors                                                                                 | ⏳ Planned            | Custom left/right saber colors per song                                                                                                                                                                                                    |
 
 > **⚠️ Current limitations:**
 >
@@ -376,7 +391,7 @@ python3 beat_saber_deluxe/webapp/server.py
   live (patch 2.04 files, eboot.bin, origin catalog, DLC-pack confidence list),
   tests the PS4 connection, and writes a fully-localized `ps4_config.json`.
 - **Game Dump Guide** — never dumped a console? The built-in guide walks the
-  process (patch 2.04, DLC installed *before* dumping) and provides the
+  process (patch 2.04, DLC installed _before_ dumping) and provides the
   ready-made `dumper.cfg` (`split=3`) for your USB stick.
 - **Song Picker** — search BeatSaver (or paste a map ID); maps are badged with
   native Easy/Normal/Hard availability (the pipeline auto-fills
@@ -402,8 +417,15 @@ python3 beat_saber_deluxe/webapp/server.py
 - **Backup / Restore** — wraps `backup-beat-saber-deluxe-files.py` (the same
   script the CLI uses): one-click backup (optionally clean the PS4 after,
   behind a hard confirm), browse `ps4_backups/`, per-row restore, live job log.
+- **Batch** — deploy whole music packs point-and-click: all 34
+  example-script loadouts (parsed live from the `.agent/docs/example_*.sh`
+  files, so the tab always matches the scripts), a multi-pack checkbox mode
+  (e.g. the standard 5-pack loadout = 47 songs in one serial run), and a
+  custom batch builder with BeatSaver search, save/load, and
+  platform-agnostic JSON batch files (format documented in the tab).
 - **Feature Request** — composes a prefilled GitHub issue for this repo;
   opens it on GitHub for you to review and submit.
+
 **GitHub Pages command-builder:** the same UI is hosted online (deployed by
 `.github/workflows/pages.yml` from `webapp/build_pages.py`) at the repo's Pages
 URL. There, the app detects it has no backend and switches to command-builder

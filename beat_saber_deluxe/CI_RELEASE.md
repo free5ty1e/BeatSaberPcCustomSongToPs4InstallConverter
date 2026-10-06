@@ -30,9 +30,11 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 
 | File | Description |
 | ---- | ----------- |
-| `webapp/server.py` | Local web UI (FastAPI, binds **127.0.0.1 only**) — run `python3 webapp/server.py` and open the browser it launches |
+| `webapp/server.py` | Local web UI (FastAPI, binds **127.0.0.1 only**) — run `python3 webapp/server.py` and open the browser it launches. A lower-right badge shows the web app / pipeline / plugin versions so you can always tell which build you're running |
 | `webapp/adapters/` | Thin-layer adapters: every deploy is the same pipeline subprocess command, zero re-implemented logic |
-| `webapp/static/` | The UI: Setup Wizard (game-dump validation + PS4 connection test + config writer), BeatSaver song picker, guided deploys with a live log, **Manage Songs** (per-pack custom-status table + surgical clear), **Full Loadout** (every pack/song, printable to PDF as a loadout reference), PS4 state, Game Dump Guide with a ready-made `dumper.cfg` (`split=3`) |
+| `webapp/static/` | The UI (11 tabs): **Setup Wizard** (game-dump validation + PS4 connection test + config writer), **Song Picker** (BeatSaver search with native-difficulty badges), **Deploy** (guided, live console, PASSED/FAILED verdict), **Manage Songs** (per-pack table + surgical clear), **Full Loadout** (every pack/song, printable to PDF as a reference), **Feature Flags** (live toggles + a simulated PS4 boot toast), **Batch** (all 34 example packs parsed live from the scripts + custom batch builder with save/load/export + multi-pack checkbox deploys), **Backup / Restore** (the battle-tested backup script, browsable folder, optional clean-PS4), **PS4 state**, **Feature Request** (prefilled GitHub issue), **Game Dump Guide** with a ready-made `dumper.cfg` (`split=3`) |
+| `webapp/batch_runner.py` | Batch deploys run as ONE serial job — each song's exact `--deploy-full` in sequence, stopping at the first failure (the `script1 && script2` semantics) |
+| `webapp/build_pages.py` | Builds the GitHub Pages bundle from the same UI (command-builder mode) |
 | `webapp/VERSION` / `webapp/CHANGELOG-WEBAPP.md` | Web app version + changelog (separate from pipeline/plugin) |
 | `webapp/requirements` | Needs `pip install -r requirements.txt` (fastapi, uvicorn) — already included there |
 

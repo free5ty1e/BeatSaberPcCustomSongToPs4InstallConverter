@@ -521,6 +521,12 @@ print('all flags ON')"
    new tag) — expect 35/35 PASS and "live state unchanged".
 3. **Tag + push** — the release workflow builds the zip (now including these
    validation docs) and publishes with the CI_RELEASE.md body.
-4. **Post-publish spot-check**: download the zip, confirm
+4. **Web app smoke test** (the zip bundles `webapp/`): from the extracted
+   zip run `python3 webapp/server.py --no-browser --port 8799` and check —
+   `/api/ping` answers with the component versions; the lower-right version
+   badge matches `webapp/VERSION` + `VERSION`; the Batch tab lists the
+   example packs; a Backup now runs and streams; the GitHub Pages workflow
+   ("Deploy Web App to GitHub Pages") is green.
+5. **Post-publish spot-check**: download the zip, confirm
    `docs/release-validation-test-procedure.*` are present, run the static-audit
    section (1.3) manually.

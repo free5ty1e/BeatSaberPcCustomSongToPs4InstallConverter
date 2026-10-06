@@ -1,6 +1,6 @@
 # Installing Custom Songs Over the Billie Eilish Music Pack
 
-This document provides step-by-step, self-contained pipeline commands to replace all 13 songs
+This document provides step-by-step, self-contained pipeline commands to replace all 10 songs
 in the official Billie Eilish DLC music pack with custom community songs from BeatSaver.
 
 Pipeline: v0.5334 — fully automated, no manual song_metadata.json editing required.
@@ -133,7 +133,7 @@ In the `.sh` scripts this runs before the deployment loop and pauses with
 
 - **Pack key**: `billieeilish`
 - **Pack bundle**: `billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle`
-- **13 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
+- **10 songs** (each with 5 difficulties: Easy, Normal, Hard, Expert, ExpertPlus):
   1. all the good girls go to hell → Custom: Mirror (Ado)
   2. bad guy → Custom: Odo (Ado)
   3. bellyache → Custom: ATTITUDE (IVE)
@@ -257,43 +257,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 6d04  
 # Difficulties: 5/5 (Easy through Expert+) [Ranked]
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song f91e     --target ThereforeIAm     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 8. 2 be loved (am i ready) → Yes I'm A Mess (AJR)
-# Custom Song: Yes I'm A Mess
-# Artist: AJR
-# Album: The Maybe Man
-# Year: 2023
-# BeatSaver MAP_ID: 35ca9
-# BeatSaver Link: https://beatsaver.com/maps/35ca9
-# Genre: Indie Pop / Alternative
-# BPM: 184
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target 2BeLoved     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-
-# 9. about damn time → The Middle (Jimmy Eat World)
-# Custom Song: The Middle
-# Artist: Jimmy Eat World
-# Album: Bleed American
-# Year: 2001
-# BeatSaver MAP_ID: 27a13
-# BeatSaver Link: https://beatsaver.com/maps/27a13
-# Genre: Alternative Rock / Emo
-# BPM: 162
-# Difficulties: 5/5 (Easy through Expert+)
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13     --target AboutDamnTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-
-# 10. cuz i love you → Bring It On (Giga-P)
-# Custom Song: Bring It On
-# Artist: Giga-P
-# Album: (single)
-# Year: 2014
-# BeatSaver MAP_ID: 2475
-# BeatSaver Link: https://beatsaver.com/maps/2475
-# Genre: Vocaloid / Electronic
-# BPM: 160
-# Difficulties: 4/5 native (Easy, Normal, Hard, Expert) — Expert+ auto-filled
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-
-# 11. i didn't change my number → Mr. Brightside (The Killers)
+# 8. i didn't change my number → Mr. Brightside (The Killers)
 # Custom Song: Mr. Brightside
 # Artist: The Killers
 # Album: Hot Fuss
@@ -305,7 +269,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475  
 # Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3fc90     --target IDidntChangeMyNumber     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 12. oxytocin → Kiss Me More (Doja Cat ft. SZA)
+# 9. oxytocin → Kiss Me More (Doja Cat ft. SZA)
 # Custom Song: Kiss Me More
 # Artist: Doja Cat ft. SZA
 # Album: Planet Her
@@ -317,7 +281,7 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3fc90 
 # Difficulties: 5/5 native (Easy, Normal, Hard, Expert, ExpertPlus)
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4dea2     --target Oxytocin     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 
-# 13. you should see me in a crown → 15 Minutes (Sabrina Carpenter)
+# 10. you should see me in a crown → 15 Minutes (Sabrina Carpenter)
 # Custom Song: 15 Minutes
 # Artist: Sabrina Carpenter
 # Album: Emails I Can't Send

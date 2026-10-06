@@ -129,44 +129,26 @@ python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song f91e  
 if [ $? -ne 0 ]; then echo "ERROR: Failed therefore i am"; exit 1; fi
 echo "  therefore i am → Who's Laughing Now deployed successfully"
 
-# Song 8: 2 be loved (am i ready) → Yes I'm A Mess (AJR)
-echo "Deploying 2 be loved (am i ready) → Yes I'm A Mess (AJR)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 35ca9     --target 2BeLoved     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-if [ $? -ne 0 ]; then echo "ERROR: Failed 2 be loved"; exit 1; fi
-echo "  2 be loved → Yes I'm A Mess deployed successfully"
-
-# Song 9: about damn time → The Middle (Jimmy Eat World)
-echo "Deploying about damn time → The Middle (Jimmy Eat World)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 27a13     --target AboutDamnTime     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-if [ $? -ne 0 ]; then echo "ERROR: Failed about damn time"; exit 1; fi
-echo "  about damn time → The Middle deployed successfully"
-
-# Song 10: cuz i love you → Bring It On (Giga-P)
-echo "Deploying cuz i love you → Bring It On (Giga-P)..."
-python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 2475     --target CuzILoveYou     --pcm16     --no-pad     --convert-to-v3     --deploy-full
-if [ $? -ne 0 ]; then echo "ERROR: Failed cuz i love you"; exit 1; fi
-echo "  cuz i love you → Bring It On deployed successfully"
-
-# Song 11: i didn't change my number → Mr. Brightside (The Killers)
+# Song 8: i didn't change my number → Mr. Brightside (The Killers)
 echo "Deploying i didn't change my number → Mr. Brightside (The Killers)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 3fc90     --target IDidntChangeMyNumber     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed i didn't change my number"; exit 1; fi
 echo "  i didn't change my number → Mr. Brightside deployed successfully"
 
-# Song 12: oxytocin → Kiss Me More (Doja Cat ft. SZA)
+# Song 9: oxytocin → Kiss Me More (Doja Cat ft. SZA)
 echo "Deploying oxytocin → Kiss Me More (Doja Cat ft. SZA)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 4dea2     --target Oxytocin     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed oxytocin"; exit 1; fi
 echo "  oxytocin → Kiss Me More deployed successfully"
 
-# Song 13: you should see me in a crown → 15 Minutes (Sabrina Carpenter)
+# Song 10: you should see me in a crown → 15 Minutes (Sabrina Carpenter)
 echo "Deploying you should see me in a crown → 15 Minutes (Sabrina Carpenter)..."
 python3 tools/full_custom_song_pipeline.py     --download-beat-saver-song 443f3     --target YouShouldSeeMeInACrown     --pcm16     --no-pad     --convert-to-v3     --deploy-full
 if [ $? -ne 0 ]; then echo "ERROR: Failed you should see me in a crown"; exit 1; fi
 echo "  you should see me in a crown → 15 Minutes deployed successfully"
 
 echo ""
-echo "=== All 13 Billie Eilish pack songs deployed (full orchestration) ==="
+echo "=== All 10 Billie Eilish pack songs deployed (full orchestration) ==="
 echo "Each command handled: song bundle + pack mode bundles + catalog + redirects + validation"
 echo ""
 echo "=== Deployment complete ==="

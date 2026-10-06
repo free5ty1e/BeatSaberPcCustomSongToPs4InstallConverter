@@ -226,4 +226,4 @@ class TestMultiPackBatch:
                   "Lizzo", "Camelia"]
         selected = [p for p in packs if any(w in p["name"] for w in wanted)]
         merged = sum(len(p["songs"]) for p in selected)
-        assert merged == 11 + 13 + 11 + 9 + 6  # RS, BE, BS, Lizzo, Camelia
+        assert merged == 11 + 10 + 11 + 9 + 6  # RS, BE(10 — Lizzo-pack dupes removed), BS, Lizzo, Camelia

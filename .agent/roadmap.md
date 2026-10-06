@@ -254,7 +254,7 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] **(Exp 237) validation-automation metadata-wipe RCA'd + fixed** — both state files pulled/backed up/compared now; name-loss gates; live PS4 metadata restored (47 names / 7 artists).
 - [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236); **metadata steps must pull song_metadata.json from the PS4 like clear_target_song already does for redirects (Exp 237)**; requirements.txt split (cosmetic).
 
-## M9 — Web App Interface for the Pipeline — 🚧 IN PROGRESS (one-stop-shop tabs built, webapp 0.3.1, Exps 244-248; pipeline v0.5352/5353 state-safety fixes)
+## M9 — Web App Interface for the Pipeline — ✅ FEATURE COMPLETE (11 tabs, webapp 0.5.2, Exps 244-256; pipeline v0.5352-0.5354 state-safety fixes; 5-pack loadout parity-proven at 47; Pages deploys at merge)
 **Goal: make the pipeline accessible to non-CLI users.** A web interface for the entire
 song-conversion pipeline, included with the release AND deployable on GitHub Pages.
 Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent/plans/web-app-song-conversion-pipeline-interface.md)

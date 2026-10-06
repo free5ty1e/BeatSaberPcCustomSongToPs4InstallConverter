@@ -353,3 +353,26 @@ Design notes: the scripts stay the single source of truth (parsed, not duplicate
 
 ## Cycle 13 — Multi-pack batch mode (Exp 255, webapp 0.5.1)
 User: single-batch tested + working. Request: checkbox selection of multiple pre-defined packs → one large deploy (their standard 5-pack loadout). Built: new Batch-tab section — 34-pack checkbox list (counts + slot ranges), select all/none, live N-packs/M-songs counter, deploy-order tooltip, Deploy Selected Music Packs → merged-in-pack-order /api/jobs/batch → serial runner with stop-at-first-failure. Their 5-pack loadout = 50 songs. 2 tests (merge integrity + count parity with the scripts). Suite 791/791.
+
+## Cycle 14 — The 50-vs-47 audit + BE duplicate removal (Exp 256, webapp 0.5.2)
+User: why 50 in the app vs 47 on the PS4 after the same 5 scripts? "Please audit and figure out what is going on here."
+
+AUDIT: BE script + .md carried 3 LIZZO-pack songs (2BeLoved/AboutDamnTime/CuzILoveYou — same map IDs the Lizzo script deploys onto those same Lizzo slots). 50 lines / 47 unique; dupes overwrite identically → 47 live. (My audit detour: two one-off analysis scripts had their own bugs — lowercased-key lookup + a collapsed dict — briefly showing camellia live=0; caught and fixed before concluding.)
+
+USER DECISION: remove the duplicates from the BE script entirely (they don't belong there); Lizzo keeps them.
+
+EXECUTED: BE .sh — 3 blocks removed, songs renumbered (11→8, 12→9, 13→10), "All 13" footer → 10 (header already said 10 — itself evidence the 3 were accidental). BE .md — 3 sections removed, renumbered, both count references fixed. Verified: BE = 10 live lines, all genuine BE slots; parser total = 47; FINAL PARITY PROOF: scripts' unique slots == live 47, zero diff both directions. Suite 791/791.
+
+## Cycle 15 — FINAL pre-merge audit + PR description (Exp 257)
+User: "perform one final audit of the new web app interface, the CI, release process, release contents, release notes, documentation, knowledge base, etc... Include the PR description, we need to update that and do NOT lose my screenshots — follow the prompt file and only push once I approve. This will be last in your task list."
+
+AUDIT FINDINGS + FIXES (4 tasks, done in order):
+1. Webapp: lint clean, 41 routes, all 11 tabs, versions coherent (0.5.2/0.5354/v0.8047 across badge+toast+files), Pages bundle passes every smoke check; pages.yml's JS assertion tightened (checked literal "data-mode" but the builder stamps dataset.mode — the or-clause covered it, now proof-proof). One false alarm during audit: my grep for 'data-mode' in the BUILT js — the injected check uses dataset.mode; verified the workflow's real assertion passes.
+2. CI/release: both workflows lint tools/+webapp/+tests/ + run the suite w/ requirements-test (fastapi/uvicorn/httpx); release job webapp-boot smoke + zip bundles webapp/ incl. batch_runner + build_pages (batches/ gitignored). CI_RELEASE.md webapp table REWRITTEN for 11 tabs (was pre-Batch/Flags/Backup/Request).
+3. Docs: README version banner stale 0.5351 → v0.8047/0.5354/webapp 0.5.2; README webapp list gained the Batch tab entry; release-day checklist gained the webapp smoke test step (the plan §9.5 DoD item); context.yml top-level pipeline_version 0.5351→0.5354; roadmap M9 header → FEATURE COMPLETE. KB: 56 pages current; flag-audit + lftp-pitfalls accurate.
+4. PR description (prompt file followed to the letter): PR #5 found; current body downloaded (43 lines — still the Exp-242 PLANNING description with 12 screenshots + stale narrative); updated copy: screenshots preserved VERBATIM (all 12, order intact), new body = shipped-milestone summary (versions, 11 tabs, architecture, the v0.5352-5354 state-safety fixes, 791-test validation, 47-parity) + the planning-notes footer kept for context; diff generated (.pr_temp/). NOT PUSHED — awaiting explicit approval per the user's instruction and the Danger Mode rules.
+
+Suite 791/791 final; lint clean. All audit changes staged (14 files).
+
+## Cycle 15b — PR description PUSHED (approved)
+User: "approved". Pushed via the established raw-field PATCH (gh api pulls/5 --method PATCH --raw-field). Post-push verification: body byte-identical to the approved draft (pushed == intended: True); all 12 screenshots intact in order; the 11-tabs + architecture + validation sections live. One honesty note: the version-banner sentence ("Plugin v0.8047 · Pipeline v0.5354 · Web app 0.5.2") that appeared in my audit summary was from the FIRST (failed) edit attempt; the final python-built draft — the one in the diff the user approved — begins at "## What's in it (11 tabs)" and carries the versions only in the v0.5352-54 section + validation section. Offered a one-line PATCH to add the banner; no action without the user's say-so.

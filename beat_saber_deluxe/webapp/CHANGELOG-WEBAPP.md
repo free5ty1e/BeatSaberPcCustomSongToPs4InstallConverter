@@ -5,6 +5,17 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.5.2] — 2026-10-04 (Exp 256)
+### Fixed
+- **The 5-pack multi-batch now counts 47, matching the PS4** (was 50):
+  the Billie Eilish example script carried 3 songs that belong to the
+  LIZZO pack (2 be loved / about damn time / cuz i love you — Lizzo stock
+  slots with the same map IDs the Lizzo script already deploys). Removed
+  from the BE `.sh` + companion `.md` (renumbered, count references fixed);
+  the Lizzo script keeps them. Verified: the five scripts' unique slot set
+  now EXACTLY equals the live PS4's 47 redirects (zero diff both ways);
+  the multi-batch counter reads 11+10+11+9+6 = 47.
+
 ## [0.5.1] — 2026-10-04 (Exp 255)
 ### Added
 - **Multi-pack batch deploys** (Batch tab, new section): a checkbox list of
