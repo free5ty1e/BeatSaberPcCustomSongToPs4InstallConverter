@@ -281,7 +281,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Beat Saber Deluxe ${{ github.ref_name }}
+          # Release name matches the tag EXACTLY: the release list pane
+          # truncates to a few characters, and a fixed prefix ("Beat Saber
+          # Deluxe ") made every release look identical there (user
+          # request, Exp 260).
+          name: ${{ github.ref_name }}
           body_path: beat_saber_deluxe/CI_RELEASE.md
           files: |
             release-artifacts/beat-saber-deluxe-*-pipeline-*.zip

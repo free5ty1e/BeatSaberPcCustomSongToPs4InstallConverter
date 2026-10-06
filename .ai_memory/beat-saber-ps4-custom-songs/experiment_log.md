@@ -227,3 +227,14 @@ into `experiment_log_archive/` with a feature+date name and open a fresh
 - **Fix:** both fixtures resolve the repo root via `PROJECT.parent` (PROJECT = the test-file-derived beat_saber_deluxe dir) → `docs/example-scripts/`. Also swept every new test file for other absolute `/workspace` strings: only inert conftest fixture data remains (never asserted — historically CI-green). Version note: webapp stays 0.5.4 (test-only change, no functional delta).
 - **Proof beyond the local suite:** re-ran the tests from a COPY of the repo at /tmp/ci-sim (a non-/workspace path — the CI condition) → 3/3 pass. Full suite 794/794; lint clean.
 - **Status:** ✅ fixed; CI will go green on the next push.
+
+### Experiment 260: alpha02 full release validation + release-title fix (2026-10-06)
+- **User request:** validate `v0.8047-pipeline-0.5354-webapp-0.5.4-alpha02` thoroughly; AND name releases to match the tag EXACTLY (the "Beat Saber Deluxe " prefix made every release look identical in GitHub's truncated list pane).
+- **Release-title fix (user-directed mutation):** workflow's `name:` changed from `Beat Saber Deluxe ${{ github.ref_name }}` to `${{ github.ref_name }}` (with an explanatory comment) — takes effect from the NEXT tagged release; the alpha02 release renamed in place via the API (user-requested): now shows `v0.8047-pipeline-0.5354-webapp-0.5.4-alpha02` in the list, verified. Older releases left as history (user can request renames).
+- **alpha02 validation (all green):**
+  - GitHub side: build + release jobs success (run 37410760565); the PR CI (tests+lint) green on the same commit — the Exp 259b absolute-path fix verified in real CI.
+  - Zip (157 entries): pipeline VERSION 0.5354, webapp/VERSION **0.5.4**, 69 example files, both FSELF plugins carrying the v0.8047 string, the fixed BE script ("All 10" footer).
+  - **THE alpha01 BUG FIXED IN THE SHIPPED ARTIFACT:** the Batch tab parses **34 packs from INSIDE the zip** (adapter imported from the extracted copy; BE=10; the 5-pack standard loadout = **47**) — the exact consumer path that returned zero in alpha01.
+  - Live boot from the extracted zip: ping → webapp 0.5.4 / pipeline 0.5354 / plugin "bundled"; index + app.js + dumper.cfg all 200; the served UI carries batchPage + toast-sim + version-badge; the release's own pipeline executes (banner: 0.5354 from the extracted root).
+  - Pages bundle (what merge deploys): all referenced assets resolve, zero /static remnants, versions baked (0.5.4/0.5354/v0.8047).
+- **Status:** ✅ alpha02 fully validated — ready to merge (Pages goes live on the merge push).

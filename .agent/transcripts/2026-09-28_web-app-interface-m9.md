@@ -395,3 +395,10 @@ Moved the 69 files; zip layout unchanged (byte-identical structure). Updated: pl
 
 ## Cycle 17b — CI red: absolute paths in the new tests (Exp 259b)
 User spotted run 37406290094 red. RCA: my Exp 259 release-layout tests hardcoded /workspace/docs/example-scripts/ as the copy source — passes in the devcontainer, FileNotFoundError on CI runners. Fixed: derive via PROJECT.parent (test-file-relative). Swept all new tests for the class (only inert conftest fixture data remains). PROOF: ran the tests from a repo copy at /tmp/ci-sim (non-/workspace — the CI condition): 3/3 pass. Suite 794/794; lint clean.
+
+## Cycle 18 — alpha02 validated + release-title fix (Exp 260)
+User: alpha02 tagged for validation + release titles should match the tag exactly (GitHub's list pane truncates; the "Beat Saber Deluxe " prefix made them indistinguishable).
+
+Title fix: workflow name: → ${{ github.ref_name }} (next releases); alpha02 renamed in place via the API (user-requested) — verified in the list pane.
+
+alpha02 validation: CI green on the tag AND the PR (the 259b fix proven in real CI). Zip: 157 entries, versions 0.5354/0.5.4, 69 examples, FSELF plugins, fixed BE script. THE alpha01 BUG FIXED IN THE ARTIFACT: Batch parses 34 packs from inside the zip (BE=10, 5-pack=47). Live boot: ping correct (0.5.4/0.5354/bundled), all assets 200, current UI elements served, release pipeline runs. Pages bundle smoke: all assets resolve, versions baked. READY TO MERGE.
