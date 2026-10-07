@@ -81,6 +81,33 @@ of the host or `-p`).
 (`open: GetPass() failed -- assume anonymous login` on stderr). Filter
 stderr, but never let stdout-parsing assume clean content (see pitfall 1).
 
+## 8. Default retries against a DEAD host take MINUTES — set net timeouts (Exp 263)
+
+lftp's defaults retry a connection-refused/unreachable host far longer than
+any interactive use can tolerate. Measured against a powered-off PS4:
+
+- a bare `lftp -e "cls <dir>; quit"` took **12 minutes 14 seconds** to give up;
+- the webapp's old read path (3 reads × 3 retries, 30s subprocess timeouts)
+  made `/api/loadout` take **~3.5 minutes** before reporting "unreachable"
+  — the UI spinner hung the whole time.
+
+Fix (webapp 0.6.1, `webapp/adapters/ps4.py::_run_lftp`): prefix every
+command list with
+
+```
+set net:timeout 5; set net:max-retries 1; set net:connect-timeout 5;
+```
+
+The same dead read then fails in **0.25s** (measured 1.19s through the
+Python adapter including temp-dir setup). Keep the outer
+`subprocess.run(timeout=…)` as the belt-and-suspenders bound, and stop
+RETRYING (beyond attempt 1) once the error is a connectivity refusal
+("No route to host" / "Connection refused" / timeout / DNS) — retries
+exist for transfer flakes, not for dead hosts. The PIPELINE's own reads
+are single-attempt with hard aborts (Exp 246/248 discipline) and never
+needed this; it's the interactive surfaces (webapp, validation tooling)
+that must fail fast.
+
 See also: [[ps4-file-system-redirects]] (topology + command reference),
 [[feature-flags]] (ps4_state.py reads), [[pack-scope-auto-discovery]]
 (the deployed-state vs local-cache rule that several of these bugs violated).

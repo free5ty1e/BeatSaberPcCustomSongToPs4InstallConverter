@@ -1051,7 +1051,8 @@ def _deployed_bundle_name(slot: str, config: dict) -> str:
     return f"{canonical}{suffix}"
 
 def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
-                                slots: list | None = None) -> int:
+                                slots: list | None = None,
+                                remote_files: dict | None = None) -> int:
     """
     (Re)generate the per-song redirect entries so every VALUE points at the
     exact deployed bundle filename (canonical slot casing + afr_target_suffix).
@@ -1061,6 +1062,17 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
     missing from the config, and removes stale pre-`.bundle` entries
     (e.g. value `Crystallized_v3` while the deployed file is
     `crystallized_v3.bundle`).
+
+    Case-collision guard (Exp 263): when `remote_files` (the LIVE AFR dir
+    listing, {filename: size}) is provided, a value that already names a file
+    that EXISTS on the PS4 is NEVER rewritten. The old healing rewrote
+    `MessItUp_v3.bundle` -> `messitup_v3.bundle` because the default config's
+    slot list prefers lowercase — but single-song deploys don't re-upload
+    out-of-scope slots, so the file on disk kept its mixed-case name and the
+    healed redirect DANGLED (the song fails to load; the post-deploy check
+    "redirect targets missing on PS4" is what caught it). Healing may now only
+    FIX a genuinely-dangling value, and it fixes it toward the case variant
+    that actually exists on disk.
 
     If `slots` is provided, ONLY those slots will have redirects - all other
     song redirects are removed. This allows single-song scoped deploys to not
@@ -1147,9 +1159,32 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
                 log.info(f"  🧹 Removed stale song redirect: {k} -> {redirects[k]}")
                 del redirects[k]
                 changed += 1
-        if redirects.get(key) != value:
-            redirects[key] = value
-            changed += 1
+        existing = redirects.get(key)
+        if existing == value:
+            continue
+        # Case-collision guard (Exp 263): a value that already names a file
+        # present on the PS4 is healthy — never rewrite it just because the
+        # config's slot list spells the slot with different casing. Out-of-scope
+        # slots are not re-uploaded by this deploy, so a "healed" value can
+        # dangle against the on-disk name.
+        if remote_files is not None and existing in remote_files:
+            log.info(f"  ℹ️  Keeping existing redirect value (target file on PS4): "
+                     f"{key} -> {existing}")
+            continue
+        if remote_files is not None and existing is not None:
+            # The value dangles at its exact case — but if a case variant of
+            # the same filename exists on disk, heal TOWARD it (the deployed
+            # file), never away from it.
+            on_disk = {n.lower(): n for n in remote_files}
+            disk_variant = on_disk.get((existing or '').lower())
+            if disk_variant and disk_variant != existing:
+                log.info(f"  🩹 Healing redirect value to the on-disk filename: "
+                         f"{key}: {existing} -> {disk_variant}")
+                redirects[key] = disk_variant
+                changed += 1
+                continue
+        redirects[key] = value
+        changed += 1
     if changed:
         log.info(f"  🎵 Ensured {len(configured)} song redirects point at deployed bundles ({changed} entries updated)")
     return changed
@@ -3782,7 +3817,17 @@ def manage_redirect_config(
     # ALWAYS keep the per-song redirects pointing at the exact deployed bundle
     # filenames (canonical slot casing + afr_target_suffix). This heals stale
     # pre-.bundle values and stale key casing after any config operation.
-    _ensure_mass_song_redirects(redirect_data, config, slots=slots)
+    # When this call will DEPLOY, pass the LIVE AFR listing so the healing can
+    # never rewrite a value that already names a real file on the PS4 (Exp 263:
+    # config-casing "healing" turned 11 healthy mixed-case values into dangling
+    # lowercase ones because out-of-scope slots are not re-uploaded). Unreachable
+    # PS4 during a deploy already aborted above; here the listing is belt-and-
+    # suspenders — if it fails, healing stays config-driven exactly as before.
+    remote_files = None
+    if should_deploy:
+        remote_files = _list_remote_dir(config) or None
+    _ensure_mass_song_redirects(redirect_data, config, slots=slots,
+                                remote_files=remote_files)
 
     # ALWAYS keep the pack bundle + catalog redirect pair consistent (Exp 180):
     # a config with a pack bundle redirect but no catalog redirect (or with a

@@ -5,6 +5,10 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.6.1] — 2026-10-06 (Exp 263)
+### Fixed
+- **Dead-PS4 reads no longer take minutes to report "unreachable"** (Exp 263 finding, measured during release validation of webapp-0.6.0-alpha01: with the PS4 powered off, `/api/loadout` took ~3.5 min — 3 reads × 3 retries against a host lftp defaults kept retrying; a bare lftp call was measured at 12:14 min). The adapters' `_run_lftp` now sets `net:timeout 5`, `net:max-retries 1`, `net:connect-timeout 5` (the same dead read fails in 0.25s), and `fetch_remote_json` stops retrying once the error is a connectivity refusal ("No route to host" / "connection refused" / timeout / DNS) — retries remain for genuine transfer flakes. The PS4-state/Loadout tabs now surface "unreachable" in seconds instead of hanging the spinner for minutes. (Found while validating against a PS4 that was initially off; pipeline-side twin of this fix: none needed — the pipeline's reads are single-attempt with hard aborts.)
+
 ## [0.6.0] — 2026-10-06 (Exp 262)
 ### Added — the Get Started tab: hosted → full app in 5 guided steps
 - **A guided download funnel for Pages visitors** (user request: "guide the

@@ -414,3 +414,35 @@ The question exposed pages mode was INCOMPLETE: no local-only tagging (backend b
 User: "the Pages deployed web app should guide the user through downloading the latest release, extracting it, and running THAT web-app... encapsulate and automate this process as much as possible... ultimate easy user friendly experience."
 
 Built the Get Started tab (both modes): prerequisite checklist (interactive, with the Dump-Guide handoff), the releases/latest download button (permalink — never needs updating), per-OS extract instructions, tabbed per-OS run commands (pip + python webapp/server.py; the Windows python gotchas), and the wizard finale. The Pages bundle auto-lands hosted visitors there; the banner leads with the ~2-minute promise. Honest framing preserved: download/extract/two-commands are the irreducible browser-limited steps — everything around them is guided. Headless-DOM consumer test (realistic shim: load-time nav wiring) passes against the built bundle; local-mode regression green. Suite 794/794.
+
+---
+
+## Cycle 21 — Exp 263: webapp-0.6.0-alpha01 release validation (found + fixed a live redirect-case bug)
+
+**User:** committed + tagged `v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01`; asked for complete validation + updating the validation script/procedure for all new functionality/UI; noted I could recover context from commit messages if the compaction lost any. Mid-validation: "oops! I forgot to power on the PS4... I just did so and ensured the ftp server was up."
+
+### What ran (chronological)
+1. Release audit on GitHub: title==tag exact, workflow green, asset 966,405 B. Downloaded + extracted to /workspace/temp/alpha01-validation.
+2. Static audit: VERSION 0.5354 + webapp/VERSION 0.6.0 (both match tag), 69 examples, FSELF binaries v0.8047, exp-246/248/253 fixes in the shipped pipeline, 12 tabs (startPage present), 37 routes, 7 local-only buttons. **Release-body gap found:** CI_RELEASE.md still said "11 tabs" → fixed (12, Get Started listed).
+3. Webapp boots from the zip: ping carries all 3 versions; catalog/batch/examples/backup/feature-request/dumper.cfg 200. **34 packs parse from the release layout; 5-pack = 47.** (batch adapter works from inside the zip.)
+4. PS4 OFF at first: `/api/loadout` HUNG ~3.5min before unreachable (dead-host retries); a bare lftp call measured **12:14 min**. Logged as finding; user then powered the PS4 on.
+5. PS4 ON: loadout 0.9s — SERVED 47 / STALE 0 / STOCK 258, readStatus all-true. ps4/state: 53 redirects, 47 songs, 5 packs, catalog true, all 4 flags ON. verify-ps4 PASSED (after pulling both state files; the no-local-file mismatch is expected pre-pull).
+6. Build-only quality: 36,706,075 B bundle; NoArrows 5/5 all-dots, OneSiber 5/5 blue-dots.
+7. **--deploy-full FAILED its own post-deploy check: `Redirect targets missing on PS4: ['messitup_v3.bundle']`.** RCA chain (fully traced in-session):
+   - I had NOT localized ps4_config.json before the deploy (skipped validator step 3 — my own mistake, but it exposed the pipeline's failure mode).
+   - No config → pipeline fell back to built-in defaults: devcontainer-absolute paths AND a `mass_deploy.slots` list with lowercase Rolling Stones spellings.
+   - `_ensure_mass_song_redirects` "healed" redirect VALUES from `mass_deploy.slots` casing → 11 live mixed-case values lowercased (`MessItUp_v3.bundle` → `messitup_v3.bundle`), pushed to the PS4.
+   - Out-of-scope slots are NOT re-uploaded by single-song deploys → files on disk kept mixed-case names → values dangled (5+ of 11; PS4 carried silent case-duplicates since Exp 253: both `Angry_v3.bundle` and `angry_v3.bundle` existed).
+   - The release's own post-deploy check #3 (exact-case target existence) caught it and correctly refused to pass. **The validation did exactly what it exists to do.**
+   - Reproduced deterministically: pre-validation backup + pure-default config + deploy scope → the same 11 diffs.
+8. **Fix (pipeline v0.5355):** `_ensure_mass_song_redirects(…, remote_files=None)` — a value that already names a file present on the PS4 is NEVER rewritten; a dangling value heals toward the ON-DISK case variant; `manage_redirect_config` fetches the live AFR listing on every deploy. 7 regression tests (`tests/test_exp263_redirect_case_healing.py`). **My own wiring test leaked** (manage_redirect_config's local-resync overwrote the working-copy redirects.json with the fixture — the env-dependent pack-mode tests caught it); hermeticized via `_get_redirect_config_path` monkeypatch; working copy restored from the pre-validation backup. Suite **801/801**; lint clean.
+9. **Webapp fix (0.6.1):** `_run_lftp` now sets `net:timeout 5 / max-retries 1 / connect-timeout 5`; `fetch_remote_json` stops retrying on connectivity refusals (retries stay for transfer flakes). Proven against the dead PS4: dead read **1.19s** (was ~3.5min via the endpoint / 12:14min bare). Suite 801/801 again.
+10. Validator + procedure updated (both files): default TAG → new release; **version expectations DERIVED from the tag** (sed extraction; no manual bumps); new automated step 4/9 webapp smoke (boots shipped server: ping versions, Get Started, 34 packs, 5-pack=47, live-truth loadout); step-order enforcement (localize BEFORE any pipeline run, with the Exp 263 story inline); findings 4 (the case-healing bug) + 5 (dead-PS4 timeouts) added; expected-results table rewritten for this run; release-day checklist documents tag==title.
+11. README banner → Pipeline 0.5355 | Web app 0.6.1 (was stale at 0.5.2).
+
+### PS4 state at session end (⚠️ pending)
+- The 15:48 deploy pushed the 11 rewritten values to the console. Pre-validation backup (`redirects.pre-validation.bak`, 53 entries, healthy mixed-case values) is safe locally. Metadata untouched (47 names live).
+- **The PS4's FTP went unreachable ~16:20 mid-validation** (GoldHEN FTPD typically drops after heavy transfer sessions — the deploy pushed ~200MB of pack bundles). Monitor armed (bd3s6jkyk) to auto-detect its return; restore = one `put` of the backup + re-verify. Do NOT boot the game before the restore (the dangling `messitup_v3.bundle` value = MessItUp won't load; 5 slots affected; everything else healthy).
+
+### Verdict on alpha01
+NOT shippable as-is: its pipeline 0.5354 carries the case-healing bug. Recommend: commit 0.5355 + webapp 0.6.1, then alpha02 (or fold into the merge). The release's OWN safety net (post-deploy validation) is what caught it — the exact system working as designed.

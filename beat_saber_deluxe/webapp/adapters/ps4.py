@@ -61,8 +61,19 @@ def _ps4_endpoint() -> tuple[str, str, int]:
 
 def _run_lftp(host: str, user_part: str, port: int, commands: list[str],
               timeout: int = 30) -> tuple[int, str]:
-    """Run lftp with the reliable anonymous form (pitfall 6: user AND password)."""
-    joined = "; ".join(commands) + "; quit"
+    """
+    Run lftp with the reliable anonymous form (pitfall 6: user AND password).
+
+    The command list is prefixed with tight network timeouts (Exp 263
+    finding): lftp's DEFAULTS retry a dead host for minutes — measured
+    12:14 against a powered-off PS4, and 3 reads × 3 retries made
+    /api/loadout take ~3.5 min to report "unreachable". With
+    net:timeout 5 / max-retries 1 the same dead read fails in 0.25s,
+    letting the UI surface unreachable state immediately. The subprocess
+    timeout stays as the belt-and-suspenders bound.
+    """
+    joined = ("set net:timeout 5; set net:max-retries 1; set net:connect-timeout 5; "
+              + "; ".join(commands) + "; quit")
     try:
         r = subprocess.run(
             ["lftp", "-u", user_part, "-p", str(port), host, "-e", joined],
@@ -98,7 +109,15 @@ def _extract_json_object(text: str) -> dict | None:
 
 
 def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
-    """Banner-free JSON read from the PS4 (the one transport, everywhere)."""
+    """
+    Banner-free JSON read from the PS4 (the one transport, everywhere).
+
+    Retry policy (Exp 263 finding): retries exist for genuine connection
+    FLAKES (transfer drops mid-file) — a fast, decisive "No route to host"
+    (dead host; the per-call lftp timeouts now fail in ~5s) is not worth
+    3 attempts, so the loop stops early once the error is a connectivity
+    refusal rather than re-trying for minutes against a powered-off PS4.
+    """
     host, user_part, port = _ps4_endpoint()
     last_err = ""
     for attempt in range(1, retries + 1):
@@ -118,6 +137,13 @@ def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
                 last_err = f"parse failed (attempt {attempt})"
             else:
                 last_err = out.strip().splitlines()[-1] if out.strip() else f"lftp rc={rc}"
+                # Connectivity refusal (host down/unreachable): dead host,
+                # not a flake — further attempts cannot succeed and each one
+                # costs the full connect-timeout.
+                low = last_err.lower()
+                if ("no route to host" in low or "connection refused" in low
+                        or "timeout" in low or "not resolved" in low):
+                    break
     return ReadResult(ok=False, error=last_err)
 
 
