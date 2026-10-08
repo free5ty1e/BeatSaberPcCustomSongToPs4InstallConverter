@@ -254,6 +254,41 @@ Prove the 4-mode pack patch + custom-song fleet end-to-end on hardware, entirely
 - [x] **(Exp 237) validation-automation metadata-wipe RCA'd + fixed** — both state files pulled/backed up/compared now; name-loss gates; live PS4 metadata restored (47 names / 7 artists).
 - [ ] Post-merge pipeline work: PROJECT_ROOT-relative config defaults (finding #1); verify-ps4 shrinkage guard (Exp 236); **metadata steps must pull song_metadata.json from the PS4 like clear_target_song already does for redirects (Exp 237)**; requirements.txt split (cosmetic).
 
+## M9 — Web App Interface for the Pipeline — ✅ FEATURE COMPLETE (11 tabs, webapp 0.5.2, Exps 244-256; pipeline v0.5352-0.5354 state-safety fixes; 5-pack loadout parity-proven at 47; Pages deploys at merge)
+**Goal: make the pipeline accessible to non-CLI users.** A web interface for the entire
+song-conversion pipeline, included with the release AND deployable on GitHub Pages.
+Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent/plans/web-app-song-conversion-pipeline-interface.md)
+
+### Core UX (the user's requirements)
+- [x] Select the local `ps4_dump` folder via a native folder picker (Phase 1: manual path entry + live validation; native dialog probe arrives Phase 3 — tkinter absent in headless devcontainer)
+- [ ] **Guide the user through obtaining the decrypted dump** — step-by-step
+      recipe, ready-made `dumper.cfg` download (split=3), live structural
+      validation with per-missing-piece errors + which DLC packs were found,
+      and dump-copy/import placement help (see plan §4.1b)
+- [x] Select a song from BeatSaver (search + map-ID entry built; local-folder tab arrives Phase 3)
+- [x] Configure pipeline options — Phase 1 core set (target slot by pack, audio codec, v3, pad, plugin-skip, name/artist overrides); advanced panel arrives Phase 3
+- [x] Manipulate feature flags (kill switch, mode mapping, metadata...) with live PS4 state display (Exp 247: Feature Flags tab — live read, descriptions, diff-only Apply via --features-only)
+- [x] **Backup / Restore page** (Exp 247): thin wrapper over backup-beat-saber-deluxe-files.py — backup (+ --clean-ps4 behind hard confirm), list ps4_backups/, per-row restore, sanitized names
+- [x] **Feature Request tab** (Exp 247): prefilled GitHub issue composer (client-side; Pages-capable)
+- [x] Configure the PS4 connection (IP/port) + **test the connection** before any deploy (wizard step 2 → /api/ps4/test)
+- [ ] Perform full validation tests (the 35-check release validator, surfaced in the UI)
+- [x] Live progress/output streaming for every operation (single-job runner, line-buffered log pane, PASSED/FAILED verdict from the pipeline's exit code)
+- [x] **Manage Songs tab** (Exp 245): pack dropdown → per-song table (stock + custom name/artist, served/stale/label-only status) + per-row surgical Clear
+- [x] **Full Loadout tab** (Exp 245): every pack × song × custom status; printable (Ctrl+P → PDF) / saveable (Ctrl+S) as a loadout reference; per-row Clear
+- [x] **GitHub Pages deployment** (Exp 245): build_pages.py + pages.yml (command-builder mode; needs Pages enabled in repo settings → GitHub Actions source)
+
+### Architecture
+- [x] Local-backend mode (FastAPI, webapp/server.py): browser UI drives the real pipeline on the
+      user's machine — binds 127.0.0.1 only, one job at a time, subprocess argv (Exp 244)
+- [ ] Static-Pages mode: a documentation/demo deployment on GitHub Pages with
+      command-building UI that generates the exact CLI invocations (works without a backend)
+- [ ] Shipped with the release (webapp/ in the zip) + `pip install`-able entry point
+- [x] Thin layer — zero duplicated logic; every button maps to a documented pipeline
+      command (proven by test: every webapp flag asserted present in pipeline --help)
+- [x] The banner-chatter/robust-transport lessons (lftp-ftp-pitfalls KB) apply to all
+      PS4 reads surfaced in the UI (banner tests even caught a new Exp-240-class bug:
+      raw_decode scanning replaces rfind-'}' slicing — Exp 244)
+
 ### Completed (Exp 233) — The Real 3-File Deletion Bug + --no-prompt + Last CI Gates
 - [x] **3-file deletion ACTUALLY fixed:** relative-vs-absolute Path comparison in the wipe (git ls-files emits repo-relative; rglob yields absolute; `item not in tracked` never matched — every file unlinked, log lied "preserved"). Both layers normalized to resolved-absolute strings; NEW E2E test runs the real wipe against a scratch git repo.
 - [x] **--no-prompt on all 34 example scripts** — unattended chained runs.

@@ -62,7 +62,7 @@ A single `--deploy-full` for one song now:
 7. validates.
 
 It does **NOT** touch the other packs/songs — so you can rebuild custom songs one at a time
-and test in-game after each (see `example_commands_to_install_custom_songs_over_*_music_pack.md`).
+and test in-game after each (see `docs/example-scripts/example_commands_to_install_custom_songs_over_*_music_pack.md`).
 
 ## Keeping the Exp 180 Invariant
 
@@ -131,3 +131,32 @@ per-song bundle:
 3. **OneSaber TextAssets are blue dots.** Generated AND mapper-authored charts
    are normalized through `_generate_one_saber()` at injection (see
    [[saber-colors-and-one-saber]]); bombs pass through.
+
+## Post-Deploy Size Checks: Scope Them to Session Uploads (v0.5356, Exp 264)
+
+The post-deploy validation's "sizes match local files" check exists to catch
+FAILED/INCOMPLETE uploads of what a deploy just pushed. It must NOT hard-fail
+over out-of-scope redirect targets whose stale LOCAL artifact differs from the
+live PS4 copy — that comparison says nothing about the deploy's health, and
+in practice it will eventually be true (local rebuilds by different pipeline
+versions legitimately differ by a few bytes; charts stay identical). The
+user's first 22-song multi-pack batch died at song 1/22 on exactly this:
+`Size mismatches: ['Oxytocin_v3.bundle (local 36,706,086 vs PS4 36,706,075)']`
+for a song the batch never touched.
+
+**Rule:** the pipeline keeps a session upload ledger
+(`_SESSION_UPLOADED_BUNDLES`) that `deploy_to_ps4` and `_deploy_file_to_ps4`
+record into on every VERIFIED upload. The size check:
+
+- hard-fails only for files in the ledger (did MY upload land intact?);
+- reports out-of-scope mismatches as an informational `ℹ️` note;
+- with an EMPTY ledger (standalone `--verify-ps4` — the deep-audit mode),
+  checks everything and fails on any mismatch.
+
+**Related trap (same batch, found while proving):** parsers of the example
+scripts must strip SHELL quoting from tokens. The scripts write
+`--target "Scream&Shout"` because `&` must be quoted for the shell; a `\S+`
+regex captures the quotes into the slot name and the deploy targets a
+garbage slot. Quotes are shell syntax, never part of the value. See
+[[lftp-ftp-pitfalls]] (pitfall 4 — the same `&` from the transport side) and
+[[ps4-file-system-redirects]] (case-sensitivity of redirect VALUES).

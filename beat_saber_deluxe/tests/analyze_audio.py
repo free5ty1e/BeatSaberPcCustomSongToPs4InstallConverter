@@ -2,14 +2,16 @@
 """
 Direct analysis: Build FSB5, examine every byte, find the freeze cause.
 """
-import sys, os, struct, math
+import os
+import struct
+import sys
+
 sys.path.insert(0, '/workspace/beat_saber_deluxe/tools')
-from hevag_encoder import (
-    pcm_to_hevag, build_fsb5, generate_test_tone_pcm, parse_fsb5,
-    HEVAG_COEFFS, HEVAG_FRAME_SIZE, HEVAG_SAMPLES_PER_FRAME
-)
 from importlib import reload
+
 import hevag_encoder
+from hevag_encoder import HEVAG_COEFFS, build_fsb5, generate_test_tone_pcm, pcm_to_hevag
+
 reload(hevag_encoder)
 
 print("=" * 60)
@@ -82,7 +84,7 @@ for i in range(len(hevag)//32):
         key = f"P{pred}S{shift}"
         frame_types[key] = frame_types.get(key, 0) + 1
 
-print(f"   Frame type distribution (top 20):")
+print("   Frame type distribution (top 20):")
 for k, v in sorted(frame_types.items(), key=lambda x: -x[1])[:20]:
     print(f"     {k}: {v} frames")
 
@@ -91,10 +93,10 @@ p4_count = sum(frame_types[k] for k in frame_types if k.startswith('P4'))
 if p4_count > 0:
     print(f"   ⚠️ Predictor 4 frames: {p4_count}")
 else:
-    print(f"   ✅ No predictor 4 frames")
+    print("   ✅ No predictor 4 frames")
 
 # 6. Decode and verify one frame
-print(f"\n6. Frame decoding verification:")
+print("\n6. Frame decoding verification:")
 frame0 = hevag[0:16]
 pred = frame0[0] & 0xF
 shift = (frame0[0] >> 4) & 0xF
@@ -120,7 +122,7 @@ err = sum(abs(left[j] - reconstructed[j]) for j in range(min(28, len(left), len(
 print(f"   Reconstruction error (first frame): {err}")
 
 # 7. Validate all nibbles
-print(f"\n7. Nibble validation...")
+print("\n7. Nibble validation...")
 all_valid = True
 bad_count = 0
 for i in range(len(hevag)):
@@ -136,12 +138,12 @@ for i in range(len(hevag)):
         bad_count += 1
 
 if all_valid:
-    print(f"   ✅ All nibbles in valid signed 4-bit range (0-7)")
+    print("   ✅ All nibbles in valid signed 4-bit range (0-7)")
 else:
     print(f"   ❌ Invalid nibbles found ({bad_count}+ violations)")
 
 # 8. Examine the quick_test.bundle
-print(f"\n8. Quick test bundle analysis:")
+print("\n8. Quick test bundle analysis:")
 qt_path = 'custom_songs/quick_test.bundle'
 with open(qt_path, 'rb') as f:
     qt = f.read()
@@ -157,7 +159,7 @@ if fsb_start >= 0:
     # Check if this matches our generated FSB5
     print(f"   Our FSB5: {len(hevag)+916} bytes")
     if len(qt_audio) == len(hevag):
-        print(f"   ✅ Audio data size matches our generated FSB5")
+        print("   ✅ Audio data size matches our generated FSB5")
     else:
         print(f"   ⚠️ Size mismatch: bundle={len(qt_audio)} vs generated={len(hevag)}")
 

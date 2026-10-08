@@ -3,7 +3,7 @@
 Analyze the ORIGINAL FSB5's sample header structure to find the correct
 sample_header_size and any additional fields we're missing.
 """
-import struct, os, sys
+import struct
 
 with open('/workspace/beat_saber_deluxe/tests/reference/original_audio.fsb5', 'rb') as f:
     orig = f.read()
@@ -16,7 +16,7 @@ magic = orig[0:4]
 ver = struct.unpack_from('<I', orig, 4)[0]
 nsamp = struct.unpack_from('<I', orig, 8)[0]
 shsz = struct.unpack_from('<I', orig, 12)[0]
-print(f"FSB5 Header:")
+print("FSB5 Header:")
 print(f"  magic: {magic}")
 print(f"  version: {ver}")
 print(f"  num_samples: {nsamp}")
@@ -41,7 +41,7 @@ freq = struct.unpack_from('<I', sh, 16)[0]
 more16 = struct.unpack_from('<H', sh, 20)[0]
 more32 = struct.unpack_from('<I', sh, 24)[0]
 
-print(f"Sample Entry (first 32 bytes):")
+print("Sample Entry (first 32 bytes):")
 print(f"  [0:4]   name_offset: {name_offset}")
 print(f"  [4:8]   data_size: {data_size}")
 print(f"  [8:12]  offset: {offset}")
@@ -79,7 +79,7 @@ for i in range(32, len(sh)):
 if in_region:
     nonzero_regions.append((region_start, len(sh), len(sh) - region_start))
 
-print(f"\nNon-zero regions (excluding first 32 bytes):")
+print("\nNon-zero regions (excluding first 32 bytes):")
 for start, end, count in nonzero_regions[:10]:
     print(f"  [{start}:{end}] ({count} bytes non-zero): {sh[start:start+min(32, end-start)].hex()}")
     if end - start > 100:
@@ -94,7 +94,7 @@ print()
 
 # Look for audio data patterns between entries and before audio data
 # Check what's at the end of the sample header area
-print(f"Last 32 bytes of sample header area:")
+print("Last 32 bytes of sample header area:")
 print(f"  Bytes {shsz-32}-{shsz}: {sh[-32:].hex()}")
 
 # What follows the sample header area?

@@ -5,17 +5,16 @@ Tests the BeatmapLevelSO blob builder and Unity string encoding
 for the pack bundle injector.
 """
 import os
-import sys
 import struct
-import pytest
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from inject_pack_bundle import (
-    encode_utf8_string,
-    build_beatmap_levelso_blob,
     _CHAR_PATH_IDS,
     _CORRECT_MONOSCRIPT_PATHID,
+    build_beatmap_levelso_blob,
+    encode_utf8_string,
 )
 
 

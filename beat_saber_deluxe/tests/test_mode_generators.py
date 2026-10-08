@@ -4,14 +4,13 @@ import tempfile
 import unittest
 
 from tools.full_custom_song_pipeline import (
+    _generate_90_degree,
     _generate_no_arrows,
     _generate_one_saber,
-    _generate_90_degree,
-    generate_missing_mode_beatmaps,
-    detect_song_modes,
-    build_mode_mapping,
     add_mode_characteristics,
-    is_v2_beatmap,
+    build_mode_mapping,
+    detect_song_modes,
+    generate_missing_mode_beatmaps,
 )
 
 V2_NOTE = {"_time": 1.0, "_lineIndex": 0, "_lineLayer": 0, "_type": 1, "_cutDirection": 3}
@@ -289,8 +288,8 @@ class TestModeBeatmapInjection(unittest.TestCase):
         ]})
 
     def test_injected_beatmaps_reference_new_textassets(self):
+
         from UnityPy import load as load_bundle
-        import io, gzip
 
         # Build a song dir with Standard source (all 5 difficulties)
         with tempfile.TemporaryDirectory() as d:
@@ -392,8 +391,6 @@ class TestModeBeatmapInjection(unittest.TestCase):
 
     def test_generated_v2_no_arrows_converted_to_v3_before_injection(self):
         """NoArrows generated from V2 source should be V3 after injection."""
-        from UnityPy import load as load_bundle
-        import os as _os
 
         with tempfile.TemporaryDirectory() as d:
             files = {
@@ -425,8 +422,9 @@ class TestModeBeatmapInjection(unittest.TestCase):
         """Re-running the pipeline on a source dir that already has generated
         mode .dat files (generated_files empty) must still inject the mode
         beatmaps as new TextAssets, not fall back to cloning Standard refs."""
-        from UnityPy import load as load_bundle
         import os as _os
+
+        from UnityPy import load as load_bundle
 
         with tempfile.TemporaryDirectory() as d:
             files = {

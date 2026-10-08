@@ -4,17 +4,16 @@ Unit tests for build_replacement_pack*.py and build_patched_pack_bundle.py
 Tests the pure functions from the pack bundle patching tools.
 """
 import os
-import sys
 import struct
-import pytest
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from build_replacement_pack import (
-    encode_utf16le,
-    build_unity_string_bytes,
-    build_pptr,
     build_array_header,
+    build_pptr,
+    build_unity_string_bytes,
+    encode_utf16le,
 )
 
 

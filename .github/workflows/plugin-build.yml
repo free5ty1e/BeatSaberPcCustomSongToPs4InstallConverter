@@ -126,7 +126,27 @@ jobs:
         run: |
           pip install -r beat_saber_deluxe/requirements-test.txt
           cd beat_saber_deluxe
+          python3 -m ruff check tools/ webapp/ tests/ --output-format=github
           python3 -m pytest tests/ -v --cov=tools --cov-report=html:htmlcov --cov-report=term-missing --cov-config=pyproject.toml
+
+      - name: Smoke-test the web app server
+        run: |
+          # Import + route check (no network): proves the webapp in the zip
+          # boots. The same UI serves the GitHub Pages build.
+          cd beat_saber_deluxe
+          python3 - <<'PYEOF'
+          import sys
+          sys.path.insert(0, "webapp")
+          import server
+          routes = {getattr(r, "path", "") for r in server.app.routes}
+          required = {"/api/ping", "/api/loadout", "/api/jobs/deploy"}
+          missing = required - routes
+          assert not missing, f"webapp missing routes: {missing}"
+          assert ( __import__("pathlib").Path("webapp/static/index.html").exists()
+                   and __import__("pathlib").Path("webapp/static/app.js").exists() ), \
+              "webapp static UI files missing"
+          print(f"webapp OK: {len(routes)} routes, static UI present")
+          PYEOF
 
       - name: Bundle release zip
         run: |
@@ -171,14 +191,24 @@ jobs:
 
           # EVERY example_*.* file (commands + scripts for each music pack —
           # ready-to-run reference deployments the user can adapt; 69 files:
-          # 34 packs x (.md command doc + .sh script))
-          cp .agent/docs/example_* release-zip/docs/example-scripts/
+          # 34 packs x (.md command doc + .sh script)). They live in the repo
+          # at docs/example-scripts/ (moved from .agent/docs/ so the repo and
+          # release layouts match — Exp 259).
+          cp docs/example-scripts/example_* release-zip/docs/example-scripts/
 
           # Release validation procedure (how this release was validated on
           # real hardware + the automated validator itself — lets a user
           # validate their own deployment the same way)
           cp .agent/docs/release-validation-test-procedure.md release-zip/docs/
           cp .agent/docs/release-validation-test-procedure.sh release-zip/docs/
+
+          # Web app (M9): the point-and-click UI over the pipeline CLI.
+          # Includes its own VERSION + CHANGELOG-WEBAPP.md; static/ doubles
+          # as the GitHub Pages build source (same UI bundle).
+          mkdir -p release-zip/webapp
+          rsync -a --exclude='__pycache__' beat_saber_deluxe/webapp/ release-zip/webapp/
+          cp beat_saber_deluxe/webapp/VERSION release-zip/webapp/VERSION
+          cp beat_saber_deluxe/webapp/CHANGELOG-WEBAPP.md release-zip/webapp/
 
           # Test coverage report
           if [ -d "beat_saber_deluxe/htmlcov" ]; then
@@ -200,6 +230,8 @@ jobs:
           echo "Created ${ZIP_NAME}"
           ls -lh "${ZIP_NAME}"
           echo "=== example files bundled: $(ls release-zip/docs/example-scripts/ | wc -l) ==="
+          echo "=== webapp bundled (version $(cat beat_saber_deluxe/webapp/VERSION)):" \
+               "$(find release-zip/webapp -type f | wc -l) files ==="
 
       - name: Verify artifacts
         run: |
@@ -249,7 +281,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Beat Saber Deluxe ${{ github.ref_name }}
+          # Release name matches the tag EXACTLY: the release list pane
+          # truncates to a few characters, and a fixed prefix ("Beat Saber
+          # Deluxe ") made every release look identical there (user
+          # request, Exp 260).
+          name: ${{ github.ref_name }}
           body_path: beat_saber_deluxe/CI_RELEASE.md
           files: |
             release-artifacts/beat-saber-deluxe-*-pipeline-*.zip

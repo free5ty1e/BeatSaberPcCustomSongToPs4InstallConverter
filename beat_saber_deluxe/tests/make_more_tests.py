@@ -3,14 +3,16 @@
 Additional test bundles for audio freeze investigation.
 Only run these after determining which of the first two tests (silence, original_audio_3s) works.
 """
-import UnityPy, json, gzip, struct, os, math, io, sys
+import gzip
+import io
+import json
+import struct
+import sys
+
+import UnityPy
 
 sys.path.insert(0, '/workspace/beat_saber_deluxe/tools')
-from hevag_encoder import (
-    generate_test_tone_pcm, pcm_to_hevag,
-    hevag_encode_block, HEVAG_COEFFS,
-    HEVAG_SAMPLES_PER_FRAME, HEVAG_FRAME_SIZE
-)
+from hevag_encoder import HEVAG_FRAME_SIZE, HEVAG_SAMPLES_PER_FRAME, generate_test_tone_pcm
 from UnityPy.streams import EndianBinaryReader
 
 OUTPUT_DIR = "/workspace/beat_saber_deluxe/custom_songs"
@@ -51,7 +53,8 @@ def build_fsb5_and_bundle(audio_data, duration=3.0, label="test"):
     bf = list(env.files.values())[0]
     cab = bf.files['CAB-6c9e66546e3e23434517417298a18b91']
     new_res = EndianBinaryReader(fsb5)
-    new_res.flags = 0; new_res.BaseOffset = 0
+    new_res.flags = 0
+    new_res.BaseOffset = 0
     bf.files['CAB-6c9e66546e3e23434517417298a18b91.resource'] = new_res
 
     for pid, reader in cab.objects.items():
@@ -94,7 +97,7 @@ def build_fsb5_and_bundle(audio_data, duration=3.0, label="test"):
 # ======================================================================
 def encode_frame_predictor0_only(samples, h1=0, h2=0):
     """Encode using ONLY predictor 0 (no prediction, simple 4-bit PCM)."""
-    c1, c2 = 0, 0  # predictor 0 coefficients
+    c1, c2 = 0, 0  # noqa: F841 — predictor 0 coefficients (documented, unused by design)
     best_shift = 0
     best_err = float('inf')
 

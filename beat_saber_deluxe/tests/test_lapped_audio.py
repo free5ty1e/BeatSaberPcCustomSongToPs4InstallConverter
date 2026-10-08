@@ -4,24 +4,19 @@ Unit tests for lapped_audio.py
 Tests BPM loading, V2 detection, event time extraction, lapped detection,
 and audio extension logic.
 """
+import json
 import os
 import sys
-import json
-import struct
-import tempfile
-import shutil
-import math
-import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from lapped_audio import (
-    load_bpm,
-    is_v2_beatmap,
-    get_beatmap_event_times,
-    make_beatmap_times,
-    detect_lapped,
     LAP_THRESHOLD,
+    detect_lapped,
+    get_beatmap_event_times,
+    is_v2_beatmap,
+    load_bpm,
+    make_beatmap_times,
 )
 
 
@@ -125,7 +120,7 @@ class TestGetBeatmapEventTimes:
 
     def test_extracts_note_times_v3(self, tmp_dir):
         """V3 notes 'b' should be in seconds (no conversion).
-        
+
         BUG: get_beatmap_event_times only searches V2 keys (_notes, _obstacles, etc.)
         but V3 uses 'colorNotes', 'bombNotes', 'obstacles', etc. and the field is 'b'
         not '_time'. So V3 beatmaps produce empty time sets and max_time=0.

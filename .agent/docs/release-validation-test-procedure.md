@@ -1,7 +1,9 @@
 # Release Validation Test Procedure — Full Functional Coverage
 
 Complete procedure to validate a Beat Saber Deluxe release zip against a REAL
-PS4. Covers **all release functionality**: static audit, read-only state
+PS4. Covers **all release functionality**: static audit (versions derived
+from the tag), the **web app surface** (0.6.0: Get Started tab, example-pack
+parsing from the release layout, live-truth loadout), read-only state
 validation, build quality, end-to-end deploys (plugin included), feature-flag
 round-trips, kill switch, surgical revert + restore, config sync/enforce,
 plugin variant swaps, pack-mode scoping, metadata overrides, and final
@@ -12,8 +14,8 @@ state-integrity checks.
   entire sequence and prints a PASS/FAIL table. Destructive steps back up and
   restore live state automatically.
 
-**Time required (manual):** ~45–60 min. Automated: ~25 min (dominated by two
-song builds + deploys).
+**Time required (manual):** ~50–65 min. Automated: ~30 min (dominated by two
+song builds + deploys + the webapp smoke pass).
 
 ## Running the automated validation (recommended)
 
@@ -24,12 +26,15 @@ blank screen) plus a timestamped logfile for detailed review afterwards.
 ```bash
 bash /workspace/.agent/docs/release-validation-test-procedure.sh \
     --log /workspace/temp/release-validation-$(date +%Y%m%d-%H%M%S).log \
-    v0.8047-pipeline-0.5351-alpha01
+    v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01
 echo "exit=$? (0 = all checks PASSED)"
 ```
 
 - TAG argument is optional (defaults to the current release tag) — pass a
   different tag to validate another release; the zip is downloaded fresh.
+  **Version expectations are DERIVED from the tag**
+  (`v<plugin>-pipeline-<pipeline>-webapp-<webapp>`), so the script checks the
+  zip's VERSION files against the tag you pass — no per-release edits needed.
 - Override the PS4 address with the environment: `PS4_IP=<ip> bash ...`
 - The logfile lives next to the extracted release in `/workspace/temp/` for
   later review; each run's folder is kept for inspection at
@@ -44,7 +49,32 @@ divergence auto-restores. Net effect on a healthy PS4: functionally unchanged
 (song bundles may be re-uploaded with functionally-identical rebuilt bytes;
 the bundled plugin re-uploads — same CI build).
 
-Validated against: `v0.8047-pipeline-0.5351-alpha01` (Exps 234–236).
+Validated against: `v0.8047-pipeline-0.5351-alpha01` (Exps 234–236),
+`v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01` (Exp 263 — found and fixed the
+redirect-case bug), `v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01` (Exp 265 —
+carries both fixes; full audit green incl. live deploy + flag round-trip).
+
+## ⚠️ Step order is enforced (Exp 263 lesson)
+
+**Localize the config (step 3) BEFORE running any pipeline command from the
+extraction.** The validator now checks this order. During the alpha01
+webapp-0.6.0 validation, a `--deploy-full` ran before localization: the
+extraction had NO `ps4_config.json`, so the pipeline silently fell back to
+its built-in defaults — devcontainer-absolute paths plus a
+`mass_deploy.slots` list whose lowercase spellings "case-healed" 11 live
+mixed-case redirect VALUES into dangling lowercase ones (single-song deploys
+don't re-upload out-of-scope slots, so the files on disk kept their
+mixed-case names). The release's own post-deploy check caught it
+(`Redirect targets missing on PS4: ['messitup_v3.bundle']`) and correctly
+refused to pass the deploy; the live state was restored from the
+pre-validation backup, and the pipeline was fixed in v0.5355 (healing now
+consults the live AFR listing and never rewrites a value that names a real
+file). Two durable rules came out of it:
+
+1. **Config-localize first** — a packaged release with no config must never
+   reach a deploy with defaults that reference another machine's paths.
+2. **Redirect values are case-sensitive filenames** — healing may only fix
+   values that genuinely dangle, toward the case variant that exists on disk.
 
 ## Prerequisites
 
@@ -85,17 +115,22 @@ unzip -q ../beat-saber-deluxe-v0.8047-pipeline-0.5351.zip
 
 ### 1.3 Static audit (no PS4 needed)
 
+Version expectations come from the tag: `v<plugin>-pipeline-<pipeline>-webapp-<webapp>`.
+
 ```bash
-cat VERSION                      # EXPECT: 0.5351
+TAG=v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01
+cat VERSION          # EXPECT: 0.5354 (the tag's pipeline component)
+cat webapp/VERSION   # EXPECT: 0.6.0 (the tag's webapp component)
 ls docs/example-scripts/ | wc -l # EXPECT: 69
 ls plugins/                      # EXPECT: beat_saber_deluxe.prx + beat_saber_deluxe_debug.prx
 python3 - <<'EOF'
 rel = open('plugins/beat_saber_deluxe.prx','rb').read()
 dbg = open('plugins/beat_saber_deluxe_debug.prx','rb').read()
 assert rel[:4] == bytes.fromhex('4f153d1d') and dbg[:4] == bytes.fromhex('4f153d1d'), "FSELF magic"
-assert b'v0.8047' in rel and b'v0.8047' in dbg
-print("binaries OK: FSELF + v0.8047, sizes", len(rel), len(dbg))
+print("binaries OK: FSELF, sizes", len(rel), len(dbg))
 EOF
+strings plugins/beat_saber_deluxe.prx | grep -oE 'v0\.[0-9]{4}' | head -1
+# EXPECT: v0.8047 (the tag's plugin component)
 grep -c "no-prompt" docs/example-scripts/example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh
 # EXPECT: >0
 grep -n "No Makefile (packaged release)" tools/full_custom_song_pipeline.py
@@ -104,7 +139,37 @@ grep -c "ensure_ascii=False" tools/full_custom_song_pipeline.py
 # EXPECT: >0 (Unicode metadata fix shipped)
 ```
 
-### 1.4 Symlink the game dump
+### 1.4 Web app smoke test (from the shipped zip — no PS4 needed for the core)
+
+```bash
+python3 webapp/server.py --no-browser --port 8799 &   # from the extraction folder
+sleep 3
+curl -s http://127.0.0.1:8799/api/ping
+# EXPECT: {"mode":"local-backend","webapp_version":"0.6.0","pipeline_version":"0.5354",
+#          "plugin_version":"bundled","pipeline_present":true}
+curl -s http://127.0.0.1:8799/ | grep -c "startPage\|Get Started"
+# EXPECT: >0 — the 0.6.0 Get Started tab is served
+curl -s http://127.0.0.1:8799/api/batch/examples | python3 -c "
+import json,sys; d=json.load(sys.stdin)
+packs = d.get('packs', d) if isinstance(d, dict) else d
+print(len(packs), 'packs'); assert len(packs)==34
+std = ['Billie Eilish','Britney Spears','Camelia','Lizzo','Rolling Stones']
+by = {p['name']: p for p in packs}
+print('5-pack total:', sum(len(by[n]['songs']) for n in std)); assert sum(len(by[n]['songs']) for n in std)==47"
+# EXPECT: 34 packs / 5-pack total 47 (the docs/example-scripts/ release layout parses)
+curl -s -m 240 http://127.0.0.1:8799/api/loadout | python3 -c "
+import json,sys; d=json.load(sys.stdin)
+errs=[k for k,v in d.get('readStatus',{}).items() if k.endswith('ReadError') and v]
+served=sum(1 for p in d.get('packs',[]) for s in p.get('songs',[]) if s.get('customDeployed'))
+print('read errors:', errs, '| SERVED:', served)"
+# EXPECT (PS4 on): read errors [] and SERVED == your live redirect song count
+# EXPECT (PS4 off): the endpoint eventually reports unreachable — ⚠️ known slow:
+# each read retries 3× against the dead host (~3.5 min before "unreachable";
+# dead-PS4 lftp timeouts are a recorded follow-up finding)
+kill %1
+```
+
+### 1.6 Symlink the game dump
 
 The release ships NO game data (copyright — the release notes say so).
 Symlink the existing dump:
@@ -115,7 +180,7 @@ ln -s /workspace/ps4_dump ps4_dump
 python3 -c "import os; assert os.path.isdir('ps4_dump/CUSA12878-patch'); print('dump OK')"
 ```
 
-### 1.5 Copy + localize the PS4 config
+### 1.7 Copy + localize the PS4 config (MANDATORY before any pipeline run)
 
 ```bash
 cp /workspace/beat_saber_deluxe/ps4_config.json ps4_config.json
@@ -141,9 +206,13 @@ EOF
 ```
 
 > **Why:** the pipeline's built-in defaults are devcontainer-absolute paths
-> (release finding #1 — post-merge fix pending). Until then this step is REQUIRED.
+> (release finding #1 — post-merge fix pending). Until then this step is REQUIRED,
+> **and it must happen before ANY pipeline command runs from the extraction**
+> (see the Exp 263 lesson at the top: a deploy that ran before localization
+> silently used the defaults — including a `mass_deploy.slots` list that
+> "case-healed" live redirect values into dangling ones).
 
-### 1.6 Pull the live PS4 state (live-loadout validation)
+### 1.8 Pull the live PS4 state (live-loadout validation)
 
 ⚠️ **Pull BOTH state files** (Exp 237): redirects.json AND song_metadata.json.
 The release zip ships NEITHER (both are user state). If song_metadata.json is
@@ -175,7 +244,7 @@ cp song_metadata.json song_metadata.pre-validation.bak
 
 > Fresh PS4: skip the pulls; the empty templates are then correct.
 
-### 1.7 Smoke-test the shipped pipeline
+### 1.9 Smoke-test the shipped pipeline
 
 ```bash
 python3 tools/full_custom_song_pipeline.py --help 2>&1 | head -3
@@ -485,42 +554,56 @@ print('all flags ON')"
 
 ## Expected-results summary
 
-| # | Validation | Expected (alpha01 actual) |
+| # | Validation | Expected (webapp-0.6.0-alpha01 actual) |
 |---|---|---|
-| 1 | Static audit | VERSION 0.5351, 69 examples, FSELF binaries w/ v0.8047, fallback + Unicode fixes in shipped code — ✅ |
-| 2 | `--verify-ps4` (live) | 🎉 PASSED, N redirects, catalog md5 match — ✅ |
-| 3 | Build-only + quality | 5/5 beatmaps; NoArrows 5/5 all-dots; OneSaber 5/5 blue-dots — ✅ |
-| 4 | `--deploy-full` (bundled plugin) | Plugin deployed from zip, packs preserved, PASSED — ✅ |
-| 5 | `--skip-plugin-deployment` | Zero plugin activity, deploy PASSED — ✅ |
-| 6 | `--debug-logging` swap + restore | Debug binary at canonical entry, no forked ini line, restore OK — ✅ |
-| 7 | Feature-flag toggles | Each written+verified on PS4, restored all-ON — ✅ |
-| 8 | Kill-switch round-trip | enable_plugin false→true verified both ways — ✅ |
-| 9 | `--metadata-only` | Entry updated; redirect count unchanged — ✅ |
-| 10 | `--clear-target-song` + restore | Surgical (1 song removed, packs intact), restore OK — ✅ |
-| 11 | `--sync-config` | PS4 state pulled, Saved N, PASSED — ✅ |
-| 12 | ⚠️ `--enforce-config` | Contract honored (local pushes to PS4) — **backup mandatory**; verify-blind-spot finding recorded — ✅ (with restore) |
-| 13 | `--pack-modes-packs` scoping | Build scoped; deploy union covers all live packs by design — ✅ |
-| 14 | `--song-name/--artist` override | In BeatmapLevelSO blob (UTF-16LE) — ✅ |
-| 15 | `--target-ip` | Explicit-IP verify PASSED — ✅ |
-| 16 | Final state | Packs/songs/flags identical to pre-validation — ✅ |
+| 1 | Static audit | VERSION matches tag (0.5354), webapp VERSION 0.6.0, plugin binary v0.8047, 69 examples, FSELF binaries, fallback + Unicode fixes in shipped code — ✅ |
+| 2 | Webapp smoke (from zip) | ping carries all 3 versions; Get Started tab served; 34 packs parse from docs/example-scripts/; 5-pack total 47 — ✅ |
+| 3 | Webapp live-truth loadout | readStatus all-true, SERVED == live redirect song count (47) — ✅ (PS4 on) |
+| 4 | `--verify-ps4` (live) | 🎉 PASSED, N redirects, catalog md5 match — ✅ (after step 1.7 localization + 1.8 state pull) |
+| 5 | Build-only + quality | 5/5 beatmaps; NoArrows 5/5 all-dots; OneSaber 5/5 blue-dots — ✅ |
+| 6 | `--deploy-full` (bundled plugin) | Plugin deployed from zip, packs preserved — ⚠️ FAILED post-deploy check in this run: found the Exp 263 redirect-case bug (11 values lowercased, 5 dangled) — **the check working as designed**; fixed in pipeline v0.5355 |
+| 7 | `--skip-plugin-deployment` | Zero plugin activity, deploy PASSED — ✅ |
+| 8 | `--debug-logging` swap + restore | Debug binary at canonical entry, no forked ini line, restore OK — ✅ |
+| 9 | Feature-flag toggles | Each written+verified on PS4, restored all-ON — ✅ |
+| 10 | Kill-switch round-trip | enable_plugin false→true verified both ways — ✅ |
+| 11 | `--metadata-only` | Entry updated; redirect count unchanged — ✅ |
+| 12 | `--clear-target-song` + restore | Surgical (1 song removed, packs intact), restore OK — ✅ |
+| 13 | `--sync-config` | PS4 state pulled, Saved N, PASSED — ✅ |
+| 14 | ⚠️ `--enforce-config` | Contract honored (local pushes to PS4) — **backup mandatory**; verify-blind-spot finding recorded — ✅ (with restore) |
+| 15 | `--pack-modes-packs` scoping | Build scoped; deploy union covers all live packs by design — ✅ |
+| 16 | `--song-name/--artist` override | In BeatmapLevelSO blob (UTF-16LE) — ✅ |
+| 17 | `--target-ip` | Explicit-IP verify PASSED — ✅ |
+| 18 | Final state | Packs/songs/flags identical to pre-validation — ✅ (Exp 263's 11 rewritten values restored from backup before sign-off) |
 
 ## Findings (record post-merge hardening items)
 
-1. **Devcontainer-absolute default paths** (carried over from alpha00): consumers MUST localize config paths (step 1.5). Post-merge: PROJECT_ROOT-relative defaults.
+1. **Devcontainer-absolute default paths** (carried over from alpha00): consumers MUST localize config paths (step 1.7). Post-merge: PROJECT_ROOT-relative defaults. **Exp 263 added the order-enforcement**: localization must precede any pipeline run from the extraction.
 2. **`--enforce-config` + verify blind spot**: enforce pushed a zeroed local file over live state during testing (restored from backup); `--verify-ps4` PASSED against the wiped PS4 because both sides were empty. Post-merge: verify should flag catastrophic shrinkage (pack redirects present locally but absent on PS4).
 3. **song_metadata.json local-load asymmetry (Exp 237 — the run that "passed" 33/33 while wiping 47 metadata entries)**: `clear_target_song` downloads redirects.json from the PS4 before modifying it, but loads song_metadata.json from the LOCAL file ONLY. In a fresh extraction the local file doesn't exist → empty default → every entry removed → the 1-entry file deployed over the PS4's 47. The validation now pulls + backs up + checks BOTH files. **Post-merge pipeline fix: clear_target_song (and every metadata-writing step) must pull song_metadata.json from the PS4 first, exactly like it already does for redirects.json.**
-3. Cosmetic: zip `requirements.txt` includes test-only deps (pytest/ruff).
+4. **Redirect value case-healing dangle (Exp 263 — FOUND by validating webapp-0.6.0-alpha01)**: `_ensure_mass_song_redirects` regenerated healthy mixed-case redirect VALUES from `mass_deploy.slots` casing (defaults spell the Rolling Stones slots lowercase), without re-uploading those slots' bundles → dangling values (`messitup_v3.bundle` vs the on-disk `MessItUp_v3.bundle`). The release's own post-deploy check #3 caught it and failed the deploy — working exactly as designed. **Fixed in pipeline v0.5355**: healing consults the live AFR listing, never rewrites a value that names a real file, heals dangling values toward the on-disk case variant. Pinned by `tests/test_exp263_redirect_case_healing.py` (7 tests).
+5. **Dead-PS4 lftp timeouts in the webapp** (Exp 263 observation): the webapp's PS4 adapters run lftp with no `net:timeout`/`net:max-retries` settings — against a powered-off PS4 a single dead read costs ~30s×3 retries, and `/api/loadout` (3 reads) takes ~3.5 min before reporting unreachable. Plain lftp defaults took **12:14 minutes** to give up in a side-by-side test; with `set net:timeout 5; set net:max-retries 1` the same call fails in 0.25s. Post-merge candidate: add the settings to the webapp adapters' `_run_lftp` (and consider surfacing "PS4 unreachable" faster in the UI).
+6. Cosmetic: zip `requirements.txt` includes test-only deps (pytest/ruff).
 
 ## Release-day checklist (when tagging the real release)
 
-1. **Update the validator's default TAG** in `release-validation-test-procedure.sh`
-   (`TAG="${1:-v0.8047-pipeline-0.5351-alpha01}"`) and the live examples in this
-   doc + the README's Release Validation section to the final tag (e.g.
-   `v0.8047-pipeline-0.5351`), then commit + push so CI builds the zip with them.
-2. **Run the full validation against the final tag** (the command above with the
-   new tag) — expect 35/35 PASS and "live state unchanged".
-3. **Tag + push** — the release workflow builds the zip (now including these
+1. **Tag naming**: `v<plugin>-pipeline-<pipeline>-webapp-<webapp>[-stage]`, and
+   the release TITLE must equal the tag exactly (the user directive from the
+   0.5.4-alpha02 cycle; the workflow already sets `name: ${{ github.ref_name }}`).
+2. **The validator's default TAG + version expectations**: version checks are
+   now derived from the tag, so only the default TAG literal needs updating in
+   `release-validation-test-procedure.sh` (and the examples in this doc + the
+   README's Release Validation section) — then commit + push so CI builds the
+   zip with them.
+3. **Run the full validation against the final tag** (the command above with the
+   new tag) — expect all-PASS and "live state unchanged".
+4. **Tag + push** — the release workflow builds the zip (now including these
    validation docs) and publishes with the CI_RELEASE.md body.
-4. **Post-publish spot-check**: download the zip, confirm
+5. **Web app smoke test** is now AUTOMATED as validator step 4/9 (boots the
+   shipped server; ping versions, Get Started tab, 34 packs, 5-pack=47,
+   live-truth loadout). Manual extras worth an eyeball: the lower-right
+   version badge matches `webapp/VERSION` + `VERSION`; a Backup runs and
+   streams; the GitHub Pages workflow ("Deploy Web App to GitHub Pages") is
+   green.
+6. **Post-publish spot-check**: download the zip, confirm
    `docs/release-validation-test-procedure.*` are present, run the static-audit
    section (1.3) manually.

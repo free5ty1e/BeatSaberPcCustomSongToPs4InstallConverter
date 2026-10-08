@@ -15,6 +15,7 @@ metadata:
 - [[ps4-memory-layout-for-module-scanning|PS4 Memory Layout for Module Scanning]] — Where modules (~2GB) and IL2CPP heap (~8-16GB) live, bounds check lessons
 - [[ps4-il2cpp-metadata-loading|PS4 IL2CPP Metadata Loading]] — Class name strings live in global-metadata.dat, NOT in compiled module PRX
 - [[feature-flags|Feature Flags]] — `features.json` configuration: `enable_plugin` (global kill switch, defaults TRUE when absent), `enable_custom_song_replacements`, `enable_song_metadata_modification`, `enable_beatmap_mode_mapping` (real gate since plugin v0.8046 — OFF skips pack+catalog redirects). Deploys merge missing DEFAULT_FEATURES keys (Exp 221). One combined boot toast (ON/OFF + N/3 flags, v0.8045+).
+- [[feature-flag-independence-audit|Feature-Flag Independence Audit]] — every flag × every gate × all 16 ON/OFF combinations; crash-safety holds everywhere; the one cosmetic hazard (metadata flag OFF mid-session leaves stale swapped strings until list re-entry) with options
 - [[partial-pack-deployment-and-clear-target|Partial Pack Deployment & Clear Target Song]] — Surgical pack bundle patching for single-song deploys, `enable_beatmap_mode_mapping` runtime flag, `--clear-target-song` parameter
 
 ## AssetBundle & Unity Serialization

@@ -9,36 +9,33 @@ Tests for the generalized pack-patch tooling (Exp 188+):
 Pure-logic tests use synthetic blobs / catalogs; a few integration tests exercise
 the real beat_saber_song_ids.json + pack_modes_bundles/ + dump when present.
 """
-import os
-import sys
-import json
 import base64
+import json
+import os
 import struct
-import pytest
 
+import pytest
 from build_pack_mode_bundles import (
     CHAR_PATH_IDS,
-    TARGET_MODES,
-    TARGET_DIFFS,
     DIFF_BYTES,
-    walk_blob,
+    TARGET_DIFFS,
+    TARGET_MODES,
     build_modes_blob,
-    update_catalog_entry,
-    patched_bundle_name,
-    crc_decompressed_stream,
-    validate_catalog_dataindexes,
     find_catalog_entry_js,
+    patched_bundle_name,
+    update_catalog_entry,
+    validate_catalog_dataindexes,
     validate_catalog_entries,
+    walk_blob,
 )
 from full_custom_song_pipeline import (
+    _ensure_pack_mode_bundles,
+    _get_pack_bundle_redirects,
     _get_pack_modes_entries,
     _get_pack_modes_redirects,
-    _get_pack_bundle_redirects,
     _get_remote_pack_paths,
-    _ensure_pack_mode_bundles,
     _resolve_target_pack,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -311,9 +308,12 @@ def _read_catalog_entries(cat):
             i += 1
             continue
         try:
-            ln = ex[i + 1]; po = i + 2 + ln
-            ln = ex[po]; po = po + 1 + ln
-            jslen = struct.unpack_from('<I', ex, po)[0]; po += 4
+            ln = ex[i + 1]
+            po = i + 2 + ln
+            ln = ex[po]
+            po = po + 1 + ln
+            jslen = struct.unpack_from('<I', ex, po)[0]
+            po += 4
         except Exception:
             i += 1
             continue
@@ -654,9 +654,12 @@ class TestPackModesRealArtifacts:
                     i += 1
                     continue
                 try:
-                    ln = ex[i + 1]; po = i + 2 + ln
-                    ln = ex[po]; po = po + 1 + ln
-                    jslen = struct.unpack_from('<I', ex, po)[0]; po += 4
+                    ln = ex[i + 1]
+                    po = i + 2 + ln
+                    ln = ex[po]
+                    po = po + 1 + ln
+                    jslen = struct.unpack_from('<I', ex, po)[0]
+                    po += 4
                 except Exception:
                     i += 1
                     continue
@@ -830,7 +833,7 @@ class TestCleanSlateCatalogPair:
             pytest.skip("origin catalog not present")
         from full_custom_song_pipeline import _ensure_pack_mode_bundles
         cfg = self._clean_slate_cfg(tmp_path)
-        built = _ensure_pack_mode_bundles(cfg, packs=['billieeilish'])
+        _built = _ensure_pack_mode_bundles(cfg, packs=['billieeilish'])
         cat = cfg['pack_modes']['patched_catalog_local']
         assert os.path.isfile(cat), "merged catalog must exist after ensure"
         import json as _json
@@ -842,8 +845,7 @@ class TestCleanSlateCatalogPair:
         carry BOTH the pack bundle redirect AND the aa/catalog.json redirect."""
         if not os.path.isfile(_DUMP_CATALOG):
             pytest.skip("origin catalog not present")
-        from full_custom_song_pipeline import (_ensure_pack_mode_bundles,
-                                               _get_pack_modes_redirects)
+        from full_custom_song_pipeline import _ensure_pack_mode_bundles, _get_pack_modes_redirects
         cfg = self._clean_slate_cfg(tmp_path)
         _ensure_pack_mode_bundles(cfg, packs=['billieeilish'])
         red = _get_pack_modes_redirects(cfg)
@@ -901,8 +903,7 @@ class TestRequestedPackUnion:
     def test_entries_include_requested_pack_not_in_state(self, tmp_path, monkeypatch):
         """britneyspears requested while deployed state only knows billieeilish
         -> britneyspears MUST appear in the entries (it joins, not filters)."""
-        from full_custom_song_pipeline import (_get_pack_modes_entries,
-                                               _load_local_redirects)
+        from full_custom_song_pipeline import _get_pack_modes_entries
         cfg, rpath = self._cfg_with_state(tmp_path, ['billieeilish'])
         monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
                             lambda project_root=None: str(rpath))
@@ -915,8 +916,7 @@ class TestRequestedPackUnion:
     def test_state_discovery_without_request_unchanged(self, tmp_path, monkeypatch):
         """No explicit request -> discovery still returns ONLY the deployed
         state (zero hardcoded expectations preserved)."""
-        from full_custom_song_pipeline import (_get_pack_modes_entries,
-                                               _resolve_active_packs)
+        from full_custom_song_pipeline import _get_pack_modes_entries, _resolve_active_packs
         cfg, rpath = self._cfg_with_state(tmp_path, ['billieeilish'])
         monkeypatch.setattr('full_custom_song_pipeline._get_redirect_config_path',
                             lambda project_root=None: str(rpath))
@@ -951,8 +951,7 @@ class TestClearSongNoGhostPacks:
     def test_deployed_packs_no_fallback(self, tmp_path, monkeypatch):
         """Clean slate (state file exists, references no packs) -> [] even
         though 6 bundles sit in the real build_dir."""
-        from full_custom_song_pipeline import (_resolve_deployed_packs,
-                                               _resolve_active_packs)
+        from full_custom_song_pipeline import _resolve_active_packs, _resolve_deployed_packs
         cfg = {
             'pack_modes': {'packs': [], 'build_dir': os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')},
             'paths': {},
@@ -971,8 +970,7 @@ class TestClearSongNoGhostPacks:
     def test_clear_song_scope_is_target_pack_only(self, tmp_path, monkeypatch):
         """With 2 BE songs deployed, clearing one must scope pack work to
         billieeilish ONLY — no ghosts from the build_dir."""
-        from full_custom_song_pipeline import (_resolve_deployed_packs,
-                                               _get_pack_modes_entries)
+        from full_custom_song_pipeline import _get_pack_modes_entries, _resolve_deployed_packs
         cfg = {
             'pack_modes': {'packs': [], 'build_dir': os.path.join(_PROJECT_ROOT, 'pack_modes_bundles')},
             'paths': {},

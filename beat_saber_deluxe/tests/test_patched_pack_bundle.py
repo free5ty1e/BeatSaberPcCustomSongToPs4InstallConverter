@@ -4,14 +4,12 @@ Unit tests for build_patched_pack_bundle.py
 Tests the blob builder and CRC/GF(2) linear algebra functions.
 """
 import os
-import sys
 import struct
-import numpy as np
-import pytest
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
-from build_patched_pack_bundle import encode_utf8_string, build_blob
+from build_patched_pack_bundle import build_blob, encode_utf8_string
 
 
 # ======================================================================

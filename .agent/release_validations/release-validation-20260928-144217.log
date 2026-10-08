@@ -1,0 +1,182 @@
+[release-validation] console output is also being logged to: /workspace/temp/release-validation-20260928-144217.log
+===================================================================
+ Release validation: v0.8047-pipeline-0.5351
+===================================================================
+
+──────── [1/8] Download + extract ────────
+
+──────── [2/8] Static audit ────────
+   [PASS] VERSION=0.5351
+   [PASS] 69 example files
+   [PASS] plugin binaries (FSELF + v0.8047)
+   [PASS] bundled-plugin fallback in shipped code
+   [PASS] Unicode metadata fix in shipped code
+   [PASS] --no-prompt in example scripts
+   [PASS] pipeline smoke test
+
+──────── [3/8] Configure environment ────────
+   [PASS] ps4_dump symlink
+   [PASS] config localized
+
+──────── [4/8] Pull + back up live state (BOTH state files) ────────
+   [PASS] live state pulled (5 packs / 47 songs / 47 names / 7 artists)
+   [PASS] metadata coverage (names >= songs)
+
+──────── [5/8] Core validations ────────
+   · 5.1 read-only --verify-ps4 (state counts + catalog integrity)
+     14:42:34 [INFO]   ✅ PS4 reachable: 57 files in AFR dir
+     14:42:34 [INFO]   ✅ redirects.json on PS4 matches local (53 redirects)
+     14:42:34 [INFO]   ✅ All 53 redirect targets exist on PS4
+     14:42:34 [INFO] 🎉 Post-deploy validation PASSED
+   [PASS] verify-ps4 (read-only)
+   · 5.2 build-only (no deploy): full conversion chain from the shipped tools (~3 min)
+     14:42:43 [INFO] Beatmaps replaced: 5/5
+     14:42:47 [INFO] Pipeline complete!
+     14:42:47 [INFO]   Size: 36706071 bytes
+   ·      checking chart quality inside the built bundle...
+     NoArrows 5/5 all-dots, OneSaber 5/5 blue-dots
+   [PASS] build-only quality (NoArrows/OneSaber 5/5)
+   · 5.3 end-to-end --deploy-full INCLUDING the bundled plugin (~4 min)
+     14:43:12 [INFO] No Makefile (packaged release) — using bundled plugin: /workspace/temp/release-validation/plugins/beat_saber_deluxe.prx
+     14:43:12 [INFO]   ✅ Plugin uploaded
+     14:43:14 [INFO]   Preserving existing packs with custom songs: lizzo, therollingstones, britneyspears, camellia
+     14:44:00 [INFO] 🎉 Post-deploy validation PASSED
+   [PASS] deploy-full: bundled plugin
+   [PASS] deploy-full: validation
+   [state] PS4 names=47 | local names=47
+   · 5.4 --deploy-full --skip-plugin-deployment (plugin must be untouched, ~4 min)
+     14:45:19 [INFO] 🎉 Post-deploy validation PASSED
+   [PASS] skip-plugin honored
+   [PASS] skip-plugin: deploy PASSED
+   [state] PS4 names=47 | local names=47
+   · 5.5 --debug-logging plugin swap (verbose build at the canonical entry) + restore
+     14:45:23 [INFO] No Makefile (packaged release) — using bundled plugin: /workspace/temp/release-validation/plugins/beat_saber_deluxe_debug.prx
+     14:45:23 [INFO]   ℹ️  Deploying beat_saber_deluxe_debug.prx as beat_saber_deluxe.prx (canonical entry — re-deploy the release build to restore quiet logging)
+     14:45:23 [INFO]   ✅ Plugin uploaded
+   [PASS] debug plugin swap (bundled debug used)
+   ·      plugins.ini debug-named entries: 0 (expect 0 — canonical entry only)
+   [PASS] canonical plugins.ini entry (no fork)
+   ·      restoring the quiet release plugin...
+   [PASS] debug→release plugin restore
+
+──────── [6/8] Feature flags, kill switch, surgical ops ────────
+   · 6.1 feature-flag toggles via --features-only (each verified by reading the PS4 back)
+   ·      toggling enable_beatmap_mode_mapping=false...
+   ·      PS4 features.json now: {"enable_plugin":true,"enable_custom_song_replacements":true,"enable_song_metadata_modification":true,"enable_beatmap_mode_mapping":false}
+   [PASS] feature-flag toggle (mode mapping off)
+   ·      toggling enable_plugin=false (kill switch)...
+   ·      PS4 features.json now: {"enable_plugin":false,"enable_custom_song_replacements":true,"enable_song_metadata_modification":true,"enable_beatmap_mode_mapping":false}
+   [PASS] kill switch OFF written
+   ·      restoring both flags ON...
+   ·      PS4 features.json now: {"enable_plugin":true,"enable_custom_song_replacements":true,"enable_song_metadata_modification":true,"enable_beatmap_mode_mapping":true}
+   [PASS] flags restored ON
+   · 6.2 --metadata-only surgical entry update (redirects must be untouched; names must not shrink)
+   ·      before: 53 redirects, 47 names
+     14:45:45 [INFO]   Song metadata: 'Oxytocin' -> 'Kiss Me More / Doja Cat'
+     14:45:45 [INFO]   Saved song_metadata.json (47 names, 7 artists)
+     14:45:45 [INFO]   ✅ Song metadata deployed
+     14:45:45 [INFO] Song metadata updated and/or deployed (metadata-only mode)
+   ·      after: 53 redirects, 47 names
+   [PASS] metadata-only (redirects untouched, names 47→47)
+   [state] PS4 names=47 | local names=47
+   · 6.3 --clear-target-song surgical revert (Oxytocin) + re-deploy restore (~5 min total)
+   ·      clearing slot...
+     14:45:52 [INFO]   Removing Oxytocin_v3.bundle from PS4...
+     14:45:52 [INFO]   ✅ Removed Oxytocin_v3.bundle from PS4
+     14:45:53 [INFO]   Removed redirect: BeatmapLevelsData/Oxytocin
+     14:45:54 [INFO]   ✅ Updated local song_metadata.json
+     14:45:54 [INFO]   Removed song metadata: 'Oxytocin'
+     14:45:54 [INFO]   ✅ Updated local song_metadata.json
+     14:45:54 [INFO]   📦 Processing pack: billieeilish
+     14:45:57 [INFO]   📦 Processing pack: britneyspears
+     14:46:01 [INFO]   📦 Processing pack: camellia
+     14:46:03 [INFO]   📦 Processing pack: lizzo
+     14:46:07 [INFO]   📦 Processing pack: therollingstones
+     14:46:27 [INFO] ✅ Slot 'Oxytocin' reverted to stock state
+   [PASS] clear-target-song surgical (46 songs, 5 packs, 46 names)
+   ·      re-deploying the cleared song to restore state...
+     14:47:41 [INFO] 🎉 Post-deploy validation PASSED
+     14:47:41 [INFO]   Saved song_metadata.json (47 names, 7 artists)
+   [PASS] clear+redeploy restore (47 songs, 47 names)
+   [state] PS4 names=47 | local names=47
+   · 6.4 --sync-config (pull the PS4's redirects.json over the local copy)
+     14:47:45 [INFO] 🔄 Syncing redirect config from PS4...
+     14:47:46 [INFO]   Downloaded config with 53 redirects
+     14:47:46 [INFO]   Saved redirects.json (53 redirects)
+     14:47:47 [INFO] 🎉 Post-deploy validation PASSED
+   [PASS] sync-config (PS4→local)
+   · 6.5 --enforce-config identity round-trip (backup-wrapped; local==PS4 so the push is a no-op)
+     14:47:50 [INFO]   Enforcing local config (53 redirects)
+     14:47:50 [INFO]   Saved redirects.json (53 redirects)
+     14:47:51 [INFO] 🎉 Post-deploy validation PASSED
+     14:47:55 [INFO] 🎉 Post-deploy validation PASSED
+   [PASS] enforce-config round-trip (identity)
+   [state] PS4 names=47 | local names=47
+   · 6.6 --deploy-pack-modes --pack-modes-packs billieeilish (build scoped; deploy union covers all live packs by design)
+     14:47:58 [INFO]   ✅ Pack mode bundles already built (5 pack(s))
+     14:47:58 [INFO]   ✅ Merged catalog regenerated from origin (5 entries): /workspace/temp/release-validation/catalog_pack_modes.json
+     14:47:58 [INFO] 📦 Deploying 6 pack_modes file(s) to PS4...
+     14:48:01 [INFO]   ✅ billieeilish_pack_modes_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle deployed
+     14:48:03 [INFO]   ✅ britneyspears_pack_modes_assets_all_18d2741e11e15c97493346b2797ea847.bundle deployed
+     14:48:05 [INFO]   ✅ camellia_pack_modes_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle deployed
+     14:48:07 [INFO]   ✅ lizzo_pack_modes_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle deployed
+     14:48:10 [INFO]   ✅ therollingstones_pack_modes_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle deployed
+   [PASS] pack-modes scoped deploy
+   [state] PS4 names=47 | local names=47
+   · 6.7 --song-name/--artist override (build-only; override must land in the BeatmapLevelSO blob)
+     14:48:20 [INFO] Pipeline complete!
+   [PASS] song-name/artist override in blob
+   · 6.8 --target-ip explicit-IP verify
+     14:48:25 [INFO] 🎉 Post-deploy validation PASSED
+   [PASS] target-ip explicit
+
+──────── [7/8] Final state integrity (both files vs backups AND the live PS4) ────────
+   [PASS] final state == pre-validation (5 packs / 47 songs / 47 PS4 names)
+   [PASS] final verify-ps4
+   [PASS] features.json all ON
+   [PASS] PS4 metadata intact post-restore (47 names)
+── [8/8] RESULTS
+
++--------+--------------------------------------------------------------+
+| RESULT | VALIDATION                                                   |
++--------+--------------------------------------------------------------+
+| PASS | VERSION=0.5351 |
+| PASS | 69 example files |
+| PASS | plugin binaries (FSELF + v0.8047) |
+| PASS | bundled-plugin fallback in shipped code |
+| PASS | Unicode metadata fix in shipped code |
+| PASS | --no-prompt in example scripts |
+| PASS | pipeline smoke test |
+| PASS | ps4_dump symlink |
+| PASS | config localized |
+| PASS | live state pulled (5 packs / 47 songs / 47 names / 7 artists) |
+| PASS | metadata coverage (names >= songs) |
+| PASS | verify-ps4 (read-only) |
+| PASS | build-only quality (NoArrows/OneSaber 5/5) |
+| PASS | deploy-full: bundled plugin |
+| PASS | deploy-full: validation |
+| PASS | skip-plugin honored |
+| PASS | skip-plugin: deploy PASSED |
+| PASS | debug plugin swap (bundled debug used) |
+| PASS | canonical plugins.ini entry (no fork) |
+| PASS | debug→release plugin restore |
+| PASS | feature-flag toggle (mode mapping off) |
+| PASS | kill switch OFF written |
+| PASS | flags restored ON |
+| PASS | metadata-only (redirects untouched, names 47→47) |
+| PASS | clear-target-song surgical (46 songs, 5 packs, 46 names) |
+| PASS | clear+redeploy restore (47 songs, 47 names) |
+| PASS | sync-config (PS4→local) |
+| PASS | enforce-config round-trip (identity) |
+| PASS | pack-modes scoped deploy |
+| PASS | song-name/artist override in blob |
+| PASS | target-ip explicit |
+| PASS | final state == pre-validation (5 packs / 47 songs / 47 PS4 names) |
+| PASS | final verify-ps4 |
+| PASS | features.json all ON |
+| PASS | PS4 metadata intact post-restore (47 names) |
++--------+--------------------------------------------------------------+
+
+PASS: 35   FAIL: 0
+✅ RELEASE VALIDATED — live state unchanged.
+   Validation folder kept for inspection: /workspace/temp/release-validation

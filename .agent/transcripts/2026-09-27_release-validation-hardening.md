@@ -198,3 +198,35 @@ Third failed run, this time WITH the read-failure labels: every `[state]` trace 
 - beat_saber_deluxe/CI_RELEASE.md (artifact table row)
 - .pr_temp/updated_pr_description.md (staged draft, pending approval)
 - experiment_log.md Exp 241, project_summary.md, transcript (this file)
+
+---
+
+## Cycle 11 — PR body + title pushed (user-approved)
+
+### User
+> "pr descrpition update approved, please push it"
+
+### Actions
+- `gh api .../pulls/4 --method PATCH --raw-field body="$(cat .pr_temp/updated_pr_description.md)"` → body live (6,975 chars)
+- Title pushed in the same flow: "…(Exps 160-240)"
+- Verified live: header Exps 160–240, 649-unit-tests line, the Hardware-release-validation section with alpha01's 35/35, transcripts pointer — all present.
+
+### PR #4 final state
+Title: Beatmap Mode Mapping: 4-mode song selection for all custom songs + missing-difficulty auto-fill + production-grade pipeline (Exps 160-240). Sections: core feature, pipeline hardening, plugin, docs & examples, test & CI, hardware release validation, hardware verification. Ready for the user's screenshots/videos, then merge + release per the release-day checklist.
+
+---
+
+## Cycle 12 — Roadmap M9 (web app) + detailed plan doc (Exp 242)
+
+### User
+> "please add to the roadmap as the very next item we will tackle after this release: a web app interface for the pipeline to really make this accessible to more users, included with the release and also perhaps deployed on github pages... select the local folder with the ps4_dump and then select a song from BeatSaver (or select a local folder, or enter a beatsaver ID), select other options, manipulate feature flags, configure the PS4, test the connection, perform full validation tests, etc. Then go on to write a detailed plan markdown document .agent/plans/web-app-song-conversion-pipeline-interface.md"
+
+### Actions
+1. Roadmap: added M9 section immediately after the release work (before the post-merge queue) — the user's full UX list as checkboxes + architecture summary + link to the plan.
+2. Wrote `.agent/plans/web-app-song-conversion-pipeline-interface.md` (matching the existing plan-doc format: status header, purpose, architecture, functional spec, phased delivery, risks, open questions, out-of-scope). Core positions: thin-layer (subprocess argv calls; zero pipeline changes), two modes (local FastAPI backend for full function + static Pages command-builder), the project's hard-won lessons wired into the design (banner-free transport, single-job executor, config-localization wizard, read-failure ≠ empty-truth), 7 pages, 4 phases with exit criteria.
+3. Cross-linked: context.yml (webapp_next_milestone), project_summary (NEXT MILESTONE pointer), experiment log Exp 242, this transcript.
+
+### Reasoning highlights
+- Why subprocess-not-imports for deploys: 5,200-line script with sys.exit()s and long FTP transfers; argv subprocess = identical behavior/logs, UI literally a CLI front-end (thin layer mechanically enforced). Read-only queries may import pure helpers.
+- Why Pages can't do full deploys: browser sandbox forbids local FS + FTP; a full-function Pages build would require re-implementing the pipeline in JS — violating the thin-layer principle. Hence command-builder mode for Pages.
+- Single-job executor: deploys mutate redirects/catalog/metadata as a transaction; concurrent deploys race on the state files (Exp 227/232 lesson family).

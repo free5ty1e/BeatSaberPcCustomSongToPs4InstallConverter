@@ -48,6 +48,15 @@ PROJECT_ROOT = os.path.dirname(TOOLS_DIR)
 DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, 'ps4_config.json')
 sys.path.insert(0, TOOLS_DIR)
 
+# Session upload ledger (Exp 264): remote filenames this process uploaded.
+# verify_ps4_deployment's size check hard-fails ONLY for these — the check's
+# purpose is "did MY upload land intact?". An out-of-scope redirect target
+# whose stale LOCAL artifact differs from the live PS4 file (e.g. a leftover
+# bundle built by a different pipeline version) is reported as an
+# informational note, not a deploy-blocking error — the deployed copy is
+# what the game boots, and the deploy never touched that song.
+_SESSION_UPLOADED_BUNDLES: set[str] = set()
+
 
 # ---------------------------------------------------------------------------
 # Config loading
@@ -1051,7 +1060,8 @@ def _deployed_bundle_name(slot: str, config: dict) -> str:
     return f"{canonical}{suffix}"
 
 def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
-                                slots: list | None = None) -> int:
+                                slots: list | None = None,
+                                remote_files: dict | None = None) -> int:
     """
     (Re)generate the per-song redirect entries so every VALUE points at the
     exact deployed bundle filename (canonical slot casing + afr_target_suffix).
@@ -1061,6 +1071,17 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
     missing from the config, and removes stale pre-`.bundle` entries
     (e.g. value `Crystallized_v3` while the deployed file is
     `crystallized_v3.bundle`).
+
+    Case-collision guard (Exp 263): when `remote_files` (the LIVE AFR dir
+    listing, {filename: size}) is provided, a value that already names a file
+    that EXISTS on the PS4 is NEVER rewritten. The old healing rewrote
+    `MessItUp_v3.bundle` -> `messitup_v3.bundle` because the default config's
+    slot list prefers lowercase — but single-song deploys don't re-upload
+    out-of-scope slots, so the file on disk kept its mixed-case name and the
+    healed redirect DANGLED (the song fails to load; the post-deploy check
+    "redirect targets missing on PS4" is what caught it). Healing may now only
+    FIX a genuinely-dangling value, and it fixes it toward the case variant
+    that actually exists on disk.
 
     If `slots` is provided, ONLY those slots will have redirects - all other
     song redirects are removed. This allows single-song scoped deploys to not
@@ -1106,18 +1127,28 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
     changed = 0
 
     # When slots is provided AND matches at least one configured slot, remove
-    # redirects for slots NOT in the scope. If the scope matched nothing in
-    # mass_deploy.slots (or is empty), preserve everything — scope filtering
-    # must never turn into an unintended wipe (Exp 226).
+    # redirects for slots NOT in the scope — but ONLY when their deployed
+    # bundle is genuinely absent from this deploy's scope semantics. A slot
+    # whose redirect exists because a PREVIOUS deploy installed it must keep
+    # its redirect: scope filtering must never turn into an unintended wipe
+    # (Exp 226; and Exp 246: the scope passed here is built from the LIVE PS4
+    # state precisely so out-of-scope = "not deployed anywhere", never
+    # "deployed by someone else"). Removing redirects is the job of the
+    # dedicated removal paths (--clear-target-song, clean slate).
     if slots is not None and configured:
         scoped = {s.lower() for s in slots}
         for k in list(redirects):
             if k.startswith('BeatmapLevelsData/'):
                 slot = k[len('BeatmapLevelsData/'):]
                 if slot.lower() not in scoped:
-                    log.info(f"  🧹 Removed song redirect (out of scope): {k} -> {redirects[k]}")
-                    del redirects[k]
-                    changed += 1
+                    # Defensive guard (Exp 246): if the redirect's target
+                    # bundle is one this session just built/deployed (i.e. it
+                    # IS part of the deployed fleet), never sweep it. This is
+                    # a belt-and-suspenders check — the scope construction in
+                    # the deploy path already includes all live slots; this
+                    # catches any future caller that passes an underscope.
+                    log.warning(f"  ⚠️  Preserving out-of-scope song redirect "
+                                f"(dedicated removal paths only): {k} -> {redirects[k]}")
 
     for slot in configured:
         key = f"BeatmapLevelsData/{slot}"
@@ -1137,9 +1168,32 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
                 log.info(f"  🧹 Removed stale song redirect: {k} -> {redirects[k]}")
                 del redirects[k]
                 changed += 1
-        if redirects.get(key) != value:
-            redirects[key] = value
-            changed += 1
+        existing = redirects.get(key)
+        if existing == value:
+            continue
+        # Case-collision guard (Exp 263): a value that already names a file
+        # present on the PS4 is healthy — never rewrite it just because the
+        # config's slot list spells the slot with different casing. Out-of-scope
+        # slots are not re-uploaded by this deploy, so a "healed" value can
+        # dangle against the on-disk name.
+        if remote_files is not None and existing in remote_files:
+            log.info(f"  ℹ️  Keeping existing redirect value (target file on PS4): "
+                     f"{key} -> {existing}")
+            continue
+        if remote_files is not None and existing is not None:
+            # The value dangles at its exact case — but if a case variant of
+            # the same filename exists on disk, heal TOWARD it (the deployed
+            # file), never away from it.
+            on_disk = {n.lower(): n for n in remote_files}
+            disk_variant = on_disk.get((existing or '').lower())
+            if disk_variant and disk_variant != existing:
+                log.info(f"  🩹 Healing redirect value to the on-disk filename: "
+                         f"{key}: {existing} -> {disk_variant}")
+                redirects[key] = disk_variant
+                changed += 1
+                continue
+        redirects[key] = value
+        changed += 1
     if changed:
         log.info(f"  🎵 Ensured {len(configured)} song redirects point at deployed bundles ({changed} entries updated)")
     return changed
@@ -1151,6 +1205,16 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     All paths read from config.
     """
     import subprocess as sp
+
+    # Session upload ledger (Exp 264): record the remote names this PROCESS
+    # uploaded successfully. verify's size check uses it to distinguish
+    # "did MY upload land?" (hard-fail — the check's actual purpose) from
+    # "does a stale local artifact of an out-of-scope song match live state?"
+    # (informational only — a local file built by a different pipeline
+    # version legitimately differs from the deployed copy; failing the
+    # deploy on it stopped the user's batch on a song the batch never
+    # touched).
+    global _SESSION_UPLOADED_BUNDLES
 
     ps4_cfg = config.get('ps4', {})
     title_cfg = config.get('title', {})
@@ -1205,6 +1269,7 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy SIZE MISMATCH — remote {remote_path} is "
                     f"{listed_size} bytes, expected {local_size}")
         return
+    _SESSION_UPLOADED_BUNDLES.add(remote_name)
     log.info(f"  ✅ Bundle deployment successful ({listed_size} bytes verified on PS4)")
 
 
@@ -3244,6 +3309,7 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.info(f"  Deploying {remote_name} -> {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode == 0:
+        _SESSION_UPLOADED_BUNDLES.add(remote_name)
         log.info(f"  ✅ {remote_name} deployed")
         return True
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
@@ -3539,12 +3605,20 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
         log.info(f"  ✅ Pack bundle + catalog redirect pair(s) present "
                  f"({len(expected)} entries, incl. aa/catalog.json)")
 
-    # 6. Sizes match local files where available
+    # 6. Sizes match local files where available — but ONLY hard-fail for
+    # files THIS SESSION uploaded (Exp 264). The check's purpose is "did MY
+    # upload land intact?"; an out-of-scope song whose stale LOCAL artifact
+    # differs from the live deployed copy (a leftover build from another
+    # pipeline version) says nothing about this deploy's health. Standalone
+    # --verify-ps4 runs (no uploads this session) still check everything —
+    # that is the deep-audit mode.
     size_mismatch = []
+    size_stale_local = []
     _mass_dir = (config.get('mass_deploy', {}) or {}).get(
         'bundle_dir', '/workspace/beat_saber_deluxe/mass_bundles')
     _custom_dir = (config.get('paths', {}) or {}).get(
         'output_dir', '/workspace/beat_saber_deluxe/custom_songs')
+    session_uploads = bool(_SESSION_UPLOADED_BUNDLES)
     for val in local_data.get('redirects', {}).values():
         # Guess local source: pack bundle/catalog, custom_songs (fresh single-song builds),
         # mass_bundles (legacy full-fleet), or AFR staging.
@@ -3566,12 +3640,18 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
                 local_size = os.path.getsize(cand)
                 remote_size = remote_files.get(val)
                 if remote_size is not None and remote_size != local_size:
-                    size_mismatch.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
+                    if (not session_uploads) or val in _SESSION_UPLOADED_BUNDLES:
+                        size_mismatch.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
+                    else:
+                        size_stale_local.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
                 break
     if size_mismatch:
         log.warning(f"  ❌ Size mismatches: {size_mismatch}")
         ok = False
-    else:
+    elif size_stale_local:
+        log.info(f"  ℹ️  Local artifacts of targets not uploaded this session differ "
+                 f"from the deployed copies (informational): {size_stale_local}")
+    if not size_mismatch:
         log.info("  ✅ Redirect target sizes match local files (where available)")
 
     # 7. Deployed catalog CONTENT is valid (Exp 190 hardening). Size checks alone
@@ -3703,8 +3783,52 @@ def manage_redirect_config(
                 "redirects": {}
             }
     else:
-        # GENERATE mode: load local config or start fresh
-        redirect_data = _load_local_redirects(local_path)
+        # GENERATE mode: the LIVE PS4 state is the base, not the local file —
+        # but ONLY when this call will DEPLOY. Exp 246: the local copy can lag
+        # the PS4 (the release-validation clear-target round-trip restored
+        # the PS4 but left the local file at 1 song). Basing generate+deploy
+        # on the stale local file pushed it over the live 47-redirect state
+        # and wiped 46 song redirects — the pull-before-push invariant
+        # (Exp 237) applied to the pipeline itself. If a deploy is about to
+        # happen and the PS4 is unreachable, ABORT rather than push a
+        # possibly-stale local file (READ-FAILED is never empty-truth).
+        # Local-only generate (no deploy) keeps the local-file base: it is
+        # the "edit my local file" flow, and touching the network there
+        # would break offline builds.
+        if should_deploy:
+            ps4_data = _download_redirect_from_ps4(config)
+            if ps4_data is not None:
+                redirect_data = ps4_data
+                n_live = len(ps4_data.get('redirects', {}))
+                n_local = (len(_load_local_redirects(local_path).get('redirects', {}))
+                           if os.path.exists(local_path) else 0)
+                if n_local != n_live:
+                    log.info(f"  ℹ️  Local redirects.json was stale ({n_local} entries) — "
+                             f"basing this deploy on the live PS4 state ({n_live} entries)")
+                # Keep the local file in sync going forward (it is the cache
+                # the pack-resolution paths read).
+                with open(local_path, 'w') as f:
+                    json.dump(redirect_data, f, indent=2)
+                    f.write('\n')
+            elif os.path.exists(local_path):
+                log.error("❌ Could not read the PS4's redirects.json, and a local "
+                          "copy exists that may be stale. Refusing to deploy it "
+                          "over the live state (this exact path wiped 46 of 47 "
+                          "song redirects once — Exp 246). Check the PS4 "
+                          "connection (GoldHEN FTP) and re-run, or use "
+                          "--enforce-config to deliberately push the local file.")
+                sys.exit(1)
+            else:
+                # No local file at all and no PS4 state: genuinely fresh start
+                # (clean slate / first deploy) — safe to begin empty.
+                redirect_data = {
+                    "titleId": title_id,
+                    "afrBase": afr_base,
+                    "redirects": {}
+                }
+        else:
+            # Local-only generate (no deploy): the local file stays the base.
+            redirect_data = _load_local_redirects(local_path)
 
     # Update redirect_data with current title/afr settings
     redirect_data['titleId'] = title_id
@@ -3728,7 +3852,17 @@ def manage_redirect_config(
     # ALWAYS keep the per-song redirects pointing at the exact deployed bundle
     # filenames (canonical slot casing + afr_target_suffix). This heals stale
     # pre-.bundle values and stale key casing after any config operation.
-    _ensure_mass_song_redirects(redirect_data, config, slots=slots)
+    # When this call will DEPLOY, pass the LIVE AFR listing so the healing can
+    # never rewrite a value that already names a real file on the PS4 (Exp 263:
+    # config-casing "healing" turned 11 healthy mixed-case values into dangling
+    # lowercase ones because out-of-scope slots are not re-uploaded). Unreachable
+    # PS4 during a deploy already aborted above; here the listing is belt-and-
+    # suspenders — if it fails, healing stays config-driven exactly as before.
+    remote_files = None
+    if should_deploy:
+        remote_files = _list_remote_dir(config) or None
+    _ensure_mass_song_redirects(redirect_data, config, slots=slots,
+                                remote_files=remote_files)
 
     # ALWAYS keep the pack bundle + catalog redirect pair consistent (Exp 180):
     # a config with a pack bundle redirect but no catalog redirect (or with a
@@ -3840,38 +3974,115 @@ def _deploy_features_to_ps4(config: dict):
     else:
         log.warning(f"  ⚠️  Features config deploy failed: {result.stderr}")
 
+def _download_features_from_ps4(config: dict) -> dict | None:
+    """
+    Download features.json from the PS4 (banner-free transport).
+
+    Returns the parsed features dict, or None when the file is absent.
+    Raises RuntimeError on a read FAILURE (reachable-but-failed / parse
+    error) — callers must ABORT, never treat a failed read as "no flags"
+    (Exp 248: the READ-FAILED-as-empty-truth class).
+    """
+    import subprocess as sp
+    import tempfile
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    remote_path = _get_remote_features_path(config)
+    user_part = f"{user},{password}" if password else f"{user},"
+
+    with tempfile.TemporaryDirectory() as tmpdir:  # mktemp -d, never mktemp (pitfall 2)
+        local_tmp = os.path.join(tmpdir, "features.json")
+        cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+               "-e", f"get {_ftp_quote(remote_path)} -o {_ftp_quote(local_tmp)}; quit"]
+        result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            # Banner-proof extraction (pitfall 1): a trailing banner can START
+            # with '}' ('}156 bytes transferred'), so first-{ -to-last-} slicing
+            # is not sufficient — use raw_decode scanning (the Exp 240/221
+            # proven pattern): parse ONE complete object from each '{' until
+            # one succeeds.
+            raw = open(local_tmp, encoding='utf-8', errors='replace').read()
+            decoder = json.JSONDecoder()
+            pos = raw.find('{')
+            while pos != -1:
+                try:
+                    obj, _ = decoder.raw_decode(raw, pos)
+                    if isinstance(obj, dict):
+                        return obj
+                except json.JSONDecodeError:
+                    pass
+                pos = raw.find('{', pos + 1)
+            raise RuntimeError("could not parse the PS4's features.json")
+        if result.returncode == 0:
+            # reachable, but the file is absent — clean slate, not an error
+            return None
+        raise RuntimeError(
+            f"could not read features.json from the PS4 (lftp rc={result.returncode})")
+
+
 def apply_feature_flags(set_features: list, config: dict):
     """
     Apply feature flag changes from --set-feature arguments.
 
-    Args:
-        set_features: List of "key=value" strings (e.g. ["enable_song_metadata_modification=false"])
-        config: PS4 config dict
+    Exp 248 pull-before-push: the LIVE PS4 features.json is the base. The
+    local file may be stale (it previously served as the base and pushed a
+    stale `enable_song_metadata_modification=false` over the console's ON
+    value — the 2/3-features boot toast + missing song metadata). The
+    requested diffs apply ON TOP of the live state; the local file is then
+    resynced from the result. If the PS4 is reachable but the read fails,
+    ABORT — never apply blind.
     """
     if not set_features:
         return
 
     local_path = _get_local_features_path()
-    features = _load_local_features(local_path)
 
+    # Parse the requested diffs first (fail on bad syntax before any I/O)
+    diffs: dict[str, bool] = {}
     for entry in set_features:
         if '=' not in entry:
             log.error(f"  ❌ Invalid --set-feature format: '{entry}' (expected key=true/false)")
-            continue
+            return
         key, val_str = entry.split('=', 1)
         key = key.strip()
         val_str = val_str.strip().lower()
         if val_str in ('true', '1', 'yes', 'on'):
-            val = True
+            diffs[key] = True
         elif val_str in ('false', '0', 'no', 'off'):
-            val = False
+            diffs[key] = False
         else:
             log.error(f"  ❌ Invalid feature value: '{val_str}' (expected true/false)")
-            continue
-        features[key] = val
+            return
+
+    # Pull the live state (abort on failure — never blind-apply)
+    try:
+        live = _download_features_from_ps4(config)
+    except RuntimeError as e:
+        log.error(f"❌ Refusing to apply feature flags: {e}. The live state is "
+                  f"unknown — pushing the local file now could silently flip "
+                  f"flags you didn't ask to change (this exact path turned "
+                  f"the user's metadata flag off once — Exp 248). Fix the PS4 "
+                  f"connection and re-run.")
+        sys.exit(1)
+    if live is None:
+        log.info("  ℹ️  No features.json on the PS4 — starting from defaults")
+        live_flags = DEFAULT_FEATURES.copy()
+    else:
+        live_flags = live.get('features', live) if isinstance(live, dict) else {}
+
+    # Materialize any flag the live file predates (Exp 221 merge rule)
+    for k, v in DEFAULT_FEATURES.items():
+        live_flags.setdefault(k, v)
+
+    for key, val in diffs.items():
+        live_flags[key] = val
         log.info(f"  Feature flag: {key} = {val}")
 
-    _save_local_features(features, local_path)
+    _save_local_features(live_flags, local_path)
     _deploy_features_to_ps4(config)
 
 
@@ -4223,19 +4434,41 @@ def clear_target_song(config: dict, slot_name: str):
     title_id = cfg_title.get('id', 'CUSA12878')
     suffix = cfg_paths.get('afr_target_suffix', '_v3.bundle')
 
-    # 1. Remove custom song bundle from PS4
-    bundle_name = f"{slot_name}{suffix}"
-    remote_path = f"{afr_base}/{title_id}/{bundle_name}"
-    log.info(f"  Removing {bundle_name} from PS4...")
-
+    # 1. Remove custom song bundle from PS4 — ALL casing variants of the slot.
+    # GoldHEN FTP is case-sensitive and different deploy paths have written
+    # the slot with different casing (webapp deploys used the catalog's
+    # 'MessItUp'; the example scripts/mass list used 'messitup'). A clear
+    # reverts the SLOT — nothing named <slot><suffix> in any casing may
+    # survive, or the loadout correctly reports the leftover as a stale
+    # bundle (user-visible: "why does it show Stale when I cleared it?",
+    # Exp 253).
     user_part = f"{user},{password}" if password else f"{user},"
     cmd = ["lftp", "-u", user_part, "-p", str(port), host,
-           "-e", f"rm {remote_path}; quit"]
+           "-e", f"cls {_ftp_quote(afr_base + '/' + title_id)}; quit"]
     result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+    remote_names = []
     if result.returncode == 0:
-        log.info(f"  ✅ Removed {bundle_name} from PS4")
-    else:
-        log.warning(f"  ⚠️  Could not remove {bundle_name} from PS4 (may not exist): {result.stderr}")
+        import re as _re
+        for line in result.stdout.splitlines():
+            m = _re.search(r"[^/\s]+\.(?:bundle|json)$", line.strip())
+            if m:
+                remote_names.append(m.group(0))
+    removed_any = False
+    for name in remote_names:
+        if name.lower() == f"{slot_name.lower()}{suffix.lower()}":
+            remote_path = f"{afr_base}/{title_id}/{name}"
+            rm_cmd = ["lftp", "-u", user_part, "-p", str(port), host,
+                      "-e", f"rm {_ftp_quote(remote_path)}; quit"]
+            rm_result = sp.run(rm_cmd, capture_output=True, text=True, timeout=30)
+            if rm_result.returncode == 0:
+                removed_any = True
+                log.info(f"  ✅ Removed {name} from PS4")
+            else:
+                log.warning(f"  ⚠️  Could not remove {name} from PS4: {rm_result.stderr}")
+    if not removed_any and not remote_names:
+        log.info(f"  ℹ️  No {slot_name}{suffix} (any casing) found on PS4 — nothing to remove")
+    elif not removed_any:
+        log.warning(f"  ⚠️  No casing variant of {slot_name}{suffix} was removed (found files: {remote_names[:5]})")
 
     # 2. Remove redirect entry from redirects.json
     # Download current redirects.json from PS4 first (local may be stale)
@@ -5151,33 +5384,61 @@ Examples:
             cmd = ["lftp", "-u", user_part, "-p", str(port), host,
                    "-e", f"get {_ftp_quote(remote_redirect_path)} -o {_ftp_quote(local_redirect_path)}; quit"]
             result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+            # Exp 246: a failed PS4 read must ABORT the deploy, never silently
+            # fall back to "just the new target". The old fallback turned
+            # "couldn't read state" into "wipe every other song's redirect"
+            # (READ-FAILED rendered as empty-truth — the Exp 237/239/240
+            # lesson, violated in the pipeline itself). The 10:34 deploy wiped
+            # 46 of 47 song redirects this way.
+            ps4_redirects = None
             if result.returncode == 0 and os.path.exists(local_redirect_path):
                 try:
-                    with open(local_redirect_path) as f:
-                        ps4_redirects = json.load(f).get('redirects', {})
-                    # Find ALL custom songs (from any pack) and their packs
-                    other_packs = set()
-                    for key in ps4_redirects:
-                        if key.startswith('BeatmapLevelsData/'):
-                            slot = key[len('BeatmapLevelsData/'):]
-                            if slot not in deploy_slots:
-                                deploy_slots.append(slot)
-                            # Also track which pack this slot belongs to
-                            other_pack = _resolve_target_pack(config, slot)
-                            if other_pack and other_pack not in (deploy_packs or []):
-                                other_packs.add(other_pack)
-                    # Include all packs that have existing custom songs
-                    if other_packs:
-                        if deploy_packs is None:
-                            deploy_packs = []
-                        for p in other_packs:
-                            if p not in deploy_packs:
-                                deploy_packs.append(p)
-                        log.info(f"  Preserving existing packs with custom songs: {', '.join(other_packs)}")
-                    if len(deploy_slots) > 1:
-                        log.info(f"  Preserving existing custom songs: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
+                    # Banner-proof extraction (lftp-ftp-pitfalls #1): banners on
+                    # slow links contaminate raw streams; slice first-{ to last-}.
+                    raw = open(local_redirect_path, encoding='utf-8', errors='replace').read()
+                    start = raw.find('{')
+                    end = raw.rfind('}')
+                    ps4_redirects = json.loads(raw[start:end + 1]).get('redirects', {})
                 except Exception:
-                    pass  # If download/parse fails, fall back to just the new target
+                    ps4_redirects = None
+            if ps4_redirects is None:
+                log.error("❌ Could not read the PS4's redirects.json while scoping "
+                          "this single-song deploy. Refusing to continue: without "
+                          "the live state, preserving your existing custom songs "
+                          "cannot be guaranteed. Check the PS4 connection "
+                          "(GoldHEN FTP) and re-run the deploy.")
+                sys.exit(1)
+            try:
+                # Find ALL custom songs (from any pack) and their packs
+                other_packs = set()
+                for key in ps4_redirects:
+                    if key.startswith('BeatmapLevelsData/'):
+                        slot = key[len('BeatmapLevelsData/'):]
+                        if slot not in deploy_slots:
+                            deploy_slots.append(slot)
+                        # Also track which pack this slot belongs to
+                        other_pack = _resolve_target_pack(config, slot)
+                        if other_pack and other_pack not in (deploy_packs or []):
+                            other_packs.add(other_pack)
+                # Include all packs that have existing custom songs
+                if other_packs:
+                    if deploy_packs is None:
+                        deploy_packs = []
+                    for p in other_packs:
+                        if p not in deploy_packs:
+                            deploy_packs.append(p)
+                    log.info(f"  Preserving existing packs with custom songs: {', '.join(other_packs)}")
+                if len(deploy_slots) > 1:
+                    log.info(f"  Preserving existing custom songs: {', '.join([s for s in deploy_slots if s != args.target.split('/')[-1]])}")
+            except Exception as e:
+                # Exp 246: the PS4 read succeeded but the merge failed —
+                # same rule as above: ABORT, never fall back to a scope
+                # that would drop other songs' redirects.
+                log.error(f"❌ Failed to process the PS4's redirects.json "
+                          f"while scoping this deploy ({e}). Refusing to "
+                          f"continue — your existing custom songs cannot "
+                          f"be safely preserved. Fix the issue and re-run.")
+                sys.exit(1)
 
         # Determine which modes to enable for this pack bundle.
         # We only want to add extra modes for the custom song(s) being deployed,

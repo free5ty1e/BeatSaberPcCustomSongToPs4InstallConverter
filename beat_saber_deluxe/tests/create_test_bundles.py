@@ -7,12 +7,17 @@ Tests:
 3. HEVAG with padded audio (15 bytes for offset=15)
 4. Minimal monotone pure sine
 """
-import struct, math, io, os, sys, json, gzip
+import gzip
+import io
+import json
+import math
+import os
+import struct
+import sys
+
 sys.path.insert(0, '/workspace/beat_saber_deLuxe/tools')
 
-from hevag_encoder import (
-    pcm_to_hevag, build_fsb5, _load_fsb5_header_template
-)
+from hevag_encoder import _load_fsb5_header_template, pcm_to_hevag
 
 # First, analyze the original FSB5
 print("=" * 60)
@@ -38,7 +43,7 @@ orig_off = struct.unpack_from('<I', orig_sh, 8)[0]
 orig_fmt = struct.unpack_from('<H', orig_sh, 12)[0]
 orig_flags = struct.unpack_from('<H', orig_sh, 14)[0]
 orig_freq = struct.unpack_from('<i', orig_sh, 16)[0]
-print(f"Sample header:")
+print("Sample header:")
 print(f"  data_size={orig_ds}")
 print(f"  offset={orig_off}")
 print(f"  format=0x{orig_fmt:04x}")
@@ -64,7 +69,7 @@ if audio_offset_to_check < len(orig):
 # Audio starts at byte 916 in FSB5
 audio_start = 916
 audio_data = orig[audio_start:audio_start + orig_ds]
-print(f"\nActual audio data:")
+print("\nActual audio data:")
 print(f"  Start byte: {audio_start}")
 print(f"  Size: {len(audio_data)} bytes (declared: {orig_ds})")
 print(f"  First 32 bytes: {audio_data[:32].hex()}")
@@ -75,7 +80,6 @@ print(f"  Total HEVAG frames (mono): {n_frames_total}")
 print(f"  Estimated duration: {n_frames_total * 28 / orig_freq:.2f}s (at {orig_freq}Hz)")
 
 # Frame type analysis of original audio
-from hevag_encoder import HEVAG_COEFFS
 frame_types = {}
 for i in range(min(5000, n_frames_total)):  # Sample first 5000 frames
     f = audio_data[i*16:(i+1)*16]
@@ -94,7 +98,7 @@ for k, v in sorted(frame_types.items(), key=lambda x: -x[1])[:15]:
 # ==========================================================
 # HEVAG for stereo uses frame interleaving: L, R, L, R...
 # Check if frames alternate similar/different patterns
-print(f"\nMono or Stereo check:")
+print("\nMono or Stereo check:")
 # Compare frame 0 and frame 1
 f0 = audio_data[0:16]
 f1 = audio_data[16:32]
@@ -108,7 +112,7 @@ else:
     print("  Frames look similar - may be mono or both")
 
 # Check the first 10 frames' bytes to look for alternating patterns
-print(f"  First 10 frame headers: ", end="")
+print("  First 10 frame headers: ", end="")
 for i in range(10):
     if i*16+16 <= len(audio_data):
         print(f"{audio_data[i*16]:02x} ", end="")
@@ -122,6 +126,7 @@ print("CREATING TEST BUNDLES")
 print("=" * 60)
 
 import UnityPy
+
 
 def generate_pcm_tone(duration=3.0, sample_rate=44100, channels=2, freq=440):
     """Generate a simple sine wave PCM."""

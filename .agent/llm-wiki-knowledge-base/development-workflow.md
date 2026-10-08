@@ -194,3 +194,13 @@ prove dead-store removal is inert (extract both versions' function via AST,
 run identical edge cases, diff outputs byte-for-byte), bump the version, and
 remove the config suppression so the file is honestly lint-enforced again.
 The freeze is lifted by the user's decision — never by the linter's.
+
+## Example scripts location (Exp 259)
+
+The 69 per-pack example scripts + command docs live at
+`docs/example-scripts/` (moved from `.agent/docs/` so the REPO layout and
+the RELEASE ZIP layout are identical — the web app's Batch tab parses them
+from there; legacy `.agent/docs/` checkouts still parse). Reference naming:
+`example_script_to_install_custom_songs_over_<pack>_music_pack.sh` +
+`example_commands_to_install_custom_songs_over_<pack>_music_pack.md`,
+34 packs, `--no-prompt` for unattended chains.

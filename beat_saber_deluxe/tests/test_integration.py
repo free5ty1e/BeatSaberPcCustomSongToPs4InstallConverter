@@ -3,39 +3,31 @@ Integration tests for the full custom song pipeline.
 Tests end-to-end song processing from mock song directory to output bundle generation,
 using a minimal mock game dump structure.
 """
+import json
 import os
 import sys
-import json
-import struct
-import gzip
-import pytest
+
 import UnityPy
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from full_custom_song_pipeline import (
-    load_config,
-    load_target_bundle,
-    replace_resource,
-    update_audioclip,
-    update_audio_gz,
-    replace_beatmaps,
-    save_bundle,
-    build_pcm16_fsb5,
-    convert_v2_to_v3,
-    is_v2_beatmap,
-    _select_beatmap_file,
+    DIFFICULTIES,
+    GAME_CHARACTERISTIC_MODES,
+    _load_local_redirects,
+    _load_local_song_metadata,
     _load_song_details,
     _load_song_ids,
     _lookup_song_name,
-    _load_local_redirects,
-    _load_local_song_metadata,
+    _select_beatmap_file,
+    build_mode_mapping,
+    build_pcm16_fsb5,
+    convert_v2_to_v3,
+    detect_song_modes,
+    is_v2_beatmap,
+    load_config,
     manage_redirect_config,
     manage_song_metadata,
-    detect_song_modes,
-    build_mode_mapping,
-    GAME_CHARACTERISTIC_MODES,
-    DIFFICULTIES,
 )
 
 
@@ -53,8 +45,8 @@ class TestPipelineIntegration:
         os.makedirs(streaming_assets, exist_ok=True)
 
         # Create a minimal valid UnityFS bundle using UnityPy
-        env = UnityPy.Environment()
-        template_bundle_path = os.path.join(streaming_assets, "startmeup")
+        _env = UnityPy.Environment()
+        _template_bundle_path = os.path.join(streaming_assets, "startmeup")
 
         # Build FSB5 audio
         pcm16_fsb5 = build_pcm16_fsb5(silence_wav, pad_to_size=1024)
@@ -329,8 +321,8 @@ class TestPackBundleRedirectConsistency:
         """No pack_bundle config, nothing built, no deployment state in scope
         -> no forced redirects. Discovery must never invent packs the user
         did not deploy."""
+
         from full_custom_song_pipeline import _get_pack_bundle_redirects
-        import tempfile as _tempfile
         config = {'title': {'id': 'CUSA12878'}, 'paths': {},
                   'pack_modes': {'packs': [], 'build_dir': '/nonexistent-build-dir'}}
         assert _get_pack_bundle_redirects(config) == {}

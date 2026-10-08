@@ -18,7 +18,8 @@
 #   exact same output for detailed review afterwards. The script's exit code
 #   is preserved: 0 = every check PASSED, 1 = failures (see the table).
 #
-#   TAG defaults to v0.8047-pipeline-0.5351-alpha01. Override the PS4 with:
+#   TAG defaults to v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01 (the current
+#   release). Override the PS4 with:
 #   PS4_IP=<ip> bash ... (environment variable, default 192.168.100.117)
 #
 # Idempotence / state restoration:
@@ -34,16 +35,30 @@
 #
 # What it does:
 #   1. Downloads + extracts the release into /workspace/temp/release-validation
-#   2. Static audit (binaries, examples, key fixes in shipped code)
+#   2. Static audit (binaries, examples, key fixes in shipped code, webapp
+#      layout: Get Started tab + version files)
 #   3. Symlinks /workspace/ps4_dump, copies+localizes ps4_config.json
-#   4. Pulls live PS4 state (backs it up — restore guaranteed)
-#   5. Runs every validation: verify, build quality, deploy-full (bundled
+#      (MANDATORY BEFORE ANY PIPELINE RUN — Exp 263: running a deploy before
+#      this step left the extraction with NO config, so the pipeline fell
+#      back to devcontainer-absolute defaults whose mass_deploy.slots
+#      "case-healed" 11 live mixed-case redirect values into dangling
+#      lowercase ones; the release's own post-deploy check caught it, the
+#      state was restored from backup, and the pipeline was fixed in
+#      v0.5355 — but the ORDER is now enforced: config-localize FIRST)
+#   4. Boots the shipped webapp server and smoke-tests the 0.6.0 surface:
+#      /api/ping carries all three versions, index serves the Get Started
+#      tab, /api/batch/examples parses the 34 packs from the release layout,
+#      the standard 5-pack loadout totals 47 songs, and (PS4 on)
+#      /api/loadout reports SERVED == live redirect song count with zero
+#      read errors
+#   5. Pulls live PS4 state (backs it up — restore guaranteed)
+#   6. Runs every validation: verify, build quality, deploy-full (bundled
 #      plugin), skip-plugin, debug-logging swap+restore, feature-flag
 #      round-trips + kill switch, metadata-only, clear-target-song + restore,
 #      sync-config, enforce-config (backup-wrapped), pack-modes scoping,
 #      metadata overrides, target-ip
-#   6. Final state integrity vs the pre-validation backup (both files + live)
-#   7. Prints a PASS/FAIL table; exits non-zero on any failure
+#   7. Final state integrity vs the pre-validation backup (both files + live)
+#   8. Prints a PASS/FAIL table; exits non-zero on any failure
 #
 # Destructive-step safety: BOTH state files are backed up before anything
 # that can change them, and the final step compares live state to the
@@ -53,7 +68,7 @@ set -u   # no set -e: we collect failures and report at the end
 
 # ── Argument parsing: [--log <file>] [TAG] ─────────────────────────────────
 LOGFILE=""
-TAG="v0.8047-pipeline-0.5351-alpha01"
+TAG="v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01"
 ARGS=("$@")
 i=0
 while [ $i -lt ${#ARGS[@]} ]; do
@@ -169,7 +184,7 @@ echo " Release validation: $TAG"
 echo "==================================================================="
 
 # ---------------------------------------------------------------------------
-step "[1/8] Download + extract"
+step "[1/9] Download + extract"
 gh release download "$TAG" --repo "$REPO" --dir "$TEMP" --clobber \
     || { echo "FATAL: download failed"; exit 1; }
 ZIP=$(ls "$TEMP"/beat-saber-deluxe-*.zip | sort -V | tail -1)
@@ -178,15 +193,23 @@ unzip -q "$ZIP" -d "$VAL" || { echo "FATAL: extract failed"; exit 1; }
 cd "$VAL" || exit 1
 
 # ---------------------------------------------------------------------------
-step "[2/8] Static audit"
-V=$(cat VERSION); [ "$V" = "0.5351" ] && mark PASS "VERSION=0.5351" || mark FAIL "VERSION=$V"
+step "[2/9] Static audit"
+# Version expectations are DERIVED from the tag (v<plugin>-pipeline-<pipe>-webapp-<wa>)
+# so this script never needs a manual bump per release. Tag components must
+# match the zip's VERSION files exactly.
+EXPECT_PIPE=$(printf '%s' "$TAG" | sed -n 's/.*-pipeline-\([0-9.]*\)-.*/\1/p')
+EXPECT_PLUGIN=$(printf '%s' "$TAG" | sed -n 's/^v\([0-9.]*\)-pipeline-.*/\1/p')
+V=$(cat VERSION); [ "$V" = "$EXPECT_PIPE" ] && mark PASS "VERSION=$V (matches tag)" || mark FAIL "VERSION=$V (tag says $EXPECT_PIPE)"
+WV=$(cat webapp/VERSION); [ -n "$WV" ] && mark PASS "webapp VERSION=$WV" || mark FAIL "webapp VERSION missing"
+case "$TAG" in *webapp-"$WV"*) mark PASS "tag carries webapp $WV";; *) mark FAIL "tag webapp version != webapp/VERSION ($TAG vs $WV)";; esac
 N=$(ls docs/example-scripts/ | wc -l); [ "$N" = "69" ] && mark PASS "69 example files" || mark FAIL "$N example files"
-python3 - <<'EOF' && mark PASS "plugin binaries (FSELF + v0.8047)" || mark FAIL "plugin binaries"
+python3 - <<'EOF' && mark PASS "plugin binaries (FSELF + plugin version)" || mark FAIL "plugin binaries"
 rel = open('plugins/beat_saber_deluxe.prx','rb').read()
 dbg = open('plugins/beat_saber_deluxe_debug.prx','rb').read()
 assert rel[:4] == bytes.fromhex('4f153d1d') and dbg[:4] == bytes.fromhex('4f153d1d')
-assert b'v0.8047' in rel and b'v0.8047' in dbg
 EOF
+PV=$(strings plugins/beat_saber_deluxe.prx 2>/dev/null | grep -oE 'v0\.[0-9]{4}' | head -1 || true)
+[ -n "$PV" ] && [ "$PV" = "v$EXPECT_PLUGIN" ] && mark PASS "plugin binary version $PV (matches tag)" || mark FAIL "plugin binary version ($PV vs tag $EXPECT_PLUGIN)"
 grep -q "No Makefile (packaged release)" tools/full_custom_song_pipeline.py \
     && mark PASS "bundled-plugin fallback in shipped code" \
     || mark FAIL "bundled-plugin fallback in shipped code"
@@ -195,14 +218,20 @@ grep -q "ensure_ascii=False" tools/full_custom_song_pipeline.py \
     || mark FAIL "Unicode metadata fix in shipped code"
 grep -q "no-prompt" docs/example-scripts/example_script_to_install_custom_songs_over_billie_eilish_music_pack.sh \
     && mark PASS "--no-prompt in example scripts" || mark FAIL "--no-prompt in example scripts"
-if python3 tools/full_custom_song_pipeline.py --help 2>&1 | head -2 | grep -q "0.5351"; then
+if python3 tools/full_custom_song_pipeline.py --help 2>&1 | head -2 | grep -q "$EXPECT_PIPE"; then
     mark PASS "pipeline smoke test"
 else
     mark FAIL "pipeline smoke test"
 fi
 
 # ---------------------------------------------------------------------------
-step "[3/8] Configure environment"
+step "[3/9] Configure environment (MANDATORY before any pipeline run)"
+# ORDER HARDENING (Exp 263): the deploy at step 5 must NEVER run before this
+# localization — with no ps4_config.json the pipeline silently falls back to
+# devcontainer-absolute defaults whose mass_deploy.slots list rewrote 11
+# live mixed-case redirect values to dangling lowercase ones (the release's
+# own post-deploy check caught it; fixed in pipeline v0.5355, but the order
+# is now a check, not a suggestion).
 ln -sfn /workspace/ps4_dump ps4_dump
 [ -d ps4_dump/CUSA12878-patch ] && mark PASS "ps4_dump symlink" || mark FAIL "ps4_dump symlink"
 cp /workspace/beat_saber_deluxe/ps4_config.json ps4_config.json
@@ -221,8 +250,87 @@ cfg['mass_deploy'] = {'bundle_dir': f'{R}/mass_bundles', 'slots': []}
 json.dump(cfg, open('ps4_config.json','w'), indent=2)
 EOF
 [ -f ps4_config.json ] && mark PASS "config localized" || mark FAIL "config localized"
+python3 -c "
+import json
+cfg = json.load(open('ps4_config.json'))
+assert cfg['paths']['game_dump_dir'].startswith('$VAL'), 'game_dump_dir not localized'
+assert cfg['mass_deploy']['slots'] == [], 'mass_deploy slots must be empty here'
+" && mark PASS "config paths are extraction-local (no devcontainer absolutes)" \
+   || mark FAIL "config still carries non-local paths"
 
-step "[4/8] Pull + back up live state (BOTH state files)"
+# ---------------------------------------------------------------------------
+step "[4/9] Web app smoke test (the 0.6.0 surface, from the shipped zip)"
+# Boots the SHIPPED webapp server on a scratch port and exercises the tab
+# surface end-to-end: versions via /api/ping, Get Started tab served, the
+# 34 example packs parsed from the RELEASE layout (docs/example-scripts/),
+# the standard 5-pack loadout totaling 47, and — PS4 on — the live-truth
+# loadout (SERVED count == live redirect song count, zero read errors).
+WA_PORT=8799
+python3 webapp/server.py --no-browser --port $WA_PORT > /tmp/webapp-validation.log 2>&1 &
+WA_PID=$!
+note "waiting for the webapp server to bind..."
+WA_READY=0
+for i in $(seq 1 20); do
+    if curl -s -m 2 "http://127.0.0.1:$WA_PORT/api/ping" > /tmp/wa_ping.json 2>/dev/null; then
+        WA_READY=1; break
+    fi
+    sleep 1
+done
+if [ "$WA_READY" = "1" ]; then
+    mark PASS "webapp server boots from the zip"
+else
+    mark FAIL "webapp server boots from the zip"
+    kill $WA_PID 2>/dev/null || true
+fi
+if [ "$WA_READY" = "1" ]; then
+    python3 - <<EOF && mark PASS "ping carries all three component versions" || mark FAIL "ping versions"
+import json
+d = json.load(open('/tmp/wa_ping.json'))
+assert d['webapp_version'] == open('webapp/VERSION').read().strip(), d
+assert d['pipeline_version'] == open('VERSION').read().strip(), d
+assert d['pipeline_present'] is True
+EOF
+    curl -s -m 5 "http://127.0.0.1:$WA_PORT/" -o /tmp/wa_index.html
+    grep -q 'startPage' /tmp/wa_index.html && grep -q 'Get Started' /tmp/wa_index.html \
+        && mark PASS "index serves the Get Started tab (webapp 0.6.0)" \
+        || mark FAIL "index missing the Get Started tab"
+    curl -s -m 30 "http://127.0.0.1:$WA_PORT/api/batch/examples" -o /tmp/wa_examples.json
+    python3 - <<EOF && mark PASS "batch examples parse from the release layout" || mark FAIL "batch examples"
+import json
+d = json.load(open('/tmp/wa_examples.json'))
+packs = d.get('packs', d) if isinstance(d, dict) else d
+assert len(packs) == 34, f"{len(packs)} packs (expect 34)"
+EOF
+    python3 - <<EOF && mark PASS "standard 5-pack loadout totals 47 songs" || mark FAIL "5-pack total"
+import json
+d = json.load(open('/tmp/wa_examples.json'))
+packs = {p['name']: p for p in (d.get('packs', d) if isinstance(d, dict) else d)}
+std = ['Billie Eilish', 'Britney Spears', 'Camelia', 'Lizzo', 'Rolling Stones']
+total = sum(len(packs[n]['songs']) for n in std if n in packs)
+assert total == 47, f"{total} (expect 47)"
+EOF
+    # Live truth (only meaningful with the PS4 on; dead PS4 is a soft-skip)
+    curl -s -m 240 "http://127.0.0.1:$WA_PORT/api/loadout" -o /tmp/wa_loadout.json
+    if [ -s /tmp/wa_loadout.json ]; then
+        python3 - <<EOF && mark PASS "loadout matches live truth (PS4 on)" || mark FAIL "loadout vs live truth"
+import json
+d = json.load(open('/tmp/wa_loadout.json'))
+rs = d.get('readStatus', {})
+errs = [k for k, v in rs.items() if k.endswith('ReadError') and v]
+assert not errs, f"read errors: {errs}"
+served = sum(1 for p in d.get('packs', []) for s in p.get('songs', []) if s.get('customDeployed'))
+r = json.load(open('redirects.json'))['redirects']
+live_songs = len([k for k in r if k.startswith('BeatmapLevelsData/')])
+assert served == live_songs, f"SERVED {served} != live {live_songs}"
+EOF
+    else
+        note "     loadout endpoint unreachable/slow (PS4 off?) — soft-skip"
+    fi
+    kill $WA_PID 2>/dev/null || true
+    wait $WA_PID 2>/dev/null || true
+fi
+
+step "[5/9] Pull + back up live state (BOTH state files)"
 # BOTH state files must be pulled and backed up: redirects.json AND
 # song_metadata.json. The release zip ships NEITHER (both are user state) —
 # if song_metadata.json is missing locally, any pipeline step that loads
@@ -250,7 +358,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-step "[5/8] Core validations"
+step "[6/9] Core validations"
 
 note "5.1 read-only --verify-ps4 (state counts + catalog integrity)"
 if PIPE --verify-ps4 2>&1 | tee /tmp/v51.log | grep -qE "PASSED|FAILED"; then
@@ -309,7 +417,7 @@ note "     restoring the quiet release plugin..."
 PIPE --deploy-plugin >/dev/null 2>&1 && mark PASS "debug→release plugin restore" || mark FAIL "debug→release plugin restore"
 
 # ---------------------------------------------------------------------------
-step "[6/8] Feature flags, kill switch, surgical ops"
+step "[7/9] Feature flags, kill switch, surgical ops"
 
 note "6.1 feature-flag toggles via --features-only (each verified by reading the PS4 back)"
 note "     toggling enable_beatmap_mode_mapping=false..."
@@ -420,7 +528,7 @@ PIPE --verify-ps4 --target-ip "$PS4_IP" 2>&1 | grep -q "PASSED" \
     && mark PASS "target-ip explicit" || mark FAIL "target-ip explicit"
 
 # ---------------------------------------------------------------------------
-step "[7/8] Final state integrity (both files vs backups AND the live PS4)"
+step "[8/9] Final state integrity (both files vs backups AND the live PS4)"
 # BOTH state files compared against the pre-validation backups, and the LIVE
 # PS4 metadata compared too (local-only checks missed the Exp 237 wipe: the
 # local file and the PS4 file must BOTH hold the full name set).
@@ -467,7 +575,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-echo "── [8/8] RESULTS"
+echo "── [9/9] RESULTS"
 echo ""
 echo "+--------+--------------------------------------------------------------+"
 echo "| RESULT | VALIDATION                                                   |"

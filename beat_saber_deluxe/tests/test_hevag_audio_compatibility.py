@@ -2,11 +2,9 @@
 Systematic test suite for HEVAG audio encoding compatibility.
 Tests HEVAG encoding consistency and validates frame structure.
 """
-import struct
-import math
-import json
 import os
 import sys
+
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
@@ -68,7 +66,7 @@ class TestSingleFrequencyTones:
                 valid_frames += 1
 
         validity_rate = (valid_frames / max(total_frames, 1)) * 100
-        assert validity_rate > 95, f"Only {valid_rate:.1f}% valid frames for {freq}Hz"
+        assert validity_rate > 95, f"Only {validity_rate:.1f}% valid frames for {freq}Hz"
 
     def test_compression_ratio(self):
         from hevag_encoder import generate_test_tone_pcm, pcm_to_hevag

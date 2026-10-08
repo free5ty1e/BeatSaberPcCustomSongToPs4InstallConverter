@@ -1,0 +1,86 @@
+name: Deploy Web App to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'beat_saber_deluxe/webapp/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:  # manual trigger
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; drop stale runs' deployments
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build the Pages bundle
+        run: |
+          # Same UI bundle as the local backend, stamped data-mode="pages"
+          # (command-builder mode: /api/ping absent → Deploy becomes
+          # "copy the generated command"). Zero backend code is deployed —
+          # the Pages site can never touch a PS4.
+          python3 beat_saber_deluxe/webapp/build_pages.py --out _pages
+
+      - name: Smoke-test the built bundle
+        run: |
+          # The built index must carry the pages marker + banner, and every
+          # referenced static asset must RESOLVE IN THE BUNDLE (the first
+          # shipped bundle 404'd its own JS/CSS — the UI looked dead).
+          python3 - <<'PYEOF'
+          from pathlib import Path
+          import re
+          root = Path("_pages")
+          html = (root / "index.html").read_text(encoding="utf-8")
+          assert 'data-mode="pages"' in html, "pages mode marker missing"
+          assert "pages-banner" in html, "pages banner missing"
+          js = (root / "app.js").read_text(encoding="utf-8")
+          assert "command builder" in js or "dataset.mode" in js, "mode switch missing"
+          for asset in ("style.css", "app.js", "dumper.cfg"):
+              assert (root / asset).is_file(), f"missing asset: {asset}"
+          # every href/src the index references must exist in the bundle
+          refs = re.findall(r'(?:href|src)="([^"#?]+)"', html)
+          for ref in refs:
+              if ref.startswith(("http", "javascript:")):
+                  continue
+              target = root / ref.lstrip("/")
+              assert target.is_file(), f"index references missing asset: {ref}"
+          assert "/static/" not in " ".join(refs), \
+              f"unrewritten /static/ refs remain: {[r for r in refs if r.startswith('/static/')]}"
+          print("Pages bundle OK:", sorted(p.name for p in root.iterdir()))
+          PYEOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

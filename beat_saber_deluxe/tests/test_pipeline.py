@@ -4,56 +4,52 @@ Unit tests for full_custom_song_pipeline.py
 Tests config loading, beatmap utilities, V2->V3 conversion,
 string encoding, blob building, path helpers, and song metadata management.
 """
-import os
-import sys
 import json
+import os
 import struct
-import tempfile
-import shutil
-import pytest
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from full_custom_song_pipeline import (
-    load_config,
-    is_v2_beatmap,
-    convert_v2_to_v3,
-    _select_beatmap_file,
-    _scan_beatmap_max_beat,
-    _encode_unity_string,
-    _build_beatmap_level_so_blob,
-    _get_redirect_config_path,
-    _get_remote_redirect_path,
-    _load_local_redirects,
-    _get_local_features_path,
-    _get_remote_features_path,
-    _load_local_features,
-    _save_local_features,
-    _get_song_metadata_path,
-    _get_song_ids_path,
-    _load_song_ids,
-    _lookup_song_name,
-    _get_remote_song_metadata_path,
-    _load_local_song_metadata,
-    load_bpm_regions,
-    detect_song_modes,
-    build_mode_mapping,
-    GAME_CHARACTERISTIC_MODES,
-    DIFFICULTIES,
-    PROJECT_ROOT,
-    REDIRECT_CONFIG_FILENAME,
-    FEATURES_FILENAME,
-    SONG_METADATA_FILENAME,
-    SONG_IDS_FILENAME,
     DEFAULT_AUDIO_CODEC,
-    DEFAULT_PAD_TO_SIZE,
-    DEFAULT_MODE_MAPPING,
     DEFAULT_CONVERT_TO_V3,
     DEFAULT_FEATURES,
+    DEFAULT_MODE_MAPPING,
+    DEFAULT_PAD_TO_SIZE,
+    DIFFICULTIES,
+    FEATURES_FILENAME,
+    GAME_CHARACTERISTIC_MODES,
+    REDIRECT_CONFIG_FILENAME,
+    SONG_IDS_FILENAME,
+    SONG_METADATA_FILENAME,
+    _build_beatmap_level_so_blob,
+    _encode_unity_string,
+    _get_local_features_path,
+    _get_redirect_config_path,
+    _get_remote_features_path,
+    _get_remote_redirect_path,
+    _get_remote_song_metadata_path,
+    _get_song_ids_path,
+    _get_song_metadata_path,
+    _load_local_features,
+    _load_local_redirects,
+    _load_local_song_metadata,
+    _load_song_ids,
+    _lookup_song_name,
+    _save_local_features,
+    _scan_beatmap_max_beat,
+    _select_beatmap_file,
+    build_mode_mapping,
+    convert_v2_to_v3,
+    detect_song_modes,
+    is_v2_beatmap,
+    load_bpm_regions,
+    load_config,
     resolve_audio_codec,
-    resolve_pad_to_size,
-    resolve_mode_mapping,
     resolve_convert_to_v3,
+    resolve_mode_mapping,
+    resolve_pad_to_size,
 )
 
 
@@ -1138,7 +1134,6 @@ class TestFeaturesMergeOnDeploy:
     def test_missing_keys_materialized_before_deploy(self, tmp_dir, monkeypatch):
         """A stale features.json missing newer flags gets them materialized
         from DEFAULT_FEATURES (explicit values untouched) during deploy."""
-        from full_custom_song_pipeline import _deploy_features_to_ps4
         stale = {"enable_custom_song_replacements": True,
                  "enable_song_metadata_modification": False,  # explicit OFF must survive
                  "enable_plugin": True}
@@ -1146,11 +1141,13 @@ class TestFeaturesMergeOnDeploy:
         with open(path, 'w') as f:
             json.dump(stale, f)
 
-        import full_custom_song_pipeline as fcp
         import subprocess
+
+        import full_custom_song_pipeline as fcp
         monkeypatch.setattr(fcp, '_get_local_features_path', lambda root=None: path)
         class FakeResult:
-            returncode = 0; stderr = ""
+            returncode = 0
+            stderr = ""
         # _deploy_features_to_ps4 imports subprocess INSIDE the function —
         # patch the shared module's run.
         monkeypatch.setattr(subprocess, 'run', lambda *a, **k: FakeResult())
@@ -1168,12 +1165,14 @@ class TestFeaturesMergeOnDeploy:
     def test_deploy_creates_file_when_absent(self, tmp_dir, monkeypatch):
         """No local features.json at all -> one is created from DEFAULT_FEATURES
         and deployed (previously the deploy was silently skipped)."""
-        import full_custom_song_pipeline as fcp
         import subprocess
+
+        import full_custom_song_pipeline as fcp
         path = os.path.join(tmp_dir, "features.json")
         monkeypatch.setattr(fcp, '_get_local_features_path', lambda root=None: path)
         class FakeResult:
-            returncode = 0; stderr = ""
+            returncode = 0
+            stderr = ""
         monkeypatch.setattr(subprocess, 'run', lambda *a, **k: FakeResult())
         cfg = {'ps4': {'ip': 'x', 'ftp_port': 1}, 'title': {}, 'paths': {}}
 
@@ -1184,9 +1183,9 @@ class TestFeaturesMergeOnDeploy:
     def test_deploy_full_implies_plugin_deploy_unless_skipped(self):
         """--deploy-full must build+deploy the latest plugin (the user's
         standard single-song command), with --skip-plugin-deployment opting out."""
-        import full_custom_song_pipeline as fcp
         # simulate the arg wiring contract
-        class A: pass
+        class A:
+            pass
         a = A()
         a.deploy_full = True
         a.skip_plugin_deployment = False

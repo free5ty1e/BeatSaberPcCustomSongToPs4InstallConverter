@@ -23,8 +23,25 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder) |
 | `VERSION`                            | Pipeline version                                 |
 | `beat_saber_song_ids.json`           | Song-slot catalog: every pack, slot ID, stock song title, bundle name — the pipeline's targeting database |
-| `requirements.txt`                    | Python dependencies for the pipeline            |
+| `requirements.txt`                    | Python dependencies for the pipeline (incl. the web app's fastapi/uvicorn) |
 | `ps4_config.example.json`             | Copy to `ps4_config.json`, fill in your PS4's IP/FTP |
+
+### 🌐 Web App (`webapp/`) — the pipeline without the terminal
+
+| File | Description |
+| ---- | ----------- |
+| `webapp/server.py` | Local web UI (FastAPI, binds **127.0.0.1 only**) — run `python3 webapp/server.py` and open the browser it launches. A lower-right badge shows the web app / pipeline / plugin versions so you can always tell which build you're running |
+| `webapp/adapters/` | Thin-layer adapters: every deploy is the same pipeline subprocess command, zero re-implemented logic |
+| `webapp/static/` | The UI (12 tabs): **Get Started** (the guided path for new users: prerequisite checklist → download this release → per-OS extract + run commands → wizard), **Setup Wizard** (game-dump validation + PS4 connection test + config writer), **Song Picker** (BeatSaver search with native-difficulty badges), **Deploy** (guided, live console, PASSED/FAILED verdict), **Manage Songs** (per-pack table + surgical clear), **Full Loadout** (every pack/song, printable to PDF as a reference), **Feature Flags** (live toggles + a simulated PS4 boot toast), **Batch** (all 34 example packs parsed live from the scripts + custom batch builder with save/load/export + multi-pack checkbox deploys), **Backup / Restore** (the battle-tested backup script, browsable folder, optional clean-PS4), **PS4 state**, **Feature Request** (prefilled GitHub issue), **Game Dump Guide** with a ready-made `dumper.cfg` (`split=3`) |
+| `webapp/batch_runner.py` | Batch deploys run as ONE serial job — each song's exact `--deploy-full` in sequence, stopping at the first failure (the `script1 && script2` semantics) |
+| `webapp/build_pages.py` | Builds the GitHub Pages bundle from the same UI (command-builder mode) |
+| `webapp/VERSION` / `webapp/CHANGELOG-WEBAPP.md` | Web app version + changelog (separate from pipeline/plugin) |
+| `webapp/requirements` | Needs `pip install -r requirements.txt` (fastapi, uvicorn) — already included there |
+
+> The same UI is also hosted on GitHub Pages (command-builder mode): configure
+> everything visually, copy the generated `python3 tools/full_custom_song_pipeline.py …`
+> command, and run it locally. Deploys need the local backend (or the CLI) —
+> browsers can't reach your PS4 or your game dump.
 
 ### 📚 Documentation
 
@@ -46,6 +63,15 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 - `pip install UnityPy` (see `requirements.txt` in this zip)
 - A PS4 with GoldHEN, FTP enabled (port 2121), configured in `ps4_config.json`
   (copy `ps4_config.example.json` and fill in your PS4's IP)
+
+**No terminal? Start the web app instead** — it writes `ps4_config.json` for
+you (Setup Wizard), validates your game dump, tests the PS4 connection, and
+deploys with live logs:
+
+```bash
+pip install -r requirements.txt
+python3 webapp/server.py
+```
 
 **⚠️ REQUIRED — bring your own decrypted game dump (`ps4_dump/`):**
 

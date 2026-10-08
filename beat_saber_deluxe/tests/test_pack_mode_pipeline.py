@@ -17,7 +17,6 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 import build_pack_mode_bundles as bpb
-import lz4.block
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Repo-layout-derived dump path (was a /workspace absolute — CI checks the
@@ -498,8 +497,7 @@ class TestCRCAndCatalog:
         assert s_orig is not None
 
         crc_orig = re.search(r'"m_Crc":(\d+)', s_orig)
-        size_orig = re.search(r'"m_BundleSize":(\d+)', s_orig)
-
+        _size_orig = re.search(r'"m_BundleSize":(\d+)', s_orig)
         # Origin catalog should NOT have the patched CRC
         assert int(crc_orig.group(1)) != m['crc'], \
             f"{pack}: origin catalog already has patched CRC (stale?)"
@@ -624,8 +622,8 @@ class TestCrossPackComparison:
 
     def test_therollingstones_vs_lizzo_origin_sets(self):
         """therollingstones has 1 set, lizzo has 1-2 sets. Document this difference."""
-        ts = ALBUMS['therollingstones']
-        lz = ALBUMS['lizzo']
+        _ts = ALBUMS['therollingstones']
+        _lz = ALBUMS['lizzo']
 
         def get_origin_set_counts(pack_name):
             a = ALBUMS[pack_name]

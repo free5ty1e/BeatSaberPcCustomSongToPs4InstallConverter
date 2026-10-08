@@ -4,10 +4,14 @@ Build a bundle using the ORIGINAL 12MB FSB5 audio (unmodified).
 Only beatmaps and AudioClip metadata (m_Size, m_Length) are changed.
 This tests whether our bundle building process itself is correct.
 """
-import UnityPy, json, gzip, struct, os, sys
+import gzip
+import json
+import struct
+import sys
+
+import UnityPy
 
 sys.path.insert(0, '/workspace/beat_saber_deluxe/tools')
-from UnityPy.streams import EndianBinaryReader
 
 TEMPLATE = "/workspace/ps4_dump/CUSA12878-patch/Media/StreamingAssets/BeatmapLevelsData/startmeup"
 OUTPUT = "/workspace/beat_saber_deluxe/custom_songs/test_original_12mb.bundle"

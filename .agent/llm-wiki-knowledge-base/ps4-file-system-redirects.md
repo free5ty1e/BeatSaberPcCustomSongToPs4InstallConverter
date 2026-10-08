@@ -29,6 +29,36 @@ parses the JSON pairs; for each value without a `/`, the plugin prepends
 - Keys are matched **case-insensitively** via lowered `strstr`, so key casing doesn't matter;
   only the VALUE must be exact.
 
+### ⚠️ CRITICAL — Healing must not "correct" healthy VALUES (Exp 263)
+
+The Exp 187 rule has a converse that bit the LIVE PS4 (found by release-validating
+`webapp-0.6.0-alpha01`, pipeline v0.5355):
+
+- `_ensure_mass_song_redirects` used to regenerate every VALUE from
+  `mass_deploy.slots` casing — but single-song deploys do NOT re-upload
+  out-of-scope slots, so a "healed" value can point at a filename that was
+  never uploaded under that casing. With the default config (lowercase
+  Rolling Stones spellings) a routine `--deploy-full` rewrote 11 healthy
+  mixed-case values (`MessItUp_v3.bundle` → `messitup_v3.bundle`); the
+  files on disk kept their mixed-case names → dangling values → songs fail
+  to load. The post-deploy check "redirect targets missing on PS4"
+  (exact-case) caught it and correctly FAILED the deploy.
+- **Rule (v0.5355):** redirect healing consults the LIVE AFR listing:
+  1. a VALUE that already names a file present on the PS4 is **never
+     rewritten** (casing-only "correction" is the bug, not the cure — the
+     `mass_deploy.slots` spelling is NOT truth for files this session did
+     not upload);
+  2. a genuinely-dangling VALUE heals **toward the case variant that
+     exists on disk**, never deeper into config casing;
+  3. new slots (not previously redirected) still get the config spelling —
+     the name THIS session is about to upload under.
+- Corollary: the PS4 can carry **case-duplicate bundles** from different
+  eras of deploy tooling (both `Angry_v3.bundle` and `angry_v3.bundle`
+  existed, Sep-27-lowercase + Oct-5-mixed-case) — always reconcile case
+  against the LIVE listing, never against a config list. See
+  [[partial-pack-deployment-and-clear-target]] (Exp 253's case-variant
+  clear) and [[pipeline-single-song-deploy]].
+
 ### ⚠️ CRITICAL: AFR vs Plugin Deploy Paths
 
 **Two separate mechanisms exist on GoldHEN, with different directories:**

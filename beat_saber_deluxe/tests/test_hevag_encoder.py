@@ -4,38 +4,37 @@ Unit tests for hevag_encoder.py
 Tests the HEVAG ADPCM encoder, FSB5 container builder, PCM generation,
 and audio I/O functions.
 """
-import os
-import sys
 import math
+import os
 import struct
-import tempfile
+import sys
+
 import numpy as np
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'tools'))
 
 from hevag_encoder import (
-    HEVAG_COEFFS,
-    HEVAG_SAMPLES_PER_FRAME,
-    HEVAG_FRAME_SIZE,
     FSB5_SAMPLE_HEADER_SIZE,
-    hevag_encode_block,
-    fast_encode_frame,
-    opt_encode_frame,
+    HEVAG_COEFFS,
+    HEVAG_FRAME_SIZE,
+    HEVAG_SAMPLES_PER_FRAME,
     _encode_with,
-    fast_pcm_to_hevag,
-    pcm_to_hevag,
-    hevag_frame_count,
-    generate_tone_pcm,
-    generate_test_tone_pcm,
-    _load_fsb5_header_template,
-    build_fsb5,
-    parse_fsb5,
-    read_wav,
-    read_raw_pcm,
-    read_audio_normalized,
-    _resample_to_44100,
     _parse_ogg_packets,
+    _resample_to_44100,
+    build_fsb5,
+    fast_encode_frame,
+    fast_pcm_to_hevag,
+    generate_test_tone_pcm,
+    generate_tone_pcm,
+    hevag_encode_block,
+    hevag_frame_count,
+    opt_encode_frame,
+    parse_fsb5,
+    pcm_to_hevag,
+    read_audio_normalized,
+    read_raw_pcm,
+    read_wav,
 )
 
 
@@ -544,7 +543,6 @@ class TestReadWAV:
         """WAV without fmt chunk should raise ValueError."""
         path = os.path.join(tmp_dir, "no_fmt.wav")
         # Minimal RIFF with only data chunk
-        import wave
         # Construct manually: RIFF header + data chunk only (no fmt)
         header = b'RIFF'
         header += struct.pack('<I', 20)  # file size
