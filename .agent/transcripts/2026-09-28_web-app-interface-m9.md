@@ -446,3 +446,16 @@ Built the Get Started tab (both modes): prerequisite checklist (interactive, wit
 
 ### Verdict on alpha01
 NOT shippable as-is: its pipeline 0.5354 carries the case-healing bug. Recommend: commit 0.5355 + webapp 0.6.1, then alpha02 (or fold into the merge). The release's OWN safety net (post-deploy validation) is what caught it — the exact system working as designed.
+
+### Cycle 21b — PS4 restored, fix proven live, hardware validations completed (Exp 263b)
+
+**User:** "the ps4 is back on, i shut it off when I left, did not realize you were still working."
+
+Mystery solved — not an FTPD crash, just the console powered off. Stopped both watchers, then:
+
+1. **Restore:** verified the backup healthy (53 entries, MessItUp→MessItUp_v3.bundle), pushed it via `lftp put`, read back **byte-identical** (sha256). Exact-case check: all 53 targets resolve in the live AFR listing. (My first verification attempt tripped on lftp `cls -l` printing 8 fields with full-path-at-index-7 on this link vs the pipeline's 9-field `ls` parse — my check's bug, noted in the KB transcript. Also `put` returned rc=1 while succeeding — pitfall 3 again: always verify by read-back.)
+2. **Fix proof (decisive):** fresh release extraction + localized config + live state pulled; swapped the FIXED pipeline in; ran the exact breaking scenario (single-song deploy-full). Result: 46 existing songs preserved, **zero redirect-value diffs vs pre-validation**, post-deploy validation PASSED, live read-back shows mixed-case values intact.
+3. **Remaining hardware steps all green:** flags round-trip + kill-switch both directions + all-ON restore (each verified by reading the PS4 back), metadata-only (redirects untouched, 47→47 names), clear-target surgical (46 songs, 5 packs, zero case-variant bundles left — Exp 253's fix verified live) + re-deploy restore (47, all other values verbatim), sync-config, enforce identity, target-ip.
+4. **Final integrity:** LIVE == pre-validation on every axis (53/47/5/catalog, 47 names, all 4 flags ON, zero value drift). Console fully healthy for game boot.
+
+**Verdict:** alpha01 fully validated; its one found defect is fixed (0.5355) + proven live + pinned by 7 tests. Recommend alpha02 carrying pipeline 0.5355 + webapp 0.6.1.
