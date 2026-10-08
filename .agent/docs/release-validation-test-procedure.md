@@ -50,8 +50,9 @@ divergence auto-restores. Net effect on a healthy PS4: functionally unchanged
 the bundled plugin re-uploads — same CI build).
 
 Validated against: `v0.8047-pipeline-0.5351-alpha01` (Exps 234–236),
-`v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01` (Exp 263 — which found and
-fixed a real redirect-case bug, see Findings).
+`v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01` (Exp 263 — found and fixed the
+redirect-case bug), `v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01` (Exp 265 —
+carries both fixes; full audit green incl. live deploy + flag round-trip).
 
 ## ⚠️ Step order is enforced (Exp 263 lesson)
 

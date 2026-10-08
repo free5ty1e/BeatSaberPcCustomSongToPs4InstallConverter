@@ -294,3 +294,16 @@ into `experiment_log_archive/` with a feature+date name and open a fresh
 - **One observed wart, non-blocking:** song 18's upload hit the known lftp single-file `ls` verification flake (`Bundle deploy UNVERIFIED`) — the bundle DID land (39,356,693 B on PS4; check #3 confirmed present; validation PASSED) but wasn't ledger-recorded, so its size took the informational path instead of the hard check. Graceful degradation, correct outcome; hardening candidate: retry the single-file listing before declaring UNVERIFIED.
 - **Final live state (all verified):** 53 redirects / **47 songs** / 5 packs / catalog; 47 names / 7 artists; **57 AFR files, zero unreferenced junk, zero missing targets** (the 10 case-duplicates remain deleted); Scream&Shout redirect clean; BabyOneMoreTime = "Take on Me / a-ha". Standalone `--verify-ps4` (deep-audit mode): **🎉 PASSED**.
 - **Status:** ✅ complete. The user's batch failure is fixed at both layers (pipeline size-check scope + parser unquoting) and the exact failing scenario now runs green end-to-end.
+
+### Experiment 265: release v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01 validated (2026-10-08)
+- **User:** hardware-confirmed the batch fix (multi-pack deploy tested on the PS4 after my 22/22 proof); tagged alpha01 carrying pipeline 0.5356 + webapp 0.6.2 for validation; re-asked the Pages/Get Started mechanics question (my earlier answer was buried mid-report).
+- **Validation (all green):**
+  - Release identity: title == tag; workflow green (2m14s); zip 978,402 B. **Both fixes SHIP**: `_SESSION_UPLOADED_BUNDLES` ×6 + `remote_files` ×15 in the shipped pipeline; webapp 0.6.2's parser produces `target: 'Scream&Shout'` (unquoted) from the release's own scripts.
+  - Webapp from the zip: ping (0.6.2/0.5356/bundled); **34 packs, 5-pack=47** from the release layout; Get Started tab served.
+  - Ordered correctly this time (the Exp 263 lesson): config localized + live state pulled BEFORE any pipeline run — no default-fallback risk.
+  - Live deploy from the SHIPPED pipeline: bundled plugin, deploy PASSED, redirect `Oxytocin -> Oxytocin_v3.bundle`.
+  - Flag round-trip from the release: OFF written + verified on PS4 → all ON verified.
+  - Final integrity: 53/47/5/catalog, 57 AFR files, zero junk, zero missing; standalone verify PASSED. Console unchanged.
+  - Pages bundle rebuilt from the release-era UI and the marker/injection shown to the user directly (the buried answer, re-delivered with evidence).
+- **Validator + procedure default TAG** bumped to the new release; "Validated against" list extended.
+- **Status:** ✅ alpha01 (0.5356/0.6.2) fully validated — the release every user should get; ready for merge.

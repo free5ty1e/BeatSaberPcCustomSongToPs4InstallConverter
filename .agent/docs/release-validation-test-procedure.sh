@@ -18,7 +18,7 @@
 #   exact same output for detailed review afterwards. The script's exit code
 #   is preserved: 0 = every check PASSED, 1 = failures (see the table).
 #
-#   TAG defaults to v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01 (the current
+#   TAG defaults to v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01 (the current
 #   release). Override the PS4 with:
 #   PS4_IP=<ip> bash ... (environment variable, default 192.168.100.117)
 #
@@ -68,7 +68,7 @@ set -u   # no set -e: we collect failures and report at the end
 
 # ── Argument parsing: [--log <file>] [TAG] ─────────────────────────────────
 LOGFILE=""
-TAG="v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01"
+TAG="v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01"
 ARGS=("$@")
 i=0
 while [ $i -lt ${#ARGS[@]} ]; do

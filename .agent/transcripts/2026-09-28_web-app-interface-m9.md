@@ -485,3 +485,13 @@ The user's exact 22-song batch re-run with all fixes: webapp-parser argv (unquot
 
 ### Cycle 22b — Exp 264b: the exact 22-song batch — 22/22 PASSED (Oct 7, ~22:07)
 The end-to-end proof completed: "✅ Batch complete: 22/22 songs deployed." Every song's post-deploy validation PASSED (22 in the log). All three fixes held: no size-check false positive all batch long (stale Oxytocin artifact present but informational), Scream&Shout deployed clean (unquote fix), all 41 mixed-case values preserved (Exp 263 guard). Song 18 restored MessItUp (Powersnake / Brothers of Metal) → console back to 47 songs — flagged to the user (pack-list semantics; re-clear if wanted). One non-blocking wart: song 18's single-file upload verification flaked (`UNVERIFIED`) while the bundle DID land — check #3 confirmed present, validation PASSED; hardening candidate noted (retry the single-file listing). Final state fully verified: 53/47/5/catalog, 47 names, 57 AFR files with ZERO unreferenced junk, standalone deep-audit verify PASSED. Stage set for the user's commit.
+
+---
+
+## Cycle 23 — Exp 265: alpha01 0.5356/0.6.2 validated + the Pages answer re-delivered (Oct 8)
+
+**User:** hardware-confirmed the batch fix; tagged `v0.8047-pipeline-0.5356-webapp-0.6.2-alpha01`; re-asked the Pages/Get Started question ("I didn't catch that" — my earlier answer was buried mid-report).
+
+**Validation green:** both fixes SHIP in the zip (ledger + case guard + unquote parser); webapp boots with 0.6.2/0.5356, 34 packs, 5-pack=47, Get Started served; ordered setup (config-localize + state pull FIRST); live deploy PASSED from the shipped pipeline (bundled plugin); flag round-trip verified both directions; final integrity 53/47/5, 57 files, zero junk; standalone verify PASSED. Validator default TAG bumped.
+
+**Pages mechanism (shown, not just told):** built the Pages bundle from the current UI and showed the user the two pieces — (1) `data-mode="pages"` baked on line 2 of the Pages index.html by build_pages.py (absent in the local UI), (2) the injected detectMode() branch: sees the marker instantly (no ping), sets ◐ badge, hides the 7 local-only buttons, relabels Deploy → "Copy deploy command", and CLICKS the Get Started nav button → showPage('startPage'). Local = no marker → ping /api/ping → full backend mode.
