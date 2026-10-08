@@ -75,6 +75,22 @@ def _pack_display_name(stem: str) -> str:
     return raw.replace("_", " ").title()
 
 
+def _unquote(raw: str) -> str:
+    """
+    Strip shell quoting from a parsed token.
+
+    The example scripts quote shell metacharacters (e.g. --target
+    "Scream&Shout" — the & would otherwise split the command). The quotes
+    are SHELL syntax, not part of the slot name: the pipeline target is
+    Scream&Shout. Leaving them in made the batch runner deploy to a slot
+    literally named '"Scream&Shout"' (Exp 264: song 8 of the Britney pack
+    would have failed even after the size-check fix).
+    """
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in ("'", '"'):
+        return raw[1:-1]
+    return raw
+
+
 def parse_example_scripts() -> list[dict]:
     """
     Parse every example_*.sh into a batch definition.
@@ -104,7 +120,7 @@ def parse_example_scripts() -> list[dict]:
             rest = m.group("rest")
             entry = {
                 "map_id": m.group("map_id"),
-                "target": m.group("target"),
+                "target": _unquote(m.group("target")),
                 "song_name": "",
                 "artist": "",
                 "audio": "vorbis" if "--vorbis" in rest else

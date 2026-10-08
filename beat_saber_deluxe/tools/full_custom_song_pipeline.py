@@ -48,6 +48,15 @@ PROJECT_ROOT = os.path.dirname(TOOLS_DIR)
 DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, 'ps4_config.json')
 sys.path.insert(0, TOOLS_DIR)
 
+# Session upload ledger (Exp 264): remote filenames this process uploaded.
+# verify_ps4_deployment's size check hard-fails ONLY for these — the check's
+# purpose is "did MY upload land intact?". An out-of-scope redirect target
+# whose stale LOCAL artifact differs from the live PS4 file (e.g. a leftover
+# bundle built by a different pipeline version) is reported as an
+# informational note, not a deploy-blocking error — the deployed copy is
+# what the game boots, and the deploy never touched that song.
+_SESSION_UPLOADED_BUNDLES: set[str] = set()
+
 
 # ---------------------------------------------------------------------------
 # Config loading
@@ -1197,6 +1206,16 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     """
     import subprocess as sp
 
+    # Session upload ledger (Exp 264): record the remote names this PROCESS
+    # uploaded successfully. verify's size check uses it to distinguish
+    # "did MY upload land?" (hard-fail — the check's actual purpose) from
+    # "does a stale local artifact of an out-of-scope song match live state?"
+    # (informational only — a local file built by a different pipeline
+    # version legitimately differs from the deployed copy; failing the
+    # deploy on it stopped the user's batch on a song the batch never
+    # touched).
+    global _SESSION_UPLOADED_BUNDLES
+
     ps4_cfg = config.get('ps4', {})
     title_cfg = config.get('title', {})
     paths_cfg = config.get('paths', {})
@@ -1250,6 +1269,7 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy SIZE MISMATCH — remote {remote_path} is "
                     f"{listed_size} bytes, expected {local_size}")
         return
+    _SESSION_UPLOADED_BUNDLES.add(remote_name)
     log.info(f"  ✅ Bundle deployment successful ({listed_size} bytes verified on PS4)")
 
 
@@ -3289,6 +3309,7 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.info(f"  Deploying {remote_name} -> {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode == 0:
+        _SESSION_UPLOADED_BUNDLES.add(remote_name)
         log.info(f"  ✅ {remote_name} deployed")
         return True
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
@@ -3584,12 +3605,20 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
         log.info(f"  ✅ Pack bundle + catalog redirect pair(s) present "
                  f"({len(expected)} entries, incl. aa/catalog.json)")
 
-    # 6. Sizes match local files where available
+    # 6. Sizes match local files where available — but ONLY hard-fail for
+    # files THIS SESSION uploaded (Exp 264). The check's purpose is "did MY
+    # upload land intact?"; an out-of-scope song whose stale LOCAL artifact
+    # differs from the live deployed copy (a leftover build from another
+    # pipeline version) says nothing about this deploy's health. Standalone
+    # --verify-ps4 runs (no uploads this session) still check everything —
+    # that is the deep-audit mode.
     size_mismatch = []
+    size_stale_local = []
     _mass_dir = (config.get('mass_deploy', {}) or {}).get(
         'bundle_dir', '/workspace/beat_saber_deluxe/mass_bundles')
     _custom_dir = (config.get('paths', {}) or {}).get(
         'output_dir', '/workspace/beat_saber_deluxe/custom_songs')
+    session_uploads = bool(_SESSION_UPLOADED_BUNDLES)
     for val in local_data.get('redirects', {}).values():
         # Guess local source: pack bundle/catalog, custom_songs (fresh single-song builds),
         # mass_bundles (legacy full-fleet), or AFR staging.
@@ -3611,12 +3640,18 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
                 local_size = os.path.getsize(cand)
                 remote_size = remote_files.get(val)
                 if remote_size is not None and remote_size != local_size:
-                    size_mismatch.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
+                    if (not session_uploads) or val in _SESSION_UPLOADED_BUNDLES:
+                        size_mismatch.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
+                    else:
+                        size_stale_local.append(f"{val} (local {local_size:,} vs PS4 {remote_size:,})")
                 break
     if size_mismatch:
         log.warning(f"  ❌ Size mismatches: {size_mismatch}")
         ok = False
-    else:
+    elif size_stale_local:
+        log.info(f"  ℹ️  Local artifacts of targets not uploaded this session differ "
+                 f"from the deployed copies (informational): {size_stale_local}")
+    if not size_mismatch:
         log.info("  ✅ Redirect target sizes match local files (where available)")
 
     # 7. Deployed catalog CONTENT is valid (Exp 190 hardening). Size checks alone

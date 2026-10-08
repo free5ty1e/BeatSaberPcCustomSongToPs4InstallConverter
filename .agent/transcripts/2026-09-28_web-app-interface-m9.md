@@ -459,3 +459,29 @@ Mystery solved — not an FTPD crash, just the console powered off. Stopped both
 4. **Final integrity:** LIVE == pre-validation on every axis (53/47/5/catalog, 47 names, all 4 flags ON, zero value drift). Console fully healthy for game boot.
 
 **Verdict:** alpha01 fully validated; its one found defect is fixed (0.5355) + proven live + pinned by 7 tests. Recommend alpha02 carrying pipeline 0.5355 + webapp 0.6.1.
+
+---
+
+## Cycle 22 — Exp 264: the user's batch failure RCA'd + fixed; PS4 cleaned; Pages question answered (Oct 7)
+
+**User:** PS4 "in the state I expect" after game-boot test; multi-pack batch deploy (Britney + Rolling Stones) failed at song 1/22 (full log pasted); asked how the web app knows it's on Pages + lands on Get Started; asked to clean up PS4 duplicates.
+
+### The three separate threads, untangled
+1. **"Missing" MessItUp — NOT a bug:** live state had 52 redirects/46 songs (no MessItUp; bundle+metadata gone in every casing = the `--clear-target-song` signature). Forensics: `song_metadata.json` mtime 20:38:03 vs batch start 20:40:53 → the USER cleared MessItUp via Manage Songs two minutes before the batch (their own valid test; Exp 253's case-variant clear working).
+2. **The batch failure — REAL bug (pipeline 0.5356):** post-deploy check 6 compared EVERY redirect target's local artifact vs live. Oxytocin (not in the batch) had a stale repo-local bundle (release-tools build, 36,706,086) vs the live copy (repo-tools build, 36,706,075) — 11 bytes of pipeline-version drift, charts hash-identical. Fix: **session upload ledger** (`_SESSION_UPLOADED_BUNDLES`) — deploy_to_ps4 + _deploy_file_to_ps4 record uploads; size check hard-fails only session uploads (its actual purpose), out-of-scope mismatches become an `ℹ️` informational note; standalone --verify-ps4 (empty ledger) keeps full checking. 6 regression tests; proven live (same deploy → PASSED with the informational note).
+3. **Second bug found proving the first (webapp 0.6.2):** batch parser `\S+` captured literal shell quotes — `--target "Scream&Shout"` parsed WITH quotes → song 8 would have failed even after fix #2. `_unquote()` strips them; 34 packs re-verified clean.
+
+### PS4 cleanup (user-requested)
+10 unreferenced case-duplicate bundles (Sep-27 lowercase RS-era): each verified to have exactly one referenced mixed-case twin, then deleted. Post-cleanup: **56 files, zero unreferenced non-state, zero missing targets**. Refreshed the stale repo-local Oxytocin artifact → standalone verify fully PASSED.
+
+### My testing mistake (corrected immediately)
+Proving the size fix I deployed map 15f52 (All Eyes On Me) instead of the pack's 6d63 (Take on Me) into BabyOneMoreTime — caught via the log's `_levelID` line, redeployed the correct map; slot verified "Take on Me / a-ha".
+
+### Pages-mode mechanics (the user's question, answered in-reply)
+build_pages.py stamps `data-mode="pages"` on `<html>` at BUILD time → the Pages branch of detectMode() (injected by the builder) sees `document.documentElement.dataset.mode === 'pages'` IMMEDIATELY (no ping wait), sets the ◐ badge, hides the 7 `.local-only` nav buttons, relabels Deploy → "Copy deploy command", and clicks the Get Started nav button → `showPage('startPage')`. The local backend has no marker → detectMode pings /api/ping → "local-backend" mode, all tabs shown, lands on wizard as before.
+
+### End-to-end proof (running in background)
+The user's exact 22-song batch re-run with all fixes: webapp-parser argv (unquoted), batch_runner serial semantics, pipeline 0.5356.
+
+### Cycle 22b — Exp 264b: the exact 22-song batch — 22/22 PASSED (Oct 7, ~22:07)
+The end-to-end proof completed: "✅ Batch complete: 22/22 songs deployed." Every song's post-deploy validation PASSED (22 in the log). All three fixes held: no size-check false positive all batch long (stale Oxytocin artifact present but informational), Scream&Shout deployed clean (unquote fix), all 41 mixed-case values preserved (Exp 263 guard). Song 18 restored MessItUp (Powersnake / Brothers of Metal) → console back to 47 songs — flagged to the user (pack-list semantics; re-clear if wanted). One non-blocking wart: song 18's single-file upload verification flaked (`UNVERIFIED`) while the bundle DID land — check #3 confirmed present, validation PASSED; hardening candidate noted (retry the single-file listing). Final state fully verified: 53/47/5/catalog, 47 names, 57 AFR files with ZERO unreferenced junk, standalone deep-audit verify PASSED. Stage set for the user's commit.

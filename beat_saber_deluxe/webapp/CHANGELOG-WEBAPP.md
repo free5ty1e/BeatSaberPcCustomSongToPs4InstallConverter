@@ -5,6 +5,10 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## [0.6.2] — 2026-10-07 (Exp 264)
+### Fixed
+- **Batch parser carried shell quoting into `--target` values** (found proving the user's failed multi-pack batch: the Britney pack's song 8 parsed as target `"Scream&Shout"` — literal quotes included — because the example scripts quote `&` for the SHELL and the parser's `\S+` regex captured the quotes as part of the slot name; the batch would have deployed to a garbage slot even after the pipeline's size-check fix). `parse_example_scripts()` now strips matching leading/trailing quotes via `_unquote()` — quotes are shell syntax, not slot names. All 34 packs re-verified: zero quoted targets remain; the Scream&Shout entry is `target: "Scream&Shout"` clean. 18 batch tests green.
+
 ## [0.6.1] — 2026-10-06 (Exp 263)
 ### Fixed
 - **Dead-PS4 reads no longer take minutes to report "unreachable"** (Exp 263 finding, measured during release validation of webapp-0.6.0-alpha01: with the PS4 powered off, `/api/loadout` took ~3.5 min — 3 reads × 3 retries against a host lftp defaults kept retrying; a bare lftp call was measured at 12:14 min). The adapters' `_run_lftp` now sets `net:timeout 5`, `net:max-retries 1`, `net:connect-timeout 5` (the same dead read fails in 0.25s), and `fetch_remote_json` stops retrying once the error is a connectivity refusal ("No route to host" / "connection refused" / timeout / DNS) — retries remain for genuine transfer flakes. The PS4-state/Loadout tabs now surface "unreachable" in seconds instead of hanging the spinner for minutes. (Found while validating against a PS4 that was initially off; pipeline-side twin of this fix: none needed — the pipeline's reads are single-attempt with hard aborts.)
