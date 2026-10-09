@@ -1541,5 +1541,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if (b.dataset.page === "backupPage") backupRefresh();
       if (b.dataset.page === "batchPage") batchRefresh();
     }));
-  showPage("wizard");
+  // Landing (Exp 266): pages mode lands on the guided download funnel — but
+  // detectMode()'s startBtn click already ran, and this DOMContentLoaded
+  // handler fires AFTER it, stomping startPage back to the wizard (the race
+  // the live Pages deploy exposed). The unconditional wizard landing must
+  // respect the mode: pages → startPage stays; local → wizard.
+  if (state.mode !== "pages") showPage("wizard");
 });
