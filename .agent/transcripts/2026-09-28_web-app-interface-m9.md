@@ -509,3 +509,19 @@ The end-to-end proof completed: "✅ Batch complete: 22/22 songs deployed." Ever
 **Fix (webapp 0.6.3):** mode-aware landing — `if (state.mode !== "pages") showPage("wizard")` in the DOMContentLoaded tail. Pages bundle rebuilt + browser-order headless proof: lands on startPage; local regression lands on wizard. Suite 807/807, lint clean.
 
 **Next:** user commits + pushes to main → Pages workflow redeploys → live re-verify: hosted visitors land on Get Started.
+
+---
+
+## Cycle 25 — Exp 266b: pre-merge validation of the Pages fix via CI artifact (Oct 9)
+
+**User:** pushed webapp 0.6.3 as PR #6 (feature/github-pages-starts-on-getting-started-tab); asked to validate the Pages deployment BEFORE merging this time, and to watch the CI.
+
+**The pre-merge technique (new, and reusable):** the Pages workflow has `workflow_dispatch` — dispatched it on the PR branch via the API. The BUILD job succeeded (6s) producing the EXACT Pages bundle CI would deploy; only the DEPLOY step was blocked (github-pages environment protection: main-only — a GitHub-side safety). Downloaded the `github-pages` ARTIFACT from that run (the actual tar CI built), extracted, served it on localhost:8899, and validated the pre-deploy bytes directly.
+
+**Validation of the CI-built artifact (all PASS):**
+- Marker `data-mode="pages"` baked; versions 0.6.3 / 0.5356 / v0.8047 in the badge.
+- All assets resolve (app.js 200/64,085 B; style.css 200; dumper.cfg 200); zero /static/ remnants; 12 nav buttons with the 6 local-only markers intact.
+- **The landing race replayed in browser order against the CI bytes:** script-load wiring → detectMode pages branch clicks startPage → DOMContentLoaded fires → the mode-aware guard runs → **LANDING: startPage.** (Before the fix the same replay lands on wizard — the negative control, verified against the LIVE pre-merge bundle fetched from the site: no guard present.)
+- PR #6 CI: build ✓, Unit Tests ✓, Lint ✓ (release job correctly skipped for a non-tag push).
+
+**Answer to "how can we test this before merging":** (1) dispatch the Pages workflow on the PR branch and pull its artifact — done, exactly what was validated; (2) serve the artifact locally (python3 -m http.server) and click through it like the hosted site; (3) the in-repo proof: `python3 beat_saber_deluxe/webapp/build_pages.py --out /tmp/pages-check` + the browser-order landing check. The environment-protection block on deploy is CORRECT (only main may deploy) — it is what makes this technique safe: dispatching cannot touch the live site.
