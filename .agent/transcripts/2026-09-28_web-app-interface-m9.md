@@ -495,3 +495,17 @@ The end-to-end proof completed: "✅ Batch complete: 22/22 songs deployed." Ever
 **Validation green:** both fixes SHIP in the zip (ledger + case guard + unquote parser); webapp boots with 0.6.2/0.5356, 34 packs, 5-pack=47, Get Started served; ordered setup (config-localize + state pull FIRST); live deploy PASSED from the shipped pipeline (bundled plugin); flag round-trip verified both directions; final integrity 53/47/5, 57 files, zero junk; standalone verify PASSED. Validator default TAG bumped.
 
 **Pages mechanism (shown, not just told):** built the Pages bundle from the current UI and showed the user the two pieces — (1) `data-mode="pages"` baked on line 2 of the Pages index.html by build_pages.py (absent in the local UI), (2) the injected detectMode() branch: sees the marker instantly (no ping), sets ◐ badge, hides the 7 local-only buttons, relabels Deploy → "Copy deploy command", and CLICKS the Get Started nav button → showPage('startPage'). Local = no marker → ping /api/ping → full backend mode.
+
+---
+
+## Cycle 24 — Exp 266: LIVE Pages landing bug — RCA'd + fixed (webapp 0.6.3) (Oct 8, evening)
+
+**Context:** PR #5 merged 21:02Z; Pages deployed green; final release tag v0.8047-pipeline-0.5356-webapp-0.6.2 built. **User (live report):** the hosted site starts on Setup Wizard instead of Get Started; "most of the tabs are missing"; pages-mode badge + version banner correct. Asked me to watch for the release tag (validated: green; already reported separately).
+
+**RCA (from the live bundle):** all landing machinery present and correct (marker, injected branch, button) — the bug is a RACE: detectMode's pages branch clicks Get Started, then DOMContentLoaded's `showPage("wizard")` (unconditional, script tail, line 1544) fires after the script bottom and stomps the landing. Badge/banner/hiding aren't re-overwritten → they looked right; only the landing was wrong. Reproduced deterministically before fixing.
+
+**"Missing tabs" — not a bug:** all 12 buttons ship; the 6 local-only (ps4Page, manage, loadout, flags, batch, backup) hide in pages mode BY DESIGN; the 6 visible (wizard, picker, deployPage, startPage, requestPage, guide) are the intended hosted surface. Explained to the user.
+
+**Fix (webapp 0.6.3):** mode-aware landing — `if (state.mode !== "pages") showPage("wizard")` in the DOMContentLoaded tail. Pages bundle rebuilt + browser-order headless proof: lands on startPage; local regression lands on wizard. Suite 807/807, lint clean.
+
+**Next:** user commits + pushes to main → Pages workflow redeploys → live re-verify: hosted visitors land on Get Started.
