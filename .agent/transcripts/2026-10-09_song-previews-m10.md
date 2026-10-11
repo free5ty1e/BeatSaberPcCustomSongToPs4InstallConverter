@@ -136,3 +136,135 @@ the dump originals, Exp 191 byte-identical proven), 48 local custom bundles,
   (M9's log archived to `experiment_log_archive/experiment_log_web-app-interface_exp244-267_2026-09-28_to_2026-10-09.md`).
 - `.agent/transcripts/2026-10-09_song-previews-m10.md` — this file (new session).
 - `.agent/plans/song-previews.md` — the detailed plan (next).
+
+---
+
+## Cycle 2 — Phase 1: implementation complete, deploy-ready (Exp 269)
+
+**User:** answered the four plan questions — Q1 mirror what works; Q2 research
+it myself; Q3 normalization yes; Q4 determine as I work. Proceed with the
+plan; notify when an experiment is ready to deploy to the PS4 for a joint
+test. Also: add a README section directing users to the Pages web app for
+the getting-started guide.
+
+### README (user request, done first)
+- New "🚀 New Here? Start with the Web App" section right after prerequisites:
+  the Pages URL (verified live: 200 + `data-mode="pages"` marker), Get Started
+  landing, funnel summary, link to the local-app feature tour.
+
+### Q resolutions (all research-verified this cycle)
+- **Q1** `m_CompressionFormat=1` — stock preview AND our proven clip declare the
+  same value; codec truth lives in the FSB5 header (mode 2 = PCM16).
+- **Q2** No block-flag math needed: `rebuild_bundle_file` re-derives blocks
+  LZ4HC from the extended stream; nodes carry offsets. THE TRAP: `m_Offset` is
+  RELATIVE TO THE RESOURCE NODE START — first spike build used absolute stream
+  offsets and every clip read garbage (decode FORMAT/INVALID PARAM errors).
+  Control test (modes bundle decodes 9/9) isolated my rebuild; node table diff
+  showed resource grew exactly 9×1,764,125; offsets-relative insight fixed it.
+- **Q3** Stock previews measure −15.1..−7.6 dBFS RMS (mean ≈ −10.4);
+  normalizer targets −10.4, peak-limits −1, engages only when >3 dB off.
+- **Q4** Stock preview template = our proven clip's exact field values; only
+  m_Offset/m_Size change (m_Length stays 10.0 since we cut exactly 10s).
+
+### Source-of-truth lesson (the deep find of the cycle)
+The 2BeLoved repo Info.dat says previewStart=33.8, but the DEPLOYED bundle's
+audio (fresh BeatSaver download at release-script time = a different map
+version) matches the 34.3s window with correlation 1.0. Preview STARTS from
+repo metadata can be wrong for freshly-downloaded deploys. Resolution: audio
+ALWAYS comes from the deployed per-song bundle (in sync with gameplay by
+construction); start = Info.dat when a matching local source dir exists, else
+the busiest-bar heuristic from the deployed bundle's own beatmaps (BPM-aware —
+notes carry BEAT values; `bpmEvents.m` converts; surrogateescape decodes
+m_Script; mode clones excluded; 4-beat bar snap).
+
+### Implementation (production paths, not spike-only)
+- `tools/song_previews.py` — new module: pcm extraction, start resolution
+  (info + heuristic), cut/fade/normalize, FSB5 PCM16 container,
+  AudioClip-blob parsing (archive:/ anchor; 4-aligned tail), in-place
+  repoint, variant rebuild via the existing bundle machinery, variant naming.
+- Pipeline 0.5357: DEFAULT_FEATURES + enable_song_previews (False);
+  `_previews_enabled`; `_get_pack_modes_entries` variant-aware; build step
+  `_ensure_previews_variants` inside `_ensure_pack_mode_bundles`; manifest
+  entry with catalogBundleName so catalog regen encodes the variant.
+- Plugin 0.8048: flag parsed/logged; gate serves pack pair when EITHER
+  mode-mapping OR previews ON; toast N/4. ps4_state.py reports the 4th flag.
+
+### Verification
+- Production path builds the lizzo variant byte-identical to the spike
+  (cmp → IDENTICAL): 22,656,895 B, crc 619811098, 9/9 previews.
+- All 9 patched clips decode exactly 10.0s (UnityPy + independent fsb5 lib
+  parse: PCM16, 441000 samples); 9 SOs keep 4 mode sets + stock floats;
+  catalog regen encodes variant CRC with 0 invalid dataIndexes.
+- Full dry run of the deploy sequence (flag → entries → variant → catalog →
+  redirect pair) green; catalog restored to modes-state after the dry run
+  (Exp 180 invariant).
+- 21 new tests + 4 gating contracts; suite 828/828; ruff clean; plugin builds
+  (strings show v0.8048 + song_previews flag line).
+
+### Files touched this cycle
+- README.md (Pages section)
+- tools/song_previews.py (NEW), tools/full_custom_song_pipeline.py (variant
+  threading + build step + DEFAULT_FEATURES), src/main.cpp (v0.8048),
+  development/scripts/ps4_state.py (4th flag)
+- VERSION → 0.5357, CHANGELOG-PIPELINE.md, CHANGELOG-PLUGIN.md
+- tests/test_song_previews.py (NEW, 21 tests), tests/test_pack_mode_pipeline.py
+  (Tier 8 gating contracts)
+- features.json (materialized enable_song_previews=false)
+- .agent/plans/song-previews.md (Phase 1 complete, Qs resolved)
+- pack_modes_bundles/lizzo_pack_modes_previews_…bundle + manifest entry
+  (deploy artifact)
+
+### Next: Exp 269b — hardware spike (PS4 currently off; user will power on)
+Deploy: plugin v0.8048 → lizzo variant + catalog → flag true → redirects.
+Rollback: flag false + redirect back to modes bundle.
+
+---
+
+## Cycle 3 — Procedure check + webapp flag surfacing (Exp 269 pre-deploy hardening)
+
+**User:** PS4 powered on. Asked to confirm the test procedure: open the web app,
+run the lizzo bundle batch install, then look for song previews — and whether
+they need to flip the feature flag on the Feature Flags page.
+
+**Procedure audit findings (answering with code, not guesses):**
+1. **The webapp didn't know the new flag** — KNOWN_FLAGS (ps4.py) and
+   FLAG_DESCRIPTIONS (server.py) are explicit lists; the Feature Flags page
+   would not have shown enable_song_previews at all. Added to both with a
+   full description. (57 webapp tests pass.)
+2. **Order matters — flag BEFORE batch:** --deploy-full re-deploys
+   features.json on every run (merging local + DEFAULT_FEATURES), so flipping
+   the flag first means the batch carries it; flipping after works too, but
+   then the variant bundle wouldn't be in the redirect values until the NEXT
+   deploy (the flag flip alone doesn't swap bundles — the plugin gate does
+   patched-vs-stock, but the VARIANT name comes from the redirect VALUE the
+   deploy writes). Correct order: flag ON first, then deploy.
+3. **Batch scope cost measured:** 3.0 s/song preview build (2.3s audio
+   extract + 0.7s cut/fsb5) → full 47-song variant build ≈ 2-3 min per
+   deploy. The lizzo batch unions ALL 5 deployed packs (Exp 226/227 rule) →
+   it would build preview variants for every pack on the first run. That's
+   SAFE (each pack gets its variant + catalog regen covers all) — just
+   slower than the single-song path. Recommendation given: EITHER the lizzo
+   batch (full-fleet previews, still only minutes) OR one lizzo song deploy
+   (surgical spike).
+4. **Crash-window fix (the big catch):** `_get_pack_modes_entries` with flag
+   ON had made EVERY pack point at the variant name — including packs with
+   NO variant built → their catalog entries would have been regenerated
+   with variant CRCs from a manifest that doesn't have them / or the
+   redirect would name a file that doesn't deploy → the Exp 225
+   CE-34878-0 class. Fixed: the variant name is used only when the variant
+   (or its buildable modes base) exists locally; otherwise the pack keeps
+   its modes-only name (flag-off behavior — nothing breaks, that pack just
+   keeps stock previews until its variant builds).
+5. **mtime freshness trap:** shutil.copy2 of a downloaded PS4 modes bundle
+   preserves the REMOTE mtime (upload time, possibly days old) — an mtime
+   comparison would have let a STALE variant ship. Removed the mtime check;
+   variants rebuild unconditionally on deploy (3 s/song makes this cheap).
+
+**Verified:** flag False → modes name; flag True → variant name (lizzo);
+webapp tests 57 pass; previews tests 21 pass; ruff clean. Staged.
+
+### Corrected user procedure (delivered):
+1. Web app → Feature Flags → enable_song_previews ON → Apply
+2. Web app → Batch → Lizzo pack → Run (or Deploy page, any lizzo song)
+3. Boot Beat Saber → song menu → highlight lizzo slots → previews play the
+   custom songs' own audio. Boot toast: 4/4 features ON.

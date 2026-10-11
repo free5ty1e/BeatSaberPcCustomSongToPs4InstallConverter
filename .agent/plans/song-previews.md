@@ -242,33 +242,53 @@ patch_previews(song_ids, album, preview_data_map, ...):
 - [x] **Phase 0 — Research** (Exp 268, 2026-10-09): dump.cs chain, storage
       format, flag mechanics, mapper-intent availability, machinery reuse —
       all verified. Plan written.
-- [ ] **Phase 1 — Spike: one pack on hardware (Exp 269)**
-      - lizzo (9 slots, all custom): build modes+previews variant, deploy,
-        user listens in the song menu. Decides m_CompressionFormat question.
-      - Deliverable: preview audible for 9 lizzo slots; modes unchanged.
+- [x] **Phase 1 — Local build + test** (Exp 269, 2026-10-09): production module
+      `tools/song_previews.py` + pipeline threading + plugin v0.8048 gate.
+      All open questions resolved (see §5). Lizzo variant builds
+      byte-identically via the production path (22,656,895 B, crc 619811098,
+      9 previews); every patched clip decodes at exactly 10.0s; mode sets
+      intact; catalog regen encodes the variant; 828/828 tests; lint clean.
+- [ ] **Phase 1b — Hardware spike (Exp 269b, PENDING — PS4 off)**
+      - Deploy: plugin v0.8048 → lizzo previews variant + merged catalog →
+        `enable_song_previews=true` → redirects updated. User listens to all
+        9 lizzo slots in the song menu.
+      - Deliverable: custom audio previews audible; modes unchanged;
+        boot toast shows 4/4.
+      - Rollback: `--features-only --set-feature enable_song_previews=false`
+        + redirect value back to the modes bundle (still deployed).
 - [ ] **Phase 2 — Full fleet (Exp 270)**
       - All 5 packs × 47 slots; fallback heuristic where needed; variant
         build + redirect updates; verify-ps4 preview check; deploy; user test.
 - [ ] **Phase 3 — Flag polish + docs (Exp 271)**
-      - features-only variant swap on flag flip; boot toast 4-flag count;
-        DEFAULT_FEATURES; KB pages (new `song-previews` page + updates to
-        feature-flags, song-metadata-addressables-structure, roadmap);
-        README feature list; changelogs; release procedure update.
+      - features-only variant swap on flag flip (verify the flag-flip path
+        re-deploys the matching bundle variant); KB pages (new
+        `song-previews` page + updates to feature-flags,
+        song-metadata-addressables-structure, roadmap); README feature list;
+        release procedure update.
 - [ ] **Phase 4 — (optional) Vorbis preview encoder** if a safe path appears
       (out of scope for now; PCM16 sizes are acceptable).
 
-## 5. Open questions (resolve in Phase 1)
+## 5. Open questions (RESOLVED in Phase 1)
 
-- Q1: `m_CompressionFormat` for a PCM16 preview clip — mirror our proven
-     custom-bundle value (1) or stock-PCM16 convention (2)? Spike decides
-     (both readable; only hardware is the oracle).
-- Q2: does appending to `.resource` in `rebuild_bundle_file` need block-flag
-     adjustments for the bigger stream? (Nodes carry offsets; blocks re-derived
-     — believed safe; spike proves.)
-- Q3: preview loudness matching — measure a stock preview's RMS as reference;
-     confirm our normalization keeps menus from blaring.
-- Q4: does `m_IsTrackerFormat`/`m_Ambisonic`/`m_SubsoundIndex` matter? (Stock:
-     all 0/1 defaults; mirror stock exactly.)
+- Q1: `m_CompressionFormat` for a PCM16 preview clip — **RESOLVED: mirror our
+     proven custom-bundle value (1)** per the user's "use what we know works."
+     Both our full-song clips and stock previews declare 1; the actual codec
+     lives in the FSB5 header (mode 2 = PCM16). Verified in real bytes.
+- Q2: resource-append block handling — **RESOLVED: none needed.**
+     `rebuild_bundle_file` re-derives all blocks with LZ4HC (flag 3) from the
+     extended decompressed stream; nodes carry their own offsets. The one
+     real trap was `m_Offset` being RELATIVE TO THE RESOURCE NODE START, not
+     an absolute stream offset (first spike build read garbage; fixed).
+- Q3: preview loudness — **RESOLVED: stock previews average ≈ −10.4 dBFS RMS**
+     (9-clip measurement, range −15.1..−7.6); our deployed clips sit in the
+     same range. Normalizer targets −10.4 dBFS, peak-limits at −1 dBFS, only
+     engages when >3 dB off. User confirmed normalization is wanted.
+- Q4: misc AudioClip fields — **RESOLVED: the stock preview template is
+     byte-identical to our proven clip's values** (m_LoadType=1, 2ch, 44100,
+     16-bit, m_PreloadAudioData=F, m_LoadInBackground=T, m_Legacy3D=T,
+     m_CompressionFormat=1); only m_Length (stays 10.0) and the resource
+     offset/size change. m_Length never even needs touching since we cut
+     exactly 10s.
 
 ## 6. Documentation map
 

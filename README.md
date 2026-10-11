@@ -12,6 +12,21 @@ Replace any Beat Saber DLC song's audio and beatmaps with community-made custom 
 <img width="1536" height="2048" alt="beatsaberdeluxev08040-billieeilish" src="https://github.com/user-attachments/assets/7a39af3e-d461-4ecf-b2df-e7b408ff0c21" />
 <img width="1536" height="2048" alt="beatsaberdeluxev08040-Lizzo" src="https://github.com/user-attachments/assets/795cc606-606e-438e-b65c-dcba45f6996f" />
 
+## 🚀 New Here? Start with the Web App
+
+The easiest way to get started is the **hosted getting-started guide**:
+
+**👉 <https://free5ty1e.github.io/BeatSaberPcCustomSongToPs4InstallConverter/>**
+
+The GitHub Pages web app opens straight onto its **Get Started** tab, which
+walks you through everything end-to-end: prerequisites, obtaining and dumping
+the decrypted game (with the ready-made `dumper.cfg`), downloading the latest
+release, extracting it, and launching the local web app that performs the
+actual song deploys. It also doubles as a command builder — configure a song
+and slot visually, then copy the generated pipeline command if you prefer the
+CLI. See [**Web App (deploy without the CLI)**](#31b-web-app--deploy-without-the-cli-m9)
+below for the local app's full feature tour.
+
 ## Web UI Screenshots
 
 <img width="942" height="831" alt="image" src="https://github.com/user-attachments/assets/f77ada23-b167-4c38-ab06-a819e1faa2d9" />

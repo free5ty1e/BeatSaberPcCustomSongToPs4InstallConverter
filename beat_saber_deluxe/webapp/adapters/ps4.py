@@ -35,7 +35,8 @@ PS4_SONG_METADATA = f"{AFR_TITLE_DIR}/song_metadata.json"
 # wire format on the PS4 features.json uses the plural form.
 DEFAULTS_TRUE = {"enable_plugin"}
 KNOWN_FLAGS = ("enable_plugin", "enable_beatmap_mode_mapping",
-               "enable_song_metadata_modification", "enable_custom_song_replacements")
+               "enable_song_metadata_modification", "enable_custom_song_replacements",
+               "enable_song_previews")
 
 
 @dataclass

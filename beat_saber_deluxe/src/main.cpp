@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8047"
+#define PLUGIN_VERSION "v0.8048"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -50,6 +50,7 @@ static int g_feature_plugin_enabled = 1;
 static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
 static int g_feature_beatmap_mode_mapping = 0;
+static int g_feature_song_previews = 0;
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -109,12 +110,14 @@ static void load_features(void) {
             g_feature_song_metadata_modification = val;
         } else if (strcmp(key, "enable_beatmap_mode_mapping") == 0) {
             g_feature_beatmap_mode_mapping = val;
+        } else if (strcmp(key, "enable_song_previews") == 0) {
+            g_feature_song_previews = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d",
-             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping);
+    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d",
+             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews);
     log_write(logmsg);
     if (!g_feature_plugin_enabled) {
         log_write("DISABLED: enable_plugin is false — ALL plugin behavior off (stock game)");
@@ -381,7 +384,14 @@ static int open_hook(const char *path, int flags, ...) {
                         // the pack scan (Exp 180 invariant). Per-song redirects
                         // still fire (custom audio + Standard beatmaps keep
                         // working).
-                        if (!g_feature_beatmap_mode_mapping
+                        // GATE (Exp 269 / M10): enable_song_previews ALSO lives
+                        // inside the patched pack bundle (the preview AudioClips
+                        // ride in its .resource). Either flag ON → serve the
+                        // patched pair; both OFF → serve stock. The bundle
+                        // VARIANT the pipeline deployed matches the flag state
+                        // at deploy time, so the redirect VALUE is already
+                        // correct — this gate only decides patched vs stock.
+                        if (!(g_feature_beatmap_mode_mapping || g_feature_song_previews)
                             && (strstr(LOWER_REDIRECT_KEYS[i], "pack_assets")
                                 || strstr(LOWER_REDIRECT_KEYS[i], "catalog"))) {
                             continue;
@@ -954,11 +964,12 @@ extern "C" int module_start(size_t argc, const void *args) {
     {
         int enabled_count = g_feature_custom_song_replacements
                           + g_feature_song_metadata_modification
-                          + g_feature_beatmap_mode_mapping;
+                          + g_feature_beatmap_mode_mapping
+                          + g_feature_song_previews;
         memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
         if (g_feature_plugin_enabled) {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/3 features ON)",
+                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/4 features ON)",
                      PLUGIN_VERSION, enabled_count);
         } else {
             snprintf(notif.message,sizeof(notif.message),

@@ -151,6 +151,7 @@ def load_config(config_path: str) -> dict:
 # Imports from our toolchain
 # ---------------------------------------------------------------------------
 import build_pack_mode_bundles as pack_modes_builder
+import song_previews
 import soundfile as sf
 import UnityPy
 from UnityPy.streams import EndianBinaryReader
@@ -3054,6 +3055,15 @@ def _resolve_active_packs(config: dict) -> list:
     return active
 
 
+def _previews_enabled(config: dict) -> bool:
+    """Whether the enable_song_previews feature flag is ON (local features.json;
+    the deployed flag is what the PLUGIN reads — the pipeline builds the bundle
+    variant that the CURRENT local flag state requests, and --features-only
+    flows keep the two in lockstep)."""
+    feats = _load_local_features(_get_local_features_path())
+    return bool(feats.get('enable_song_previews', False))
+
+
 def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     """
     Deterministic list of pack_modes entries derived from config + song_ids.json.
@@ -3066,6 +3076,11 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     re-unioning the local-bundle fallback here would resurrect never-installed
     packs. Default (None): all ACTIVE (user-pinned list or auto-discovered
     from built bundles — build-time scope, never hardcoded).
+
+    M10: when enable_song_previews is ON, patched_bundle/local_path point at
+    the modes+previews VARIANT (…_pack_modes_previews_assets_all_…); the
+    modes-only bundle keeps its own name. The variant is a SEPARATE file —
+    flag flips swap which file deploys, never mutating the modes-only bundle.
     """
     pm = config.get('pack_modes', {}) or {}
     if packs is not None:
@@ -3081,6 +3096,7 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
         return []
     albums = _load_pack_albums(config)
     build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    previews_on = _previews_enabled(config)
     entries = []
     for pack in configured:
         album = albums.get(pack)
@@ -3088,6 +3104,17 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
             continue
         original = album['packBundle']
         patched = pack_modes_builder.patched_bundle_name(original)
+        if previews_on:
+            # M10: prefer the modes+previews VARIANT — but only when it EXISTS
+            # locally (or its base modes bundle exists so a variant can build).
+            # A pack without a variant must keep its modes-only name: the
+            # catalog/redirect pair must reference the bundle that will
+            # actually deploy, or the pack boots against a mismatched CRC
+            # (the Exp 225 crash class).
+            variant = song_previews.previews_bundle_name(patched)
+            modes_path = os.path.join(build_dir, patched)
+            if os.path.isfile(os.path.join(build_dir, variant)) or os.path.isfile(modes_path):
+                patched = variant
         entries.append({
             'pack': pack,
             'bundle_key': original,
@@ -3220,10 +3247,101 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
         built = len(results)
     else:
         log.info(f"  ✅ Pack mode bundles already built ({len(entries)} pack(s))")
+
+    # M10 song previews: when enable_song_previews is ON, the deployable variant
+    # is modes+previews. Build it from the modes bundle (append preview FSB5s to
+    # the .resource, repoint the preview AudioClips in place) whenever the
+    # variant is missing or older than its modes bundle. target_slots scopes the
+    # preview map too (partial packs only preview the custom slots in scope).
+    if _previews_enabled(config):
+        _ensure_previews_variants(config, packs=configured, target_slots=target_slots)
     # The merged catalog must always match the CURRENT redirect set (regenerated
     # from origin each time so entries for untouched packs stay byte-identical).
     _regenerate_merged_catalog(config, packs=configured)
     return built
+
+
+def _ensure_previews_variants(config: dict, packs: list | None = None,
+                               target_slots: list | None = None) -> int:
+    """Build the modes+previews bundle variant for every pack in scope whose
+    modes bundle exists. Idempotent: rebuilds when the variant is missing or
+    older than the modes bundle. Returns number of variants built."""
+    pm = config.get('pack_modes', {}) or {}
+    build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    albums = _load_pack_albums(config)
+    configured = list(packs) if packs is not None else _resolve_active_packs(config)
+    built = 0
+    for pack in configured:
+        album = albums.get(pack)
+        if not album or not album.get('packBundle'):
+            continue
+        modes_name = pack_modes_builder.patched_bundle_name(album['packBundle'])
+        modes_path = os.path.join(build_dir, modes_name)
+        if not os.path.isfile(modes_path):
+            continue          # modes bundle not built yet — previews ride on it
+        var_name = song_previews.previews_bundle_name(modes_name)
+        var_path = os.path.join(build_dir, var_name)
+        # NOTE: no mtime-based freshness check. shutil.copy2 of a downloaded
+        # PS4 modes bundle preserves the REMOTE mtime (upload time — possibly
+        # days old), which can make a stale variant look "fresher" than a
+        # just-refreshed modes base. Preview builds are ~3 s/song — rebuild
+        # unconditionally on deploy; correctness over speed.
+        log.info(f"🎵 Building song-previews variant for {pack} "
+                 f"({var_name})")
+        preview_map = song_previews.build_preview_map(
+            album, config, log=log.info)
+        if target_slots is not None:
+            tl = {s.lower() for s in target_slots}
+            preview_map = {sid: f for sid, f in preview_map.items()
+                           if sid.lower() in tl}
+        if not preview_map:
+            log.info(f"  ℹ️  {pack}: no previewable custom slots — variant not built")
+            continue
+        work = song_previews.patch_pack_previews(album, preview_map, modes_path)
+        if work is None:
+            log.warning(f"  ⚠️  {pack}: preview patch produced nothing — skipped")
+            continue
+        new_bundle = song_previews.rebuild_bundle_with_previews(work, var_path)
+        crc = pack_modes_builder.crc_decompressed_stream(new_bundle)
+        _record_previews_manifest(pm, build_dir, pack, var_name,
+                                  len(new_bundle), crc, preview_map,
+                                  album.get('catalogBundleName', ''))
+        log.info(f"    ✓ {pack}: {var_name} ({len(new_bundle):,} B, "
+                 f"crc={crc}, previews={len(preview_map)})")
+        built += 1
+    return built
+
+
+def _record_previews_manifest(pm: dict, build_dir: str, pack: str,
+                              var_name: str, size: int, crc: int,
+                              preview_map: dict, catalog_bundle_name: str) -> None:
+    """Record the previews variant in pack_modes manifest.json so catalog
+    regeneration (which reads the manifest for crc/size) can encode it."""
+    mpath = os.path.join(build_dir, 'manifest.json')
+    data = {'entries': []}
+    if os.path.isfile(mpath):
+        try:
+            with open(mpath) as f:
+                data = json.load(f)
+        except Exception:
+            data = {'entries': []}
+    entries = [e for e in data.get('entries', [])
+               if not (isinstance(e, dict) and e.get('bundle') == var_name)]
+    entries.append({
+        'pack': pack,
+        'bundle': var_name,
+        'patchedBundle': var_name,
+        'packBundle': pack,
+        'catalogBundleName': catalog_bundle_name,
+        'size': size,
+        'crc': crc,
+        'previews': sorted(preview_map.keys()),
+        'previewsAt': int(__import__('time').time()),
+    })
+    data['entries'] = entries
+    with open(mpath, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')
 
 def _resolve_configured_packs(config: dict, packs: list | None) -> list:
     """Return the pack list to operate on: `packs` if given else all DEPLOYED
@@ -3901,6 +4019,7 @@ DEFAULT_FEATURES = {
     "enable_custom_song_replacements": True,
     "enable_song_metadata_modification": True,
     "enable_beatmap_mode_mapping": True,
+    "enable_song_previews": False,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:

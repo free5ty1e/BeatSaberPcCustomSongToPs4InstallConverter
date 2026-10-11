@@ -223,6 +223,7 @@ FLAG_DESCRIPTIONS = {
     "enable_custom_song_replacements": "Gates all custom-song bundle redirects. OFF = every song loads its original stock audio and beatmaps (metadata labels stay).",
     "enable_song_metadata_modification": "Gates the in-game song-list name/artist swaps. OFF = songs show their official titles even when customs are deployed.",
     "enable_beatmap_mode_mapping": "Gates the extra game-mode buttons (OneSaber / NoArrows / 90Degree). OFF = the stock pack bundles + catalog are served (Standard only) — the safe posture while a pack is only partially deployed.",
+    "enable_song_previews": "Gates the custom SONG PREVIEWS in the song menu (M10): highlighting a custom song plays its own ~10s audio instead of the stock song's clip. Previews ride inside the patched pack bundles — ON deploys the modes+previews bundle variant; OFF serves stock previews (the pack/mode redirects are shared with mode mapping: either flag ON keeps the patched pair live).",
 }
 
 

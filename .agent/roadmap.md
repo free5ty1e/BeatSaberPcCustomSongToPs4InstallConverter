@@ -395,8 +395,12 @@ Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
       previews-only / stock)
 
 ### Phases
-- [ ] Phase 1 — Spike: lizzo pack (9 slots) modes+previews variant on hardware
+- [x] Phase 1 — Implementation (Exp 269): `tools/song_previews.py` + pipeline 0.5357
+      variant threading + plugin 0.8048 gate/toast; lizzo variant built+verified
+      byte-identical via production path; 828/828 tests; all 4 plan Qs resolved
+- [ ] Phase 1b — Hardware spike (Exp 269b, PENDING): deploy lizzo variant, user
+      listens to all 9 slots in the song menu (rollback: flag off + modes bundle)
 - [ ] Phase 2 — Full fleet: 5 packs × 47 slots + verify-ps4 preview check
-- [ ] Phase 3 — Flag polish: features-only variant swap, toast N/4, DEFAULT_FEATURES,
-      KB pages, README, changelogs
+- [ ] Phase 3 — Flag polish: features-only variant swap on flip, KB pages, README,
+      release procedure
 - [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears

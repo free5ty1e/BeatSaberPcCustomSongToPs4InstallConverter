@@ -4,6 +4,10 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8048] — 2026-10-09
+### Added
+- **`enable_song_previews` feature flag (M10, Exp 269).** Parsed from features.json like its siblings (`enable_song_previews` → `g_feature_song_previews`); logged in the features boot line; counted in the boot toast (now N/4). The song-menu preview swap itself is pure pipeline data (preview AudioClips inside the deployed pack bundle) — the plugin's role is the redirect-set switch: the Exp-222 pack-assets/catalog gate now serves the patched bundle pair when EITHER `enable_beatmap_mode_mapping` OR `enable_song_previews` is ON; both OFF skips the pair so the stock bundle + origin catalog load (no CRC crash — Exp 180 invariant preserved). The redirect VALUE already names the variant matching the flag state at deploy time.
+
 ## [v0.8047] — 2026-09-24
 ### Fixed
 - **Non-ASCII song titles never matched their metadata replacement (Exp 228 — '…Baby One More Time').** Three-part root cause: (1) the pipeline wrote `song_metadata.json` with `ensure_ascii=True`, shipping the key as the 6-ASCII-byte escape `…` — the plugin's byte-verbatim `parse_json_pairs` compared those literal bytes; (2) the game's UTF-16 title (U+2026 ellipsis) folds to `?` in `extract_utf16_string`; (3) no amount of unescaping alone fixes the fold mismatch. Fixes: `json_unescape_inplace()` unescapes `\uXXXX`/`\n`/`\\` etc. in parsed keys/values (backward compat with already-deployed escaped files); `fold_utf8_to_ascii()` folds loaded KEYS through the same projection as extraction (BMP char → 1 `?`, astral → 2 `?` — an exact byte-for-byte mirror) so comparison succeeds for ANY Unicode title; values stay raw UTF-8 (display strings).
