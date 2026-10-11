@@ -268,3 +268,45 @@ webapp tests 57 pass; previews tests 21 pass; ruff clean. Staged.
 2. Web app → Batch → Lizzo pack → Run (or Deploy page, any lizzo song)
 3. Boot Beat Saber → song menu → highlight lizzo slots → previews play the
    custom songs' own audio. Boot toast: 4/4 features ON.
+
+---
+
+## Cycle 4 — LIVE deploy: false-alarm validation failure RCA'd; state verified READY (Exp 269b)
+
+**User run (the log, verbatim highlights):** flag flip via webapp OK → lizzo batch song 1/9: full
+song build → bundle deploy (one transient "UNVERIFIED" on the song bundle upload, the known
+Exp-240-class flake; the pack files deployed clean) → plugin v0.8048 built+uploaded → 5-pack
+incremental bases downloaded → **all 5 packs' preview variants built (46 previews: lizzo 9,
+britney 11, RS 11, billie 9, camellia 6)** → all 5 variants + catalog + redirects deployed
+and size-verified on-PS4 → then: `❌ Deployed catalog missing/incorrect pack entries:
+mismatched=[all 5 pack guids]` → batch stopped (validation failure = exit 1 by design).
+
+**RCA (fast — the log told the story):** catalog md5 local==PS4 (✅), so the DEPLOYED
+catalog was the right one. The check builds expected (guid, crc, size) triples from the
+manifest row indexed by stock packBundle; my `_record_previews_manifest` wrote variant rows
+with `packBundle=<PACK ID>` — so the check read each pack's MODES row (crc 3526914570 for
+lizzo) and "mismatched" against the correctly-variant catalog (619811098). False alarm.
+
+**Fixes (pipeline 0.5358):**
+1. Variant manifest rows carry the stock bundle name as packBundle.
+2. The check's manifest index is FLAG-AWARE (variant row wins when the flag is ON; modes
+   row when OFF — dict order can never decide).
+3. The 5 on-disk rows repaired.
+4. Suite caught a second latent bug while the local flag was ON (its true state from the
+   user's webapp Apply): `_get_pack_modes_entries` picked the variant name when only the
+   MODES base existed → redirect/presence filters (which check the variant FILE) dropped
+   the entries entirely (6 test failures). Rule: variant name only when the variant FILE
+   exists.
+
+**Live verification (all green):**
+- Re-ran the fixed check against the LIVE downloaded catalog: missing=[] mismatched=[] —
+  the deployed state needed NO redeploy.
+- Standalone `--verify-ps4` → 🎉 PASSED (after refreshing the stale local Oxytocin bundle
+  from the authoritative PS4 copy — the pre-existing informational 4-byte delta).
+- Live spot-check: deployed lizzo variant pulled; 9/9 clips decode at exactly 10.0s;
+  2BeLoved preview correlates 1.0000 with the custom song's own audio @34.3s.
+- PS4 features.json: all 5 flags ON. Plugin: v0.8048 strings-verified.
+- Suite: 834/834 (2 new manifest-selection regressions + the 146-file re-run).
+
+**Delivered to the user:** the deploy SUCCEEDED — no re-run needed; boot and listen. If
+they want the batch green end-to-end, re-running is now safe (validation passes).

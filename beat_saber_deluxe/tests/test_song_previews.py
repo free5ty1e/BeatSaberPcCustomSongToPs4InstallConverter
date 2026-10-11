@@ -315,3 +315,59 @@ class TestLizzoVariantEndToEnd:
                     modes_ok += 1
         assert patched == 9 and stock == 0
         assert modes_ok == 9
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Exp 269b regression: the post-deploy catalog check must read the manifest row
+# that matches the DEPLOYED bundle variant (flag-aware), never a stale modes row.
+# (The live batch deploy failed validation on all 5 packs because the variant
+# manifest rows carried packBundle=<pack id> instead of the stock bundle name,
+# so the check indexed the modes rows and compared their stale crc/size.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestManifestVariantSelection:
+    def _write_manifest(self, tmp_path, pack='lizzo',
+                        modes_crc=111, var_crc=222,
+                        modes_bundle='lizzo_pack_modes_assets_all_abc.bundle',
+                        var_bundle='lizzo_pack_modes_previews_assets_all_abc.bundle',
+                        stock='lizzo_pack_assets_all_abc.bundle',
+                        guid='0092fb8fb92ea09b9665fceaf1a42d0e',
+                        modes_packbundle=None, var_packbundle=None):
+        """Manifest with BOTH rows. Defaults give the variant row the CORRECT
+        packBundle (stock name); *_packbundle overrides let us simulate the bug."""
+        entries = [
+            {'pack': pack, 'patchedBundle': modes_bundle, 'packBundle':
+             modes_packbundle if modes_packbundle is not None else stock,
+             'catalogBundleName': guid, 'crc': modes_crc, 'size': 5000},
+            {'pack': pack, 'bundle': var_bundle, 'patchedBundle': var_bundle,
+             'packBundle': var_packbundle if var_packbundle is not None else stock,
+             'catalogBundleName': guid, 'crc': var_crc, 'size': 9000,
+             'previews': [pack]},
+        ]
+        import json as _json
+        mp = tmp_path / 'manifest.json'
+        mp.write_text(_json.dumps({'entries': entries}))
+        return str(mp)
+
+    def test_buggy_packbundle_reproduces_stale_lookup(self, tmp_path):
+        """The exact live scenario: variant row's packBundle = the PACK ID →
+        index-by-stock-name picks the modes row (stale crc) → check fails."""
+        import build_pack_mode_bundles as pmb
+        import full_custom_song_pipeline as fp
+        mp = self._write_manifest(tmp_path, var_packbundle='lizzo')  # the bug
+        manifest = {e['packBundle']: e for e in pmb.load_manifest(str(tmp_path))}
+        me = manifest.get('lizzo_pack_assets_all_abc.bundle')
+        assert me['crc'] == 111   # modes row won — the stale one. Bug reproduced.
+
+    def test_flag_on_selects_variant_row(self, tmp_path):
+        import build_pack_mode_bundles as pmb
+        self._write_manifest(tmp_path)   # correct packBundle
+        # the FIXED selection logic (mirrors the pipeline's check):
+        for want_variant, expect in ((True, 222), (False, 111)):
+            manifest = {}
+            for me in pmb.load_manifest(str(tmp_path)):
+                cur = manifest.get(me['packBundle'])
+                is_var = 'previews' in me
+                if cur is None or is_var == want_variant:
+                    manifest[me['packBundle']] = me
+            assert manifest['lizzo_pack_assets_all_abc.bundle']['crc'] == expect

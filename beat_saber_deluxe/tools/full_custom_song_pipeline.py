@@ -3105,15 +3105,14 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
         original = album['packBundle']
         patched = pack_modes_builder.patched_bundle_name(original)
         if previews_on:
-            # M10: prefer the modes+previews VARIANT — but only when it EXISTS
-            # locally (or its base modes bundle exists so a variant can build).
-            # A pack without a variant must keep its modes-only name: the
-            # catalog/redirect pair must reference the bundle that will
-            # actually deploy, or the pack boots against a mismatched CRC
-            # (the Exp 225 crash class).
+            # M10: prefer the modes+previews VARIANT — but ONLY when the variant
+            # FILE itself exists. The variant is built by _ensure_previews_variants
+            # BEFORE any deploy path reads entries, so a missing variant here means
+            # it genuinely cannot deploy (no custom slots / build failed) — the
+            # pack must keep its modes-only name so the catalog/redirect/bundle
+            # triple stays consistent (the Exp 225 crash class otherwise).
             variant = song_previews.previews_bundle_name(patched)
-            modes_path = os.path.join(build_dir, patched)
-            if os.path.isfile(os.path.join(build_dir, variant)) or os.path.isfile(modes_path):
+            if os.path.isfile(os.path.join(build_dir, variant)):
                 patched = variant
         entries.append({
             'pack': pack,
@@ -3305,7 +3304,8 @@ def _ensure_previews_variants(config: dict, packs: list | None = None,
         crc = pack_modes_builder.crc_decompressed_stream(new_bundle)
         _record_previews_manifest(pm, build_dir, pack, var_name,
                                   len(new_bundle), crc, preview_map,
-                                  album.get('catalogBundleName', ''))
+                                  album.get('catalogBundleName', ''),
+                                  album['packBundle'])
         log.info(f"    ✓ {pack}: {var_name} ({len(new_bundle):,} B, "
                  f"crc={crc}, previews={len(preview_map)})")
         built += 1
@@ -3314,7 +3314,8 @@ def _ensure_previews_variants(config: dict, packs: list | None = None,
 
 def _record_previews_manifest(pm: dict, build_dir: str, pack: str,
                               var_name: str, size: int, crc: int,
-                              preview_map: dict, catalog_bundle_name: str) -> None:
+                              preview_map: dict, catalog_bundle_name: str,
+                              pack_bundle_name: str) -> None:
     """Record the previews variant in pack_modes manifest.json so catalog
     regeneration (which reads the manifest for crc/size) can encode it."""
     mpath = os.path.join(build_dir, 'manifest.json')
@@ -3327,11 +3328,14 @@ def _record_previews_manifest(pm: dict, build_dir: str, pack: str,
             data = {'entries': []}
     entries = [e for e in data.get('entries', [])
                if not (isinstance(e, dict) and e.get('bundle') == var_name)]
+    # packBundle = the STOCK bundle filename (the manifest's shared key with the
+    # modes entry — the post-deploy check indexes by it). The variant entry also
+    # carries 'previews' so consumers can tell the two apart.
     entries.append({
         'pack': pack,
         'bundle': var_name,
         'patchedBundle': var_name,
-        'packBundle': pack,
+        'packBundle': pack_bundle_name,
         'catalogBundleName': catalog_bundle_name,
         'size': size,
         'crc': crc,
@@ -3817,12 +3821,34 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
                             log.info(f"  ✅ Deployed {pm['patched_catalog']} md5 matches local build ({local_md5})")
                     # Verify each configured pack's catalog entry carries the patched CRC/size.
                     entries = _get_pack_modes_entries(config, packs=packs)
-                    manifest = {e['packBundle']: e for e in pm_b.load_manifest(pm['build_dir'])}
+                    # Index by stock packBundle — FLAG-AWARE (M10): when
+                    # enable_song_previews is ON, the deployed bundle is the
+                    # variant, so the variant's manifest row must win over the
+                    # (now-stale) modes row regardless of append order. OFF →
+                    # the modes row wins. Rows are keyed by packBundle and the
+                    # variant carries 'previews' to tell them apart.
+                    want_variant = _previews_enabled(config)
+                    manifest = {}
+                    for me in pm_b.load_manifest(pm['build_dir']):
+                        cur = manifest.get(me['packBundle'])
+                        is_var = 'previews' in me
+                        if cur is None or is_var == want_variant:
+                            manifest[me['packBundle']] = me
                     checks = []
                     for e in entries:
                         me = manifest.get(e['bundle_key'])
-                        if me:
-                            checks.append((me['catalogBundleName'], me['crc'], me['size']))
+                        if me is None:
+                            continue
+                        # M10: entries point at the variant when the flag is on —
+                        # cross-check the manifest row actually describes the
+                        # bundle that deployed (variant row ↔ variant entry).
+                        if ('previews' in e['patched_bundle'] or '_previews_' in e['patched_bundle']):
+                            if me.get('patchedBundle') != e['patched_bundle']:
+                                log.warning(f"  ⚠️  Manifest row for {e['pack']} is "
+                                             f"{me.get('patchedBundle')} but the deploy "
+                                             f"shipped {e['patched_bundle']} — expected "
+                                             f"crc/size may be stale")
+                        checks.append((me['catalogBundleName'], me['crc'], me['size']))
                     if checks:
                         missing, mismatched = pm_b.validate_catalog_entries(remote_cat, checks)
                         if missing or mismatched:
