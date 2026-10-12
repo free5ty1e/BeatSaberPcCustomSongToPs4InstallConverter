@@ -424,10 +424,51 @@ def find_custom_bundle_for_slot(slot: str, config: dict, log=None):
     return None
 
 
-def build_preview_map(album: dict, config: dict, log=print):
+def _display_title(disp: str) -> str:
+    """The custom song's TITLE from its 'Title / Artist' display string.
+
+    Splits on the LAST ' / ' — titles rarely contain the separator, but
+    ARTISTS sometimes do ('Queencard ( / G)I-DLE': the map's own title is
+    literally 'Queencard (' with artist '(G)I-DLE' — BeatSaver metadata is
+    occasionally malformed). Splitting on the FIRST separator truncated the
+    title and the repo-source lookup failed → the busiest-bar heuristic
+    silently took over with a different (stable but mapper-intent-free)
+    start (Exp 269c)."""
+    if ' / ' in disp:
+        return disp.rsplit(' / ', 1)[0].strip().lower()
+    return disp.strip().lower()
+
+
+def _resolve_source_dir(disp: str) -> str | None:
+    """Best-effort local source dir for the slot's custom song.
+
+    Ladder (Exp 269c): exact extracted title → title with trailing
+    punctuation/whitespace stripped (catches 'Queencard (' → 'queencard')
+    → title with ALL parens/brackets content dropped → None (heuristic path).
+    """
+    title = _display_title(disp)
+    idx = _repo_title_index()
+    if title in idx:
+        return idx[title]
+    stripped = title.rstrip(' ([-_')
+    if stripped != title and stripped in idx:
+        return idx[stripped]
+    noparen = title.split('(')[0].strip().rstrip(' -_')
+    if noparen and noparen in idx:
+        return idx[noparen]
+    return None
+
+
+def build_preview_map(album: dict, config: dict, log=print, want_inputs=False):
     """For every CUSTOM slot in the album (present in song_metadata.json),
     build the preview FSB5. Returns {slot_songID: fsb5_bytes}; slots without
-    a local custom bundle are skipped with a warning (stock preview stays)."""
+    a local custom bundle are skipped with a warning (stock preview stays).
+
+    want_inputs=True also returns a per-slot INPUT FINGERPRINT dict:
+        {slot: [bundle_md5, start_seconds]}
+    — everything that determines the preview bytes. Stored in the variant's
+    manifest row, it lets future deploys skip slots (and whole packs) whose
+    inputs are unchanged (Exp 269c dirty-checking)."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     meta_path = os.path.join(root, 'song_metadata.json')
     meta = {}
@@ -454,7 +495,9 @@ def build_preview_map(album: dict, config: dict, log=print):
                 except Exception:
                     pass
 
+    import hashlib
     preview_map = {}
+    inputs = {}
     for song in album['songs']:
         sid = song['songID']
         stock = song.get('songName', '')
@@ -472,8 +515,7 @@ def build_preview_map(album: dict, config: dict, log=print):
 
         start = None
         disp = meta[stock]
-        name_part = disp.split(' / ')[0].strip().lower()
-        src_dir = title_idx.get(name_part)
+        src_dir = _resolve_source_dir(disp)
         if src_dir:
             start = preview_start_from_info(src_dir)
         if start is None:
@@ -485,6 +527,94 @@ def build_preview_map(album: dict, config: dict, log=print):
         seg = cut_preview(pcm, start)
         fsb = build_preview_fsb5(seg)
         preview_map[sid] = fsb
+        if want_inputs:
+            with open(cpath, 'rb') as f:
+                bundle_md5 = hashlib.md5(f.read()).hexdigest()
+            inputs[sid] = [bundle_md5, _info_dat_md5_for(disp, root)]
         log(f"  ✂️  {sid:<18} start={start:7.1f}s  dur={dur:6.1f}s  "
             f"fsb5={len(fsb):,} B  rms {_rms_db(seg):.1f} dBFS")
+    if want_inputs:
+        return preview_map, inputs
     return preview_map
+
+
+_REPO_TITLE_INDEX_CACHE = None
+
+
+def _repo_title_index() -> dict:
+    """{lowercase song title: repo dir} for the local BeatSaver sources.
+
+    Cached for the process lifetime — the repo rarely changes mid-run, and
+    without the cache the dirty-check re-parsed ~100 Info.dat files PER SLOT
+    (46 slots × 100 files = 42 s of pure waste; profiling caught it)."""
+    global _REPO_TITLE_INDEX_CACHE
+    if _REPO_TITLE_INDEX_CACHE is not None:
+        return _REPO_TITLE_INDEX_CACHE
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo = os.path.join(os.path.dirname(root), 'beat-saber-ps4-custom-songs', 'songs_repo')
+    title_idx = {}
+    if os.path.isdir(repo):
+        for h in os.listdir(repo):
+            ip = os.path.join(repo, h, 'Info.dat')
+            if os.path.isfile(ip):
+                try:
+                    with open(ip) as f:
+                        d = json.load(f)
+                    n = (d.get('_songName') or d.get('song', {}).get('title') or '').strip()
+                    if n:
+                        title_idx.setdefault(n.lower(), os.path.join(repo, h))
+                except Exception:
+                    pass
+    _REPO_TITLE_INDEX_CACHE = title_idx
+    return title_idx
+
+
+def _info_dat_md5_for(disp: str, root: str) -> str | None:
+    """md5 of the local source dir's Info.dat that would supply this slot's
+    preview START (None when no source dir matches → heuristic path, whose
+    output is a pure function of the bundle bytes the md5 already covers)."""
+    import hashlib
+    if not disp:
+        return None
+    src_dir = _resolve_source_dir(disp)
+    if not src_dir:
+        return None
+    ip = os.path.join(src_dir, 'Info.dat')
+    if not os.path.isfile(ip):
+        return None
+    with open(ip, 'rb') as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+
+def slot_input_fingerprint(sid: str, config: dict, album: dict) -> list | None:
+    """Cheap per-slot dirty-check input WITHOUT building the preview.
+
+    Shape: [bundle_md5, info_dat_md5_or_None].
+      - bundle_md5: the deployed custom bundle's exact bytes — the audio AND
+        the embedded beatmaps that drive the heuristic start are both inside
+        it, so any content change flips the md5.
+      - info_dat_md5: the local source dir's Info.dat (the mapper's preview
+        start). None = no source dir → the start is the in-bundle heuristic,
+        fully covered by bundle_md5.
+    NO UnityPy parsing on this path — a clean 47-slot fleet checks in
+    seconds (pure file reads; ~0.4 s per large bundle for the md5).
+    None = no bundle → slot cannot preview (dirty-check treats as skip)."""
+    import hashlib
+    cpath = find_custom_bundle_for_slot(sid, config)
+    if cpath is None:
+        return None
+    with open(cpath, 'rb') as f:
+        bundle_md5 = hashlib.md5(f.read()).hexdigest()
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    meta_path = os.path.join(root, 'song_metadata.json')
+    disp = ''
+    if os.path.isfile(meta_path):
+        try:
+            with open(meta_path) as f:
+                meta = json.load(f).get('song_names', {})
+            stock = next((s.get('songName', '') for s in album.get('songs', [])
+                          if s.get('songID') == sid), '')
+            disp = meta.get(stock, '')
+        except Exception:
+            disp = ''
+    return [bundle_md5, _info_dat_md5_for(disp, root)]

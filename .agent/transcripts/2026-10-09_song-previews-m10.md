@@ -310,3 +310,102 @@ lizzo) and "mismatched" against the correctly-variant catalog (619811098). False
 
 **Delivered to the user:** the deploy SUCCEEDED — no re-run needed; boot and listen. If
 they want the batch green end-to-end, re-running is now safe (validation passes).
+
+---
+
+## Cycle 5 — Previews hardware-confirmed; batch optimization (Exp 269c)
+
+**User:** re-ran the lizzo batch to verify their own process works; booted the game —
+song previews working for ALL custom songs; boot toast v0.8048 4/4 features ON. Asks:
+(1) any lizzo hardcoding? (must be any-pack/any-song); (2) optimize the batch preview
+regeneration with a --skip-song-preview-management parameter on all-but-last commands
++ only regenerate previews for packs actually touched; (3) download + analyze the PS4 log.
+
+**PS4 log (archived v0.8048_song_previews_first_boot.txt; cleared after):** v0.8048
+session perfect — song_previews=1 parsed; 53 redirects (variant names in the pack
+redirects); all 5 packs' preview variants served REDIRECTED; catalog redirected;
+lizzo pack opened 5× (menu + preview loads); 86 metadata swaps; 0 crash markers.
+
+**Hardcoding audit:** none anywhere in the preview path — scope from deployed state,
+slot mapping from song_ids (36 packs), custom detection via song_metadata, audio from
+each slot's own bundle. The user's 46-preview batch across 5 packs already proved it.
+
+**Optimization 1 — --skip-song-preview-management:** skips variant BUILD management
+(deploy of existing variant continues). batch_runner injects it into all-but-the-last
+batch command (previews regenerate once at the end); user-supplied flag on the last
+command honored with a NOTE. Threaded through deploy_pack_bundle/modes + CLI paths;
+documented in help + README.
+
+**Optimization 2 — per-pack dirty-check:** variant rebuilds only on (a) missing
+variant/row, (b) modes-base mtime > previewsAt, (c) custom-slot set changed, or
+(d) any slot fingerprint [bundle_md5, info_dat_md5] changed — no UnityPy parse on the
+skip path. Measured: clean 5-pack skip = 23.3s (md5 reads) vs 152s rebuild. Profiling
+caught _repo_title_index reparsing ~100 Info.dats per SLOT (46×, 42s) → process cache.
+
+**Tests:** 843/843 (7 new: skip-flag threading, 4 dirty-check legs, fingerprint shape,
+cache identity, runner injection); lint clean. README: Song Previews in the feature
+table + the new flag documented. v0.5359.
+
+---
+
+## Cycle 6 — Second batch failure: 3-part RCA + fixes, live-verified (Exp 269d, pipeline 0.5360)
+
+**User's run:** the lizzo batch (now with --skip-song-preview-management auto-injected)
+failed validation at song 1/9 — again with the deploy itself successful. The new
+stale-row detector printed the smoking gun: manifest rows named the MODES bundles
+while the deploy shipped PREVIEW variants.
+
+**RCAs + fixes:**
+1. **Manifest clobber** — _save_manifest (modes builder) keyed rows by pack →
+   per-song modes rebuilds replaced the 5 variant rows. Fixed: variant rows are
+   preserved (keyed by patchedBundle, deduped newest previewsAt); only the variant
+   builder replaces them.
+2. **Preview-start drift (found during verification)** — 'Queencard (' is the map's
+   literal title (BeatSaver metadata malformed); first-separator split broke the
+   repo lookup → heuristic silently took over (53.4→83.1s across rebuilds). Fixed:
+   last-separator split + resolution ladder (exact → strip punct → drop parens →
+   heuristic), identically in build + fingerprint. Queencard = mapper's 53.423s.
+3. **Upload waste completed** — batch songs are separate processes; session memory
+   can't dedupe. Fixed: pack/catalog artifacts skip upload when the live remote
+   listing confirms the identical size (rebuilt variants always differ in size).
+
+**Live proof (one deploy, all three visible):** 4 packs ⏭️ dirty-skipped in seconds;
+4 bundles ⏭️ upload-skipped; only the genuinely-changed lizzo variant + catalog
+deployed (Queencard start fix) → --verify-ps4 🎉 PASSED.
+
+**Tests 850/850** (7 new: manifest preservation/dedupe, title ladder, upload-skip
+×3). Lint clean. v0.5360.
+
+---
+
+## Cycle 7 — CE-34878-0 crash after batch: full RCA + 3 defenses (Exp 269e, pipeline 0.5361)
+
+**User:** batch succeeded and was MUCH faster (previews only processed at the last song —
+the optimization visibly working) but booting the game crashed CE-34878-0. Asked for log
+download + RCA + fix + defensive programming + unit coverage.
+
+**Log (archived v0.5360_preview_batch_crash.txt):** crash session dies mid-pack-scan at
+RS's redirected open #571; lizzo NEVER re-opened in scan pass 2 (healthy sessions open it
+2-4×) — the lazy-CRC crash signature (Exp 180 family).
+
+**Byte forensics (decisive):** catalog expects lizzo crc 2,222,108,153; deployed file's
+actual crc = 1,065,772,882 — SAME SIZE, different bytes; stream-diff localized the delta
+to exactly one preview slice (EverybodysGay). Two different valid builds of one variant.
+
+**Chain (two v0.5359 optimizations interacting):** deploy pass 1 uploaded the variant
+built from batch-song-1's fresh BeatSaver bundles; pass 2's dirty-check fired on the
+touched modes mtime → REBUILT → catalog got pass-2's CRC → my same-SIZE upload-skip
+blocked the corrective upload (same slot set = same size, always) → pass-1 file +
+pass-2 catalog → Unity CRC fail at pack scan → CE-34878-0.
+
+**Fixes:** (1) sound upload-skip: same-session record + unchanged remote size only;
+cross-process always uploads. (2) single build per deploy: build BEFORE any upload.
+(3) NEW deployed-bundle CRC guard in validation: pulls every deployed pack bundle,
+compares actual CRC vs catalog — names the crash signature on failure. Would have
+caught this pre-boot.
+
+**Live repair:** all 5 variants + catalog re-deployed; --verify-ps4 with the new guard:
+5/5 ✅ CRC matches → 🎉 PASSED. PS4 safe to boot.
+
+**Tests 856/856** (5 new: skip soundness ×3, crash-number contract, single-build
+ordering, guard presence). Lint clean. v0.5361.

@@ -684,11 +684,33 @@ def load_manifest(out_dir):
 
 
 def _save_manifest(out_dir, results):
-    """Merge the latest build results into the manifest (per-pack, keyed by pack)."""
-    existing = {r['pack']: r for r in load_manifest(out_dir)}
+    """Merge the latest MODES build results into the manifest (per-pack, keyed
+    by pack) — WITHOUT dropping previews-VARIANT rows.
+
+    Exp 269c: a pack has up to TWO manifest rows sharing its pack key — the
+    modes row (this builder's) and the modes+previews variant row (the
+    previews pipeline's, carries 'previews'). Keying the merge purely by pack
+    made every modes rebuild CLOBBER the variant rows; the post-deploy check
+    then compared the (stale) modes CRCs against the deployed catalog (which
+    correctly carries the variant's) and failed validation on all 5 packs —
+    twice, in two different shapes. Variant rows are preserved here; only the
+    variant builder (_record_previews_manifest) ever replaces them, by
+    patchedBundle name. Duplicate variant rows (same patchedBundle) dedupe
+    to the newest previewsAt."""
+    modes_rows = {}
+    variant_rows = {}
+    for r in load_manifest(out_dir):
+        if 'previews' in r:
+            key = r.get('patchedBundle') or r.get('bundle') or r['pack']
+            old = variant_rows.get(key)
+            if old is None or r.get('previewsAt', 0) >= old.get('previewsAt', 0):
+                variant_rows[key] = r
+        else:
+            modes_rows[r['pack']] = r
     for r in results:
-        existing[r['pack']] = r
-    entries = sorted(existing.values(), key=lambda r: r['pack'])
+        modes_rows[r['pack']] = r
+    entries = sorted(list(modes_rows.values()) + list(variant_rows.values()),
+                     key=lambda r: r['pack'])
     with open(_manifest_path(out_dir), 'w') as f:
         json.dump({'entries': entries}, f, indent=2)
 
