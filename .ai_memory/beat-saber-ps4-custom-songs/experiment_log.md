@@ -82,3 +82,18 @@ from Info.dat. Plan: `.agent/plans/song-previews.md`.
 - **Live repair:** re-deployed all 5 packs' variants + catalog; full `--verify-ps4` with the new guard: all 5 packs ✅ deployed bundle CRC matches catalog → 🎉 PASSED. The user's PS4 is safe to boot.
 - **Tests:** 856/856 (5 new: skip-soundness ×3, the crash-number contract [size-equal/crc-different builds must fail], single-build ordering, guard-presence source check). Lint clean.
 - **Status:** ✅ crash root-caused from bytes, fixed 3 ways, live state repaired + verified, regression-pinned.
+
+### Experiment 270: post-crash success verified + full release-prep audit (2026-10-10)
+- **User:** re-ran the lizzo batch in the web app (fast: preview processing only at the last song), tested on the PS4 — no crash, previews working, custom songs all present, spot-check played two levels. Asked to: audit the PS4 log; audit release notes + CI builds + KB + documentation + README for release prep; and asked WHO chooses the preview moment (complimenting that previews often include the song title in the lyrics).
+- **Log audit (archived v0.5361_batch_success_boot.txt; cleared):** 4 boot sessions — sessions 1 & 3 = the pre-repair crash boots (the lizzo pass-2-absence signature, preserved for the record); sessions 2 & 4 = post-repair successes: full menu arrival (PlayerData.dat), lizzo redirected 4-5× across scan passes (previews streaming), 46 metadata swaps, and the user's gameplay visible — startmeup (Wake Me Up/Avicii) + paintitblack (VOLUPTE/Tare) level loads. ZERO crash markers.
+- **Preview-selection answer (honest credit split):** the MAPPER's `_previewStartTime` (26/47 slots resolve to local sources) + my busiest-bar heuristic for the rest (snapped to a 4-beat bar — choruses, where titles live, are the densest windows). The "title in the lyrics" moments = the mappers' picks honored verbatim + density-finding choruses.
+- **Release-prep audit (all gaps found + fixed):**
+  - CI_RELEASE.md: added `enable_song_previews` row + 4/4 toast text + song-previews mention in the tools table.
+  - Feature doc: NEW docs/features/song-previews.md (user-facing: what it does, selection logic, flag round-trip commands, batch behavior, validation) — added to plugin-build.yml's release-zip bundle.
+  - requirements-test.txt: +fsb5 (the previews tests roundtrip through the independent decoder; CI needs it).
+  - CI shape verified: 43/43 previews tests pass hermetically (the 2 hardware-env tests self-skip via existing gates).
+  - KB: NEW song-previews.md page (architecture, m_Offset-relative lesson, variant bundles, batch optimizations, the size≠identity CE-34878-0 lesson + CRC guard); feature-flags.md gains the 4th flag row; lftp-ftp-pitfalls.md gains pitfall 9 (size≠identity, sound upload-skip rules); index.md cross-refs.
+  - README: banner → v0.8048/0.5361/0.6.3 + previews highlight; flag table + toast → 4 flags; `--skip-song-preview-management` documented (done cycle 5); Song Previews row in the features table (cycle 5).
+  - Webapp: Feature-Flags toast simulation now counts N/4 derived from the flag-list length (never hardcoded again), TOAST_VERSION v0.8048, `enable_song_previews` in the simulated list; index.html placeholder 4/4. webapp 0.6.4 + changelog entry.
+  - Release-validation procedure: NEW step 5.1b (previews variant + flag round-trip + boot-toast expectations + batch-skip log expectations); validator script's default TAG → v0.8048-pipeline-0.5361-webapp-0.6.3.
+- **Status:** ✅ release-ready: everything audited, all docs/CI/KB current, suite green. Suggested tag: v0.8048-pipeline-0.5361-webapp-0.6.4.

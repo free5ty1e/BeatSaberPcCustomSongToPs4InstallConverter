@@ -409,3 +409,34 @@ caught this pre-boot.
 
 **Tests 856/856** (5 new: skip soundness ×3, crash-number contract, single-build
 ordering, guard presence). Lint clean. v0.5361.
+
+---
+
+## Cycle 8 — Success verified + release-prep audit (Exp 270)
+
+**User:** lizzo batch re-run fast + successful; PS4 tested — no crash, previews working,
+spot-check played levels. Asked for log audit + full release-notes/CI/KB/docs/README audit
+for release prep. Also complimented the preview section choices (title-in-lyrics moments).
+
+**Log audit:** 4 sessions — 2 pre-repair crash boots (kept for the record), 2 post-repair
+successes: menu reached, lizzo opened 4-5× (previews streaming), 46 metadata swaps, the
+user's two played levels visible (startmeup→Wake Me Up, paintitblack→VOLUPTE). Zero crash
+markers. Archived + cleared.
+
+**Preview-selection answer:** shared credit — the mappers' `_previewStartTime` honored
+verbatim (26/47) + my busiest-bar heuristic (21/47) that finds choruses (densest windows,
+snapped to a bar — titles usually live in choruses).
+
+**Release-prep audit — gaps found and fixed:**
+1. CI_RELEASE.md: 4th flag row, 4/4 toast, previews in the tools table.
+2. NEW docs/features/song-previews.md — added to the release-zip workflow.
+3. requirements-test.txt +fsb5 (CI needs it for the previews roundtrip tests).
+4. CI shape proven: 43/43 previews tests hermetic-pass.
+5. KB: song-previews.md (new), feature-flags.md (4th flag), lftp-ftp-pitfalls.md
+   (pitfall 9: size≠identity + sound upload-skip rules), index.md.
+6. README: banner v0.8048/0.5361/0.6.3 + previews highlight; flag table + N/4 toast.
+7. Webapp 0.6.4: toast simulation counts from the flag-list length, v0.8048, 4th flag
+   in the simulated list; changelog entry.
+8. Validation procedure: step 5.1b (previews round-trip) + default TAG bump.
+
+**Suggested release tag: v0.8048-pipeline-0.5361-webapp-0.6.4.**

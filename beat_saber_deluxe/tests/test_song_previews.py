@@ -353,8 +353,7 @@ class TestManifestVariantSelection:
         """The exact live scenario: variant row's packBundle = the PACK ID →
         index-by-stock-name picks the modes row (stale crc) → check fails."""
         import build_pack_mode_bundles as pmb
-        import full_custom_song_pipeline as fp
-        mp = self._write_manifest(tmp_path, var_packbundle='lizzo')  # the bug
+        self._write_manifest(tmp_path, var_packbundle='lizzo')  # the bug
         manifest = {e['packBundle']: e for e in pmb.load_manifest(str(tmp_path))}
         me = manifest.get('lizzo_pack_assets_all_abc.bundle')
         assert me['crc'] == 111   # modes row won — the stale one. Bug reproduced.
@@ -379,24 +378,19 @@ class TestManifestVariantSelection:
 
 class TestSkipPreviewManagement:
     def test_cli_flag_exists(self):
-        fp = self._fp()
-        import argparse
         # the parser registration is in main(); assert the attribute plumbing
         # by checking the pipeline source carries the argument + threading
         src = open(os.path.join(TOOLS, 'full_custom_song_pipeline.py')).read()
         assert "'--skip-song-preview-management'" in src
         assert 'args.skip_song_preview_management' in src
 
-    def _fp(self):
-        import full_custom_song_pipeline as fp
-        return fp
-
     def test_ensure_skips_previews_when_flag_set(self, tmp_path, monkeypatch):
-        fp = self._fp()
+        import full_custom_song_pipeline as fp
         called = []
         monkeypatch.setattr(fp, '_ensure_previews_variants',
                             lambda *a, **k: called.append(k) or 0)
-        fdir = tmp_path / 'f'; fdir.mkdir()
+        fdir = tmp_path / 'f'
+        fdir.mkdir()
         fpath = fdir / 'features.json'
         fpath.write_text(json.dumps({'enable_song_previews': True}))
         monkeypatch.setattr(fp, '_get_local_features_path', lambda *a, **k: str(fpath))
@@ -581,8 +575,9 @@ class TestIdenticalUploadSkip:
         """Same size on the remote + NO session record → MUST UPLOAD.
         (The Exp 269c version asserted the unsound skip; the crash inverted
         this contract.)"""
-        import full_custom_song_pipeline as fp_mod
         import subprocess as sp_mod
+
+        import full_custom_song_pipeline as fp_mod
         fp_mod._SESSION_UPLOADED_BUNDLES.clear()
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 500)
@@ -591,7 +586,8 @@ class TestIdenticalUploadSkip:
         uploaded = []
         def fake_run(cmd, **kw):
             uploaded.append(cmd)
-            class R: returncode = 0
+            class R:
+                returncode = 0
             return R()
         monkeypatch.setattr(sp_mod, 'run', fake_run)
         ok = fp_mod._deploy_file_to_ps4({'ps4': {}, 'title': {'id': 'CUSA12878'},
@@ -600,8 +596,9 @@ class TestIdenticalUploadSkip:
         assert ok and len(uploaded) == 1   # uploaded: size alone is not identity
 
     def test_uploads_when_size_differs(self, tmp_path, monkeypatch):
-        import full_custom_song_pipeline as fp_mod
         import subprocess as sp_mod
+
+        import full_custom_song_pipeline as fp_mod
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 500)
         monkeypatch.setattr(fp_mod, '_list_remote_dir',
@@ -609,7 +606,8 @@ class TestIdenticalUploadSkip:
         uploaded = []
         def fake_run(cmd, **kw):
             uploaded.append(cmd)
-            class R: returncode = 0
+            class R:
+                returncode = 0
             return R()
         monkeypatch.setattr(sp_mod, 'run', fake_run)
         ok = fp_mod._deploy_file_to_ps4({'ps4': {}, 'title': {'id': 'CUSA12878'},
@@ -618,8 +616,9 @@ class TestIdenticalUploadSkip:
         assert ok and len(uploaded) == 1   # actually uploaded
 
     def test_song_bundles_always_upload(self, tmp_path, monkeypatch):
-        import full_custom_song_pipeline as fp_mod
         import subprocess as sp_mod
+
+        import full_custom_song_pipeline as fp_mod
         local = tmp_path / '2BeLoved_v3.bundle'
         local.write_bytes(b'S' * 300)
         monkeypatch.setattr(fp_mod, '_list_remote_dir',
@@ -627,7 +626,8 @@ class TestIdenticalUploadSkip:
         uploaded = []
         def fake_run(cmd, **kw):
             uploaded.append(cmd)
-            class R: returncode = 0
+            class R:
+                returncode = 0
             return R()
         monkeypatch.setattr(sp_mod, 'run', fake_run)
         ok = fp_mod._deploy_file_to_ps4({'ps4': {}, 'title': {'id': 'CUSA12878'},
@@ -651,8 +651,9 @@ class TestUploadSkipSoundness:
     def test_skip_requires_session_ledger(self, tmp_path, monkeypatch):
         """Same-size remote file + NO session record → MUST upload (a fresh
         batch-song process must never trust size alone — the crash path)."""
-        import full_custom_song_pipeline as fp_mod
         import subprocess as sp_mod
+
+        import full_custom_song_pipeline as fp_mod
         fp_mod._SESSION_UPLOADED_BUNDLES.clear()      # fresh process simulation
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 500)
@@ -661,7 +662,8 @@ class TestUploadSkipSoundness:
         uploaded = []
         def fake_run(cmd, **kw):
             uploaded.append(cmd)
-            class R: returncode = 0
+            class R:
+                returncode = 0
             return R()
         monkeypatch.setattr(sp_mod, 'run', fake_run)
         ok = fp_mod._deploy_file_to_ps4(
@@ -672,8 +674,9 @@ class TestUploadSkipSoundness:
 
     def test_skip_after_same_session_upload(self, tmp_path, monkeypatch):
         """Same-process record + remote size unchanged → skip (the sound case)."""
-        import full_custom_song_pipeline as fp_mod
         import subprocess as sp_mod
+
+        import full_custom_song_pipeline as fp_mod
         fp_mod._SESSION_UPLOADED_BUNDLES.clear()
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 500)
@@ -682,7 +685,8 @@ class TestUploadSkipSoundness:
         uploaded = []
         def fake_run(cmd, **kw):
             uploaded.append(cmd)
-            class R: returncode = 0
+            class R:
+                returncode = 0
             return R()
         monkeypatch.setattr(sp_mod, 'run', fake_run)
         ok = fp_mod._deploy_file_to_ps4(
@@ -691,8 +695,9 @@ class TestUploadSkipSoundness:
         assert ok and uploaded == []
 
     def test_size_change_forces_upload(self, tmp_path, monkeypatch):
-        import full_custom_song_pipeline as fp_mod
         import subprocess as sp_mod
+
+        import full_custom_song_pipeline as fp_mod
         fp_mod._SESSION_UPLOADED_BUNDLES.clear()
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 600)
@@ -701,7 +706,8 @@ class TestUploadSkipSoundness:
         uploaded = []
         def fake_run(cmd, **kw):
             uploaded.append(cmd)
-            class R: returncode = 0
+            class R:
+                returncode = 0
             return R()
         monkeypatch.setattr(sp_mod, 'run', fake_run)
         ok = fp_mod._deploy_file_to_ps4(

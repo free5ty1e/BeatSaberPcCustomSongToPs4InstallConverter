@@ -20,7 +20,7 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | File                                 | Description                                      |
 | ------------------------------------ | ------------------------------------------------ |
 | `tools/full_custom_song_pipeline.py` | Main pipeline script for converting custom songs |
-| `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder) |
+| `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder, song-previews patcher) |
 | `VERSION`                            | Pipeline version                                 |
 | `beat_saber_song_ids.json`           | Song-slot catalog: every pack, slot ID, stock song title, bundle name — the pipeline's targeting database |
 | `requirements.txt`                    | Python dependencies for the pipeline (incl. the web app's fastapi/uvicorn) |
@@ -132,9 +132,10 @@ See the main `README.md` for full pipeline documentation.
 | `enable_custom_song_replacements` | `false` | Gates all bundle redirects |
 | `enable_song_metadata_modification` | `false` | Gates song name/artist swaps in the UI |
 | `enable_beatmap_mode_mapping` | `false` | Gates extra game modes (OneSaber/NoArrows/90Degree) — OFF serves stock pack bundles + catalog |
+| `enable_song_previews` | `false` | Gates **song previews**: highlighting a custom song in the menu plays its own ~10s audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles — either this flag or `enable_beatmap_mode_mapping` keeps the patched pair live |
 
 On boot the plugin shows one combined toast with its state:
-`BS Deluxe vX (ON) / By Chris Primeish / (3/3 features ON)` — or
+`BS Deluxe vX (ON) / By Chris Primeish / (4/4 features ON)` — or
 `BS Deluxe vX (OFF) / By Chris Primeish / (official songs only)`.
 
 ## Plugin Installation

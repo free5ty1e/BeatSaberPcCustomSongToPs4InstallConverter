@@ -648,12 +648,13 @@ const FLAG_ORDER = ["enable_plugin", "enable_custom_song_replacements",
 let flagsDirty = false;
 
 // Simulated PS4 launch toast — mirrors the plugin's exact format
-// (main.cpp module_start): "BS Deluxe vX (ON)\nBy Chris Primeish\n(N/3 features ON)"
+// (main.cpp module_start): "BS Deluxe vX (ON)\nBy Chris Primeish\n(N/4 features ON)"
 // — or "(OFF) … (official songs only)" when the kill switch is off.
-const TOAST_VERSION = "v0.8047";
+const TOAST_VERSION = "v0.8048";
 const FEATURE_FLAG_KEYS = ["enable_custom_song_replacements",
                            "enable_song_metadata_modification",
-                           "enable_beatmap_mode_mapping"];
+                           "enable_beatmap_mode_mapping",
+                           "enable_song_previews"];
 
 function updateToastSim() {
   const checks = $("flags-list").querySelectorAll("input[type=checkbox]");
@@ -664,7 +665,7 @@ function updateToastSim() {
   const count = FEATURE_FLAG_KEYS.filter(k => state[k]).length;
   $("toast-title").textContent = `BS Deluxe ${TOAST_VERSION} ${on ? "(ON)" : "(OFF)"}`;
   $("toast-count").textContent = on
-    ? `(${count}/3 features ON)`
+    ? `(${count}/${FEATURE_FLAG_KEYS.length} features ON)`
     : "(official songs only)";
   $("toast-note").textContent = on
     ? "With these toggles, the next boot shows this toast and the features above are active."

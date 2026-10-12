@@ -2,7 +2,7 @@
 
 **Custom song replacement for PlayStation 4 Beat Saber (CUSA12878, version 2.04)**
 
-**Plugin v0.8047 | Pipeline v0.5356 | Web app 0.6.3** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation, **surgical pack bundle patching for partial deploys**, **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
+**Plugin v0.8048 | Pipeline v0.5361 | Web app 0.6.3** — Self-contained single-song `--deploy-full` with clean slate backup, feature flags gated, post-deploy validation with deployed-bundle CRC verification, **surgical pack bundle patching for partial deploys**, **song previews that play each custom song's own audio in the menu** (`enable_song_previews`), **`--clear-target-song` for reverting slots**, **multi-pack incremental deploys that preserve every pack's custom songs**, **every difficulty slot filled with custom content at the true mapper BPM**, **OneSaber as blue dots**, **a global kill switch (`--set-feature enable_plugin=false`) to play 100% official songs without uninstalling anything**.
 
 Replace any Beat Saber DLC song's audio and beatmaps with community-made custom songs — no game modding required. Works via GoldHEN's file redirection hook and a PS4 plugin. The pipeline can target **any song** present in the game's `BeatmapLevelsData/` directory — not just the default set listed below.
 
@@ -226,6 +226,7 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 | `enable_custom_song_replacements`   | `false`             | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs                                                                                                                                                         |
 | `enable_song_metadata_modification` | `false`             | Gates song metadata modification — when ON, hooks MoveNext() to replace song names/artists in the UI                                                                                                                                                    |
 | `enable_beatmap_mode_mapping`       | `false`             | Gates the extra game modes (OneSaber, NoArrows, 90Degree) — when OFF, pack bundles and the catalog redirect are skipped so every song shows only Standard (custom audio still plays); when ON, patched packs show all 4 mode sets                       |
+| `enable_song_previews`              | `false`             | Gates **song previews** — highlighting a custom song in the menu plays a ~10s cut of ITS OWN audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles; either this or mode-mapping keeps the patched pair live. Re-deploy after flipping to ship the matching bundle variant. |
 
 ### Startup Notifications
 
@@ -234,14 +235,14 @@ feature-flag state (a single toast because the PS4VR headset switch-over can
 swallow a second toast when the headset is already powered on at launch):
 
 ```
-BS Deluxe v0.8047 (ON)
+BS Deluxe v0.8048 (ON)
 By Chris Primeish
-(3/3 features ON)
+(4/4 features ON)
 ```
 
 - **`(ON)` / `(OFF)`** — the global `enable_plugin` kill-switch state
-- **`(N/3 features ON)`** — how many of the three feature flags are enabled
-- When the kill switch is OFF: `BS Deluxe v0.8047 (OFF) / By Chris Primeish / (official songs only)`
+- **`(N/4 features ON)`** — how many of the four feature flags are enabled
+- When the kill switch is OFF: `BS Deluxe v0.8048 (OFF) / By Chris Primeish / (official songs only)`
 
 To change what the next boot shows:
 

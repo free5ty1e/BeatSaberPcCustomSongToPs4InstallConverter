@@ -111,3 +111,24 @@ that must fail fast.
 See also: [[ps4-file-system-redirects]] (topology + command reference),
 [[feature-flags]] (ps4_state.py reads), [[pack-scope-auto-discovery]]
 (the deployed-state vs local-cache rule that several of these bugs violated).
+
+## 9. Size equality is NOT content identity — never skip uploads on size alone (Exp 269e)
+
+`cls -l` gives sizes cheaply, and a same-size remote file tempts an "already
+deployed, skip the upload" optimization. **UNSOUND for same-slot-set rebuilds:**
+two different builds of the same pack-variant bundle share size whenever the
+preview set matches (fixed 10s PCM16 slices = fixed lengths) — the live crash
+had CRC 1,065,772,882 vs 2,222,108,153 at identical size 22,656,896. The
+resulting catalog/file CRC mismatch crashed the game with CE-34878-0 at the
+pack scan.
+
+**Sound rules (pipeline v0.5361):**
+- Skip an upload ONLY when THIS PROCESS previously uploaded those exact bytes
+  (session ledger) AND the remote size is unchanged.
+- Cross-process callers (batch songs are separate pipeline invocations) always
+  upload — each uploads once, which is correct, not wasteful.
+- Build everything BEFORE the first upload so one deploy cannot ship two
+  different builds of the same artifact (the other half of the crash).
+- Defense in depth: post-deploy validation pulls every deployed pack bundle
+  and checks its actual catalog-scheme CRC against the catalog entry — the
+  check that catches any recurrence BEFORE boot, naming the crash signature.

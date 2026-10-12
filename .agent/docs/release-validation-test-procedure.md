@@ -476,6 +476,31 @@ timeout 300 python3 tools/full_custom_song_pipeline.py \
 # a scoping bug. Every upload line must end "✅ ... deployed".
 ```
 
+### 5.1b Song previews (M10) — variant bundles + flag round-trip
+
+```bash
+# Flag ON + deploy one pack: the preview VARIANT ships (…_pack_modes_previews_…)
+timeout 300 python3 tools/full_custom_song_pipeline.py     --features-only --set-feature enable_song_previews=true 2>&1 | tail -2
+timeout 600 python3 tools/full_custom_song_pipeline.py     --deploy-pack-modes --pack-modes-packs lizzo 2>&1 | grep -E "previews|✅|❌" | tail -6
+# EXPECT: "🎵 Building song-previews variant" lines (or "already fresh — skipped"),
+# the variant bundle deployed, then post-deploy validation incl. the per-pack
+# "deployed bundle CRC matches catalog" guard. Boot the game: the boot toast
+# reads "(4/4 features ON)" and highlighting a custom Lizzo slot plays the
+# CUSTOM song's audio (~10s), not the stock clip.
+
+# Flag OFF + re-deploy: the modes-only bundle returns
+timeout 300 python3 tools/full_custom_song_pipeline.py     --features-only --set-feature enable_song_previews=false 2>&1 | tail -2
+timeout 600 python3 tools/full_custom_song_pipeline.py     --deploy-pack-modes --pack-modes-packs lizzo 2>&1 | tail -4
+# EXPECT: modes-only bundle deployed; boot toast "(3/4 features ON)".
+# RESTORE for the rest of the procedure: set the flag back to true and
+# re-deploy (or leave off — the remaining steps do not depend on previews).
+
+# Batch behavior (no separate run needed — inspect any batch log): all-but-the
+# last command carries --skip-song-preview-management (injected by
+# batch_runner), and the last command's deploy dirty-checks every pack —
+# untouched packs log "already fresh (inputs unchanged) — skipped".
+```
+
 ### 5.2 `--deploy-mass-bundles` (validation config has no slots)
 
 ```bash

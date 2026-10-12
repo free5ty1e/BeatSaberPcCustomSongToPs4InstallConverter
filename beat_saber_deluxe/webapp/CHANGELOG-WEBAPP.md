@@ -335,4 +335,8 @@ that actually deploys.
   records — concurrent writers corrupt them, plan §9.4 invariant 2).
 - Every PS4 read uses the `get`-to-temp-dir banner-free transport (never
   `lftp cat`) with first-`{`-to-last-`}` JSON extraction and retries
-  (`.agent/llm-wiki-knowledge-base/lftp-ftp-pitfalls.md`, plan §9.4 invariant 3).
+  (`.agent/llm-wiki-knowledge-base/lftp-ftp-pitfalls.md`, plan §9.4 invariant 3).## 0.6.4 (2026-10-10)
+### Changed
+- **Feature Flags tab tracks the 4th flag + the real toast format (M10).** `enable_song_previews` renders with a full description (its absence was the gap found while validating the user's live deploy); the simulated boot toast counts `N/4` (derived from the flag list length — never hardcoded again) and shows `v0.8048`. The Batch tab's runner now injects `--skip-song-preview-management` into all-but-the-last batch command (previews regenerate once at the end of a batch).
+
+

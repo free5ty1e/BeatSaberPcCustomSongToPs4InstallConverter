@@ -398,9 +398,11 @@ Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
 - [x] Phase 1 — Implementation (Exp 269): `tools/song_previews.py` + pipeline 0.5357
       variant threading + plugin 0.8048 gate/toast; lizzo variant built+verified
       byte-identical via production path; 828/828 tests; all 4 plan Qs resolved
-- [ ] Phase 1b — Hardware spike (Exp 269b, PENDING): deploy lizzo variant, user
-      listens to all 9 slots in the song menu (rollback: flag off + modes bundle)
-- [ ] Phase 2 — Full fleet: 5 packs × 47 slots + verify-ps4 preview check
-- [ ] Phase 3 — Flag polish: features-only variant swap on flip, KB pages, README,
-      release procedure
+- [x] Phase 1b — Hardware spike (Exp 269b): lizzo variant deployed + user listen-tested
+- [x] Phase 2 — Full fleet (Exps 269c-e): 46 previews across 5 packs live; verify gains the
+      deployed-bundle CRC guard; batch optimizations (skip-flag auto-inject + per-pack
+      dirty-check + sound upload-skip); the CE-34878-0 size≠identity crash RCA'd + fixed
+- [x] Phase 3 — Flag polish + docs (Exp 270): KB pages (song-previews new + feature-flags +
+      lftp pitfall 9), README banner/table/toast, feature doc shipped in the release zip,
+      validation procedure step 5.1b, webapp toast N/4
 - [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears
