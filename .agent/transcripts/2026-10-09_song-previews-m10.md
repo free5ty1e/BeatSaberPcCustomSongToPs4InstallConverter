@@ -517,3 +517,30 @@ all resolve zip-root-relative (build smoke wrote bundle+catalog into the extract
 modes bundle loads), backup script ships. Core code byte-identical to the repo. Deploy-only
 against the powered-off PS4 correctly REFUSED (pull-before-push held; noted a 30s-timeout UX
 wart in the deploy-only redirect pull — non-blocking).
+
+---
+
+## Cycle 12 — alpha03 watched + fully validated (Exp 274)
+
+**User:** tagged alpha03 (after committing the ci.yml pin); asked to watch the build + validate
+thoroughly.
+
+**Build watched → green** (build 2m13s + release 13s). Release workflow: pinned ruff 0.16.0 +
+fsb5-1.0 installed; 864 collected → 741 passed + 123 gated skips. Standalone ci.yml Lint job
+now also on 0.16.0 (PR run confirmed).
+
+**Validation from a clean extraction:**
+- Static: versions/FSELF/strings/requirements/69-examples/4-docs/backup-script/relative-config ✓;
+  every fix marker present (layout ×3, skip-flag ×4, localize_paths ×3, deploy-only redirect
+  refresh, CRC guard ×11, build-before-upload).
+- Byte parity: core .py files + CI-built PRX md5-identical to repo.
+- Functional: webapp boots (3 versions); Batch 34 packs (fix #1 live); catalog 36 packs;
+  flags endpoint reports unreachable-PS4 as an error (no empty-truth); all config paths
+  zip-root-relative + build outputs written into the extraction dir (fix #2 live).
+- **M10 end-to-end from the release:** clean extraction = "no previewable custom slots"
+  (correct clean-slate semantics); seeded like a deployed user → the release pipeline built
+  the full lizzo variant (9/9 previews, crc 3710284817) → decode-verified: 9 clips exactly
+  10.0s + 9 SOs with 4 mode sets.
+
+**alpha03 = THE release.** Ready for merge + final non-alpha tag. PS4-side procedure pending
+next power-on (delta since the last green hardware run is CI-only).
