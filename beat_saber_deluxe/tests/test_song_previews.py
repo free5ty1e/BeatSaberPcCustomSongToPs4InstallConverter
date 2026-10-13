@@ -820,7 +820,7 @@ class TestDeployOnlyRefreshesRedirects:
         """EXAMPLE_DIRS must probe PROJECT_DIR-level docs too (flat zip)."""
         sys.path.insert(0, os.path.join(os.path.dirname(TOOLS), 'webapp'))
         try:
-            from adapters import paths, batch
+            from adapters import batch, paths
             assert (paths.PROJECT_DIR / "docs" / "example-scripts") in batch.EXAMPLE_DIRS
             assert any(d.is_dir() for d in batch.EXAMPLE_DIRS), \
                 'at least one example dir must exist in this checkout'

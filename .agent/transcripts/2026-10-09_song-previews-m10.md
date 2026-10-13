@@ -475,3 +475,24 @@ findings, flag table, after-merge) — awaiting approval to push via the raw-fie
 Pipeline 0.5362 + webapp 0.6.5 changelogs; 5 regression tests; suite 864/864; lint clean.
 
 **Suggested final tag: v0.8048-pipeline-0.5362-webapp-0.6.5.**
+
+---
+
+## Cycle 10 — New-tag CI failure RCA (Exp 272)
+
+**User:** approved PR description (pushed ✓); committed layout fixes; tagged
+v0.8048-pipeline-0.5362-webapp-0.6.5-alpha01; personally tested webapp + lizzo deploy +
+game function (PS4 now off for the night). CI + release build failed.
+
+**RCA:** all 3 failed runs (CI lint, CI tests, plugin-build tests) = ONE line: the new
+zip-layout test's `from adapters import paths, batch` unsorted import. The user's commit
+predated my final lint-fix edit. Compounding: CI's ruff auto-resolved to 0.17.0 (released
+today) with stricter import-sorting vs local 0.16.0 → "passed locally, failed remotely"
+even at equal code.
+
+**Fixes (CI-only, no component changes):** (1) sorted the import; (2) pinned
+ruff==0.16.0 in requirements-test.txt + ci.yml's lint job (plugin-build inherits) —
+local/CI can never lint-diverge again.
+
+**Verified:** ruff clean + 864/864 locally in the CI-equivalent sequence. Ready for
+commit + re-tag.

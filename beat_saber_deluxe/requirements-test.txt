@@ -2,7 +2,10 @@
 pytest>=9.0
 pytest-cov>=5.0
 coverage>=7.0
-ruff>=0.4
+# Pinned (Exp 271b): unpinned ruff drifted CI onto a brand-new 0.17.0 with
+# stricter import-sorting while local dev ran 0.16.0 — "passed locally,
+# failed remotely". Pin both to the same line; bump deliberately.
+ruff==0.16.0
 
 # Runtime dependencies (needed for import testing)
 UnityPy>=1.20

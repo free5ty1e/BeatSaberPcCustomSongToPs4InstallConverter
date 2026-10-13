@@ -111,3 +111,12 @@ from Info.dat. Plan: `.agent/plans/song-previews.md`.
   - Bonus: backup-beat-saber-deluxe-files.py now ships in the zip (the Backup tab wrapped a script that was never bundled).
 - **Deliverables:** .agent/introduction.md (full onboarding: project, hardware, guardrails, the 5 must-read files, work cycle, release flow, invariants, layout map, current versions); PR #7 description drafted per the update-pr-description prompt (awaiting approval); webapp 0.6.5 + pipeline 0.5362 changelogs; 5 new regression tests (relative paths ×3, deploy-only redirect refresh + source wiring, batch-dirs zip layout). Suite 864/864; lint clean.
 - **Status:** ✅ alpha01 validated with 3 real findings fixed. Suggested final tag: v0.8048-pipeline-0.5362-webapp-0.6.5 (needs a fresh build to carry the fixes).
+
+### Experiment 272: new-tag CI failure RCA'd — one unsorted import + unpinned-ruff drift; fixed + pinned (2026-10-13)
+- **User:** approved the PR description (pushed via raw-field PATCH ✓); committed the layout fixes, tagged v0.8048-pipeline-0.5362-webapp-0.6.5-alpha01; tested the webapp + lizzo deploy + game function personally before powering the PS4 off. CI + release build then FAILED (tag exists; release object never published — the workflow's build job died at the test step, before bundling).
+- **RCA (single root cause, three runs):** all three failures are ONE line — the new `test_batch_dirs_cover_zip_layout` test's `from adapters import paths, batch` import was not alphabetically sorted. The user's commit carried the pre-fix version: my sys.path edit landed in my tree AFTER their commit. Compounding factor: CI's freshly-released ruff 0.17.0 (today!) enforces stricter import sorting than local 0.16.0, so a "passed locally, failed remotely" gap existed even at equal code.
+- **Fixes (CI-only, zero component changes — no retest needed):**
+  1. Import sorted (one line: `batch, paths`).
+  2. **ruff PINNED to 0.16.0** in requirements-test.txt + ci.yml's lint job (plugin-build inherits via requirements-test) — version drift between local and CI can no longer create lint-behavior divergence; bumps become deliberate.
+- **Verification:** full local CI-equivalent sequence green (ruff clean + 864/864); the fix is one test-file line + two requirement/workflow lines.
+- **Status:** ✅ ready for the user to commit + re-tag. Suggested: re-push the same tag name (or -alpha02) — the workflow will run clean and publish the release.
