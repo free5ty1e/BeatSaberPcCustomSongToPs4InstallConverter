@@ -496,3 +496,24 @@ local/CI can never lint-diverge again.
 
 **Verified:** ruff clean + 864/864 locally in the CI-equivalent sequence. Ready for
 commit + re-tag.
+
+---
+
+## Cycle 11 — alpha02 release validated + CI audit (Exp 273)
+
+**User:** committed + re-tagged v0.8048-pipeline-0.5362-webapp-0.6.5-alpha02; all runs green;
+release published. Asked for release validation + CI build audit.
+
+**CI audit:** pinned ruff 0.16.0 confirmed in the release build's install log (with fsb5-1.0);
+864 tests collected; build + release jobs green. RESIDUAL FOUND: ci.yml's standalone Lint job
+still ran unpinned ruff 0.17.0 — my previous pin edit was a SILENT NO-OP (replace pattern said
+`python3 -m ruff`, file says `python -m ruff`) and the file wasn't in the user's commit.
+Passed this time (code clean under both), but the divergence window was open → re-applied with
+an assert guard + staged. Lesson: never rely on .replace() without an `assert old in s`.
+
+**Release validation (clean extraction):** versions/FSELF/strings/docs/69-examples all correct;
+all three Exp 270a fixes verified LIVE from the zip: Batch tab 34 packs (was 0), config paths
+all resolve zip-root-relative (build smoke wrote bundle+catalog into the extraction dir; built
+modes bundle loads), backup script ships. Core code byte-identical to the repo. Deploy-only
+against the powered-off PS4 correctly REFUSED (pull-before-push held; noted a 30s-timeout UX
+wart in the deploy-only redirect pull — non-blocking).

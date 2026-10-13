@@ -93,7 +93,10 @@ jobs:
           python-version: '3.12'
 
       - name: Install ruff
-        run: pip install ruff
+        # Pinned to match requirements-test.txt + local dev (Exp 271b: unpinned
+        # ruff drifted CI onto a brand-new release with stricter import-sorting
+        # while local ran an older line — "passed locally, failed remotely").
+        run: pip install ruff==0.16.0
 
       - name: Run ruff check
         run: python -m ruff check tools/ webapp/ tests/ --output-format=github
