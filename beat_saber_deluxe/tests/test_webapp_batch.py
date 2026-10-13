@@ -283,3 +283,23 @@ class TestReleaseLayoutParsing:
         rs = [p for p in packs if "Rolling Stones" in p["name"]]
         assert len(rs) == 1, "duplicate pack from two layouts"
         assert len(packs) == 34
+
+
+class TestExampleDirsBothLayouts:
+    """Exp 270a: the batch adapter must find example scripts in BOTH shapes —
+    the dev checkout (<root>/beat_saber_deluxe/webapp with docs at <root>) and
+    the FLAT release zip (webapp at the zip root, docs beside it). The zip
+    shape silently showed 0 example packs since the first M9 release."""
+
+    def test_example_dirs_include_project_level(self):
+        from adapters import batch, paths
+        assert (paths.PROJECT_DIR / "docs" / "example-scripts") in batch.EXAMPLE_DIRS
+
+    def test_at_least_one_dir_exists_in_repo(self):
+        from adapters import batch
+        assert any(d.is_dir() for d in batch.EXAMPLE_DIRS)
+
+    def test_release_root_surname_prefers_existing_level(self, tmp_path):
+        from adapters import paths
+        # dev shape: docs under RELEASE_ROOT
+        assert paths.release_root_surname() in (paths.RELEASE_ROOT, paths.PROJECT_DIR)

@@ -15,7 +15,7 @@ from pathlib import Path
 from . import paths
 
 STATE_PATH = paths.WEBAPP_DIR / "webapp_state.json"
-DEFAULT_BACKUP_DIR = paths.RELEASE_ROOT / "ps4_backups"
+DEFAULT_BACKUP_DIR = paths.release_path("ps4_backups")
 VALID_KEYS = ("backup_dir",)
 
 

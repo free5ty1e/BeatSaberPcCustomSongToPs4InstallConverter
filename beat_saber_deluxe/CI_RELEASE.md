@@ -50,10 +50,10 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | `README.md` | Main documentation (pipeline, features, feature flags, clean slate) |
 | `PIPELINE-README.md` | Pipeline-internal README |
 | `CHANGELOG-PLUGIN.md` / `CHANGELOG-PIPELINE.md` | Full change history |
-| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping |
+| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping, **song previews** |
 | `docs/examples/`, `docs/how-to-replace-pack.md` | Pack-replacement walkthroughs |
 | `docs/example-scripts/example_*` | **All 69 ready-to-run example files** — per-music-pack command docs (`.md`) + shell scripts (`.sh`) for every DLC pack, with verified BeatSaver MAP_IDs for five packs (billie eilish, britney spears, camelia, lizzo, rolling stones) and `[REPLACE_WITH_MAP_ID]` templates for the rest |
-| `docs/release-validation-test-procedure.md` + `.sh` | **Release validation procedure + the automated validator** — the exact hardware test this release passed (35 checks: read-only verify, build quality, end-to-end deploy incl. the bundled plugin, feature-flag and kill-switch round-trips, surgical revert + restore, state-integrity auto-restore). Run it against your own PS4 to validate your deployment |
+| `docs/release-validation-test-procedure.md` + `.sh` | **Release validation procedure + the automated validator** — the exact hardware test this release passed (read-only verify, build quality, end-to-end deploy incl. the bundled plugin, feature-flag and kill-switch round-trips, surgical revert + restore, state-integrity auto-restore, song-previews variant + flag round-trip). Run it against your own PS4 to validate your deployment |
 
 ## Running the Pipeline
 

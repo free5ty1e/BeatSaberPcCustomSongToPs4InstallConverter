@@ -180,6 +180,11 @@ jobs:
           cp README.md release-zip/
           cp beat_saber_deluxe/README.md release-zip/PIPELINE-README.md
 
+          # Backup/restore helper (the web app's Backup tab wraps this exact
+          # script; Exp 270a found it was never bundled — the tab was
+          # repo-only until now)
+          cp backup-beat-saber-deluxe-files.py release-zip/
+
           # Feature docs
           cp beat_saber_deluxe/docs/features/custom-song-replacement.md release-zip/docs/features/
           cp beat_saber_deluxe/docs/features/song-metadata-modification.md release-zip/docs/features/

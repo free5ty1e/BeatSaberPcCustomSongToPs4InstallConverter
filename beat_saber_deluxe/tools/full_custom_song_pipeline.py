@@ -65,7 +65,16 @@ def load_config(config_path: str) -> dict:
     """
     Load PS4 configuration from a JSON file.
     Falls back to a sensible default if file is missing.
+
+    Exp 270a: every default that pointed at a devcontainer-absolute path
+    (/workspace/…) is now PROJECT_ROOT-RELATIVE — the release zip works from
+    any extraction directory without hand-localizing the config (the Exp 234
+    "post-merge finding #1" finally fixed). Users who localized their config
+    keep their explicit values; only the DEFAULTS changed. The game dump
+    default is '<extraction>/ps4_dump/CUSA12878-patch' — matching the README's
+    documented dump location relative to wherever the user extracted.
     """
+    dump_rel = os.path.join(PROJECT_ROOT, 'ps4_dump', 'CUSA12878-patch')
     default_config = {
         "ps4": {"ip": "192.168.100.117", "ftp_port": 2121,
                 "ftp_user": "anonymous", "ftp_password": ""},
@@ -73,9 +82,9 @@ def load_config(config_path: str) -> dict:
         "paths": {
             "afr_base": "/data/GoldHEN/AFR",
             "afr_target_suffix": "_v3.bundle",
-            "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+            "game_dump_dir": dump_rel,
             "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
-            "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
+            "output_dir": os.path.join(PROJECT_ROOT, 'custom_songs')
         },
         "pipeline": {"default_target": "startmeup", "sample_rate": 44100},
         # Generalized pack patch (Exp 188+): ALL configured DLC packs get 4 preview
@@ -97,12 +106,12 @@ def load_config(config_path: str) -> dict:
             # reality. Users may still set an explicit list in ps4_config.json
             # to pin behavior.
             "packs": [],
-            "build_dir": "/workspace/beat_saber_deluxe/pack_modes_bundles",
-            "song_ids_path": "/workspace/beat_saber_deluxe/beat_saber_song_ids.json",
-            "dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+            "build_dir": os.path.join(PROJECT_ROOT, 'pack_modes_bundles'),
+            "song_ids_path": os.path.join(PROJECT_ROOT, 'beat_saber_song_ids.json'),
+            "dump_dir": dump_rel,
             "catalog_key": "aa/catalog.json",
             "patched_catalog": "catalog_pack_modes.json",
-            "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
+            "patched_catalog_local": os.path.join(PROJECT_ROOT, 'catalog_pack_modes.json'),
         },
         # Mass deploy (deploy_all38.sh replacement): list of all custom song slots
         # deployed as <slot>_v3.bundle into the AFR dir. bundle_dir is a STABLE
@@ -110,7 +119,7 @@ def load_config(config_path: str) -> dict:
         # exact loadout: build_deploy_all38.py writes builds here, then
         # --deploy-mass-bundles uploads them.
         "mass_deploy": {
-            "bundle_dir": "/workspace/beat_saber_deluxe/mass_bundles",
+            "bundle_dir": os.path.join(PROJECT_ROOT, 'mass_bundles'),
             "slots": [
                 "startmeup", "angry", "bitemyheadoff", "cantyouhearmeknocking",
                 "deadmanwalking", "gimmeshelter", "icantgetnosatisfaction",
@@ -139,6 +148,21 @@ def load_config(config_path: str) -> dict:
                     else:
                         result[k] = v
                 return result
+            # Exp 270a: RELATIVE PATHS in the user's config resolve against
+            # PROJECT_ROOT (the release/checkout root) — ps4_config.example.json
+            # ships './ps4_dump/...' and './custom_songs', which must work from
+            # any extraction directory (absolute devcontainer paths in the
+            # shipped example were the Exp 234 release finding #1).
+            def localize_paths(node, prefix):
+                for k, v in list(node.items()):
+                    if isinstance(v, dict):
+                        localize_paths(v, prefix)
+                    elif (isinstance(v, str) and v.startswith('./')
+                          and (k.endswith('_dir') or k.endswith('_path')
+                               or k.endswith('_local'))):
+                        node[k] = os.path.normpath(os.path.join(prefix, v))
+                return node
+            localize_paths(user_config, PROJECT_ROOT)
             merged = deep_merge(default_config, user_config)
             log.info(f"Loaded config from {config_path}")
             return merged
@@ -5356,6 +5380,24 @@ Examples:
                                           packs=pack_modes_packs,
                                           skip_previews=args.skip_song_preview_management)
             deploy_pack_bundle(deploy_cfg, skip_previews=args.skip_song_preview_management)
+        # Exp 270a: a pack deploy MUST also refresh the pack redirect pair. The
+        # redirect VALUES name the bundle variant (modes-only vs modes+previews)
+        # derived from the CURRENT flag state — deploying bundles without
+        # refreshing redirects leaves the live redirects pointing at the OLD
+        # variant while the new catalog describes the NEW one → catalog/bundle
+        # CRC mismatch → CE-34878-0 at boot (the exact landmine the release
+        # validation caught: --deploy-pack-modes shipped variant bundles + a
+        # variant catalog while the live redirects still named the modes
+        # bundles). --deploy-full always runs manage_redirect_config, which is
+        # why full deploys were safe; the deploy-only paths get the same
+        # ensure here.
+        if args.deploy_pack_modes or args.deploy_pack_bundle:
+            manage_redirect_config(
+                deploy_cfg,
+                target_name=None,
+                generate=True,
+                deploy=True,
+            )
         if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config or args.deploy:
             manage_redirect_config(
                 deploy_cfg,

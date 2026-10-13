@@ -440,3 +440,38 @@ snapped to a bar — titles usually live in choruses).
 8. Validation procedure: step 5.1b (previews round-trip) + default TAG bump.
 
 **Suggested release tag: v0.8048-pipeline-0.5361-webapp-0.6.4.**
+
+---
+
+## Cycle 9 — alpha01 release validation: 3 latent layout bugs fixed (Exp 271)
+
+**User:** committed + pushed v0.8048-pipeline-0.5361-webapp-0.6.4-alpha01 (CI green);
+asked for full release validation, PR description update (per the prompt), and an
+.agent/introduction.md onboarding doc.
+
+**Validation from a CLEAN zip extraction (the M9 lesson applied):**
+- Static audit green (FSELF magic both PRXs, song_previews.py + feature doc + fsb5 + 69
+  examples shipped; versions consistent).
+- Webapp boots from the zip (3-version ping); full --deploy-full from the SHIPPED pipeline
+  PASSED against the live PS4.
+- Found 3 latent release bugs:
+  1. Batch tab: 0 example packs from the zip (flat layout vs RELEASE_ROOT's one-level-up
+     assumption — latent since the first M9 release; proven against the 0.6.3 zip too).
+     Fixed: paths.py layout probing (release_root_surname/release_path) applied to batch
+     dirs, runner cwd, backups, validator. 34 packs now parse from a clean extraction.
+  2. Devcontainer-absolute default config paths (Exp 234 finding #1) — all defaults now
+     PROJECT_ROOT-relative; example config ships ./ps4_dump/... with a teaching note;
+     relative paths localize at load.
+  3. Deploy-only --deploy-pack-modes shipped variants+catalog while live redirects still
+     named modes bundles (found LIVE during the smoke: catalog/bundle CRC landmine — the
+     exact CE-34878-0 class). Deploy-only paths now refresh the redirect pair. The live
+     PS4 was healed mid-validation (flag restore + variant re-deploy + redirects refresh →
+     all 5 CRCs match, verify 🎉 PASSED).
+  - Also: backup script now ships in the zip.
+
+**Deliverables:** introduction.md (onboarding), PR #7 description drafted (46 lines:
+summary, how-it-works, batch optimizations, hard-won fixes, testing, release-validation
+findings, flag table, after-merge) — awaiting approval to push via the raw-field gh api.
+Pipeline 0.5362 + webapp 0.6.5 changelogs; 5 regression tests; suite 864/864; lint clean.
+
+**Suggested final tag: v0.8048-pipeline-0.5362-webapp-0.6.5.**

@@ -755,3 +755,74 @@ class TestSingleBuildPerDeploy:
         # find the deploy_pack_bundle occurrence of the upload (it's after the marker)
         assert i_build > 0 and i_upload > i_build, \
             'the build step must precede the upload-list construction in deploy_pack_bundle'
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Exp 270a — release-layout validation findings:
+#   (a) relative config paths must resolve against PROJECT_ROOT (the shipped
+#       example config uses ./ps4_dump/...);
+#   (b) the deploy-only CLI paths (--deploy-pack-modes / --deploy-pack-bundle)
+#       must refresh the pack redirect pair — shipping variant bundles + a
+#       variant catalog while live redirects still name the modes bundles is
+#       the catalog/bundle CE-34878-0 landmine.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestRelativeConfigPaths:
+    def test_example_config_uses_relative_paths(self):
+        """The SHIPPED ps4_config.example.json must not carry devcontainer
+        absolutes (the Exp 234 finding) — relative paths work anywhere."""
+        p = os.path.join(os.path.dirname(TOOLS), 'ps4_config.example.json')
+        cfg = json.load(open(p))
+        assert not cfg['paths']['game_dump_dir'].startswith('/workspace')
+        assert not cfg['paths']['output_dir'].startswith('/workspace')
+
+    def test_defaults_are_project_relative(self, monkeypatch, tmp_path):
+        """load_config's fallback defaults resolve against PROJECT_ROOT, so a
+        release works from any extraction directory."""
+        import full_custom_song_pipeline as fp
+        # defaults computed at call time from PROJECT_ROOT — assert they are
+        # inside PROJECT_ROOT (not the devcontainer /workspace literal)
+        c = fp.load_config('/nonexistent-config.json')
+        assert c['pack_modes']['build_dir'].startswith(fp.PROJECT_ROOT)
+        assert c['paths']['output_dir'].startswith(fp.PROJECT_ROOT)
+        assert c['paths']['game_dump_dir'].startswith(fp.PROJECT_ROOT)
+
+    def test_user_relative_paths_localize(self, tmp_path, monkeypatch):
+        """A config with './ps4_dump/...' values resolves them against
+        PROJECT_ROOT at load time (absolute by the time callers see them)."""
+        import full_custom_song_pipeline as fp
+        cfgfile = tmp_path / 'cfg.json'
+        cfgfile.write_text(json.dumps({
+            'ps4': {}, 'title': {}, 'paths': {
+                'game_dump_dir': './ps4_dump/CUSA12878-patch',
+                'output_dir': './custom_songs'}}))
+        c = fp.load_config(str(cfgfile))
+        assert c['paths']['game_dump_dir'] == os.path.join(fp.PROJECT_ROOT, 'ps4_dump', 'CUSA12878-patch')
+        assert c['paths']['output_dir'] == os.path.join(fp.PROJECT_ROOT, 'custom_songs')
+
+
+class TestDeployOnlyRefreshesRedirects:
+    """The --deploy-pack-modes / --deploy-pack-bundle CLI paths must call
+    manage_redirect_config after deploying (the redirect VALUES name the
+    bundle variant; deploying bundles without refreshing redirects leaves the
+    live pair naming the OLD variant against the NEW catalog = the
+    CE-34878-0 landmine the release validation caught)."""
+
+    def test_source_wires_redirect_refresh(self):
+        src = open(os.path.join(TOOLS, 'full_custom_song_pipeline.py')).read()
+        i = src.find('Exp 270a: a pack deploy MUST also refresh the pack redirect pair')
+        assert i > 0, 'the deploy-only redirect-refresh block must exist'
+        tail = src[i:i + 2500]
+        assert 'manage_redirect_config(' in tail
+        assert 'args.deploy_pack_modes or args.deploy_pack_bundle' in src
+
+    def test_batch_dirs_cover_zip_layout(self):
+        """EXAMPLE_DIRS must probe PROJECT_DIR-level docs too (flat zip)."""
+        sys.path.insert(0, os.path.join(os.path.dirname(TOOLS), 'webapp'))
+        try:
+            from adapters import paths, batch
+            assert (paths.PROJECT_DIR / "docs" / "example-scripts") in batch.EXAMPLE_DIRS
+            assert any(d.is_dir() for d in batch.EXAMPLE_DIRS), \
+                'at least one example dir must exist in this checkout'
+        finally:
+            sys.path.remove(os.path.join(os.path.dirname(TOOLS), 'webapp'))

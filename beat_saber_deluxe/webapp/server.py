@@ -286,8 +286,8 @@ def jobs_flags_apply(body: dict):
 # --------------------------------------------------------------------------
 # Backup / Restore (thin layer over backup-beat-saber-deluxe-files.py)
 # --------------------------------------------------------------------------
-BACKUP_SCRIPT = paths.RELEASE_ROOT / "backup-beat-saber-deluxe-files.py"
-DEFAULT_BACKUP_DIR = paths.RELEASE_ROOT / "ps4_backups"
+BACKUP_SCRIPT = paths.release_path("backup-beat-saber-deluxe-files.py")
+DEFAULT_BACKUP_DIR = paths.release_path("ps4_backups")
 
 
 def _backup_dir() -> Path:
