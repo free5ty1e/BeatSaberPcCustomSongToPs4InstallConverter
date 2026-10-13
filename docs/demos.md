@@ -2,14 +2,15 @@
 
 ## Demo Videos
 
-[Demo video v0.8048 plugin, v0.5362 converter](https://youtu.be/vd4rVxODBmY)
-[Demo Video v0.8047 plugin, v0.5351 converter](https://youtu.be/WrqExCvC3d4)
-[Demo Video v0.46](https://www.youtube.com/watch?v=J835HDdB-7g)
+- [Demo video v0.8048 plugin, v0.5362 converter](https://youtu.be/vd4rVxODBmY)
+- [Demo Video v0.8047 plugin, v0.5351 converter](https://youtu.be/WrqExCvC3d4)
+- [Demo Video v0.46](https://www.youtube.com/watch?v=J835HDdB-7g)
+
+## In-Game Screenshots
+
 <img width="2048" height="1536" alt="beatsaberdeluxev08040-rollingstones" src="https://github.com/user-attachments/assets/0fd72ed3-122c-436f-8b77-b6fc2bb4982a" />
 <img width="1536" height="2048" alt="beatsaberdeluxev08040-billieeilish" src="https://github.com/user-attachments/assets/7a39af3e-d461-4ecf-b2df-e7b408ff0c21" />
 <img width="1536" height="2048" alt="beatsaberdeluxev08040-Lizzo" src="https://github.com/user-attachments/assets/795cc606-606e-438e-b65c-dcba45f6996f" />
-
-## In-Game Screenshots
 
 ## Web UI Screenshots
 
