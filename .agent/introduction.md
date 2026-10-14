@@ -160,13 +160,13 @@ designing anything** — this project has already made most mistakes once.
 
 ## 7. Current versions & next steps (as of 2026-10-12)
 
-- Plugin **v0.8048** · Pipeline **v0.5362** · Web app **0.6.5**
-- Latest release tag: **`v0.8048-pipeline-0.5361-webapp-0.6.4-alpha01`**
-  (validated; the post-validation fixes above will need a fresh tag —
-  suggested: `v0.8048-pipeline-0.5362-webapp-0.6.5`).
-- M10 (song previews) is complete and hardware-verified; the next feature is
-  whatever the user picks from the roadmap (M3 note-color customization is
-  the long-standing candidate; the user may also choose fresh ideas).
+- Plugin **v0.8048** · Pipeline **v0.5362** · Web app **0.6.6**
+- Latest release: **`v0.8048-pipeline-0.5362-webapp-0.6.6`** (LIVE, fully validated;
+  M10 song previews shipped — 46 previews across 5 packs, hardware-confirmed).
+- M10 (song previews) is SHIPPED (merged PR #7, release live). The next
+  feature is whatever the user picks from the roadmap (M3 note-color
+  customization is the standing candidate; the user may also choose fresh
+  ideas).
 - Open PR during release flow: check `gh pr list` — update its description
   per `/workspace/.claude/prompts/update-pr-description.prompt` (surgical
   edits, `--raw-field` only, user approval before pushing).

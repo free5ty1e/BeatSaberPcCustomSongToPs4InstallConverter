@@ -151,3 +151,12 @@ from Info.dat. Plan: `.agent/plans/song-previews.md`.
   - Static: versions 0.5362/0.6.6/v0.8048; FSELF both PRXs; plugin strings; pinned ruff + fsb5; 69 examples; 4 feature docs; backup script; relative-path example config.
   - Functional: ping carries all 3 versions; Batch tab parses 34 packs (layout fix live); webapp boots clean.
 - **Status:** ✅ validated — merge PR #7, then tag the REAL release v0.8048-pipeline-0.5362-webapp-0.6.6.
+
+### Experiment 277: THE RELEASE — v0.8048-pipeline-0.5362-webapp-0.6.6 fully validated (M10 shipped) (2026-10-14)
+- **User:** merged PR #7 + tagged the real release; asked to watch the build + validate thoroughly.
+- **Build (watched):** all green — CI + plugin-build + Pages (28s) on main-merge, then the tag build (2m2s + release 9s): 866 collected → 743 passed + 123 gated skips, pinned ruff 0.16.0 + fsb5-1.0 installed. Release published (1,054,992 B zip); releases/latest resolves to THIS tag.
+- **Zip validation (clean extraction):** versions 0.5362/0.6.6/v0.8048; FSELF both PRXs; plugin strings; pinned deps; 69 examples; 4 feature docs; backup script; relative config; ALL fix markers (layout ×3, skip-flag ×4, localize ×3, CRC-guard ×11); demos link with the main-branch URL; all 5 core files byte-identical to the repo.
+- **Functional:** webapp boots (3-version ping), Batch 34 packs, catalog 36, demos link served.
+- **LIVE Pages (post-merge):** the hosted site carries the demos link + all 3 badge versions (0.6.6/0.5362/v0.8048); the Exp-266 landing guard intact in the live app.js (line 1564); assets 200; dumper.cfg split=3; docs/demos.md renders on main (200) — the link's target is live.
+- **End-to-end M10 from the REAL release zip:** seeded like a deployed user, the shipped pipeline built the full lizzo variant (9/9 previews, crc 3710284817) → decode-verified 9 clips @ exactly 10.0s + 9 SOs @ 4 mode sets.
+- **Status:** ✅✅ M10 IS SHIPPED. The release is live; the hosted funnel serves it. Remaining: PS4-side procedure steps at the user's next power-on (hardware state last verified green; the local console already runs this content). M10 CLOSED.

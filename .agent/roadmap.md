@@ -374,7 +374,7 @@ Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent
 - [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy with `--deploy-full`.
 - [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).
 
-## M10 — Song Previews: Redirect Menu Preview Playback to Custom Audio (In Progress — Exp 268+)
+## M10 — Song Previews: Redirect Menu Preview Playback to Custom Audio — ✅ COMPLETE (Exps 268-277; shipped in v0.8048-pipeline-0.5362-webapp-0.6.6)
 **Goal:** when the player highlights a custom song in the song menu, play a ~10s
 excerpt of the CUSTOM song's own audio (mapper's `_previewStartTime`) instead of
 the confusing stock-song preview. Patched into the pack bundles'
