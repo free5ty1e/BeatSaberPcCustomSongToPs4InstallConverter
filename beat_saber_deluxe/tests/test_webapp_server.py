@@ -226,3 +226,23 @@ class TestVersionBadge:
         assert "version-badge" in html
         assert 'id="ver-webapp"' in html and 'id="ver-pipeline"' in html \
             and 'id="ver-plugin"' in html
+
+
+class TestDemosLink:
+    """Exp 275: both web-app surfaces (local + Pages) carry a lower-left link
+    to the project's demo-video/screenshot gallery (docs/demos.md on the MAIN
+    branch — stable across releases; goes live when the PR merges)."""
+
+    REPO_URL = "https://github.com/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/blob/main/docs/demos.md"
+
+    def test_link_in_index_html(self):
+        html = (PROJECT / "webapp" / "static" / "index.html").read_text()
+        assert 'id="demos-link"' in html
+        assert self.REPO_URL in html
+        assert 'target="_blank"' in html and 'rel="noopener"' in html
+
+    def test_link_css_present(self):
+        css = (PROJECT / "webapp" / "static" / "style.css").read_text()
+        assert ".demos-link" in css
+        assert "left: 0.6rem" in css          # lower-LEFT (badge is right)
+        assert "print" in css                 # hidden when printing

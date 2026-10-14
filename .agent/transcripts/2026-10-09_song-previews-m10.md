@@ -544,3 +544,23 @@ now also on 0.16.0 (PR run confirmed).
 
 **alpha03 = THE release.** Ready for merge + final non-alpha tag. PS4-side procedure pending
 next power-on (delta since the last green hardware run is CI-only).
+
+---
+
+## Cycle 13 — Demos link in both web-app surfaces (Exp 275, webapp 0.6.6)
+
+**User:** added PR screenshots + a demo video; started docs/demos.md (gallery of all videos +
+screenshots). Asked: a lower-left link in BOTH web-app versions → demos.md on the MAIN branch
+(stable URL; example main-branch link given).
+
+**Implementation:** 🎬 Demos link in static/index.html — absolute main-branch URL,
+target=_blank rel=noopener; CSS mirrors the version badge chip (fixed lower-LEFT, rounded
+outer edge, hover accent, print-hidden). Both surfaces carry it (Pages bundles static/
+verbatim). Verified: served HTML + Pages build output carry it; branch URL 200 / main 404
+until merge (goes live on merge, by design).
+
+**Tests:** 2 new (link+URL presence, CSS placement). 866/866. Webapp 0.6.6 + changelog.
+
+**Note for the release decision:** webapp version moved 0.6.5 → 0.6.6 — the alpha03 zip
+predates the link. Either fold this into the final tag (v0.8048-pipeline-0.5362-webapp-0.6.6)
+or ship alpha03 as-is and let the link land post-merge.

@@ -310,6 +310,24 @@ table.loadout tr:hover td { background: var(--card2); }
   user-select: none;
 }
 .version-badge b { color: var(--accent2); font-weight: 600; }
+
+/* ---------------- Demos link (lower-left, mirrors the badge) ---------------- */
+.demos-link {
+  position: fixed;
+  left: 0.6rem;
+  bottom: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  background: rgba(16, 18, 24, 0.88);
+  border: 1px solid #2b3145;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-decoration: none;
+  z-index: 50;
+}
+.demos-link:hover { color: var(--accent2); border-color: var(--accent2); }
+@media print { .demos-link { display: none !important; } }
+
 @media print { .version-badge { display: none !important; } }
 
 /* ---------------- Batch tab ---------------- */
