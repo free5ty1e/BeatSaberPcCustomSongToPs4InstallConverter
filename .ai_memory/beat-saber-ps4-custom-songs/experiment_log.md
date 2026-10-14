@@ -142,3 +142,12 @@ from Info.dat. Plan: `.agent/plans/song-previews.md`.
 - **Implementation:** a 🎬 Demos footer link in static/index.html (absolute main-branch URL https://github.com/.../blob/main/docs/demos.md, target=_blank rel=noopener) + CSS mirroring the version badge's corner-chip design (fixed lower-LEFT — the badge is right — rounded outer edge, hover accent, hidden in print). Both surfaces carry it automatically (Pages bundles static/ verbatim). Verified: served HTML carries the link; the Pages build output carries it; the branch URL renders 200 and main 404s until merge (by design — goes live on merge).
 - **Tests:** 2 regression tests (link + URL in index.html; CSS placement/behavior). Suite 866/866. Webapp 0.6.6 + changelog.
 - **Status:** ✅ done. Note: this changes the webapp version — the PR's screenshots predate the link, and any release built before merge won't carry it; it ships with the next tag (suggest folding into the final v0.8048-pipeline-0.5362-webapp-0.6.6 if the user prefers the link in the release, or tagging the current 0.6.5 zip as-is and letting the link land post-merge).
+
+### Experiment 276: v0.8048-pipeline-0.5362-webapp-0.6.6-alpha01 validated — release-ready (2026-10-14)
+- **User:** tagged the 0.6.6-alpha01 release (build green: 866 collected → 743 passed + 123 gated skips; pinned ruff 0.16.0 confirmed in the install log) for full validation before merging PR #7 and creating the real release.
+- **Validation (clean extraction):**
+  - **The new demos link ships in BOTH surfaces**: served local page carries `demos-link` + the badge; the Pages build output carries the link in index.html (×1) and the style block (×3); URL = the main-branch docs/demos.md form (goes live on merge).
+  - Byte parity: all 6 core webapp/pipeline files md5-identical to the repo (incl. index.html/style.css/app.js).
+  - Static: versions 0.5362/0.6.6/v0.8048; FSELF both PRXs; plugin strings; pinned ruff + fsb5; 69 examples; 4 feature docs; backup script; relative-path example config.
+  - Functional: ping carries all 3 versions; Batch tab parses 34 packs (layout fix live); webapp boots clean.
+- **Status:** ✅ validated — merge PR #7, then tag the REAL release v0.8048-pipeline-0.5362-webapp-0.6.6.

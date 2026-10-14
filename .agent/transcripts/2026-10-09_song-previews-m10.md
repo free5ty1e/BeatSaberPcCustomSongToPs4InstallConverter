@@ -564,3 +564,17 @@ until merge (goes live on merge, by design).
 **Note for the release decision:** webapp version moved 0.6.5 → 0.6.6 — the alpha03 zip
 predates the link. Either fold this into the final tag (v0.8048-pipeline-0.5362-webapp-0.6.6)
 or ship alpha03 as-is and let the link land post-merge.
+
+---
+
+## Cycle 14 — 0.6.6-alpha01 validated (Exp 276)
+
+**User:** tagged v0.8048-pipeline-0.5362-webapp-0.6.6-alpha01; validate before merge + real tag.
+
+**Build:** green (866 collected → 743 passed + 123 gated; ruff 0.16.0 pinned in the log).
+**Validation (clean extraction):** demos link ships in BOTH surfaces (local served page +
+Pages build output carry the link + its CSS; main-branch URL); all 6 core files byte-identical
+to the repo; every static check green (FSELF, strings, pinned deps, 69 examples, 4 docs,
+backup script, relative config); ping carries 3 versions; Batch 34 packs.
+
+**VERDICT: validated. Merge PR #7 → tag the real v0.8048-pipeline-0.5362-webapp-0.6.6.**
