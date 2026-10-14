@@ -247,7 +247,7 @@ def main():
             plugin_on = feats.get("enable_plugin", True)
             print(f"  Plugin (enable_plugin): {'ON — custom songs active' if plugin_on else 'OFF — official songs only'}")
             flag_names = ["enable_custom_song_replacements", "enable_song_metadata_modification",
-                          "enable_beatmap_mode_mapping"]
+                          "enable_beatmap_mode_mapping", "enable_song_previews"]
             for fn in flag_names:
                 if fn not in feats:
                     print(f"  {fn}: MISSING (defaults false on the plugin)")
@@ -255,7 +255,7 @@ def main():
                     print(f"  {fn}: {'ON' if feats[fn] else 'OFF'}")
             n_on = sum(1 for fn in flag_names if feats.get(fn, False))
             print(f"  → Boot notification will show: "
-                  f"\"BS Deluxe vX ({'ON' if plugin_on else 'OFF'}) ... ({n_on}/3 features "
+                  f"\"BS Deluxe vX ({'ON' if plugin_on else 'OFF'}) ... ({n_on}/4 features "
                   f"{'ON' if plugin_on else '— plugin disabled'})\"")
     print()
     print("=" * 62)

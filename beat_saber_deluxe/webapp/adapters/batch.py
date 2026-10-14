@@ -42,6 +42,12 @@ from . import paths
 # parser checks the canonical path first, then the legacy .agent/docs/ layout
 # (old checkouts) — first-match wins, no duplicates.
 EXAMPLE_DIRS = [
+    # Exp 270a: probe BOTH layout levels — the dev checkout keeps example
+    # scripts at <root>/docs/example-scripts (RELEASE_ROOT), while the FLAT
+    # release zip has them at the zip root (PROJECT_DIR). Missing this second
+    # level made the Batch tab show 0 example packs from a clean zip
+    # extraction (latent since the first M9 release; found validating the
+    # 0.6.4 zip from a true clean extraction).
     paths.RELEASE_ROOT / "docs" / "example-scripts",
     paths.PROJECT_DIR / "docs" / "example-scripts",
     # legacy layout (pre-Exp 259 checkouts)

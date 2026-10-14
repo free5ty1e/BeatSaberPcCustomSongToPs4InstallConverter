@@ -65,7 +65,16 @@ def load_config(config_path: str) -> dict:
     """
     Load PS4 configuration from a JSON file.
     Falls back to a sensible default if file is missing.
+
+    Exp 270a: every default that pointed at a devcontainer-absolute path
+    (/workspace/…) is now PROJECT_ROOT-RELATIVE — the release zip works from
+    any extraction directory without hand-localizing the config (the Exp 234
+    "post-merge finding #1" finally fixed). Users who localized their config
+    keep their explicit values; only the DEFAULTS changed. The game dump
+    default is '<extraction>/ps4_dump/CUSA12878-patch' — matching the README's
+    documented dump location relative to wherever the user extracted.
     """
+    dump_rel = os.path.join(PROJECT_ROOT, 'ps4_dump', 'CUSA12878-patch')
     default_config = {
         "ps4": {"ip": "192.168.100.117", "ftp_port": 2121,
                 "ftp_user": "anonymous", "ftp_password": ""},
@@ -73,9 +82,9 @@ def load_config(config_path: str) -> dict:
         "paths": {
             "afr_base": "/data/GoldHEN/AFR",
             "afr_target_suffix": "_v3.bundle",
-            "game_dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+            "game_dump_dir": dump_rel,
             "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
-            "output_dir": "/workspace/beat_saber_deluxe/custom_songs"
+            "output_dir": os.path.join(PROJECT_ROOT, 'custom_songs')
         },
         "pipeline": {"default_target": "startmeup", "sample_rate": 44100},
         # Generalized pack patch (Exp 188+): ALL configured DLC packs get 4 preview
@@ -97,12 +106,12 @@ def load_config(config_path: str) -> dict:
             # reality. Users may still set an explicit list in ps4_config.json
             # to pin behavior.
             "packs": [],
-            "build_dir": "/workspace/beat_saber_deluxe/pack_modes_bundles",
-            "song_ids_path": "/workspace/beat_saber_deluxe/beat_saber_song_ids.json",
-            "dump_dir": "/workspace/ps4_dump/CUSA12878-patch",
+            "build_dir": os.path.join(PROJECT_ROOT, 'pack_modes_bundles'),
+            "song_ids_path": os.path.join(PROJECT_ROOT, 'beat_saber_song_ids.json'),
+            "dump_dir": dump_rel,
             "catalog_key": "aa/catalog.json",
             "patched_catalog": "catalog_pack_modes.json",
-            "patched_catalog_local": "/workspace/beat_saber_deluxe/catalog_pack_modes.json",
+            "patched_catalog_local": os.path.join(PROJECT_ROOT, 'catalog_pack_modes.json'),
         },
         # Mass deploy (deploy_all38.sh replacement): list of all custom song slots
         # deployed as <slot>_v3.bundle into the AFR dir. bundle_dir is a STABLE
@@ -110,7 +119,7 @@ def load_config(config_path: str) -> dict:
         # exact loadout: build_deploy_all38.py writes builds here, then
         # --deploy-mass-bundles uploads them.
         "mass_deploy": {
-            "bundle_dir": "/workspace/beat_saber_deluxe/mass_bundles",
+            "bundle_dir": os.path.join(PROJECT_ROOT, 'mass_bundles'),
             "slots": [
                 "startmeup", "angry", "bitemyheadoff", "cantyouhearmeknocking",
                 "deadmanwalking", "gimmeshelter", "icantgetnosatisfaction",
@@ -139,6 +148,21 @@ def load_config(config_path: str) -> dict:
                     else:
                         result[k] = v
                 return result
+            # Exp 270a: RELATIVE PATHS in the user's config resolve against
+            # PROJECT_ROOT (the release/checkout root) — ps4_config.example.json
+            # ships './ps4_dump/...' and './custom_songs', which must work from
+            # any extraction directory (absolute devcontainer paths in the
+            # shipped example were the Exp 234 release finding #1).
+            def localize_paths(node, prefix):
+                for k, v in list(node.items()):
+                    if isinstance(v, dict):
+                        localize_paths(v, prefix)
+                    elif (isinstance(v, str) and v.startswith('./')
+                          and (k.endswith('_dir') or k.endswith('_path')
+                               or k.endswith('_local'))):
+                        node[k] = os.path.normpath(os.path.join(prefix, v))
+                return node
+            localize_paths(user_config, PROJECT_ROOT)
             merged = deep_merge(default_config, user_config)
             log.info(f"Loaded config from {config_path}")
             return merged
@@ -151,6 +175,7 @@ def load_config(config_path: str) -> dict:
 # Imports from our toolchain
 # ---------------------------------------------------------------------------
 import build_pack_mode_bundles as pack_modes_builder
+import song_previews
 import soundfile as sf
 import UnityPy
 from UnityPy.streams import EndianBinaryReader
@@ -3054,6 +3079,15 @@ def _resolve_active_packs(config: dict) -> list:
     return active
 
 
+def _previews_enabled(config: dict) -> bool:
+    """Whether the enable_song_previews feature flag is ON (local features.json;
+    the deployed flag is what the PLUGIN reads — the pipeline builds the bundle
+    variant that the CURRENT local flag state requests, and --features-only
+    flows keep the two in lockstep)."""
+    feats = _load_local_features(_get_local_features_path())
+    return bool(feats.get('enable_song_previews', False))
+
+
 def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     """
     Deterministic list of pack_modes entries derived from config + song_ids.json.
@@ -3066,6 +3100,11 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
     re-unioning the local-bundle fallback here would resurrect never-installed
     packs. Default (None): all ACTIVE (user-pinned list or auto-discovered
     from built bundles — build-time scope, never hardcoded).
+
+    M10: when enable_song_previews is ON, patched_bundle/local_path point at
+    the modes+previews VARIANT (…_pack_modes_previews_assets_all_…); the
+    modes-only bundle keeps its own name. The variant is a SEPARATE file —
+    flag flips swap which file deploys, never mutating the modes-only bundle.
     """
     pm = config.get('pack_modes', {}) or {}
     if packs is not None:
@@ -3081,6 +3120,7 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
         return []
     albums = _load_pack_albums(config)
     build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    previews_on = _previews_enabled(config)
     entries = []
     for pack in configured:
         album = albums.get(pack)
@@ -3088,6 +3128,16 @@ def _get_pack_modes_entries(config: dict, packs: list | None = None) -> list:
             continue
         original = album['packBundle']
         patched = pack_modes_builder.patched_bundle_name(original)
+        if previews_on:
+            # M10: prefer the modes+previews VARIANT — but ONLY when the variant
+            # FILE itself exists. The variant is built by _ensure_previews_variants
+            # BEFORE any deploy path reads entries, so a missing variant here means
+            # it genuinely cannot deploy (no custom slots / build failed) — the
+            # pack must keep its modes-only name so the catalog/redirect/bundle
+            # triple stays consistent (the Exp 225 crash class otherwise).
+            variant = song_previews.previews_bundle_name(patched)
+            if os.path.isfile(os.path.join(build_dir, variant)):
+                patched = variant
         entries.append({
             'pack': pack,
             'bundle_key': original,
@@ -3176,7 +3226,8 @@ def _regenerate_merged_catalog(config: dict, packs: list | None = None) -> int:
 
 def _ensure_pack_mode_bundles(config: dict, force: bool = False,
                               packs: list | None = None, enable_modes: list = None,
-                              target_slots: list = None) -> int:
+                              target_slots: list = None,
+                              skip_previews: bool = False) -> int:
     """
     Build patched pack bundles + merged catalog for any configured pack whose
     bundle is missing locally (or all with force=True). `packs` optionally
@@ -3185,6 +3236,10 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
     limits which song slots to patch in each pack (for partial deployments).
     When `target_slots` is provided, we ALWAYS force rebuild from the original
     dump to ensure only those slots get extra modes (stock songs stay Standard-only).
+    skip_previews=True skips song-previews variant management entirely (Exp 269c:
+    the --skip-song-preview-management batch flag — all-but-the-last batch
+    command defers the (now cheap, dirty-checked) preview rebuild to the final
+    deploy; the variant file already on the PS4 keeps serving previews).
     Returns number of bundles built.
     """
     pm = config.get('pack_modes', {}) or {}
@@ -3220,10 +3275,198 @@ def _ensure_pack_mode_bundles(config: dict, force: bool = False,
         built = len(results)
     else:
         log.info(f"  ✅ Pack mode bundles already built ({len(entries)} pack(s))")
+
+    # M10 song previews: when enable_song_previews is ON, the deployable variant
+    # is modes+previews. Build it from the modes bundle (append preview FSB5s to
+    # the .resource, repoint the preview AudioClips in place) whenever the
+    # variant is missing or older than its modes bundle. target_slots scopes the
+    # preview map too (partial packs only preview the custom slots in scope).
+    if _previews_enabled(config) and not skip_previews:
+        _ensure_previews_variants(config, packs=configured, target_slots=target_slots)
+    elif _previews_enabled(config) and skip_previews:
+        log.info("  ⏭️  Song-preview variant management SKIPPED (--skip-song-preview-management)")
     # The merged catalog must always match the CURRENT redirect set (regenerated
     # from origin each time so entries for untouched packs stay byte-identical).
     _regenerate_merged_catalog(config, packs=configured)
     return built
+
+
+def _previews_manifest_row(build_dir: str, var_name: str) -> dict | None:
+    """The variant's manifest row (by patchedBundle name), or None."""
+    for e in pack_modes_builder.load_manifest(build_dir):
+        if e.get('patchedBundle') == var_name and 'previews' in e:
+            return e
+    return None
+
+
+def _previews_pack_dirty(album: dict, config: dict, build_dir: str,
+                         modes_path: str, var_name: str,
+                         target_slots: list | None) -> tuple[bool, str]:
+    """Exp 269c dirty-check: is this pack's variant stale?
+
+    A rebuild is needed when ANY of:
+      - the variant FILE is missing;
+      - the MODES base changed (mtime newer than the variant's manifest row
+        previewsAt — mtime is valid HERE because both files are local builds
+        we wrote ourselves; the Exp 269 trap was about REMOTE mtimes);
+      - the set of previewable slots changed (song added/cleared in the pack);
+      - any slot's preview INPUT changed: its local custom bundle's md5 or
+        the resolved preview start differ from the fingerprint recorded at
+        the last build (previewsInputs).
+    Returns (dirty, reason). Clean packs are skipped entirely — the batch
+    case where 4 of 5 packs are untouched drops from ~4 min to <10 s."""
+    var_path = os.path.join(build_dir, var_name)
+    row = _previews_manifest_row(build_dir, var_name)
+    if not os.path.isfile(var_path) or row is None:
+        return True, 'variant missing'
+    # modes base changed?
+    if os.path.getmtime(modes_path) > row.get('previewsAt', 0):
+        return True, 'modes base rebuilt since last variant'
+    # previewable-slot set changed?
+    recorded = set(row.get('previews', []))
+    expected = set()
+    for s in album.get('songs', []):
+        if _slot_is_custom(s, config) and song_previews.find_custom_bundle_for_slot(
+                s.get('songID', ''), config):
+            expected.add(s['songID'])
+    if recorded != expected:
+        missing = expected - recorded
+        extra = recorded - expected
+        why = []
+        if missing:
+            why.append(f"new custom slots: {sorted(missing)}")
+        if extra:
+            why.append(f"slots gone: {sorted(extra)}")
+        return True, '; '.join(why)
+    # per-slot input fingerprints changed?
+    old_inputs = row.get('previewsInputs') or {}
+    for s in album.get('songs', []):
+        sid = s.get('songID', '')
+        if sid not in expected:
+            continue
+        cur = song_previews.slot_input_fingerprint(sid, config, album)
+        if cur is None:
+            continue            # cannot fingerprint (bundle missing) — leave to build
+        if old_inputs.get(sid) != cur:
+            return True, f"input changed: {sid}"
+    return False, 'inputs unchanged'
+
+
+def _slot_is_custom(song: dict, config: dict) -> bool:
+    """Is this album slot a deployed custom? (present in song_metadata.json)"""
+    root = PROJECT_ROOT
+    meta_path = os.path.join(root, 'song_metadata.json')
+    stock = song.get('songName', '')
+    try:
+        with open(meta_path) as f:
+            meta = json.load(f).get('song_names', {})
+        return stock in meta
+    except Exception:
+        return False
+
+
+def _ensure_previews_variants(config: dict, packs: list | None = None,
+                               target_slots: list | None = None) -> int:
+    """Build the modes+previews bundle variant for every pack in scope whose
+    modes bundle exists, SKIPPING packs whose variant is already fresh
+    (Exp 269c dirty-check: variant file + modes-base mtime + slot set +
+    per-slot input fingerprints). Returns number of variants (re)built."""
+    pm = config.get('pack_modes', {}) or {}
+    build_dir = pm.get('build_dir') or os.path.join(PROJECT_ROOT, 'pack_modes_bundles')
+    albums = _load_pack_albums(config)
+    configured = list(packs) if packs is not None else _resolve_active_packs(config)
+    built = 0
+    for pack in configured:
+        album = albums.get(pack)
+        if not album or not album.get('packBundle'):
+            continue
+        modes_name = pack_modes_builder.patched_bundle_name(album['packBundle'])
+        modes_path = os.path.join(build_dir, modes_name)
+        if not os.path.isfile(modes_path):
+            continue          # modes bundle not built yet — previews ride on it
+        var_name = song_previews.previews_bundle_name(modes_name)
+        var_path = os.path.join(build_dir, var_name)
+
+        # target_slots scoping (surgical deploys): a scoped rebuild is dirty
+        # when any scoped slot's inputs changed — the dirty-check handles it
+        # per-slot; scoped builds only rebuild those slots' previews.
+        if target_slots is not None and not target_slots:
+            continue          # explicit empty scope = nothing to preview
+
+        dirty, why = _previews_pack_dirty(album, config, build_dir,
+                                          modes_path, var_name, target_slots)
+        if not dirty:
+            log.info(f"  ✅ {pack}: previews variant already fresh ({why}) — skipped")
+            continue
+        log.info(f"🎵 Building song-previews variant for {pack} "
+                 f"({var_name}) — {why}")
+        preview_map, inputs = song_previews.build_preview_map(
+            album, config, log=log.info, want_inputs=True)
+        if target_slots is not None:
+            tl = {s.lower() for s in target_slots}
+            preview_map = {sid: f for sid, f in preview_map.items()
+                           if sid.lower() in tl}
+        if not preview_map:
+            log.info(f"  ℹ️  {pack}: no previewable custom slots — variant not built")
+            continue
+        work = song_previews.patch_pack_previews(album, preview_map, modes_path)
+        if work is None:
+            log.warning(f"  ⚠️  {pack}: preview patch produced nothing — skipped")
+            continue
+        new_bundle = song_previews.rebuild_bundle_with_previews(work, var_path)
+        crc = pack_modes_builder.crc_decompressed_stream(new_bundle)
+        _record_previews_manifest(pm, build_dir, pack, var_name,
+                                  len(new_bundle), crc, preview_map,
+                                  album.get('catalogBundleName', ''),
+                                  album['packBundle'], inputs)
+        log.info(f"    ✓ {pack}: {var_name} ({len(new_bundle):,} B, "
+                 f"crc={crc}, previews={len(preview_map)})")
+        built += 1
+    return built
+
+
+def _record_previews_manifest(pm: dict, build_dir: str, pack: str,
+                              var_name: str, size: int, crc: int,
+                              preview_map: dict, catalog_bundle_name: str,
+                              pack_bundle_name: str,
+                              preview_inputs: dict | None = None) -> None:
+    """Record the previews variant in pack_modes manifest.json so catalog
+    regeneration (which reads the manifest for crc/size) can encode it.
+
+    preview_inputs: per-slot {slot: [bundle_md5, start_seconds]} — the
+    fingerprints the Exp 269c dirty-check compares to skip fresh packs."""
+    mpath = os.path.join(build_dir, 'manifest.json')
+    data = {'entries': []}
+    if os.path.isfile(mpath):
+        try:
+            with open(mpath) as f:
+                data = json.load(f)
+        except Exception:
+            data = {'entries': []}
+    entries = [e for e in data.get('entries', [])
+               if not (isinstance(e, dict) and e.get('bundle') == var_name)]
+    # packBundle = the STOCK bundle filename (the manifest's shared key with the
+    # modes entry — the post-deploy check indexes by it). The variant entry also
+    # carries 'previews' so consumers can tell the two apart.
+    row = {
+        'pack': pack,
+        'bundle': var_name,
+        'patchedBundle': var_name,
+        'packBundle': pack_bundle_name,
+        'catalogBundleName': catalog_bundle_name,
+        'size': size,
+        'crc': crc,
+        'previews': sorted(preview_map.keys()),
+        'previewsAt': int(__import__('time').time()),
+    }
+    if preview_inputs is not None:
+        row['previewsInputs'] = {sid: list(v) for sid, v in preview_inputs.items()
+                                 if sid in preview_map}
+    entries.append(row)
+    data['entries'] = entries
+    with open(mpath, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')
 
 def _resolve_configured_packs(config: dict, packs: list | None) -> list:
     """Return the pack list to operate on: `packs` if given else all DEPLOYED
@@ -3233,7 +3476,7 @@ def _resolve_configured_packs(config: dict, packs: list | None) -> list:
         return [p for p in packs if True] or [p for p in configured if p in packs]
     return list(configured)
 
-def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None) -> bool:
+def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None, skip_previews: bool = False) -> bool:
     """
     Build-if-missing and deploy the generalized pack_modes bundles + merged catalog.
 
@@ -3267,7 +3510,7 @@ def deploy_pack_modes(config: dict, packs: list | None = None, enable_modes: lis
         log.warning("  ⚠️  no pack_modes packs in scope (no pinned list, no built "
                     "bundles, no deployed state, none requested) — nothing to deploy")
         return False
-    _ensure_pack_mode_bundles(config, packs=active, enable_modes=enable_modes, target_slots=target_slots)
+    _ensure_pack_mode_bundles(config, packs=active, enable_modes=enable_modes, target_slots=target_slots, skip_previews=skip_previews)
     pairs = [(e['local_path'], e['patched_bundle'])
              for e in _get_pack_modes_entries(config, packs=active)
              if os.path.isfile(e['local_path'])]
@@ -3302,6 +3545,34 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
 
     remote_path = f"{afr_base}/{title_id}/{remote_name}"
     user_part = f"{ftp_user},{ftp_pass}" if ftp_pass else f"{ftp_user},"
+
+    # Exp 269e: skip uploading a pack-variant/catalog artifact ONLY when this
+    # same PROCESS already built the exact bytes and they are confirmed live
+    # on the PS4. Soundness rules (the Exp 269c size-only version caused the
+    # CE-34878-0 crash — see _previews_pack_dirty's notes):
+    #   1. The session ledger (same process) proves WE built/uploaded these
+    #      exact bytes — a cross-process skip cannot rely on it, which is
+    #      correct: a fresh batch-song process must re-verify or re-upload.
+    #   2. The remote listing must confirm the file exists with the SAME SIZE
+    #      as the local artifact (cheap) — a size change means a different
+    #      build for sure.
+    #   3. SIZE EQUALITY ALONE IS NOT IDENTITY: two different builds of the
+    #      same variant share size whenever the preview set is the same
+    #      (fixed 10s PCM16 slices = fixed lengths). That was the crash:
+    #      pass 1 uploaded variant v1; pass 2 rebuilt v2 (same size, different
+    #      bytes), the catalog encoded v2's CRC, and this skip blocked v2's
+    #      upload → catalog/file mismatch → CE-34878-0 at the pack scan.
+    # So: same-process + already-uploaded + remote size unchanged → skip.
+    # Anything else uploads.
+    if ('pack_modes' in remote_name or remote_name == 'catalog_pack_modes.json') \
+            and remote_name in _SESSION_UPLOADED_BUNDLES:
+        remote = _list_remote_dir(config)
+        remote_size = (remote or {}).get(remote_name)
+        if remote_size is not None and remote_size == os.path.getsize(local_path):
+            log.info(f"  ⏭️  {remote_name}: this session's upload is live on PS4 "
+                     f"({remote_size:,} B, unchanged) — re-upload skipped")
+            return True
+
     cmd = [
         "lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
         "-e", f"put {_ftp_quote(local_path)} -o {_ftp_quote(remote_path)}; quit"
@@ -3358,7 +3629,7 @@ def _download_pack_bundle_from_ps4(config: dict, pack_name: str, local_dir: str)
     return None
 
 
-def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None) -> bool:
+def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: list = None, target_slots: list = None, skip_previews: bool = False) -> bool:
     """
     Deploy the patched pack bundle + patched catalog.json to the PS4.
 
@@ -3402,6 +3673,21 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
                 target_path = os.path.join(pm_build_dir, os.path.basename(existing_bundle))
                 shutil.copy2(existing_bundle, target_path)
 
+    # Exp 269e: BUILD BEFORE ANY UPLOAD. The old order uploaded whatever
+    # variant file existed locally (pass 1), THEN called deploy_pack_modes
+    # which rebuilt (dirty-check fires on the incremental modes copy's mtime)
+    # and re-uploaded (pass 2). Two builds of the same variant in one deploy
+    # are not byte-identical when song bundles changed in between → the
+    # catalog encoded pass-2's CRC while pass-1's file could stay deployed
+    # (the old size-only upload-skip blocked the corrective re-upload) →
+    # catalog/file CRC mismatch → CE-34878-0 at the pack scan. Building
+    # exactly once, BEFORE the first upload, makes every upload of this
+    # deploy carry the same (final) bytes the catalog will encode.
+    if configured_packs and not skip_previews:
+        _ensure_pack_mode_bundles(
+            config, packs=configured_packs, enable_modes=enable_modes,
+            target_slots=target_slots, skip_previews=skip_previews)
+
     ok = True
     pairs = _get_remote_pack_paths(config, packs=packs)
     if pairs:
@@ -3420,7 +3706,11 @@ def deploy_pack_bundle(config: dict, packs: list | None = None, enable_modes: li
     # boots into Unity's CRC check against the ORIGINAL catalog and crashes
     # with CE-34878-0 (Exp 180 invariant; regression fixed here, Exp 225).
     if configured_packs:
-        ok = deploy_pack_modes(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots) and ok
+        # skip_previews=True here means the build was ALSO skipped above: the
+        # deploy uploads the EXISTING variant (unchanged) with the EXISTING
+        # catalog — still a consistent pair (the batch defers both to the
+        # last command, which builds both).
+        ok = deploy_pack_modes(config, packs=packs, enable_modes=enable_modes, target_slots=target_slots, skip_previews=skip_previews) and ok
     return ok
 
 def deploy_mass_bundles(config: dict) -> bool:
@@ -3699,12 +3989,34 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
                             log.info(f"  ✅ Deployed {pm['patched_catalog']} md5 matches local build ({local_md5})")
                     # Verify each configured pack's catalog entry carries the patched CRC/size.
                     entries = _get_pack_modes_entries(config, packs=packs)
-                    manifest = {e['packBundle']: e for e in pm_b.load_manifest(pm['build_dir'])}
+                    # Index by stock packBundle — FLAG-AWARE (M10): when
+                    # enable_song_previews is ON, the deployed bundle is the
+                    # variant, so the variant's manifest row must win over the
+                    # (now-stale) modes row regardless of append order. OFF →
+                    # the modes row wins. Rows are keyed by packBundle and the
+                    # variant carries 'previews' to tell them apart.
+                    want_variant = _previews_enabled(config)
+                    manifest = {}
+                    for me in pm_b.load_manifest(pm['build_dir']):
+                        cur = manifest.get(me['packBundle'])
+                        is_var = 'previews' in me
+                        if cur is None or is_var == want_variant:
+                            manifest[me['packBundle']] = me
                     checks = []
                     for e in entries:
                         me = manifest.get(e['bundle_key'])
-                        if me:
-                            checks.append((me['catalogBundleName'], me['crc'], me['size']))
+                        if me is None:
+                            continue
+                        # M10: entries point at the variant when the flag is on —
+                        # cross-check the manifest row actually describes the
+                        # bundle that deployed (variant row ↔ variant entry).
+                        if ('previews' in e['patched_bundle'] or '_previews_' in e['patched_bundle']):
+                            if me.get('patchedBundle') != e['patched_bundle']:
+                                log.warning(f"  ⚠️  Manifest row for {e['pack']} is "
+                                             f"{me.get('patchedBundle')} but the deploy "
+                                             f"shipped {e['patched_bundle']} — expected "
+                                             f"crc/size may be stale")
+                        checks.append((me['catalogBundleName'], me['crc'], me['size']))
                     if checks:
                         missing, mismatched = pm_b.validate_catalog_entries(remote_cat, checks)
                         if missing or mismatched:
@@ -3714,6 +4026,47 @@ def verify_ps4_deployment(config: dict, packs: list | None = None) -> bool:
                         else:
                             log.info(f"  ✅ Deployed catalog carries patched CRC/size for all "
                                      f"{len(checks)} configured packs")
+
+                    # Exp 269e DEPLOYED-BUNDLE CRC GUARD — the check that would
+                    # have caught the lizzo CE-34878-0 before the crash: the
+                    # catalog's expected CRC vs the ACTUAL CRC of the bundle
+                    # file on the PS4. Size equality never proved content
+                    # identity (two different builds of the same variant share
+                    # size whenever the preview set matches — fixed 10s PCM16
+                    # slices), and this exact gap shipped a catalog/file
+                    # mismatch that crashed the game at the pack scan. Pulls
+                    # each deployed pack bundle (they are large — this runs in
+                    # full verify and post-deploy validation only) and
+                    # computes the same catalog-scheme CRC.
+                    for e in entries:
+                        me = manifest.get(e['bundle_key'])
+                        if me is None:
+                            continue
+                        remote_bundle_path = f"{afr_base}/{title_id}/{e['patched_bundle']}"
+                        bundle_tmp = os.path.join(tmpdir, e['patched_bundle'])
+                        rb = sp.run(
+                            ["lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
+                             "-e", f"get {_ftp_quote(remote_bundle_path)} -o {_ftp_quote(bundle_tmp)}; quit"],
+                            capture_output=True, text=True, timeout=600,
+                        )
+                        if rb.returncode != 0 or not os.path.exists(bundle_tmp):
+                            log.warning(f"  ❌ Could not download deployed "
+                                        f"{e['patched_bundle']} for CRC validation")
+                            ok = False
+                            continue
+                        with open(bundle_tmp, 'rb') as f:
+                            actual_crc = pm_b.crc_decompressed_stream(f.read())
+                        if actual_crc != me['crc']:
+                            log.warning(
+                                f"  ❌ {e['pack']}: deployed bundle CRC {actual_crc} != "
+                                f"manifest/catalog CRC {me['crc']} (size matches at "
+                                f"{me['size']:,}) — the catalog describes DIFFERENT bytes "
+                                f"than what is deployed. THIS IS THE CE-34878-0 CRASH "
+                                f"SIGNATURE — re-deploy the pack (do NOT boot the game).")
+                            ok = False
+                        else:
+                            log.info(f"  ✅ {e['pack']}: deployed bundle CRC matches "
+                                     f"catalog ({actual_crc})")
         except Exception as exc:
             log.warning(f"  ❌ Catalog content validation errored: {exc}")
             ok = False
@@ -3901,6 +4254,7 @@ DEFAULT_FEATURES = {
     "enable_custom_song_replacements": True,
     "enable_song_metadata_modification": True,
     "enable_beatmap_mode_mapping": True,
+    "enable_song_previews": False,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -4789,6 +5143,15 @@ Examples:
                              'PS4 plugin is intentionally pinned (e.g. testing a specific plugin build). '
                              'Default behavior: every --deploy-full builds the LATEST plugin source and '
                              'installs it, so source changes always reach the PS4.')
+    parser.add_argument('--skip-song-preview-management', action='store_true',
+                        help='Skip building/deploying song-previews variants this run (Exp 269c). For '
+                             'BATCHES: every --deploy-full rebuilds previews for packs whose inputs '
+                             'changed, which across N batch songs wastes N-1 rebuilds — pass this flag '
+                             'on all batch commands EXCEPT THE LAST so previews regenerate once, at '
+                             'the end. (Preview builds are also dirty-checked per pack now: a variant '
+                             'is rebuilt only when its modes base, slot set, or any song bundle md5 / '
+                             'preview-start changed — untouched packs are skipped in seconds.) The '
+                             'variant already deployed on the PS4 keeps serving previews meanwhile.')
     parser.add_argument('--deploy-features', action='store_true',
                         help='Deploy the local features.json to the PS4 (runtime feature flags)')
     parser.add_argument('--debug-logging', action='store_true',
@@ -5003,18 +5366,38 @@ Examples:
             pack_modes_packs = [p.strip() for p in args.pack_modes_packs.split(',') if p.strip()]
         if args.build_pack_modes:
             _ensure_pack_mode_bundles(deploy_cfg, force=args.force_pack_modes,
-                                      packs=pack_modes_packs)
+                                      packs=pack_modes_packs,
+                                      skip_previews=args.skip_song_preview_management)
         if args.deploy_mass_bundles:
             deploy_mass_bundles(deploy_cfg)
         if args.deploy_pack_modes:
-            deploy_pack_modes(deploy_cfg)
+            deploy_pack_modes(deploy_cfg, skip_previews=args.skip_song_preview_management)
         if args.deploy_pack_bundle:
             if pack_modes_packs:
                 # Pre-build the requested subset so deploy_pack_bundle's build-if-missing
                 # and the redirect generation only cover exactly these packs.
                 _ensure_pack_mode_bundles(deploy_cfg, force=args.force_pack_modes,
-                                          packs=pack_modes_packs)
-            deploy_pack_bundle(deploy_cfg)
+                                          packs=pack_modes_packs,
+                                          skip_previews=args.skip_song_preview_management)
+            deploy_pack_bundle(deploy_cfg, skip_previews=args.skip_song_preview_management)
+        # Exp 270a: a pack deploy MUST also refresh the pack redirect pair. The
+        # redirect VALUES name the bundle variant (modes-only vs modes+previews)
+        # derived from the CURRENT flag state — deploying bundles without
+        # refreshing redirects leaves the live redirects pointing at the OLD
+        # variant while the new catalog describes the NEW one → catalog/bundle
+        # CRC mismatch → CE-34878-0 at boot (the exact landmine the release
+        # validation caught: --deploy-pack-modes shipped variant bundles + a
+        # variant catalog while the live redirects still named the modes
+        # bundles). --deploy-full always runs manage_redirect_config, which is
+        # why full deploys were safe; the deploy-only paths get the same
+        # ensure here.
+        if args.deploy_pack_modes or args.deploy_pack_bundle:
+            manage_redirect_config(
+                deploy_cfg,
+                target_name=None,
+                generate=True,
+                deploy=True,
+            )
         if args.generate_config or args.deploy_config or args.sync_config or args.enforce_config or args.deploy:
             manage_redirect_config(
                 deploy_cfg,
@@ -5453,7 +5836,7 @@ Examples:
             log.info(f"  Pack bundle will enable extra modes for custom songs: {deploy_enable_modes}")
 
     if should_deploy:
-        deploy_pack_bundle(deploy_cfg, packs=deploy_packs, enable_modes=deploy_enable_modes, target_slots=deploy_slots)
+        deploy_pack_bundle(deploy_cfg, packs=deploy_packs, enable_modes=deploy_enable_modes, target_slots=deploy_slots, skip_previews=args.skip_song_preview_management)
 
     # -----------------------------------------------------------------------
     # Step 9: Manage redirect config (redirects.json)

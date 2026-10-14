@@ -124,7 +124,10 @@ class SingleJobRunner:
                 argv=list(popen_argv[2:]),  # the script's own argv (after python3 + script)
                 # CWD = the release/checkout root (same semantics as the
                 # example scripts; the pipeline resolves the rest itself).
-                cwd=str(paths.RELEASE_ROOT),
+                # Exp 270a: layout-agnostic — in the flat release zip the
+                # zip root IS PROJECT_DIR (RELEASE_ROOT points one level
+                # above the extraction, where nothing lives).
+                cwd=str(paths.release_root_surname()),
                 started_at=time.time(),
                 label=label,
                 command_line=command,

@@ -988,3 +988,36 @@ class TestFeatureFlagGatingAudit:
             conds = _re.findall(rf"(?:if\s*\(|&&\s*|!\s*){flag}", rest)
             assert len(conds) >= 1, \
                 f"{flag} has no behavioral gate outside load_features — decorative flag"
+
+# ─── Tier 8: Song previews flag gating (M10, Exp 269) ─────────────────────────
+
+class TestSongPreviewsFlagGating:
+    """The enable_song_previews flag must gate the pack-redirect pair exactly
+    like enable_beatmap_mode_mapping (Exp 222): either flag ON serves the
+    patched bundle + catalog; both OFF serves stock (Exp 180 CRC invariant)."""
+
+    def test_plugin_parses_song_previews_flag(self):
+        main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")
+        with open(main_cpp) as f:
+            code = f.read()
+        assert 'strcmp(key, "enable_song_previews")' in code
+        assert "g_feature_song_previews" in code
+
+    def test_pack_gate_either_flag(self):
+        """The pack_assets/catalog skip must require BOTH flags OFF."""
+        main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")
+        with open(main_cpp) as f:
+            code = f.read()
+        assert "!(g_feature_beatmap_mode_mapping || g_feature_song_previews)" in code, \
+            "pack gate must serve the patched pair when EITHER flag is ON"
+
+    def test_default_features_has_previews(self):
+        import full_custom_song_pipeline as fp
+        assert fp.DEFAULT_FEATURES.get("enable_song_previews") is False
+
+    def test_toast_counts_four_flags(self):
+        main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")
+        with open(main_cpp) as f:
+            code = f.read()
+        assert "(%d/4 features ON)" in code
+        assert "g_feature_song_previews" in code.split("enabled_count =")[1].split("memset")[0]

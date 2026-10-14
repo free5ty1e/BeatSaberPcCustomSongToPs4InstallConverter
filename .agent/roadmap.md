@@ -373,3 +373,36 @@ Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent
 ### Next (M9 — Generalization)
 - [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy with `--deploy-full`.
 - [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).
+
+## M10 — Song Previews: Redirect Menu Preview Playback to Custom Audio (In Progress — Exp 268+)
+**Goal:** when the player highlights a custom song in the song menu, play a ~10s
+excerpt of the CUSTOM song's own audio (mapper's `_previewStartTime`) instead of
+the confusing stock-song preview. Patched into the pack bundles'
+`BeatmapLevelSO._previewAudioClip` (FSB5 PCM16, our proven codec) behind the
+`enable_song_previews` feature flag.
+Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
+
+### Research-verified architecture (Exp 268, 2026-10-09)
+- [x] Runtime chain mapped: `LevelCollectionViewController.SongPlayerCrossfadeToLevelAsync`
+      → `BeatmapLevelSO.get_songPreviewAudioClip()` → `SongPreviewPlayer.CrossfadeTo`
+- [x] Storage verified in all 5 packs: per-song preview AudioClips are LOCAL
+      PPtrs; clips concatenated in the pack bundle's inner `.resource`;
+      `_previewStartTime=0.0`/`_previewDuration=10.0` (clips pre-cut) → SO floats untouched
+- [x] Stock codec = FSB5 Vorbis (blocked); ours = FSB5 PCM16 (proven) — reuse
+- [x] 94/94 local song sources carry mapper preview start (V2/V3 + V4 schemas)
+- [x] Flag design: `enable_song_previews` = redirect-set switch like Exp 222;
+      bundle VARIANTS per flag combination (modes+previews / modes-only /
+      previews-only / stock)
+
+### Phases
+- [x] Phase 1 — Implementation (Exp 269): `tools/song_previews.py` + pipeline 0.5357
+      variant threading + plugin 0.8048 gate/toast; lizzo variant built+verified
+      byte-identical via production path; 828/828 tests; all 4 plan Qs resolved
+- [x] Phase 1b — Hardware spike (Exp 269b): lizzo variant deployed + user listen-tested
+- [x] Phase 2 — Full fleet (Exps 269c-e): 46 previews across 5 packs live; verify gains the
+      deployed-bundle CRC guard; batch optimizations (skip-flag auto-inject + per-pack
+      dirty-check + sound upload-skip); the CE-34878-0 size≠identity crash RCA'd + fixed
+- [x] Phase 3 — Flag polish + docs (Exp 270): KB pages (song-previews new + feature-flags +
+      lftp pitfall 9), README banner/table/toast, feature doc shipped in the release zip,
+      validation procedure step 5.1b, webapp toast N/4
+- [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears

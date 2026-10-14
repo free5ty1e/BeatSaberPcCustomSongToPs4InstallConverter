@@ -5,6 +5,19 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+
+## 0.6.6 (2026-10-13)
+### Added
+- **Demos link (lower-left, both surfaces).** A small footer link — 🎬 Demos — opens the project's collected demo-video + screenshot gallery (`docs/demos.md` on the MAIN branch: <https://github.com/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/blob/main/docs/demos.md>). Mirrors the version badge's corner-chip styling (rounded on the outer edge, hidden when printing, hover accent); `target="_blank" rel="noopener"`. The main-branch URL is stable across releases and goes live the moment the feature PR merges (404s before that, by design).
+
+## 0.6.5 (2026-10-12)
+### Fixed
+- **The Batch tab showed 0 example packs from an extracted release zip (latent since the first M9 release; Exp 270a).** The zip's layout is flat — `webapp/`, `docs/` sit at the zip root — but the adapter resolved example scripts one level above it. `paths.py` now probes both layout levels (`release_root_surname()` / `release_path()`) and every release-root consumer (batch dirs, runner cwd, backup paths, validator) is layout-agnostic. Verified from a clean extraction: 34 example packs parse; the dev checkout is unchanged.
+
+## 0.6.4 (2026-10-10)
+### Changed
+- **Feature Flags tab tracks the 4th flag + the real toast format (M10).** `enable_song_previews` renders with a full description (its absence was the gap found while validating the user's live deploy); the simulated boot toast counts `N/4` (derived from the flag list length — never hardcoded again) and shows `v0.8048`. The Batch tab's runner now injects `--skip-song-preview-management` into all-but-the-last batch command (previews regenerate once at the end of a batch).
+
 ## [0.6.3] — 2026-10-08 (Exp 266)
 ### Fixed
 - **Pages mode landed on the Setup Wizard instead of Get Started (found on the LIVE Pages deploy by the user, minutes after PR #5 merged).** Root cause: a landing race — `detectMode()`'s pages branch clicks the Get Started button (correct), but the `DOMContentLoaded` handler at the script's tail then runs `showPage("wizard")` UNCONDITIONALLY, and it fires after the script bottom — stomping the landing back to the wizard on every fast connection. The badge/banner/tab-hiding all worked (they're not overwritten later), which is exactly why the page LOOKED correct except for the landing. Fix: the DOMContentLoaded wizard landing is now mode-aware — `if (state.mode !== "pages") showPage("wizard")`; pages mode keeps the Get Started landing, local mode keeps the wizard. The hidden-tabs behavior the user noticed ("most of the tabs are missing") is the DESIGNED pages mode — the 6 backend-only tabs (PS4, Manage Songs, Loadout, Flags, Batch, Backup) can't function hosted and hide; verified all 12 buttons ship in the bundle with `local-only` markers. Proven with a browser-order headless simulation (startPage click → DOMContentLoaded guard → lands on startPage; local regression lands on wizard). Suite 807/807.

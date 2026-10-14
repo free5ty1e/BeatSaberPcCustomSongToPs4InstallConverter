@@ -20,7 +20,7 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | File                                 | Description                                      |
 | ------------------------------------ | ------------------------------------------------ |
 | `tools/full_custom_song_pipeline.py` | Main pipeline script for converting custom songs |
-| `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder) |
+| `tools/*.py`                         | Supporting tools (downloader, audio encoder, pack-mode bundle builder, song-previews patcher) |
 | `VERSION`                            | Pipeline version                                 |
 | `beat_saber_song_ids.json`           | Song-slot catalog: every pack, slot ID, stock song title, bundle name — the pipeline's targeting database |
 | `requirements.txt`                    | Python dependencies for the pipeline (incl. the web app's fastapi/uvicorn) |
@@ -50,10 +50,10 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | `README.md` | Main documentation (pipeline, features, feature flags, clean slate) |
 | `PIPELINE-README.md` | Pipeline-internal README |
 | `CHANGELOG-PLUGIN.md` / `CHANGELOG-PIPELINE.md` | Full change history |
-| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping |
+| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping, **song previews** |
 | `docs/examples/`, `docs/how-to-replace-pack.md` | Pack-replacement walkthroughs |
 | `docs/example-scripts/example_*` | **All 69 ready-to-run example files** — per-music-pack command docs (`.md`) + shell scripts (`.sh`) for every DLC pack, with verified BeatSaver MAP_IDs for five packs (billie eilish, britney spears, camelia, lizzo, rolling stones) and `[REPLACE_WITH_MAP_ID]` templates for the rest |
-| `docs/release-validation-test-procedure.md` + `.sh` | **Release validation procedure + the automated validator** — the exact hardware test this release passed (35 checks: read-only verify, build quality, end-to-end deploy incl. the bundled plugin, feature-flag and kill-switch round-trips, surgical revert + restore, state-integrity auto-restore). Run it against your own PS4 to validate your deployment |
+| `docs/release-validation-test-procedure.md` + `.sh` | **Release validation procedure + the automated validator** — the exact hardware test this release passed (read-only verify, build quality, end-to-end deploy incl. the bundled plugin, feature-flag and kill-switch round-trips, surgical revert + restore, state-integrity auto-restore, song-previews variant + flag round-trip). Run it against your own PS4 to validate your deployment |
 
 ## Running the Pipeline
 
@@ -132,9 +132,10 @@ See the main `README.md` for full pipeline documentation.
 | `enable_custom_song_replacements` | `false` | Gates all bundle redirects |
 | `enable_song_metadata_modification` | `false` | Gates song name/artist swaps in the UI |
 | `enable_beatmap_mode_mapping` | `false` | Gates extra game modes (OneSaber/NoArrows/90Degree) — OFF serves stock pack bundles + catalog |
+| `enable_song_previews` | `false` | Gates **song previews**: highlighting a custom song in the menu plays its own ~10s audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles — either this flag or `enable_beatmap_mode_mapping` keeps the patched pair live |
 
 On boot the plugin shows one combined toast with its state:
-`BS Deluxe vX (ON) / By Chris Primeish / (3/3 features ON)` — or
+`BS Deluxe vX (ON) / By Chris Primeish / (4/4 features ON)` — or
 `BS Deluxe vX (OFF) / By Chris Primeish / (official songs only)`.
 
 ## Plugin Installation
