@@ -38,6 +38,17 @@ enable_in_game_plugin_toggle=true`).
   word diagnostics so the first boot log confirms the offsets empirically.
   Hardware result: STILL never fired — **NID dlsym also resolves nothing**
   (dlsym cannot see kernel-loaded SPRX exports at all).
+- **v0.8051 (Exp 278d):** GOT resolution WORKED (eboot.bin base found;
+  scePadRead slot bound at open #1) — but Detouring the real library code
+  built a trampoline over a non-relocatable prologue → **the game HUNG at a
+  black screen on the first scePadRead call**. Also revealed: JUMP_SLOTs
+  bind LAZILY (the move slot held a sentinel until the game's first call).
+- **v0.8052 (Exp 278e):** **GOT HIJACKING** — overwrite the slot value with
+  the hook address after mprotect RW (atomic write, no trampoline, no code
+  patching; the hook calls the saved original pointer directly) and WAIT for
+  lazy slots to bind. Per-call diagnostics moved behind VERBOSE_LOG (debug
+  builds only) per the release-performance directive; release logs one-time
+  events only. Form detection cached (no hot-path syscalls).
 - **v0.8051 (Exp 278d):** the definitive resolution — **the EBOOT'S GOT
   slots** (r_offset from the eboot's JMPREL relocations, precomputed from
   the decrypted dump: sceMoveReadStateRecent → RVA 0x1c634e8, scePadRead →

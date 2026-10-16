@@ -444,6 +444,18 @@ Full plan: [`.agent/plans/in-game-global-plugin-enable-toggle-plan.md`](.agent/p
       q1cHNfGycLI; the boot log showed 100 failed attempts); (2) the **DS4 is
       ignored by Beat Saber in VR mode** (user-verified). Logged + archived
       (v0.8049_hotkey_test_failure_l3r3.txt).
+- [x] **Exp 278e RCA (v0.8051 hung the game at a black screen): the Detour trampoline over
+      scePadRead's real code corrupted its non-relocatable prologue — the first call after
+      install killed the calling thread (the GOT resolution itself WORKED: pad slot bound at
+      open #1). Also discovered: PS4 JUMP_SLOTs bind LAZILY (the move slot held the sentinel
+      0xeffffffe000001a0 until the game's first call). v0.8052: **GOT HIJACKING** — mprotect
+      the RELRO page RW, write the hook address into the slot (atomic 8-byte write, zero
+      races), the hook calls the saved original pointer directly — no trampoline, no code
+      patching, the crash class is structurally eliminated. Release-lean logging (user
+      directive): per-call diagnostics behind #ifdef VERBOSE_LOG (DEBUG=1 build only);
+      release logs one-time events; form detection cached (no hot-path syscalls). Debug
+      variant deployed for this test round (--debug-logging; plain --deploy-plugin restores
+      release after confirmation). Suite 894/894. Awaiting the Move-combo hardware test.
 - [x] **Exp 278d RCA (v0.8050 also failed): NID dlsym finds NOTHING either** — dlsym(RTLD_DEFAULT) cannot
       see kernel-loaded Sony SPRX exports AT ALL (only game-module exports like il2cpp_string_new ever
       resolved). The DEFINITIVE mechanism (v0.8051): resolve via the EBOOT'S GOT — JMPREL r_offset RVAs

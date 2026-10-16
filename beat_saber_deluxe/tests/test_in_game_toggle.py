@@ -85,41 +85,89 @@ class TestInGameToggleFlagGating:
 
 
 class TestInGameToggleResearchedFacts:
-    """Pins the Exp-278/278c/278d research: GOT-slot hook resolution (the
-    definitive mechanism after TWO hardware failures), hook targets, Move
-    button bits, timing.
+    """Pins the Exp-278/278c/278d/278e research: GOT-SLOT HIJACKING (the
+    definitive mechanism after THREE hardware failures), hook targets, Move
+    button bits, timing, and the release-logging policy.
 
-    v0.8049 hardware result (Exp 278b): readable-name dlsym fails — Sony
-    system libraries export NIDs. v0.8050 hardware result (Exp 278c): NID
-    dlsym ALSO fails — dlsym(RTLD_DEFAULT) cannot see kernel-loaded SPRX
-    exports AT ALL (only eboot-exported symbols like il2cpp_string_new
-    resolve). v0.8051 (Exp 278d): the eboot's GOT slots — filled by the OS
-    module loader at bind time — hold the final function addresses; the
-    plugin reads them at base + rva (rva precomputed from the decrypted
-    dump's JMPREL relocations) and Detours the resolved address.
+    Hardware iteration history: v0.8049 — readable-name dlsym finds nothing
+    (Sony libs export NIDs). v0.8050 — NID dlsym ALSO finds nothing (dlsym
+    cannot see kernel-loaded SPRX exports AT ALL). v0.8051 — GOT resolution
+    WORKED but Detouring the real library code built a trampoline over a
+    non-relocatable prologue → the game HUNG at a black screen on the first
+    scePadRead call (also revealed: JUMP_SLOTs bind LAZILY — the move slot
+    held a sentinel until the game's first call). v0.8052 — hijack the GOT
+    SLOT VALUE (atomic 8-byte write; no trampoline, no code patching; the
+    hook calls the saved original pointer directly).
     """
 
-    def test_hooks_resolved_via_eboot_got(self):
-        """THE v0.8051 resolution mechanism: GOT slot read (r_offset from the
-        eboot's JMPREL, computed via the ps4_elf_imports.py methodology) —
-        no dlsym for system libraries at all."""
+    def test_hooks_installed_via_got_hijack(self):
+        """THE v0.8052 mechanism: overwrite the GOT slot value with the hook
+        address after mprotect RW — no dlsym, no Detour on library code."""
         code = _code()
         assert "#define GOT_RVA_SCE_MOVE_READ_RECENT 0x1c634e8" in code
         assert "#define GOT_RVA_SCE_PAD_READ         0x1c63500" in code
-        assert "resolve_import_by_got" in code
+        assert "try_hijack_got_slot" in code
         assert 'strcmp(info.name, "eboot.bin")' in code
-        # dlsym must NOT be used for system-library functions anymore
+        assert "sceKernelMprotect" in code
+        # dlsym must NOT be used for system-library functions at all
         assert 'dlsym(RTLD_DEFAULT, "scePadRead")' not in code
         assert 'dlsym(RTLD_DEFAULT, "sceMoveReadStateRecent")' not in code
         assert 'dlsym(RTLD_DEFAULT, NID_' not in code
 
-    def test_got_resolution_validates_pointer(self):
-        """The resolved GOT value must be validated as mapped readable code via
-        sceKernelQueryMemoryProtection before Detour (signal-free technique)."""
-        body = _def_body(_code(), "resolve_import_by_got", span=3000)
-        assert body, "resolve_import_by_got definition not found"
-        assert "sceKernelQueryMemoryProtection" in body
-        assert "prot & 0x1" in body
+    def test_no_trampoline_on_library_code(self):
+        """THE v0.8051 black-screen hang pin: never Detour Sony library
+        functions (non-relocatable prologues corrupt the trampoline). The
+        hooks call the SAVED ORIGINALS directly — no HOOK_CONTINUE."""
+        code = _code()
+        assert "HOOK_CONTINUE(hook_pad_read" not in code
+        assert "HOOK_CONTINUE(hook_move_read" not in code
+        assert "HOOK_INIT(hook_pad_read)" not in code
+        assert "HOOK_INIT(hook_move_read)" not in code
+        body = _def_body(code, "pad_read_hook", span=1500)
+        assert "g_orig_pad_read(handle" in body
+        mbody = _def_body(code, "move_read_hook", span=3000)
+        assert "g_orig_move_read(handle" in mbody
+
+    def test_hijack_waits_for_lazy_binding(self):
+        """JUMP_SLOTs bind on the game's FIRST call — until then the slot holds
+        a lazy sentinel (0xeffffffe000001a0) or the in-eboot PLT resolver
+        stub. The hijack must reject both and keep retrying."""
+        body = _def_body(_code(), "try_hijack_got_slot", span=3000)
+        assert body, "try_hijack_got_slot definition not found"
+        assert "EBOOT_TEXT_SPAN" in body          # rejects in-eboot PLT stubs
+        assert "fn_addr < 0x1000000ULL" in body   # rejects unbound/garbage
+        # mprotect BEFORE the write, page protection restored after
+        assert body.find("sceKernelMprotect(page_start") < body.find("*(uint64_t *)slot_addr = (uint64_t)hook")
+        assert body.count("sceKernelMprotect") >= 2
+
+    def test_hijack_never_crashes_the_game(self):
+        """Any mprotect/query failure must ABORT the hijack (give up) — never
+        write blindly to a page we could not flip RW."""
+        body = _def_body(_code(), "try_hijack_got_slot", span=3000)
+        assert "mprotect RW failed" in body
+        assert "no write attempted" in body
+
+    def test_verbose_diagnostics_gated_behind_debug_build(self):
+        """RELEASE-PERFORMANCE DIRECTIVE (user, Exp 278e): per-call diagnostics
+        (raw-word dumps, change logging, retry progress) are DEBUG-BUILD ONLY
+        (#ifdef VERBOSE_LOG — the Makefile's DEBUG=1 flag). Release logs
+        one-time events only (ARMED, hijack installed, form detected, ERROR
+        give-ups, toggle flips, cooldown)."""
+        code = _code()
+        assert code.count("#ifdef VERBOSE_LOG") >= 4  # pad diag + move diag + 2 retry loops
+        # the raw-word diagnostics live inside the gates
+        pad_body = _def_body(code, "pad_read_hook", span=1800)
+        assert "#ifdef VERBOSE_LOG" in pad_body
+        move_body = _def_body(code, "move_read_hook", span=4000)
+        assert "#ifdef VERBOSE_LOG" in move_body
+
+    def test_form_detection_cached(self):
+        """The move call form (3-arg vs 4-arg) is detected ONCE and cached —
+        the steady-state hot path runs no pointer-validation syscalls."""
+        body = _def_body(_code(), "move_read_hook", span=4000)
+        assert "g_move_form == 0" in body   # detect only while unknown
+        assert "g_move_form = 4" in body
+        assert "g_move_form = 3" in body
 
     def test_primary_hook_target_is_sceMoveReadStateRecent(self):
         """Beat Saber reads both Moves every frame via sceMoveReadStateRecent
@@ -166,16 +214,18 @@ class TestInGameToggleResearchedFacts:
     def test_signature_ambiguity_handled_safely(self):
         """shadPS4 documents sceMoveReadStateRecent as 4-arg
         (handle, timestamp, data, out_count); a 3-arg form would put the data
-        buffer in RSI instead of RDX. The hook must detect the form at runtime
-        via sceKernelQueryMemoryProtection (the v0.8045-proven signal-free
-        technique) and always pass ALL FOUR registers through."""
+        buffer in RSI instead of RDX. The hook detects the form at runtime via
+        sceKernelQueryMemoryProtection (the v0.8045-proven signal-free
+        technique), CACHES it, and calls the saved original with ALL FOUR
+        registers (a 3-arg original ignores the extra) — no HOOK_CONTINUE
+        exists anymore."""
         code = _code()
         assert "is_mapped_rw_pointer" in code
         assert "sceKernelQueryMemoryProtection" in code
-        body = _def_body(code, "move_read_hook", span=3000)
+        body = _def_body(code, "move_read_hook", span=4000)
         assert body, "move_read_hook definition not found"
-        assert "form = 4" in body and "form = 3" in body
-        assert "HOOK_CONTINUE(hook_move_read" in body
+        assert "g_move_form = 4" in body and "g_move_form = 3" in body
+        assert "HOOK_CONTINUE(hook_move_read" not in code
 
     def test_two_second_hold_with_kernel_time(self):
         """2 s hold timed by sceKernelGetProcessTime (µs) = 2,000,000, fed
@@ -210,8 +260,12 @@ class TestInGameToggleResearchedFacts:
         """v0.8049 re-logged its ERROR on every open_hook call after giving
         up. The retry loops must set a gave-up flag and stop."""
         code = _code()
-        assert "g_pad_hook_gave_up" in code
-        assert "g_move_hook_gave_up" in code
+        assert "g_pad_hijack_gave_up" in code
+        assert "g_move_hijack_gave_up" in code
+        # the move slot binds LAZILY (at VR init) — its retry budget is far
+        # larger than the pad's (bound at open #1)
+        assert "#define MOVE_HIJACK_MAX_ATTEMPTS 2000" in code
+        assert "#define PAD_HIJACK_MAX_ATTEMPTS 100" in code
 
     def test_surgical_in_place_flip(self):
         """The flip edits the enable_plugin value in place (memmove for the
@@ -230,7 +284,7 @@ class TestInGameToggleResearchedFacts:
 
 class TestInGameToggleVersions:
     def test_plugin_version_bumped(self):
-        assert '#define PLUGIN_VERSION "v0.8051"' in _code()
+        assert '#define PLUGIN_VERSION "v0.8052"' in _code()
 
     def test_toast_counts_five_flags(self):
         code = _code()
@@ -263,7 +317,7 @@ class TestInGameToggleWebappSurfaces:
         with open(os.path.join(WEBAPP, "static", "app.js"), encoding="utf-8") as f:
             code = f.read()
         assert '"enable_in_game_plugin_toggle"' in code
-        assert 'TOAST_VERSION = "v0.8051"' in code
+        assert 'TOAST_VERSION = "v0.8052"' in code
 
     def test_index_placeholder_five_of_five(self):
         with open(os.path.join(WEBAPP, "static", "index.html"), encoding="utf-8") as f:

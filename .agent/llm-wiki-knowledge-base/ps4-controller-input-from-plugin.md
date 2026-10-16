@@ -67,11 +67,37 @@ that ends up holding the FINAL resolved address of the imported function:
 #define GOT_RVA_SCE_PAD_READ         0x1c63500   // scePadRead
 
 uint64_t base = find_module_base_by_name("eboot.bin");   // sceKernelGetModuleList
-uint64_t fn   = *(uint64_t *)(base + GOT_RVA_SCE_MOVE_READ_RECENT);
-// validate via sceKernelQueryMemoryProtection (mapped + readable), then:
-Detour_Construct(&Detour_hook, DetourMode_x64);
-Detour_DetourFunction(&Detour_hook, fn, (void *)my_hook);
+uint64_t slot = base + GOT_RVA_SCE_MOVE_READ_RECENT;
+uint64_t fn   = *(uint64_t *)slot;
+// ... wait until fn is canonical, OUTSIDE the eboot's own text (lazy stubs),
+// and mapped-readable (sceKernelQueryMemoryProtection). THEN HIJACK THE SLOT:
+sceKernelMprotect(page, len, 0x3);            // RELRO page R -> RW
+*(uint64_t *)slot = (uint64_t)my_hook;        // atomic 8-byte write
+sceKernelMprotect(page, len, orig_prot);      // restore
+// my_hook calls the SAVED original fn pointer DIRECTLY — no trampoline.
 ```
+
+⚠️⚠️⚠️ **NEVER Detour Sony library functions (Exp 278e — the v0.8051
+black-screen hang).** Detouring the resolved address built a trampoline over
+`scePadRead`'s prologue, which is NOT relocatable (dense RIP-relative code in
+lib functions) — the first call corrupted execution and the game hung at a
+black screen before the VR screen. The 14-byte copy + jump-back model is only
+safe on functions whose prologues you have VERIFIED are relocatable (our
+IL2CPP hooks). **GOT hijacking has no trampoline, no code patching, and no
+races (an aligned 8-byte slot write is atomic — readers see old-or-new, both
+valid); the hook calls the saved original pointer directly.**
+
+**LAZY BINDING (Exp 278e discovery):** PS4 JUMP_SLOT imports bind on the
+game's FIRST CALL, not at module load. Until then the slot holds a lazy
+sentinel (observed `0xeffffffe000001a0` — encoding the relocation index
+`0x1A0`) or the file-initial value = the in-eboot PLT resolver stub address
+(`0x1822480`/`0x18224b0` for these two — a mapped code address INSIDE the
+eboot's text!). The hijack must: reject values below the module range, reject
+values inside `[eboot_base, eboot_base + text_span)` (lazy stubs), require
+the value to pass mapped-readable validation, and RETRY on later opens until
+the game binds the slot (the pad slot was bound at open #1 — the game calls
+scePadRead during early input init; the move slot binds when VR init first
+polls the Moves). Hijacking an unbound slot would break lazy resolution.
 
 - **eboot.bin is module[0] from the very first `open_hook` attempt**
   (log-verified; at module_start only 3 modules are visible: eboot.bin,

@@ -6,6 +6,10 @@ subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
 
+## 0.6.10 (2026-10-16)
+### Changed
+- `TOAST_VERSION` bumped to v0.8052 (GOT-hijack build). Note: this round deploys the DEBUG plugin variant (`--deploy-logging`) for full move-data diagnostics; `--deploy-plugin` restores the quiet release build after confirmation.
+
 ## 0.6.9 (2026-10-16)
 ### Changed
 - `TOAST_VERSION` bumped to v0.8051 (GOT-resolution build; UI otherwise unchanged).

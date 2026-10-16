@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8051"
+#define PLUGIN_VERSION "v0.8052"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -455,8 +455,6 @@ static int close_hook(int fd) {
 HOOK_INIT(hook_tmp_text_set_text);
 HOOK_INIT(hook_tmp_text_set_text2);
 HOOK_INIT(hook_move_next);
-HOOK_INIT(hook_pad_read);
-HOOK_INIT(hook_move_read);
 static int g_tmp_text_set_text_count = 0;
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)
@@ -875,13 +873,32 @@ static void move_next_hook(void* state_machine) {
 #define NID_MOVE_READ_RECENT "f2bcpK6kJfg"   // sceMoveReadStateRecent — same verification
 // GOT slot vaddrs (r_offset from the eboot's JMPREL relocations, type
 // R_X86_64_JUMP_SLOT) — computed from the decrypted dump's dynlib data via
-// the ps4_elf_imports.py methodology (Exp 278d). THE RESOLUTION MECHANISM:
-// dlsym CANNOT see kernel-loaded Sony SPRX exports (v0.8049 tested readable
-// names, v0.8050 tested NIDs — both found NOTHING; only eboot-exported
-// symbols like il2cpp_string_new resolve). The eboot's import slots, filled
-// by the OS module loader at bind time, hold the final function addresses.
+// the ps4_elf_imports.py methodology (Exp 278d).
+//
+// THE v0.8052 MECHANISM (Exp 278e): GOT HIJACKING, never code Detour.
+// The v0.8051 hardware test proved Detouring a Sony library function's real
+// code is FATAL — its prologue is not relocatable (RIP-relative density in
+// lib code), so the trampoline corrupted the first call → the game hung at a
+// black screen before the VR screen. Instead we overwrite the GOT SLOT VALUE
+// with our hook's address (an aligned 8-byte write is atomic — zero races)
+// after mprotecting the RELRO page RW, and the hook calls the SAVED original
+// pointer directly — no trampoline, no code patching, no relocation risk.
+//
+// LAZY BINDING (the v0.8051 surprise): JUMP_SLOT imports bind on the GAME'S
+// FIRST CALL, not at module load — until then the slot holds a lazy
+// sentinel (observed 0xeffffffe000001a0, encoding the relocation index) or
+// the in-eboot PLT resolver stub address (file-initial values 0x1822480/
+// 0x18224b0). Therefore the hijack must WAIT until the slot holds a
+// canonical pointer OUTSIDE the eboot's own text (the pad slot was already
+// bound at open #1; the move slot binds when VR init first polls the Moves).
 #define GOT_RVA_SCE_MOVE_READ_RECENT 0x1c634e8
 #define GOT_RVA_SCE_PAD_READ         0x1c63500
+// eboot text span (first PT_LOAD) — slot values INSIDE it are lazy PLT stubs
+#define EBOOT_TEXT_SPAN 0x2000000ULL
+// hijack retry caps: the pad slot binds at open #1 (observed); the move slot
+// binds at VR init — file keeps opening through the menus, so give it room
+#define PAD_HIJACK_MAX_ATTEMPTS 100
+#define MOVE_HIJACK_MAX_ATTEMPTS 2000
 #define PAD_BUTTON_L3 0x0002u                // DS4 combo (secondary path — kept for pad-mode sessions)
 #define PAD_BUTTON_R3 0x0004u
 #define PAD_COMBO (PAD_BUTTON_L3 | PAD_BUTTON_R3)             // 0x0006
@@ -903,6 +920,12 @@ static void move_next_hook(void* state_machine) {
 // interleave calls, so the non-holding handle's polls must not reset a hold
 // in progress. Latched until the combo has been RELEASED for a full gap
 // window; a 3 s cooldown after a fired toggle prevents double-fires.
+// Saved ORIGINAL function addresses (read from the GOT slots before the
+// hijack) — the hooks call these directly; no trampolines exist.
+static int (*g_orig_pad_read)(int32_t, void *, int32_t);
+static int (*g_orig_move_read)(int64_t, int64_t, int64_t, int64_t);  // 4-arg tolerant
+static int g_move_form = 0;  // cached call form: 0 unknown, 3 = (h,data,num), 4 = (h,ts,data,out_count)
+
 static uint64_t g_combo_first_us = 0;       // when the current hold started (0 = none)
 static uint64_t g_combo_last_us = 0;        // last poll that saw the combo
 static uint64_t g_toggle_last_fired_us = 0;  // cooldown guard
@@ -1048,17 +1071,20 @@ static int is_mapped_rw_pointer(void *p) {
 }
 
 // scePadRead(handle, OrbisPadData*, num) — SECONDARY path (DS4 L3+R3; kept
-// for any session where the game polls pads). Most recent sample is
-// data[n-1]; the buttons u32 sits at offset 0 of each OrbisPadData
-// (dual-verified). Feeds the shared combo detector.
+// for any session where the game polls pads). Called via the HIJACKED GOT
+// slot: calls the saved original directly (no trampoline). Steady-state cost
+// is a handful of instructions; per-call diagnostics are DEBUG-BUILD ONLY
+// (VERBOSE_LOG) per the v0.8052 release-performanance directive.
 static int pad_read_hook(int32_t handle, void *data, int32_t num) {
-    int n = HOOK_CONTINUE(hook_pad_read, int (*)(int32_t, void*, int32_t), handle, data, num);
-    if (!g_feature_in_game_plugin_toggle) return n;  // flag OFF (belt + braces: hook is not installed)
+    if (!g_orig_pad_read) return -1;
+    int n = g_orig_pad_read(handle, data, num);
+    if (!g_feature_in_game_plugin_toggle) return n;  // flag OFF (hook would not be armed)
 
     g_pad_call_count++;
     if (data && n >= 1) {
         uint32_t buttons = ((uint32_t *)data)[n - 1];
 
+#ifdef VERBOSE_LOG
         if (g_pad_call_count <= PAD_DIAG_N) {
             char dlog[160];
             snprintf(dlog, sizeof(dlog), "[TOGGLE] padRead#%d handle=%d num=%d ret=%d buttons=0x%08x",
@@ -1069,6 +1095,7 @@ static int pad_read_hook(int32_t handle, void *data, int32_t num) {
             snprintf(clog, sizeof(clog), "[TOGGLE] pad poll counter: %d calls", g_pad_call_count);
             log_write(clog);
         }
+#endif
 
         combo_feed(buttons == PAD_COMBO);
     } else {
@@ -1077,31 +1104,42 @@ static int pad_read_hook(int32_t handle, void *data, int32_t num) {
     return n;
 }
 
-// sceMoveReadStateRecent — the PRIMARY hotkey path. Form detected at runtime
-// (see is_mapped_rw_pointer): 4-arg form carries the SceMoveData buffer in
-// RDX (a3), 3-arg form in RSI (a2). All four registers always pass through,
-// so either form is safe. Button check runs on entry 0 — a 2-second hold
-// spans 100+ frames, so every entry in every call shows the same held-state
-// bits regardless of which entry is "most recent". Raw words are logged on
-// the first calls and whenever they change (a button press lights up the
-// log — empirically confirming the +0x18/+0x1A offsets).
+// sceMoveReadStateRecent — the PRIMARY hotkey path, called via the HIJACKED
+// GOT slot (calls the saved original directly; no trampoline). Form detected
+// ONCE and cached (g_move_form) — the steady-state path is a handful of
+// instructions + no syscalls. All raw-word diagnostics are DEBUG-BUILD ONLY
+// (VERBOSE_LOG); release logging is one-time events only (per the v0.8052
+// release-performance directive). A 2-second hold spans 100+ frames, so
+// entry 0 carries the held-state bits regardless of which entry is "most
+// recent".
 static int move_read_hook(int32_t handle, int64_t a2, void *a3, int64_t a4) {
-    int rc = HOOK_CONTINUE(hook_move_read, int (*)(int32_t, int64_t, void*, int64_t),
-                           handle, a2, a3, a4);
+    if (!g_orig_move_read) return -1;
+    int rc = g_orig_move_read(handle, a2, (int64_t)a3, a4);
     if (!g_feature_in_game_plugin_toggle) return rc;
 
     g_move_call_count++;
 
     void *data = NULL;
-    int form = 0;
-    if (is_mapped_rw_pointer(a3) && !is_mapped_rw_pointer((void *)a2)) {
-        data = a3; form = 4;   // (handle, timestamp, data, out_count)
-    } else if (is_mapped_rw_pointer((void *)a2) && !is_mapped_rw_pointer(a3)) {
-        data = (void *)a2; form = 3;   // (handle, data, num)
+    if (g_move_form == 0) {
+        // First calls: detect the call form ONCE via signal-free pointer
+        // validation (a 3-arg call leaves RDX = sample count (an int, fails
+        // RW validation); a 4-arg call leaves RSI = timestamp (fails it)).
+        if (is_mapped_rw_pointer(a3) && !is_mapped_rw_pointer((void *)a2)) {
+            g_move_form = 4;   // (handle, timestamp, data, out_count)
+        } else if (is_mapped_rw_pointer((void *)a2) && !is_mapped_rw_pointer(a3)) {
+            g_move_form = 3;   // (handle, data, num)
+        }
+        if (g_move_form) {
+            char flog[128];
+            snprintf(flog, sizeof(flog), "[TOGGLE] sceMoveReadStateRecent call form detected: %d-arg", g_move_form);
+            log_write(flog);
+        }
     }
+    data = (g_move_form == 4) ? a3 : (g_move_form == 3) ? (void *)a2 : NULL;
 
     if (data) {
         uint32_t *w = (uint32_t *)data;
+#ifdef VERBOSE_LOG
         int changed = 0;
         for (int i = 2; i < 8; i++) {
             if (w[i] != g_move_prev_words[i]) changed = 1;
@@ -1111,12 +1149,15 @@ static int move_read_hook(int32_t handle, int64_t a2, void *a3, int64_t a4) {
             char dlog[288];
             snprintf(dlog, sizeof(dlog),
                      "[TOGGLE] moveRead#%d form=%d handle=%d rc=%d w=[%08x %08x %08x %08x %08x %08x %08x %08x]",
-                     g_move_call_count, form, handle, rc,
+                     g_move_call_count, g_move_form, handle, rc,
                      w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]);
             log_write(dlog);
             if (changed && g_move_call_count > MOVE_DIAG_FIRST_N) g_move_change_logs++;
         }
+#endif
+#ifdef VERBOSE_LOG
         for (int i = 0; i < 8; i++) g_move_prev_words[i] = w[i];
+#endif
 
         uint16_t bd = *(uint16_t *)((char *)data + MOVE_DATA_BUTTON_OFF);
         uint16_t trig = *(uint16_t *)((char *)data + MOVE_DATA_TRIGGER_OFF);
@@ -1130,14 +1171,17 @@ static int move_read_hook(int32_t handle, int64_t a2, void *a3, int64_t a4) {
     return rc;
 }
 
-// Resolve a system-library function via the EBOOT'S GOT (Exp 278d — the
+// Resolve a system-library function via the EBOOT'S GOT (Exp 278d/e — the
 // definitive mechanism). dlsym cannot see kernel-loaded SPRX exports on PS4
 // (v0.8049/v0.8050 hardware-proven: readable names AND NIDs both fail), but
-// the eboot's import slots — filled by the OS module loader at bind time —
-// hold the final resolved addresses. Find eboot.bin by name via the module
-// list, read the slot at base + rva, validate it as mapped readable code via
-// sceKernelQueryMemoryProtection (signal-free), and hand the address to
-// Detour — hooking the LIBRARY function itself catches calls from any module.
+// the eboot's import slots — filled by the OS module loader at bind time
+// (LAZILY for JUMP_SLOTs: not until the game's first call) — hold the final
+// resolved addresses. The plugin finds eboot.bin by name via the module
+// list (it is module[0] from the very first open — log-verified), waits for
+// the slot to hold a canonical pointer outside the eboot's own text (lazy
+// PLT stubs live inside it), then HIJACKS the slot (see
+// try_hijack_got_slot below) — routing every call through the plugin hook
+// with no trampoline and no code patching.
 static uint64_t g_eboot_base = 0;
 
 static uint64_t find_eboot_base(void) {
@@ -1161,103 +1205,127 @@ static uint64_t find_eboot_base(void) {
     return 0;
 }
 
-// Returns the resolved function address from the eboot's GOT slot, or NULL
-// when the slot is not yet usable (retry-friendly: caller re-tries on later
-// opens). Logs the slot value + page protection once resolved.
-static void *resolve_import_by_got(uint64_t got_rva, const char *label) {
+// Hijack a GOT slot (Exp 278e — THE mechanism). Steps: find eboot.bin,
+// read the slot, and WAIT until it holds a canonical pointer OUTSIDE the
+// eboot's own text (lazy JUMP_SLOTs hold a sentinel or the in-eboot PLT
+// resolver stub until the game's first call binds them — hijacking those
+// would break lazy resolution). Once bound: mprotect the slot's page RW,
+// save the original, write our hook's address (atomic 8-byte write — zero
+// races; readers see old-or-new, both valid), restore the page protection.
+// The hook then receives the original call and invokes the saved original
+// directly — NO trampoline, NO code patching (the v0.8051 Detour-trampoline
+// approach corrupted scePadRead's non-relocatable prologue and hung the game
+// at a black screen on the first call).
+static int try_hijack_got_slot(uint64_t got_rva, const char *label, void **out_orig, void *hook) {
     uint64_t base = find_eboot_base();
-    if (!base) return NULL;
+    if (!base) return 0;  // module not visible yet — caller retries
+
     uint64_t slot_addr = base + got_rva;
     uint64_t fn_addr = *(uint64_t *)slot_addr;
-    if (fn_addr < 0x1000000ULL) return NULL;  // below the PS4 module range — unbound
+    if (fn_addr < 0x1000000ULL) return 0;                       // below the module range — unbound
+    if (fn_addr >= base && fn_addr < base + EBOOT_TEXT_SPAN) return 0;  // lazy PLT stub — wait for binding
 
     void *start = NULL, *end = NULL;
     int32_t prot = 0;
     if (sceKernelQueryMemoryProtection((void *)fn_addr, &start, &end, &prot) < 0 || !(prot & 0x1)) {
-        char wlog[192];
-        snprintf(wlog, sizeof(wlog),
-                 "[TOGGLE] %s: GOT 0x%lx holds 0x%lx (unmapped/unreadable — not bound yet?), retrying",
-                 label, slot_addr, fn_addr);
-        log_write(wlog);
-        return NULL;
+        return 0;  // sentinel/unmapped (e.g. 0xeffffffe000001a0) — unbound; caller retries
     }
 
-    char rlog[192];
-    snprintf(rlog, sizeof(rlog), "[TOGGLE] %s: GOT 0x%lx -> 0x%lx (prot=0x%x)",
-             label, slot_addr, fn_addr, prot);
-    log_write(rlog);
-    return (void *)fn_addr;
+    // Query the slot's page, flip it RW, write, restore.
+    void *page_start = NULL, *page_end = NULL;
+    int32_t page_prot = 0;
+    if (sceKernelQueryMemoryProtection((void *)slot_addr, &page_start, &page_end, &page_prot) < 0) {
+        char elog[160];
+        snprintf(elog, sizeof(elog), "[TOGGLE] %s: slot page query failed — giving up", label);
+        log_write(elog);
+        return -1;
+    }
+    if (sceKernelMprotect(page_start, (size_t)((char *)page_end - (char *)page_start), 0x3) < 0) {
+        char elog[192];
+        snprintf(elog, sizeof(elog), "[TOGGLE] %s: mprotect RW failed (page 0x%lx) — giving up, no write attempted",
+                 label, (uint64_t)page_start);
+        log_write(elog);
+        return -1;
+    }
+    *out_orig = (void *)fn_addr;      // save the original BEFORE the write
+    *(uint64_t *)slot_addr = (uint64_t)hook;
+    sceKernelMprotect(page_start, (size_t)((char *)page_end - (char *)page_start), page_prot);
+
+    char ilog[192];
+    snprintf(ilog, sizeof(ilog), "[TOGGLE] %s: GOT slot 0x%lx hijacked (orig=0x%lx) — slot calls now route through the plugin hook",
+             label, slot_addr, fn_addr);
+    log_write(ilog);
+    return 1;
 }
 
-// Lazy installs — GOT resolution + GoldHEN Detour. At module_start only 3
-// modules are visible, but eboot.bin is one of them (log-verified) and its
-// GOT is bound at load, so the first open_hook attempt should resolve.
-// Give-up flags stop the retry loop cleanly (the v0.8049 spam bug).
-static int g_pad_hook_installed = 0;
-static int g_pad_hook_attempts = 0;
-static int g_pad_hook_gave_up = 0;
-static int g_move_hook_installed = 0;
-static int g_move_hook_attempts = 0;
-static int g_move_hook_gave_up = 0;
+// Lazy hijack installs — called from open_hook (eboot.bin is module[0] from
+// the first open). The pad slot binds at open #1 (observed); the move slot
+// binds when VR init first polls the Moves — file opens continue through
+// the menus, so the retry cadence catches it. Give-up flags stop the loops
+// cleanly. Retry-progress logging is DEBUG-BUILD ONLY (VERBOSE_LOG).
+static int g_pad_hijack_done = 0;
+static int g_pad_hijack_attempts = 0;
+static int g_pad_hijack_gave_up = 0;
+static int g_move_hijack_done = 0;
+static int g_move_hijack_attempts = 0;
+static int g_move_hijack_gave_up = 0;
 
 static void try_install_pad_hook(void) {
-    if (g_pad_hook_installed || g_pad_hook_gave_up) return;
+    if (g_pad_hijack_done || g_pad_hijack_gave_up) return;
     if (!g_feature_in_game_plugin_toggle) return;  // NOT gated by the kill switch (one-way-door rule)
 
-    g_pad_hook_attempts++;
-    void *fn = resolve_import_by_got(GOT_RVA_SCE_PAD_READ, "scePadRead");
-    if (!fn) {
-        if (g_pad_hook_attempts <= 3 || g_pad_hook_attempts % 20 == 0) {
-            char alog[128];
-            snprintf(alog, sizeof(alog), "[TOGGLE] scePadRead not resolvable yet (attempt %d, open #%d)",
-                     g_pad_hook_attempts, g_open_count);
-            log_write(alog);
-        }
-        if (g_pad_hook_attempts < 100) return;  // keep retrying
-        g_pad_hook_gave_up = 1;
-        log_write("[TOGGLE] ERROR: scePadRead never resolved — DS4 path unavailable this session (Move path may still work)");
+    g_pad_hijack_attempts++;
+    int rc = try_hijack_got_slot(GOT_RVA_SCE_PAD_READ, "scePadRead",
+                                 (void **)&g_orig_pad_read, (void *)pad_read_hook);
+    if (rc == 1) {
+        g_pad_hijack_done = 1;
         return;
     }
-
-    Detour_Construct(&Detour_hook_pad_read, DetourMode_x64);
-    Detour_DetourFunction(&Detour_hook_pad_read, (uint64_t)fn, (void *)pad_read_hook);
-    g_pad_hook_installed = 1;
-
-    char ilog[160];
-    snprintf(ilog, sizeof(ilog),
-             "[TOGGLE] scePadRead hooked at %p (GOT-resolved) — DS4 L3+R3 secondary path",
-             fn);
-    log_write(ilog);
+    if (rc == -1) {
+        g_pad_hijack_gave_up = 1;  // mprotect/query failed — never crash the game for a hotkey
+        return;
+    }
+#ifdef VERBOSE_LOG
+    if (g_pad_hijack_attempts <= 3 || g_pad_hijack_attempts % 50 == 0) {
+        char alog[128];
+        snprintf(alog, sizeof(alog), "[TOGGLE] scePadRead slot not bound yet (attempt %d, open #%d)",
+                 g_pad_hijack_attempts, g_open_count);
+        log_write(alog);
+    }
+#endif
+    if (g_pad_hijack_attempts >= PAD_HIJACK_MAX_ATTEMPTS) {
+        g_pad_hijack_gave_up = 1;
+        log_write("[TOGGLE] ERROR: scePadRead slot never bound — DS4 path unavailable this session (Move path may still work)");
+    }
 }
 
 static void try_install_move_hook(void) {
-    if (g_move_hook_installed || g_move_hook_gave_up) return;
+    if (g_move_hijack_done || g_move_hijack_gave_up) return;
     if (!g_feature_in_game_plugin_toggle) return;
 
-    g_move_hook_attempts++;
-    void *fn = resolve_import_by_got(GOT_RVA_SCE_MOVE_READ_RECENT, "sceMoveReadStateRecent");
-    if (!fn) {
-        if (g_move_hook_attempts <= 3 || g_move_hook_attempts % 20 == 0) {
-            char alog[128];
-            snprintf(alog, sizeof(alog), "[TOGGLE] sceMoveReadStateRecent not resolvable yet (attempt %d, open #%d)",
-                     g_move_hook_attempts, g_open_count);
-            log_write(alog);
-        }
-        if (g_move_hook_attempts < 100) return;
-        g_move_hook_gave_up = 1;
-        log_write("[TOGGLE] ERROR: sceMoveReadStateRecent never resolved — in-game toggle unavailable this session");
+    g_move_hijack_attempts++;
+    int rc = try_hijack_got_slot(GOT_RVA_SCE_MOVE_READ_RECENT, "sceMoveReadStateRecent",
+                                 (void **)&g_orig_move_read, (void *)move_read_hook);
+    if (rc == 1) {
+        g_move_hijack_done = 1;
         return;
     }
-
-    Detour_Construct(&Detour_hook_move_read, DetourMode_x64);
-    Detour_DetourFunction(&Detour_hook_move_read, (uint64_t)fn, (void *)move_read_hook);
-    g_move_hook_installed = 1;
-
-    char ilog[160];
-    snprintf(ilog, sizeof(ilog),
-             "[TOGGLE] sceMoveReadStateRecent hooked at %p (GOT-resolved) — hold Move button + trigger for 2s to toggle the plugin",
-             fn);
-    log_write(ilog);
+    if (rc == -1) {
+        g_move_hijack_gave_up = 1;
+        return;
+    }
+#ifdef VERBOSE_LOG
+    if (g_move_hijack_attempts <= 3 || g_move_hijack_attempts % 500 == 0) {
+        char alog[128];
+        snprintf(alog, sizeof(alog), "[TOGGLE] sceMoveReadStateRecent slot not bound yet (attempt %d, open #%d)",
+                 g_move_hijack_attempts, g_open_count);
+        log_write(alog);
+    }
+#endif
+    if (g_move_hijack_attempts >= MOVE_HIJACK_MAX_ATTEMPTS) {
+        g_move_hijack_gave_up = 1;
+        log_write("[TOGGLE] ERROR: sceMoveReadStateRecent slot never bound — in-game toggle unavailable this session");
+    }
 }
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────

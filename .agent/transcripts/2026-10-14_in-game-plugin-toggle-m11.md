@@ -189,3 +189,21 @@
 **Verification:** full clean build (105,536 B); suite **890/890**; ruff clean; deployed via --deploy-plugin + strings-verified (v0.8051 + eboot.bin base + GOT logging in the deployed bytes).
 
 **Status:** ✅ v3 deployed. Awaiting the Move-combo test. The next boot log answers EVERYTHING layer by layer: eboot base → GOT slot value + prot → hook installed → first-10-calls raw words → on-change button logging (every button press lights up the log). If the combo still fails, the raw words pinpoint the true bits for a one-line v0.8052 fix.
+
+---
+
+## Cycle 8 — v0.8051 hardware test: BLACK-SCREEN HANG (Exp 278e RCA)
+
+**User:** boot toast appeared, then the game sat at a black screen for several minutes (never reached the VR agreement screen); held the combo during the hang; force-closed. Directive: gate verbose logging behind the debug build; keep release lean/performant.
+
+**Log analysis (archived v0.8051_black_screen_hang.txt, 109 lines):** GOT resolution WORKED (eboot base 0x400000; scePadRead slot bound → hooked at 800439fe0 at open #1) — then ZERO padRead lines and the log died at open #51: **the Detour trampoline over scePadRead's real code corrupted its non-relocatable prologue; the game's first call after install killed the thread → hang.** Plus: the move slot held the lazy-binding sentinel 0xeffffffe000001a0 (index 0x1A0 encoded; file-initial values = in-eboot PLT resolver stubs) — **JUMP_SLOTs bind LAZILY on first call.**
+
+## Cycle 9 — v0.8052: GOT HIJACKING + release-lean logging; debug build deployed
+
+**Design:** overwrite the GOT slot VALUE with the hook address after mprotect RW (atomic aligned 8-byte write — zero races; readers see old-or-new, both valid); the hook calls the SAVED original pointer directly — no trampoline, no code patching, the crash class is structurally gone. Wait for lazy binding (reject unbound values, reject in-eboot PLT-stub values, require mapped-readable; mprotect failure aborts with "no write attempted"). Pad budget 100 opens; move budget 2000 (binds at VR init). **Release-lean (user directive):** all per-call diagnostics behind #ifdef VERBOSE_LOG (DEBUG=1); release = one-time events only; form detection cached (no hot-path syscalls). Verified Il2CppUserAssemblies.prx imports no pad/move functions (282 imports) — eboot slots cover everything.
+
+**Files changed:** src/main.cpp (v0.8052: try_hijack_got_slot + saved-original pointers + plain-function hooks + form cache + VERBOSE gating; HOOK_INIT/Detour removed for these hooks), tests/test_in_game_toggle.py (hijack/trampoline-ban/lazy-wait/verbose-gating/form-cache pins; 28 tests), webapp TOAST_VERSION v0.8052 + VERSION 0.6.10, CHANGELOG-PLUGIN v0.8052, webapp CHANGELOG 0.6.10, KB: ps4-controller-input-from-plugin (hijack mechanism + NEVER-Detour-library-code ban + lazy-binding section — corrects the 278d advice), in-game-plugin-toggle + index (four-iteration history), plan/roadmap/experiment-log 278e.
+
+**Verification:** release build 105,440 B (lean strings only) + debug 105,504 B (full diagnostics); suite **894/894**; ruff clean; deployed the DEBUG variant via `--deploy-plugin --debug-logging` + strings-verified (moveRead raw-word format strings in the deployed bytes).
+
+**Status:** ✅ v4 deployed (debug variant for this test round). After user confirmation: plain `--deploy-plugin` restores the quiet release build. The log will now show every layer: pad hijack (open #1) → move hijack (VR init) → form detected → raw words on every button press (debug) → toggle flip.

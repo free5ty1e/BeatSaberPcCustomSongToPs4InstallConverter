@@ -1,10 +1,10 @@
 # M11 — In-Game Global Plugin Enable/Disable Toggle (L3+R3 Hotkey) — Implementation Plan
 
-**Status:** 🟡 v3 DEPLOYED (Exp 278d) — EBOOT-GOT resolution awaiting hardware re-test; v0.8049 (readable-name dlsym) AND v0.8050 (NID dlsym) both hardware-failed → the GOT mechanism is the definitive answer
+**Status:** 🟡 v4 DEPLOYED as the DEBUG variant (Exp 278e — GOT HIJACKING) awaiting hardware re-test; iteration history: v0.8049 readable-dlsym failed → v0.8050 NID-dlsym failed → v0.8051 GOT-resolution worked but Detouring library code HUNG the game (trampoline over non-relocatable prologue) + lazy binding discovered → v0.8052 hijack the slot value (no trampoline, no crash class)
 **Created:** 2026-10-14 (exploration) → 2026-10-14 (plan, research-locked)
 **Supersedes:** the exploration document of the same feature (renamed; alternatives considered are preserved in §8)
 **Feature flag:** `enable_in_game_plugin_toggle` (new, defaults false when absent)
-**Plugin:** v0.8049 → v0.8050 (both hardware-failed on hook resolution) → **v0.8051** · **Pipeline:** 0.5363 · **Webapp:** 0.6.7 → 0.6.8 → **0.6.9**
+**Plugin:** v0.8049 → v0.8050 → v0.8051 (each superseded) → **v0.8052** · **Pipeline:** 0.5363 · **Webapp:** → **0.6.10**
 **Transcript:** `.agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md`
 
 ---
