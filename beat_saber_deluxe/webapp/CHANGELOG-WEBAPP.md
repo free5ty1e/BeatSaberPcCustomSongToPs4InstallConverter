@@ -6,6 +6,10 @@ subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
 
+## 0.6.7 (2026-10-14)
+### Added
+- **M11: 5th feature flag `enable_in_game_plugin_toggle` surfaced everywhere the app touches flags.** `KNOWN_FLAGS` (adapter), a full `FLAG_DESCRIPTIONS` entry (documents the L3+R3 2-second DS4 hotkey, the restart-to-apply semantics, and that the hotkey deliberately ignores the kill switch so it always works), the toast simulation's `FEATURE_FLAG_KEYS` + `FLAG_ORDER` (toast now reads N/5), `TOAST_VERSION` v0.8049, and the index.html static placeholder (5/5).
+
 ## 0.6.6 (2026-10-13)
 ### Added
 - **Demos link (lower-left, both surfaces).** A small footer link — 🎬 Demos — opens the project's collected demo-video + screenshot gallery (`docs/demos.md` on the MAIN branch: <https://github.com/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/blob/main/docs/demos.md>). Mirrors the version badge's corner-chip styling (rounded on the outer edge, hidden when printing, hover accent); `target="_blank" rel="noopener"`. The main-branch URL is stable across releases and goes live the moment the feature PR merges (404s before that, by design).

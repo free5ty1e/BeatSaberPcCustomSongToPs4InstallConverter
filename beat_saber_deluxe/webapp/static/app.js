@@ -643,18 +643,20 @@ async function loadoutRefresh() {
 
 // ---------------------------------------------------------------- feature flags
 const FLAG_ORDER = ["enable_plugin", "enable_custom_song_replacements",
-                     "enable_song_metadata_modification", "enable_beatmap_mode_mapping"];
+                     "enable_song_metadata_modification", "enable_beatmap_mode_mapping",
+                     "enable_in_game_plugin_toggle"];
 // NOTE: the pipeline's canonical key is the PLURAL enable_custom_song_replacements.
 let flagsDirty = false;
 
 // Simulated PS4 launch toast — mirrors the plugin's exact format
 // (main.cpp module_start): "BS Deluxe vX (ON)\nBy Chris Primeish\n(N/4 features ON)"
 // — or "(OFF) … (official songs only)" when the kill switch is off.
-const TOAST_VERSION = "v0.8048";
+const TOAST_VERSION = "v0.8049";
 const FEATURE_FLAG_KEYS = ["enable_custom_song_replacements",
                            "enable_song_metadata_modification",
                            "enable_beatmap_mode_mapping",
-                           "enable_song_previews"];
+                           "enable_song_previews",
+                           "enable_in_game_plugin_toggle"];
 
 function updateToastSim() {
   const checks = $("flags-list").querySelectorAll("input[type=checkbox]");

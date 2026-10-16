@@ -1015,9 +1015,17 @@ class TestSongPreviewsFlagGating:
         import full_custom_song_pipeline as fp
         assert fp.DEFAULT_FEATURES.get("enable_song_previews") is False
 
-    def test_toast_counts_four_flags(self):
+    def test_toast_counts_five_flags(self):
         main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")
         with open(main_cpp) as f:
             code = f.read()
-        assert "(%d/4 features ON)" in code
-        assert "g_feature_song_previews" in code.split("enabled_count =")[1].split("memset")[0]
+        assert "(%d/5 features ON)" in code
+        # every feature flag participates in the enabled_count sum (M11 added
+        # the 5th: enable_in_game_plugin_toggle)
+        tail = code.split("enabled_count =")[1].split("memset")[0]
+        for flag in ("g_feature_custom_song_replacements",
+                     "g_feature_song_metadata_modification",
+                     "g_feature_beatmap_mode_mapping",
+                     "g_feature_song_previews",
+                     "g_feature_in_game_plugin_toggle"):
+            assert flag in tail, f"{flag} missing from the toast enabled_count"

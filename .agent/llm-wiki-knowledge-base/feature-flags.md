@@ -19,7 +19,8 @@ Since v0.5334, `features.json` holds the runtime flags the plugin reads at start
   "enable_custom_song_replacements": true,
   "enable_song_metadata_modification": true,
   "enable_beatmap_mode_mapping": true,
-  "enable_song_previews": true
+  "enable_song_previews": true,
+  "enable_in_game_plugin_toggle": false
 }
 ```
 
@@ -35,6 +36,7 @@ Since v0.5334, `features.json` holds the runtime flags the plugin reads at start
 | `enable_song_metadata_modification` | `false` | Gates song name/artist metadata replacement (MoveNext hook + `song_metadata.json` + TMP_Text replacement). ON in production. |
 | `enable_beatmap_mode_mapping` | `false` | **Really gates since plugin v0.8046** (was decorative v0.5334–v0.8045): when OFF, the open-hook redirect loop skips `pack_assets` bundle redirects AND the `catalog` redirect — the game loads STOCK pack bundles, so every song shows only Standard mode; per-song custom bundles still redirect (custom audio + Standard beatmaps keep working). The catalog must be skipped with the packs: the patched catalog's m_Crc/m_BundleSize describe the PATCHED bundles, and serving it against stock bundles fails Unity's CRC check and crashes the pack scan ([[addressables-catalog-crc-validation]]). When ON, patched packs show all 4 mode sets. |
 | `enable_song_previews` | `false` | **M10 (plugin v0.8048 / pipeline v0.5357):** gates the custom-song SONG PREVIEWS ([[song-previews]]) — highlighting a custom song in the menu plays its own ~10s audio instead of the stock clip. The preview AudioClips ride INSIDE the patched pack bundles, so this flag shares the mode-mapping gate: the patched pack+catalog pair is served when EITHER flag is ON (both OFF → stock bundles + origin catalog). The pipeline derives the bundle VARIANT (modes+previews vs modes-only) from the flag state at deploy time — redirects carry the variant filename as their VALUE. |
+| `enable_in_game_plugin_toggle` | `false` | **M11 (plugin v0.8049 / pipeline v0.5363):** arms the **L3+R3 2-second DS4 hotkey** that flips `enable_plugin` inside features.json ([[in-game-plugin-toggle]] / [[ps4-controller-input-from-plugin]]). Persist-only: the flip applies at the NEXT boot (notification says "restart game to apply"); the current session never changes mid-game. **Deliberately NOT gated by the kill switch** — the hotkey must keep working when the plugin is toggled OFF, or a user could never re-enable without a PC (one-way-door prevention). Only this flag disables the hotkey. |
 
 ## Startup Notification (plugin v0.8045+)
 

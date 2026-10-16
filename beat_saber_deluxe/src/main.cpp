@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8048"
+#define PLUGIN_VERSION "v0.8049"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -51,6 +51,7 @@ static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
 static int g_feature_beatmap_mode_mapping = 0;
 static int g_feature_song_previews = 0;
+static int g_feature_in_game_plugin_toggle = 0;  // M11: L3+R3 hotkey (gates ONLY this feature)
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -63,6 +64,7 @@ static int METADATA_ARTIST_COUNT = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
+static void try_install_pad_hook(void);  // M11 in-game toggle (defined after the hooks)
 
 static void load_features(void) {
     int fd = open(FEATURES_PATH, O_RDONLY, 0);
@@ -112,12 +114,14 @@ static void load_features(void) {
             g_feature_beatmap_mode_mapping = val;
         } else if (strcmp(key, "enable_song_previews") == 0) {
             g_feature_song_previews = val;
+        } else if (strcmp(key, "enable_in_game_plugin_toggle") == 0) {
+            g_feature_in_game_plugin_toggle = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d",
-             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews);
+    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d in_game_plugin_toggle=%d",
+             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews, g_feature_in_game_plugin_toggle);
     log_write(logmsg);
     if (!g_feature_plugin_enabled) {
         log_write("DISABLED: enable_plugin is false — ALL plugin behavior off (stock game)");
@@ -356,6 +360,10 @@ static int open_hook(const char *path, int flags, ...) {
     // Deferred TMP_Text hook — install once after game modules are loaded
     try_install_tmp_hook();
 
+    // Deferred pad hook (M11): libScePad loads with the game (the eboot
+    // imports it), so the first open-hook attempts resolve scePadRead.
+    try_install_pad_hook();
+
     const char *np = NULL;
     if (path) {
         char lower_path[MAX_PATH];
@@ -441,6 +449,7 @@ static int close_hook(int fd) {
 HOOK_INIT(hook_tmp_text_set_text);
 HOOK_INIT(hook_tmp_text_set_text2);
 HOOK_INIT(hook_move_next);
+HOOK_INIT(hook_pad_read);
 static int g_tmp_text_set_text_count = 0;
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)
@@ -816,6 +825,208 @@ static void move_next_hook(void* state_machine) {
     HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);
 }
 
+// ── In-game plugin toggle (M11): L3+R3 hotkey via scePadRead hook ───────────
+// The game (Unity's PS4 input backend) polls connected controllers every
+// frame through native scePadRead(handle, OrbisPadData*, num) — verified in
+// the eboot's imports (Exp 278; scePadReadState is NOT imported; Move
+// controllers are read via the separate libSceMove, so pad polls carry
+// DS4-class pads only and can never carry Move data — a Move physically
+// cannot set the L3/R3 bits).
+//
+// Hotkey: hold L3 + R3 (buttons == 0x0006 EXACTLY — clean combo, no other
+// digital bit, the anti-accidental-trigger guard) for 2 full seconds →
+// flip "enable_plugin" inside features.json IN PLACE (surgical byte edit
+// preserving every other key), send a notification, log it. Persist-only:
+// the CURRENT session's behavior NEVER changes — boot-time feature flags
+// govern runtime, as always; the flip applies at the NEXT boot (user-
+// approved "restart to apply" design — eliminates every mixed-state
+// hazard: already-loaded pack bundles/mode buttons can never desync from
+// per-song bundles mid-session).
+//
+// GATED BY enable_in_game_plugin_toggle ONLY — deliberately NOT by the
+// enable_plugin kill switch: if the hotkey died with the kill switch, a
+// user who toggled OFF could never re-enable without a PC (one-way door).
+// The kill switch disables game-behavior features (redirects, metadata,
+// modes, previews), not the plugin's own control surface.
+#define PAD_BUTTON_L3 0x0002u   // verified: OpenOrbis orbis/_types/pad.h + shadPS4Plus
+#define PAD_BUTTON_R3 0x0004u
+#define PAD_TOGGLE_COMBO (PAD_BUTTON_L3 | PAD_BUTTON_R3)  // 0x0006 — exactly these two
+#define PAD_TOGGLE_HOLD_US 2000000ULL                     // 2 s (sceKernelGetProcessTime is µs)
+#define PAD_TOGGLE_DIAG_N 8                               // log the first N scePadRead calls
+
+static uint64_t g_toggle_hold_started_us = 0;  // 0 = combo not currently held
+static int g_toggle_latched = 0;                // require combo RELEASE before the next toggle
+static int g_pad_call_count = 0;                // total scePadRead calls seen (diagnostics/liveness)
+
+// Flip "enable_plugin" inside features.json in place, preserving every other
+// key/byte (the pipeline's Exp-248 pull-before-push reads the LIVE file, so
+// in-game flips flow into webapp/ps4_state/pipeline deploys automatically).
+// Returns the NEW state (1=enabled, 0=disabled), or -1 on failure.
+static int in_game_toggle_plugin(void) {
+    char buf[4096];
+    int fd = sceKernelOpen(FEATURES_PATH, O_RDONLY, 0);
+    if (fd < 0) {
+        log_write("[TOGGLE] ERROR: cannot open features.json — toggle aborted");
+        return -1;
+    }
+    ssize_t got = sceKernelRead(fd, buf, sizeof(buf) - 1);
+    sceKernelClose(fd);
+    if (got <= 0 || got >= (ssize_t)sizeof(buf) - 1) {
+        log_write("[TOGGLE] ERROR: features.json unreadable — toggle aborted");
+        return -1;
+    }
+    buf[got] = '\0';
+
+    int new_state = -1;
+    char *p = strstr(buf, "\"enable_plugin\"");
+    if (p) {
+        p = strchr(p + 15, ':');  // 15 == strlen("\"enable_plugin\""); land after the key
+        if (p) {
+            p++;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+            if (*p == 't') {
+                // "true" -> "false": grow by one byte
+                memmove(p + 1, p, strlen(p) + 1);
+                memcpy(p, "false", 5);
+                got += 1;
+                new_state = 0;
+            } else if (*p == 'f') {
+                // "false" -> "true": shrink by one byte
+                memcpy(p, "true", 4);
+                memmove(p + 4, p + 5, strlen(p + 5) + 1);
+                got -= 1;
+                new_state = 1;
+            }
+        }
+    } else {
+        // Key absent (hand-edited file): absent defaults ON, so the flip is
+        // OFF — rewrite the file with all known keys from the boot parse.
+        // (The pipeline always materializes enable_plugin, so this is rare;
+        // any unknown keys are lost here but re-materialized by the next
+        // pipeline deploy per the Exp 221 merge rule.)
+        new_state = 0;
+        got = snprintf(buf, sizeof(buf),
+                       "{\n"
+                       "  \"enable_plugin\": false,\n"
+                       "  \"enable_custom_song_replacements\": %s,\n"
+                       "  \"enable_song_metadata_modification\": %s,\n"
+                       "  \"enable_beatmap_mode_mapping\": %s,\n"
+                       "  \"enable_song_previews\": %s\n"
+                       "}\n",
+                       g_feature_custom_song_replacements ? "true" : "false",
+                       g_feature_song_metadata_modification ? "true" : "false",
+                       g_feature_beatmap_mode_mapping ? "true" : "false",
+                       g_feature_song_previews ? "true" : "false");
+    }
+
+    if (new_state < 0) {
+        log_write("[TOGGLE] ERROR: could not locate the enable_plugin value — toggle aborted");
+        return -1;
+    }
+
+    fd = sceKernelOpen(FEATURES_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        log_write("[TOGGLE] ERROR: cannot write features.json — toggle aborted");
+        return -1;
+    }
+    sceKernelFchmod(fd, 0644);
+    sceKernelWrite(fd, buf, got);
+    sceKernelClose(fd);
+
+    {
+        char tlog[192];
+        snprintf(tlog, sizeof(tlog),
+                 "[TOGGLE] enable_plugin flipped to %s in features.json (persist-only; restart to apply)",
+                 new_state ? "true (ON)" : "false (OFF)");
+        log_write(tlog);
+    }
+    {
+        OrbisNotificationRequest notif;
+        memset(&notif, 0, sizeof(notif));
+        notif.type = (OrbisNotificationRequestType)0;
+        notif.targetId = -1;
+        snprintf(notif.message, sizeof(notif.message),
+                 "BS Deluxe: Plugin %s\nRestart game to apply",
+                 new_state ? "ENABLED" : "DISABLED");
+        sceKernelSendNotificationRequest(0, &notif, sizeof(notif), 0);
+    }
+    return new_state;
+}
+
+// scePadRead(handle, OrbisPadData*, num) — most recent sample is data[n-1];
+// the buttons u32 sits at offset 0 of each OrbisPadData (dual-verified).
+static int pad_read_hook(int32_t handle, void *data, int32_t num) {
+    int n = HOOK_CONTINUE(hook_pad_read, int (*)(int32_t, void*, int32_t), handle, data, num);
+    if (!g_feature_in_game_plugin_toggle) return n;  // flag OFF (belt + braces: hook is not installed)
+
+    g_pad_call_count++;
+    if (data && n >= 1) {
+        uint32_t buttons = ((uint32_t *)data)[n - 1];
+
+        if (g_pad_call_count <= PAD_TOGGLE_DIAG_N) {
+            char dlog[160];
+            snprintf(dlog, sizeof(dlog), "[TOGGLE] padRead#%d handle=%d num=%d ret=%d buttons=0x%08x",
+                     g_pad_call_count, handle, num, n, buttons);
+            log_write(dlog);
+        } else if (g_pad_call_count % 10000 == 0) {
+            char clog[96];
+            snprintf(clog, sizeof(clog), "[TOGGLE] pad poll counter: %d calls", g_pad_call_count);
+            log_write(clog);
+        }
+
+        if (buttons == PAD_TOGGLE_COMBO) {
+            uint64_t now = sceKernelGetProcessTime();
+            if (g_toggle_hold_started_us == 0) {
+                g_toggle_hold_started_us = now ? now : 1;
+            } else if (!g_toggle_latched &&
+                       (now - g_toggle_hold_started_us) >= PAD_TOGGLE_HOLD_US) {
+                g_toggle_latched = 1;  // require combo release before the next toggle
+                in_game_toggle_plugin();
+            }
+        } else {
+            g_toggle_hold_started_us = 0;
+            g_toggle_latched = 0;
+        }
+    }
+    return n;
+}
+
+// Lazy install: dlsym(RTLD_DEFAULT, "scePadRead") + GoldHEN Detour — the exact
+// pattern proven for il2cpp_string_new in this codebase. At module_start only
+// 3 modules are visible; libScePad loads with the game (the eboot imports
+// it), so the first open_hook attempts resolve it.
+static int g_pad_hook_installed = 0;
+static int g_pad_hook_attempts = 0;
+
+static void try_install_pad_hook(void) {
+    if (g_pad_hook_installed) return;
+    if (!g_feature_in_game_plugin_toggle) return;  // NOT gated by the kill switch (one-way-door rule)
+
+    g_pad_hook_attempts++;
+    void *fn = dlsym(RTLD_DEFAULT, "scePadRead");
+    if (!fn) {
+        if (g_pad_hook_attempts <= 3 || g_pad_hook_attempts % 20 == 0) {
+            char alog[128];
+            snprintf(alog, sizeof(alog), "[TOGGLE] scePadRead not found yet (attempt %d, open #%d)",
+                     g_pad_hook_attempts, g_open_count);
+            log_write(alog);
+        }
+        if (g_pad_hook_attempts < 100) return;  // keep retrying
+        log_write("[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session");
+        return;
+    }
+
+    Detour_Construct(&Detour_hook_pad_read, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_pad_read, (uint64_t)fn, (void *)pad_read_hook);
+    g_pad_hook_installed = 1;
+
+    char ilog[160];
+    snprintf(ilog, sizeof(ilog),
+             "[TOGGLE] scePadRead hooked at %p — hold L3+R3 for 2s on a DS4 to toggle the plugin",
+             fn);
+    log_write(ilog);
+}
+
 // ── IL2CPP module base ──────────────────────────────────────────────────────
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[256];
@@ -924,12 +1135,18 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: plugin=%s  custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s",
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: plugin=%s  custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s  song_previews=%s  in_game_plugin_toggle=%s",
                  g_feature_plugin_enabled ? "ON" : "OFF",
                  g_feature_custom_song_replacements ? "ON" : "OFF",
                  g_feature_song_metadata_modification ? "ON" : "OFF",
-                 g_feature_beatmap_mode_mapping ? "ON" : "OFF");
+                 g_feature_beatmap_mode_mapping ? "ON" : "OFF",
+                 g_feature_song_previews ? "ON" : "OFF",
+                 g_feature_in_game_plugin_toggle ? "ON" : "OFF");
         log_write(flog);
+    }
+
+    if (g_feature_in_game_plugin_toggle) {
+        log_write("[TOGGLE] in-game hotkey ARMED: hold L3+R3 for 2s on a DS4 to flip enable_plugin (restart to apply)");
     }
 
     if (!g_feature_custom_song_replacements) {
@@ -965,11 +1182,12 @@ extern "C" int module_start(size_t argc, const void *args) {
         int enabled_count = g_feature_custom_song_replacements
                           + g_feature_song_metadata_modification
                           + g_feature_beatmap_mode_mapping
-                          + g_feature_song_previews;
+                          + g_feature_song_previews
+                          + g_feature_in_game_plugin_toggle;
         memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
         if (g_feature_plugin_enabled) {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/4 features ON)",
+                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/5 features ON)",
                      PLUGIN_VERSION, enabled_count);
         } else {
             snprintf(notif.message,sizeof(notif.message),

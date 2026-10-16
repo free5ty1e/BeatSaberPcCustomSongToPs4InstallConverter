@@ -4255,6 +4255,11 @@ DEFAULT_FEATURES = {
     "enable_song_metadata_modification": True,
     "enable_beatmap_mode_mapping": True,
     "enable_song_previews": False,
+    # M11 (Exp 278): L3+R3 2s hotkey flips enable_plugin inside features.json
+    # in place (persist-only; restart to apply). The plugin's apply_feature_flags
+    # pull-before-push (Exp 248) reads the LIVE file, so in-game flips flow into
+    # webapp/ps4_state/pipeline deploys automatically — zero other pipeline changes.
+    "enable_in_game_plugin_toggle": False,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
