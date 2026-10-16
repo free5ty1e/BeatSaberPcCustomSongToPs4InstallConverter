@@ -171,3 +171,21 @@
 **Files changed (this cycle):** src/main.cpp (v0.8050 redesign), tests/test_in_game_toggle.py (rewritten), webapp/server.py + static/app.js + VERSION 0.6.8, CHANGELOG-PLUGIN v0.8050, webapp CHANGELOG 0.6.8, plan doc (§2.1 v2 + §3.5 hardware answers + Phase-4 test plan), roadmap M11 (278b/278c), experiment log (278b/278c entries), KB: ps4-controller-input-from-plugin (THE NID RULE + Move path section + signature-ambiguity technique), in-game-plugin-toggle (design history + new combo), feature-flags + index rows, both READMEs, project_summary + context.yml.
 
 **Status:** ✅ v2 deployed. Awaiting the user's Move-combo test: boot → toast 5/5 → hold Move button+trigger 2 s → DISABLED notification → restart → stock → combo again from OFF (one-way-door proof) → restart → customs. The moveRead change-diagnostics will empirically confirm the bit layout (or pinpoint the true bits for a one-line v0.8051 fix).
+
+---
+
+## Cycle 6 — v0.8050 hardware test FAILED AGAIN (Exp 278d analysis): NID dlsym also dead
+
+**User:** held the trigger + large thumb button (Move button) 2-5 s at the song list, then again from a fresh boot, then restarted to check — no notification, no change; customs still working. "I feel like we're close."
+
+**Log analysis (archived v0.8050_move_combo_test_failure.txt, 2,309 lines / 2 sessions; cleared):** BOTH hooks failed to install — `sceMoveReadStateRecent not found yet` × 100 → "never found"; same for scePadRead. **NID dlsym ALSO finds nothing** → dlsym(RTLD_DEFAULT) cannot see kernel-loaded Sony SPRX exports AT ALL (the il2cpp_string_new precedent only worked because that symbol is exported by a GAME module). Module-name diagnostics confirmed: eboot.bin = module[0] from the first open; Il2CppUserAssemblies.prx = separate module (game code) at 0x806c0000.
+
+## Cycle 7 — v0.8051: the EBOOT-GOT resolution (the definitive mechanism) + deployed
+
+**Design:** the eboot's JMPREL relocations name the GOT slots that hold the loader-bound FINAL addresses. Computed from the dump's dynlib data (the one gotcha: JMPREL symbol names carry the `#lib#mod` suffix — the bare-NID match needed a strip): **sceMoveReadStateRecent → GOT RVA 0x1c634e8, scePadRead → 0x1c63500** (both in the RELRO segment, type R_X86_64_JUMP_SLOT). Runtime: find eboot.bin by name (sceKernelGetModuleList) → read *(u64*)(base+rva) → validate mapped+readable (sceKernelQueryMemoryProtection) → Detour the resolved address (hooks the library function itself — catches any caller). Removed the dead dlsym calls.
+
+**Files changed:** src/main.cpp (v0.8051: find_eboot_base + resolve_import_by_got + GOT RVAs; installers re-wired; combo/detector/diagnostics unchanged), tests/test_in_game_toggle.py (GOT pins replace NID pins: RVAs, eboot-name lookup, pointer validation, dlsym-absence; _def_body helper gained void */uint64_t signatures), webapp static/app.js TOAST_VERSION v0.8051 + VERSION 0.6.9, CHANGELOG-PLUGIN v0.8051, webapp CHANGELOG 0.6.9, KB: ps4-controller-input-from-plugin (the GOT mechanism now heads the hooking section — supersedes the hardware-disproven NID-dlsym advice), in-game-plugin-toggle (v0.8051 design history), index, plan/roadmap/experiment-log 278d.
+
+**Verification:** full clean build (105,536 B); suite **890/890**; ruff clean; deployed via --deploy-plugin + strings-verified (v0.8051 + eboot.bin base + GOT logging in the deployed bytes).
+
+**Status:** ✅ v3 deployed. Awaiting the Move-combo test. The next boot log answers EVERYTHING layer by layer: eboot base → GOT slot value + prot → hook installed → first-10-calls raw words → on-change button logging (every button press lights up the log). If the combo still fails, the raw words pinpoint the true bits for a one-line v0.8052 fix.

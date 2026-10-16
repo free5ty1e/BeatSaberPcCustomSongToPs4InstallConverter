@@ -36,6 +36,15 @@ enable_in_game_plugin_toggle=true`).
   `PSVRDeviceManager.PSMoveButton` enum (trigger=0x2, Move=0x4);
   runtime-safe signature detection via sceKernelQueryMemoryProtection; raw
   word diagnostics so the first boot log confirms the offsets empirically.
+  Hardware result: STILL never fired — **NID dlsym also resolves nothing**
+  (dlsym cannot see kernel-loaded SPRX exports at all).
+- **v0.8051 (Exp 278d):** the definitive resolution — **the EBOOT'S GOT
+  slots** (r_offset from the eboot's JMPREL relocations, precomputed from
+  the decrypted dump: sceMoveReadStateRecent → RVA 0x1c634e8, scePadRead →
+  0x1c63500) hold the loader-bound final addresses; the plugin finds
+  eboot.bin by name via the module list, reads the slot, validates with
+  sceKernelQueryMemoryProtection, Detours the resolved address. See
+  [[ps4-controller-input-from-plugin]].
 
 ## The three deliberate design rules
 

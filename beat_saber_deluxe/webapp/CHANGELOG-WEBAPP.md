@@ -6,6 +6,10 @@ subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
 
+## 0.6.9 (2026-10-16)
+### Changed
+- `TOAST_VERSION` bumped to v0.8051 (GOT-resolution build; UI otherwise unchanged).
+
 ## 0.6.8 (2026-10-15)
 ### Changed
 - **M11 hotkey description updated for the v0.8050 redesign** (Exp 278c): the hotkey is now **Move button + trigger held together for 2 seconds** (the user-verified reality: the DS4 is ignored by Beat Saber in VR mode; the new combo is used nowhere else in the game). `TOAST_VERSION` bumped to v0.8050.

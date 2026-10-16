@@ -4,6 +4,12 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8051] — 2026-10-16
+### Fixed — v0.8050 hardware failure RCA (Exp 278d): the definitive hook-resolution mechanism
+- **NID dlsym ALSO finds nothing** (the v0.8050 log: 100 failed attempts for BOTH `q1cHNfGycLI` and the readable name) — `dlsym(RTLD_DEFAULT)` cannot see kernel-loaded Sony SPRX exports AT ALL on PS4; it only ever resolved `il2cpp_string_new` because that symbol is exported by a game module (Il2CppUserAssemblies.prx / eboot).
+- **THE FIX: resolve system-library functions via the EBOOT'S GOT.** The eboot's import slots (vaddrs taken from its JMPREL relocations, type R_X86_64_JUMP_SLOT — precomputed from the decrypted dump: `sceMoveReadStateRecent` → GOT RVA 0x1c634e8, `scePadRead` → 0x1c63500) hold the final resolved function addresses, written by the OS module loader at bind time. The plugin finds `eboot.bin` by name via `sceKernelGetModuleList` (it is module[0] from the very first open — log-verified), reads `*(uint64_t*)(base + rva)`, validates the value as mapped readable code via `sceKernelQueryMemoryProtection`, and Detours the resolved address — hooking the LIBRARY function itself, which catches calls from any module.
+- Removed the (hardware-proven dead) dlsym calls for system libraries; all retry/give-up/latch/combo/diagnostic machinery unchanged.
+
 ## [v0.8050] — 2026-10-15
 ### Fixed — v0.8049 hardware failure RCA (Exp 278b/278c)
 - **ROOT CAUSE of the L3+R3 hotkey never firing: `dlsym(RTLD_DEFAULT, "scePadRead")` FAILED** — the boot log showed 100 failed attempts then "ERROR: scePadRead never found". **Sony system libraries export functions under their NIDs, not readable names** (the game imports scePadRead as NID `q1cHNfGycLI`); readable-name dlsym only ever worked in this codebase for eboot-exported symbols like `il2cpp_string_new`. All hooks now resolve **BY NID first** (readable name kept as fallback): scePadRead = `q1cHNfGycLI`, sceMoveReadStateRecent = `f2bcpK6kJfg` (both NIDs verified from the game's own import table via the Exp-278 eboot NID decode).

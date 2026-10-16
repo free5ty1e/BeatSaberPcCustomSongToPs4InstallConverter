@@ -46,35 +46,51 @@ TRIANGLE=0x1000  CIRCLE=0x2000  CROSS=0x4000  SQUARE=0x8000  TOUCH_PAD click=0x1
 ⚠️ These differ from some PS3-era conventions — verify from the headers, don't trust
 memory. A plugin reading the hook's output only needs `((uint32_t*)data)[n-1]`.
 
-## Hooking pattern (proven in this project — with the Exp 278b lesson)
+## Hooking pattern — THE EBOOT-GOT MECHANISM (Exp 278d; the definitive answer)
+
+⚠️⚠️ **dlsym(RTLD_DEFAULT, ...) CANNOT resolve Sony system-library functions
+AT ALL on PS4.** Two hardware iterations proved it (Exp 278b: readable names
+fail — "scePadRead" finds nothing; Exp 278c: NIDs ALSO fail —
+`dlsym(RTLD_DEFAULT, "q1cHNfGycLI")` finds nothing either). Kernel-loaded
+SPRX exports are simply not in dlsym's global scope. The ONLY dlsym hits in
+this codebase have been symbols exported by GAME modules (`il2cpp_string_new`
+in the eboot/Il2CppUserAssemblies.prx).
+
+**The mechanism that works: read the EBOOT'S GOT slots.** The eboot's import
+table is bound by the OS module loader at load time — each JMPREL relocation
+(`Elf64_Rela`, type R_X86_64_JUMP_SLOT=7) names a GOT slot (r_offset vaddr)
+that ends up holding the FINAL resolved address of the imported function:
 
 ```c
-void *fn = dlsym(RTLD_DEFAULT, "q1cHNfGycLI");   // ← resolve BY NID
-if (!fn) fn = dlsym(RTLD_DEFAULT, "scePadRead"); // readable-name fallback only
-Detour_Construct(&Detour_hook_pad_read, DetourMode_x64);
-Detour_DetourFunction(&Detour_hook_pad_read, (uint64_t)fn, (void *)pad_read_hook);
+// rva precomputed from the decrypted dump's JMPREL (see methodology below):
+#define GOT_RVA_SCE_MOVE_READ_RECENT 0x1c634e8   // sceMoveReadStateRecent
+#define GOT_RVA_SCE_PAD_READ         0x1c63500   // scePadRead
+
+uint64_t base = find_module_base_by_name("eboot.bin");   // sceKernelGetModuleList
+uint64_t fn   = *(uint64_t *)(base + GOT_RVA_SCE_MOVE_READ_RECENT);
+// validate via sceKernelQueryMemoryProtection (mapped + readable), then:
+Detour_Construct(&Detour_hook, DetourMode_x64);
+Detour_DetourFunction(&Detour_hook, fn, (void *)my_hook);
 ```
 
-⚠️ **THE NID RESOLUTION RULE (Exp 278b root cause):** Sony system libraries
-(libScePad, libSceMove, …) export functions **under their NIDs, NOT readable
-names**. `dlsym(RTLD_DEFAULT, "scePadRead")` finds NOTHING — the game imports
-it as NID `q1cHNfGycLI`. Readable-name dlsym only works for symbols the
-GAME'S OWN EBOOT exports by name (e.g. `il2cpp_string_new`). **Always resolve
-system-library functions by NID** (verified from the game's import table via
-the methodology below, or a NID DB like shadPS4's aerolib.inl):
+- **eboot.bin is module[0] from the very first `open_hook` attempt**
+  (log-verified; at module_start only 3 modules are visible: eboot.bin,
+  libSceFios2.prx, libc.prx) — no waiting for game modules.
+- **Detour the RESOLVED ADDRESS (the library function itself)** — catches
+  calls from every module, and the trampoline keeps the original callable.
+- The NID table is still needed to FIND the right GOT slot: the JMPREL walk
+  matches each slot to the import's dynsym name (the NID + `#lib#mod`
+  suffix):
 
-| Function | NID |
-|---|---|
-| `scePadRead` | `q1cHNfGycLI` |
-| `scePadReadState` | `YndgXqQVV7c` |
-| `sceMoveReadStateRecent` | `f2bcpK6kJfg` |
+| Function | NID | GOT slot vaddr (Beat Saber 2.04 eboot) |
+|---|---|---|
+| `scePadRead` | `q1cHNfGycLI` | 0x1c63500 |
+| `scePadReadState` | `YndgXqQVV7c` | (not imported) |
+| `sceMoveReadStateRecent` | `f2bcpK6kJfg` | 0x1c634e8 |
 
-- `dlsym(RTLD_DEFAULT, ...)` is the proven pattern (proven for
-  [[plugin-architecture]] — il2cpp_string_new). At `module_start` only 3
-  modules are visible — install LAZILY from `open_hook()` with retries
-  (system libs are loaded before the game's first file open because the
-  eboot imports them). Set a **gave-up flag** when retries exhaust (don't
-  re-log the error on every open — the v0.8049 spam bug).
+- Set a **gave-up flag** when retries exhaust (don't re-log the error on
+  every open — the v0.8049 spam bug). Install LAZILY from `open_hook()`
+  with retries.
 - Hook body: call the original first (`HOOK_CONTINUE`), then inspect the
   output. `n <= 0` = no fresh sample — skip, don't reset hold state.
 - Time source for hold durations: `uint64_t sceKernelGetProcessTime(void)` —

@@ -28,7 +28,8 @@ def _def_body(code, name, span=2000):
     """Find a function DEFINITION (not a forward declaration) and return its
     first `span` chars. Definitions have a '{' before the next ';'."""
     for variant in (f"static void* {name}(", f"static void {name}(",
-                    f"static int {name}("):
+                    f"static int {name}(", f"static void *{name}(",
+                    f"static uint64_t {name}("):
         idx = 0
         while True:
             idx = code.find(variant, idx)
@@ -84,26 +85,41 @@ class TestInGameToggleFlagGating:
 
 
 class TestInGameToggleResearchedFacts:
-    """Pins the Exp-278/278c research: NID hook resolution (the v0.8049
-    hardware failure's root cause), hook targets, Move button bits, timing.
+    """Pins the Exp-278/278c/278d research: GOT-slot hook resolution (the
+    definitive mechanism after TWO hardware failures), hook targets, Move
+    button bits, timing.
 
-    v0.8049 hardware result (Exp 278b): dlsym(RTLD_DEFAULT, "scePadRead")
-    FAILED — Sony system libraries export functions under NIDs, not readable
-    names. Resolution is now BY NID: scePadRead = q1cHNfGycLI,
-    sceMoveReadStateRecent = f2bcpK6kJfg (both verified from the game's own
-    import table + the aerolib NID DB).
+    v0.8049 hardware result (Exp 278b): readable-name dlsym fails — Sony
+    system libraries export NIDs. v0.8050 hardware result (Exp 278c): NID
+    dlsym ALSO fails — dlsym(RTLD_DEFAULT) cannot see kernel-loaded SPRX
+    exports AT ALL (only eboot-exported symbols like il2cpp_string_new
+    resolve). v0.8051 (Exp 278d): the eboot's GOT slots — filled by the OS
+    module loader at bind time — hold the final function addresses; the
+    plugin reads them at base + rva (rva precomputed from the decrypted
+    dump's JMPREL relocations) and Detours the resolved address.
     """
 
-    def test_hooks_resolved_by_nid(self):
-        """THE v0.8050 ROOT-CAUSE FIX: NID-first dlsym with readable fallback."""
+    def test_hooks_resolved_via_eboot_got(self):
+        """THE v0.8051 resolution mechanism: GOT slot read (r_offset from the
+        eboot's JMPREL, computed via the ps4_elf_imports.py methodology) —
+        no dlsym for system libraries at all."""
         code = _code()
-        assert '#define NID_PAD_READ "q1cHNfGycLI"' in code
-        assert '#define NID_MOVE_READ_RECENT "f2bcpK6kJfg"' in code
-        # NID first, readable name only as fallback
-        assert 'dlsym(RTLD_DEFAULT, NID_PAD_READ)' in code
-        assert 'dlsym(RTLD_DEFAULT, NID_MOVE_READ_RECENT)' in code
-        assert 'dlsym(RTLD_DEFAULT, "scePadRead")' in code  # fallback path
-        assert 'dlsym(RTLD_DEFAULT, "scePadReadState")' not in code
+        assert "#define GOT_RVA_SCE_MOVE_READ_RECENT 0x1c634e8" in code
+        assert "#define GOT_RVA_SCE_PAD_READ         0x1c63500" in code
+        assert "resolve_import_by_got" in code
+        assert 'strcmp(info.name, "eboot.bin")' in code
+        # dlsym must NOT be used for system-library functions anymore
+        assert 'dlsym(RTLD_DEFAULT, "scePadRead")' not in code
+        assert 'dlsym(RTLD_DEFAULT, "sceMoveReadStateRecent")' not in code
+        assert 'dlsym(RTLD_DEFAULT, NID_' not in code
+
+    def test_got_resolution_validates_pointer(self):
+        """The resolved GOT value must be validated as mapped readable code via
+        sceKernelQueryMemoryProtection before Detour (signal-free technique)."""
+        body = _def_body(_code(), "resolve_import_by_got", span=3000)
+        assert body, "resolve_import_by_got definition not found"
+        assert "sceKernelQueryMemoryProtection" in body
+        assert "prot & 0x1" in body
 
     def test_primary_hook_target_is_sceMoveReadStateRecent(self):
         """Beat Saber reads both Moves every frame via sceMoveReadStateRecent
@@ -112,10 +128,10 @@ class TestInGameToggleResearchedFacts:
         stays as the secondary DS4 path."""
         code = _code()
         assert "move_read_hook" in code
-        assert 'dlsym(RTLD_DEFAULT, "sceMoveReadStateRecent")' in code
         # the Latest variant must never be a hook target (not imported by the game;
         # comments documenting that fact are fine)
         assert 'dlsym(RTLD_DEFAULT, "sceMoveReadStateLatest")' not in code
+        assert 'GOT_RVA_SCE_MOVE_READ_RECENT' in code  # the Recent variant is the hook target
 
     def test_move_button_bits_from_game_enum(self):
         """Move bits reconstructed from the game's OWN PSMoveButton enum
@@ -214,7 +230,7 @@ class TestInGameToggleResearchedFacts:
 
 class TestInGameToggleVersions:
     def test_plugin_version_bumped(self):
-        assert '#define PLUGIN_VERSION "v0.8050"' in _code()
+        assert '#define PLUGIN_VERSION "v0.8051"' in _code()
 
     def test_toast_counts_five_flags(self):
         code = _code()
@@ -247,7 +263,7 @@ class TestInGameToggleWebappSurfaces:
         with open(os.path.join(WEBAPP, "static", "app.js"), encoding="utf-8") as f:
             code = f.read()
         assert '"enable_in_game_plugin_toggle"' in code
-        assert 'TOAST_VERSION = "v0.8050"' in code
+        assert 'TOAST_VERSION = "v0.8051"' in code
 
     def test_index_placeholder_five_of_five(self):
         with open(os.path.join(WEBAPP, "static", "index.html"), encoding="utf-8") as f:

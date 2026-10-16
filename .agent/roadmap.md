@@ -444,6 +444,13 @@ Full plan: [`.agent/plans/in-game-global-plugin-enable-toggle-plan.md`](.agent/p
       q1cHNfGycLI; the boot log showed 100 failed attempts); (2) the **DS4 is
       ignored by Beat Saber in VR mode** (user-verified). Logged + archived
       (v0.8049_hotkey_test_failure_l3r3.txt).
+- [x] **Exp 278d RCA (v0.8050 also failed): NID dlsym finds NOTHING either** — dlsym(RTLD_DEFAULT) cannot
+      see kernel-loaded Sony SPRX exports AT ALL (only game-module exports like il2cpp_string_new ever
+      resolved). The DEFINITIVE mechanism (v0.8051): resolve via the EBOOT'S GOT — JMPREL r_offset RVAs
+      precomputed from the decrypted dump (sceMoveReadStateRecent → 0x1c634e8, scePadRead → 0x1c63500)
+      hold the loader-bound final addresses; plugin finds eboot.bin by name (module[0] from the first
+      open), reads the slot, validates via sceKernelQueryMemoryProtection, Detours the resolved address.
+      Deployed + strings-verified. Suite 890/890. Awaiting the Move-combo hardware re-test.
 - [x] **Exp 278c redesign (v0.8050): hotkey moved to the MOVE controller** —
       user-chosen combo **Move button + trigger held together 2 s** (used nowhere
       else in the game). All hooks now resolve **BY NID** (sceMoveReadStateRecent =

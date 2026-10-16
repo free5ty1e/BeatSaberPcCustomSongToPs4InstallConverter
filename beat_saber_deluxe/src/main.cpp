@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8050"
+#define PLUGIN_VERSION "v0.8051"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -873,6 +873,15 @@ static void move_next_hook(void* state_machine) {
 // couch, or the feature would be a one-way door).
 #define NID_PAD_READ "q1cHNfGycLI"           // scePadRead — verified: eboot imports + aerolib
 #define NID_MOVE_READ_RECENT "f2bcpK6kJfg"   // sceMoveReadStateRecent — same verification
+// GOT slot vaddrs (r_offset from the eboot's JMPREL relocations, type
+// R_X86_64_JUMP_SLOT) — computed from the decrypted dump's dynlib data via
+// the ps4_elf_imports.py methodology (Exp 278d). THE RESOLUTION MECHANISM:
+// dlsym CANNOT see kernel-loaded Sony SPRX exports (v0.8049 tested readable
+// names, v0.8050 tested NIDs — both found NOTHING; only eboot-exported
+// symbols like il2cpp_string_new resolve). The eboot's import slots, filled
+// by the OS module loader at bind time, hold the final function addresses.
+#define GOT_RVA_SCE_MOVE_READ_RECENT 0x1c634e8
+#define GOT_RVA_SCE_PAD_READ         0x1c63500
 #define PAD_BUTTON_L3 0x0002u                // DS4 combo (secondary path — kept for pad-mode sessions)
 #define PAD_BUTTON_R3 0x0004u
 #define PAD_COMBO (PAD_BUTTON_L3 | PAD_BUTTON_R3)             // 0x0006
@@ -1121,13 +1130,69 @@ static int move_read_hook(int32_t handle, int64_t a2, void *a3, int64_t a4) {
     return rc;
 }
 
-// Lazy installs: dlsym BY NID (the v0.8050 root-cause fix — Sony system
-// libraries export NIDs, not readable names; the readable-name dlsym only
-// ever worked for eboot-exported symbols like il2cpp_string_new) + GoldHEN
-// Detour. At module_start only 3 modules are visible; libScePad/libSceMove
-// load with the game (the eboot imports both), so the first open_hook
-// attempts resolve them. Give-up flags stop the retry loop cleanly (the
-// v0.8049 build re-logged its ERROR on every open after giving up).
+// Resolve a system-library function via the EBOOT'S GOT (Exp 278d — the
+// definitive mechanism). dlsym cannot see kernel-loaded SPRX exports on PS4
+// (v0.8049/v0.8050 hardware-proven: readable names AND NIDs both fail), but
+// the eboot's import slots — filled by the OS module loader at bind time —
+// hold the final resolved addresses. Find eboot.bin by name via the module
+// list, read the slot at base + rva, validate it as mapped readable code via
+// sceKernelQueryMemoryProtection (signal-free), and hand the address to
+// Detour — hooking the LIBRARY function itself catches calls from any module.
+static uint64_t g_eboot_base = 0;
+
+static uint64_t find_eboot_base(void) {
+    if (g_eboot_base) return g_eboot_base;
+    OrbisKernelModule modules[256];
+    size_t available = 0;
+    if (sceKernelGetModuleList(modules, 256, &available) < 0) return 0;
+    for (size_t i = 0; i < available; i++) {
+        OrbisKernelModuleInfo info;
+        memset(&info, 0, sizeof(info));
+        info.size = sizeof(info);
+        if (sceKernelGetModuleInfo(modules[i], &info) < 0) continue;
+        if (strcmp(info.name, "eboot.bin") == 0 && info.segmentCount > 0) {
+            g_eboot_base = (uint64_t)info.segmentInfo[0].address;
+            char blog[128];
+            snprintf(blog, sizeof(blog), "[TOGGLE] eboot.bin base: 0x%lx", g_eboot_base);
+            log_write(blog);
+            return g_eboot_base;
+        }
+    }
+    return 0;
+}
+
+// Returns the resolved function address from the eboot's GOT slot, or NULL
+// when the slot is not yet usable (retry-friendly: caller re-tries on later
+// opens). Logs the slot value + page protection once resolved.
+static void *resolve_import_by_got(uint64_t got_rva, const char *label) {
+    uint64_t base = find_eboot_base();
+    if (!base) return NULL;
+    uint64_t slot_addr = base + got_rva;
+    uint64_t fn_addr = *(uint64_t *)slot_addr;
+    if (fn_addr < 0x1000000ULL) return NULL;  // below the PS4 module range — unbound
+
+    void *start = NULL, *end = NULL;
+    int32_t prot = 0;
+    if (sceKernelQueryMemoryProtection((void *)fn_addr, &start, &end, &prot) < 0 || !(prot & 0x1)) {
+        char wlog[192];
+        snprintf(wlog, sizeof(wlog),
+                 "[TOGGLE] %s: GOT 0x%lx holds 0x%lx (unmapped/unreadable — not bound yet?), retrying",
+                 label, slot_addr, fn_addr);
+        log_write(wlog);
+        return NULL;
+    }
+
+    char rlog[192];
+    snprintf(rlog, sizeof(rlog), "[TOGGLE] %s: GOT 0x%lx -> 0x%lx (prot=0x%x)",
+             label, slot_addr, fn_addr, prot);
+    log_write(rlog);
+    return (void *)fn_addr;
+}
+
+// Lazy installs — GOT resolution + GoldHEN Detour. At module_start only 3
+// modules are visible, but eboot.bin is one of them (log-verified) and its
+// GOT is bound at load, so the first open_hook attempt should resolve.
+// Give-up flags stop the retry loop cleanly (the v0.8049 spam bug).
 static int g_pad_hook_installed = 0;
 static int g_pad_hook_attempts = 0;
 static int g_pad_hook_gave_up = 0;
@@ -1140,18 +1205,17 @@ static void try_install_pad_hook(void) {
     if (!g_feature_in_game_plugin_toggle) return;  // NOT gated by the kill switch (one-way-door rule)
 
     g_pad_hook_attempts++;
-    void *fn = dlsym(RTLD_DEFAULT, NID_PAD_READ);
-    if (!fn) fn = dlsym(RTLD_DEFAULT, "scePadRead");  // readable-name fallback
+    void *fn = resolve_import_by_got(GOT_RVA_SCE_PAD_READ, "scePadRead");
     if (!fn) {
         if (g_pad_hook_attempts <= 3 || g_pad_hook_attempts % 20 == 0) {
             char alog[128];
-            snprintf(alog, sizeof(alog), "[TOGGLE] scePadRead not found yet (attempt %d, open #%d)",
+            snprintf(alog, sizeof(alog), "[TOGGLE] scePadRead not resolvable yet (attempt %d, open #%d)",
                      g_pad_hook_attempts, g_open_count);
             log_write(alog);
         }
         if (g_pad_hook_attempts < 100) return;  // keep retrying
         g_pad_hook_gave_up = 1;
-        log_write("[TOGGLE] ERROR: scePadRead never found — DS4 path unavailable this session (Move path may still work)");
+        log_write("[TOGGLE] ERROR: scePadRead never resolved — DS4 path unavailable this session (Move path may still work)");
         return;
     }
 
@@ -1161,7 +1225,7 @@ static void try_install_pad_hook(void) {
 
     char ilog[160];
     snprintf(ilog, sizeof(ilog),
-             "[TOGGLE] scePadRead hooked at %p (NID-resolved) — DS4 L3+R3 secondary path",
+             "[TOGGLE] scePadRead hooked at %p (GOT-resolved) — DS4 L3+R3 secondary path",
              fn);
     log_write(ilog);
 }
@@ -1171,18 +1235,17 @@ static void try_install_move_hook(void) {
     if (!g_feature_in_game_plugin_toggle) return;
 
     g_move_hook_attempts++;
-    void *fn = dlsym(RTLD_DEFAULT, NID_MOVE_READ_RECENT);
-    if (!fn) fn = dlsym(RTLD_DEFAULT, "sceMoveReadStateRecent");  // readable-name fallback
+    void *fn = resolve_import_by_got(GOT_RVA_SCE_MOVE_READ_RECENT, "sceMoveReadStateRecent");
     if (!fn) {
         if (g_move_hook_attempts <= 3 || g_move_hook_attempts % 20 == 0) {
             char alog[128];
-            snprintf(alog, sizeof(alog), "[TOGGLE] sceMoveReadStateRecent not found yet (attempt %d, open #%d)",
+            snprintf(alog, sizeof(alog), "[TOGGLE] sceMoveReadStateRecent not resolvable yet (attempt %d, open #%d)",
                      g_move_hook_attempts, g_open_count);
             log_write(alog);
         }
         if (g_move_hook_attempts < 100) return;
         g_move_hook_gave_up = 1;
-        log_write("[TOGGLE] ERROR: sceMoveReadStateRecent never found — in-game toggle unavailable this session");
+        log_write("[TOGGLE] ERROR: sceMoveReadStateRecent never resolved — in-game toggle unavailable this session");
         return;
     }
 
@@ -1192,7 +1255,7 @@ static void try_install_move_hook(void) {
 
     char ilog[160];
     snprintf(ilog, sizeof(ilog),
-             "[TOGGLE] sceMoveReadStateRecent hooked at %p (NID-resolved) — hold Move button + trigger for 2s to toggle the plugin",
+             "[TOGGLE] sceMoveReadStateRecent hooked at %p (GOT-resolved) — hold Move button + trigger for 2s to toggle the plugin",
              fn);
     log_write(ilog);
 }

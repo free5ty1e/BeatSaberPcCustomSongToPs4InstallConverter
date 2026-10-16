@@ -1,10 +1,10 @@
 # M11 — In-Game Global Plugin Enable/Disable Toggle (L3+R3 Hotkey) — Implementation Plan
 
-**Status:** 🟡 v2 DEPLOYED (Exp 278c) — Move-combo redesign awaiting hardware re-test; v0.8049 hardware failure RCA'd (NID resolution + DS4 ignored)
+**Status:** 🟡 v3 DEPLOYED (Exp 278d) — EBOOT-GOT resolution awaiting hardware re-test; v0.8049 (readable-name dlsym) AND v0.8050 (NID dlsym) both hardware-failed → the GOT mechanism is the definitive answer
 **Created:** 2026-10-14 (exploration) → 2026-10-14 (plan, research-locked)
 **Supersedes:** the exploration document of the same feature (renamed; alternatives considered are preserved in §8)
 **Feature flag:** `enable_in_game_plugin_toggle` (new, defaults false when absent)
-**Plugin:** v0.8049 (hardware-failed) → **v0.8050** · **Pipeline:** 0.5363 · **Webapp:** 0.6.7 → **0.6.8**
+**Plugin:** v0.8049 → v0.8050 (both hardware-failed on hook resolution) → **v0.8051** · **Pipeline:** 0.5363 · **Webapp:** 0.6.7 → 0.6.8 → **0.6.9**
 **Transcript:** `.agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md`
 
 ---
