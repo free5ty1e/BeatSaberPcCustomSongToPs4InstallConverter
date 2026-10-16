@@ -1,10 +1,10 @@
 # M11 — In-Game Global Plugin Enable/Disable Toggle (L3+R3 Hotkey) — Implementation Plan
 
-**Status:** 🟢 Research COMPLETE — all open questions resolved (Exp 278); implementation in progress
+**Status:** 🟡 v2 DEPLOYED (Exp 278c) — Move-combo redesign awaiting hardware re-test; v0.8049 hardware failure RCA'd (NID resolution + DS4 ignored)
 **Created:** 2026-10-14 (exploration) → 2026-10-14 (plan, research-locked)
 **Supersedes:** the exploration document of the same feature (renamed; alternatives considered are preserved in §8)
 **Feature flag:** `enable_in_game_plugin_toggle` (new, defaults false when absent)
-**Plugin:** v0.8049 · **Pipeline:** 0.5363 · **Webapp:** 0.6.7
+**Plugin:** v0.8049 (hardware-failed) → **v0.8050** · **Pipeline:** 0.5363 · **Webapp:** 0.6.7 → **0.6.8**
 **Transcript:** `.agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md`
 
 ---
@@ -16,28 +16,55 @@ a PC on the same network running the pipeline (`--features-only --set-feature
 enable_plugin=false|true` over FTP). **Goal:** let the user switch between all-stock and
 all-custom Beat Saber entirely from the couch, with only a PS4 controller.
 
-**Approved hotkey:** hold **L3 + R3 simultaneously for 2 seconds** on a DualShock 4 →
-notification shows the new state → restart Beat Saber to apply (restart explicitly
-acceptable — see §2.2).
+**Approved hotkey (v2, Exp 278c):** hold **the Move BUTTON + TRIGGER together for 2
+seconds** on a Move controller → notification shows the new state → restart Beat
+Saber to apply (restart explicitly acceptable — see §2.2). The v1 L3+R3 DS4 combo
+hardware-failed (see §2.1a).
 
 Beat Saber is played with Move controllers; the DS4 is connected alongside them for
 the hotkey. **Accidental triggers during gameplay must be impossible** — see §2.3.
 
 ## 2. Locked Design Decisions (user-approved, Exp 278)
 
-### 2.1 Hotkey = L3 + R3, 2-second hold, clean combo, release latch
-- **L3 = bit 0x0002, R3 = bit 0x0004** in the pad `buttons` u32 (dual-verified: OpenOrbis
-  `orbis/_types/pad.h` `enum OrbisPadButton` + shadPS4Plus `OrbisPadButtonDataOffset`).
-- **Clean combo:** trigger requires `buttons == 0x0006` EXACTLY — no other digital bit
-  may be set in any poll during the hold. Gripping/jostling a DS4 mid-swing sets face/
-  shoulder/dpad bits and breaks the combo; resting thumbs on analog L2/R2 does NOT
-  (analog values live outside the bitmask). The 2-second hold adds a second layer.
-- **Release latch:** after a toggle fires, both buttons must be RELEASED (any poll with
-  `buttons != 0x6`) before the next hold can begin — no rapid re-toggling from a held combo.
-- **Move-proof by construction:** Move controllers are read through the separate
-  `libSceMove` (`sceMoveReadStateRecent` — verified in the game's imports), and Moves
-  have no stick buttons. `scePadRead` polls carry DS4-class pads only, so a Move can
-  never set L3/R3 bits.
+### 2.1 Hotkey = Move button + trigger, 2-second hold, clean combo, release latch
+- **v0.8050 redesign (Exp 278c):** the user's hardware test showed the v0.8049
+  L3+R3 DS4 combo never fired — (a) the hook never installed because
+  `dlsym(RTLD_DEFAULT, "scePadRead")` resolves NOTHING (Sony system libraries
+  export NIDs, not readable names — the game imports scePadRead as NID
+  `q1cHNfGycLI`), and (b) the DS4 is ignored by Beat Saber in VR mode.
+- **User-chosen combo: hold the Move BUTTON + TRIGGER together for 2 full
+  seconds** — a combination used nowhere else in the game (user-verified).
+- **Move bit layout, reconstructed from the game's OWN enum** (dump.cs
+  `PSVRDeviceManager.PSMoveButton`: Select=1, [2 = trigger — skipped because
+  the game reads the trigger via GetPSMoveAnalog], Move=4, Start=8,
+  Triangle=16, Circle=32, Cross=64, Square=128): **trigger digital bit =
+  0x0002, Move button = 0x0004**. SceMoveData layout per shadPS4Plus's
+  SDK-derived OrbisMoveData: **button_data u16 @ +0x18, trigger analog u16 @
+  +0x1A**; the trigger counts as held via its digital bit OR analog > 0x80.
+- **Primary hook: `sceMoveReadStateRecent` (NID `f2bcpK6kJfg`)** — the ONLY
+  Move state read in the eboot's imports (sceMoveReadStateLatest is NOT
+  imported), so Unity's runtime reads both Moves through it every frame.
+- **Clean combo:** no other button bit may be set (the PS4 Move physically has
+  only these two buttons + PS). **Release latch** + a 3 s global cooldown
+  prevent double-fires; a **250 ms poll-gap window** keeps the non-holding
+  Move handle's per-frame polls from resetting a hold the other sustains.
+- **Secondary path kept:** `scePadRead` (NID `q1cHNfGycLI`), DS4 L3+R3 — now
+  NID-resolved, so it works if the game ever polls pads.
+- **Empirical confirmation built in:** the Move hook logs the first 10 calls
+  raw plus every data-word change (capped) — a button press lights up the
+  boot log, confirming/correcting the +0x18/+0x1A offsets from the first
+  hardware boot.
+- **Signature ambiguity handled safely:** shadPS4 documents
+  sceMoveReadStateRecent as 4-arg (handle, timestamp, data, out_count); the
+  hook validates which register holds the output buffer via
+  `sceKernelQueryMemoryProtection` (v0.8045-proven signal-free technique)
+  and passes ALL FOUR registers through either way.
+
+### 2.1a (superseded) v0.8049 hotkey = L3 + R3 on DS4 — hardware-failed (kept for history)
+- L3 = 0x0002, R3 = 0x0004 in the pad buttons u32 (dual-verified OpenOrbis +
+  shadPS4Plus); clean combo `buttons == 0x0006`; 2 s hold; release latch.
+- **Exp 278b hardware result: NEVER FIRED** — root cause: readable-name dlsym
+  failure (see above). ALSO established: the DS4 is ignored in VR mode.
 
 ### 2.2 Persist-only semantics — restart to apply (no mid-session behavior change)
 The hotkey flips the `enable_plugin` value **inside `features.json` on the PS4** for the
@@ -128,15 +155,17 @@ address — the exact pattern already proven in this codebase for `il2cpp_string
   calls (handle, num, return, buttons) + install event + a periodic call counter, so
   the boot log answers "does the game poll a boot-connected DS4 every frame?".
 
-### 3.5 To verify on hardware (only remaining unknown)
-- That the game polls a boot-connected DS4 every frame via `scePadRead` (expected:
-  Unity PS4 input polls all opened handles; the v1 diagnostic logging confirms or
-  refutes from the boot log).
-- Whether a DS4 connected MID-session gets polled (edge case; if not, v1.1 adds an
-  own-handle fallback — `scePadOpen` + poll our handle inside the hook tick. The
-  OpenOrbis input sample documents the scePadInit/sceUserServiceGetInitialUser/scePadOpen
-  flow; not needed for v1).
-- **v1 guidance: connect the DS4 before booting Beat Saber.**
+### 3.5 Hardware answers (Exp 278b) + v2 verification
+- **ANSWERED (v0.8049 test): the DS4 is IGNORED in VR mode** — user-connected DS4
+  (same profile as headset + Moves) never produced pad input; the pad hook never
+  even installed (dlsym root cause, §2.1). v2 needs NO DS4 at all.
+- **v2 verification (from the next boot log):** the moveRead raw-word
+  change-diagnostics confirm the +0x18/+0x1A offsets and the trigger/Move bits
+  empirically — every button press lights up the log. If the layout guess were
+  wrong, the same diagnostics pinpoint the true bits for a one-line v0.8051 fix.
+- **Still unknown:** sceMoveReadStateRecent's real arity/return semantics — handled
+  safely at runtime (adaptive form detection, §2.1); the log's `form=N` field will
+  show which form the game actually uses.
 
 ### 3.6 New reusable tool (development script)
 `beat_saber_deluxe/development/scripts/ps4_elf_imports.py` — dumps dynamic symbols of
@@ -205,18 +234,21 @@ Updated: `tests/test_pack_mode_pipeline.py::test_toast_counts_four_flags` → co
 - [ ] **Phase 3 — Deploy via web UI** (hardware): webapp Feature Flags tab →
       `enable_in_game_plugin_toggle=true`; deploy plugin v0.8049 (or a `--deploy-full`
       song install to exercise the full flow); reboot Beat Saber.
-- [ ] **Phase 4 — Hardware test** (user, DS4 connected at boot):
-      1. Boot → toast shows `(5/5 features ON)` (with all flags on) + log shows
-         `[TOGGLE] scePadRead hooked` + first-call diagnostics.
-      2. Hold L3+R3 2 s → notification "Plugin DISABLED — restart game to apply".
+- [ ] **Phase 4 — Hardware test v2** (user, Moves as usual — no DS4 needed):
+      1. Boot → toast shows `(5/5 features ON)` + log shows `[TOGGLE]
+         sceMoveReadStateRecent hooked at <addr> (NID-resolved)` (and the pad hook
+         if the game loads libScePad) + first-10-calls raw diagnostics.
+      2. Hold **Move button + trigger together 2 s** on one Move → notification
+         "Plugin DISABLED — restart game to apply".
       3. Restart → toast `(OFF)`/official songs only; song menu shows stock names;
          previews stock; mode buttons gone.
-      4. Hold L3+R3 2 s → notification "Plugin ENABLED — restart game to apply"
-         (**kill-switch survival — the one-way-door test**).
+      4. Hold Move button + trigger 2 s again → "Plugin ENABLED — restart game to
+         apply" (**kill-switch survival — the one-way-door test**).
       5. Restart → customs fully back (toast 5/5).
-      6. Anti-accidental check: grip the DS4 during a Move session with combos of other
-         buttons + L3/R3 — no toggle unless buttons == L3|R3 exactly for the full 2 s.
-      7. Pull + archive the PS4 log; confirm the pad-poll diagnostics (§3.5).
+      6. Pull + archive the PS4 log; the moveRead change-diagnostics confirm the
+         +0x18/+0x1A button/trigger offsets empirically (a button press lights
+         up the log); if the combo didn't fire, the same diagnostics pinpoint
+         the true bits for a one-line v0.8051 fix.
 - [ ] **Phase 5 — Docs polish**: README hotkey section + flag table row, KB
       `feature-flags` 5th row, release notes at next tag.
 

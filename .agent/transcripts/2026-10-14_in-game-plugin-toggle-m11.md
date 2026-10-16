@@ -142,3 +142,32 @@
 9. Log hygiene per the rules: the pre-existing log (2,623 lines, 3 × v0.8048 boot sessions — M10 post-release gameplay) archived to `.ai_memory/experiment_logs/v0.8048_m10_post_release_boots.txt` and cleared on the PS4 → the hotkey test will produce a clean log.
 
 **Status:** ✅ deployed + verified on-PS4. Awaiting the user's in-game test (checklist handed over); after their test: pull + analyze the clean boot log (first-8-calls padRead diagnostics answer the per-frame-DS4-poll question) + document (Exp 278b wrap).
+
+---
+
+## Cycle 4 — v0.8049 hardware test FAILED (Exp 278b): root cause from the boot log
+
+**User:** tested on the PS4 — DS4 connected to the same profile as the VR headset + Moves: the 5/5 boot toast appeared (deploy + flag confirmed) but holding L3+R3 never fired a notification. User's read: the DS4 seems completely disabled in Beat Saber, so its inputs are ignored. Asked (a) whether I'd used the pipeline/webapp and redeployed a song (answers: webapp API for flag+verify + pipeline CLI --deploy-plugin for the plugin; NO song redeploy — the hotkey lives in the plugin + features.json only), and (b) to research the active controls and switch to a MOVE-controller button shortcut.
+
+**Log analysis (archived `.ai_memory/experiment_logs/v0.8049_hotkey_test_failure_l3r3.txt`, 1,491 lines; cleared after):**
+- `features: ... in_game_plugin_toggle=1` + "hotkey ARMED" ✓ — flag parsed, code deployed.
+- **ROOT CAUSE: `[TOGGLE] scePadRead not found yet` × 100 attempts → "ERROR: scePadRead never found"** (then re-logged on EVERY subsequent open — the give-up-flag bug). The hook NEVER INSTALLED, so no pad data was ever observed.
+- **The lesson (durable, now in KB):** `dlsym(RTLD_DEFAULT, "scePadRead")` resolves NOTHING because **Sony system libraries export functions under their NIDs, not readable names** — the game imports scePadRead as NID `q1cHNfGycLI`. Readable-name dlsym only ever worked here for eboot-exported symbols (`il2cpp_string_new`).
+
+## Cycle 5 — v0.8050 redesign (Exp 278c): Move button + trigger; NID-resolved hooks; deployed
+
+**User:** chose the combo: **Move button + trigger held together** — "used nowhere else in the beat saber game".
+
+**Research (the game's own dump.cs):**
+- `PSVRDeviceManager.PSMoveButton` enum: **Select=1, [2 = trigger — SKIPPED], Move=4, Start=8, Triangle=16, Circle=32, Cross=64, Square=128** — the enum skips 2 because the game reads the trigger via `GetPSMoveAnalog`; the trigger's DIGITAL bit is 0x2, the Move button is 0x4.
+- Game surface: `GetPSMoveButtonDown(idx, button)` / `GetPSMoveAnalog(idx)` / PSMoveDevice carries sceMove handles.
+- The per-frame Move read = **`sceMoveReadStateRecent`** (NID `f2bcpK6kJfg`) — the ONLY Move state read in the eboot's imports (sceMoveReadStateLatest NOT imported).
+- SceMoveData layout per shadPS4Plus's SDK-derived OrbisMoveData: accelerometer[3]+gyro[3] then **button_data u16 @ +0x18, trigger u16 @ +0x1A**; shadPS4 documents the read as 4-arg (handle, timestamp, data, out_count) — arity handled SAFELY at runtime.
+
+**Implemented (plugin v0.8050):** NID-first dlsym (`q1cHNfGycLI` scePadRead secondary DS4 path; `f2bcpK6kJfg` sceMoveReadStateRecent PRIMARY) with readable-name fallbacks; move_read_hook detects the call form at runtime via `is_mapped_rw_pointer()` (sceKernelQueryMemoryProtection — v0.8045-proven) and passes ALL FOUR registers through; combo = Move button + trigger (digital bit OR analog>0x80), clean (no other bit), 2 s via sceKernelGetProcessTime; shared `combo_feed()` detector with 250 ms poll-gap window (two Move handles interleave), release latch, 3 s global cooldown; diagnostics: first-10 moveRead calls raw + every data-word change (capped 40) — a button press lights up the boot log, confirming/correcting the +0x18/+0x1A offsets EMPIRICALLY; give-up flags fix the retry spam; entry-0 button check (a 2 s hold spans 100+ frames). Webapp 0.6.8 (description + TOAST_VERSION v0.8050). Pipeline unchanged (0.5363).
+
+**Verification:** make clean build (105,536 B — matches the historical ~105 KB full-build baseline; the 89,008 B v0.8049 was a stale-link artifact though its deployed copy did carry all toggle code per strings-verification); tests rewritten for v2 (24 tests); suite **889/889**; ruff clean. **Deployed via `--deploy-plugin` + strings-verified on the PS4** (v0.8050 + both NIDs + Move-combo ARMED line in the downloaded bytes). Boot log was cleared at the Exp-278b archive, so the next boot produces a clean diagnostic log.
+
+**Files changed (this cycle):** src/main.cpp (v0.8050 redesign), tests/test_in_game_toggle.py (rewritten), webapp/server.py + static/app.js + VERSION 0.6.8, CHANGELOG-PLUGIN v0.8050, webapp CHANGELOG 0.6.8, plan doc (§2.1 v2 + §3.5 hardware answers + Phase-4 test plan), roadmap M11 (278b/278c), experiment log (278b/278c entries), KB: ps4-controller-input-from-plugin (THE NID RULE + Move path section + signature-ambiguity technique), in-game-plugin-toggle (design history + new combo), feature-flags + index rows, both READMEs, project_summary + context.yml.
+
+**Status:** ✅ v2 deployed. Awaiting the user's Move-combo test: boot → toast 5/5 → hold Move button+trigger 2 s → DISABLED notification → restart → stock → combo again from OFF (one-way-door proof) → restart → customs. The moveRead change-diagnostics will empirically confirm the bit layout (or pinpoint the true bits for a one-line v0.8051 fix).

@@ -1,11 +1,11 @@
-"""In-game global plugin toggle (M11, Exp 278) — hermetic source-level tests.
+"""In-game global plugin toggle (M11, Exp 278/278c) — hermetic source-level tests.
 
 The plugin change is C++ (compiled by make, not unit-testable from Python), so
 these tests pin the researched facts and the behavioral contract in the source,
 mirroring the TestSongPreviewsFlagGating pattern. The researched facts (hook
-target, button bits, struct layout, time source) were verified against the
-game's real eboot imports + two independent SDK sources — see the plan:
-.agent/plans/in-game-global-plugin-enable-toggle-plan.md
+targets, NID resolution, Move button bits, struct layout, time source) were
+verified against the game's real eboot imports + the game's own dump.cs enum —
+see the plan: .agent/plans/in-game-global-plugin-enable-toggle-plan.md
 """
 import os
 import re
@@ -43,8 +43,8 @@ def _def_body(code, name, span=2000):
 
 
 class TestInGameToggleFlagGating:
-    """The enable_in_game_plugin_toggle flag gates the pad hook install AND
-    the hook body (feature-flag enforcement, CLAUDE.md §2)."""
+    """The enable_in_game_plugin_toggle flag gates the hook installs AND
+    bodies (feature-flag enforcement, CLAUDE.md §2)."""
 
     def test_plugin_parses_toggle_flag(self):
         code = _code()
@@ -67,7 +67,9 @@ class TestInGameToggleFlagGating:
         when enable_plugin=false, or a user toggled OFF could never re-enable
         without a PC. No toggle-path function may require g_feature_plugin_enabled."""
         code = _code()
-        for fn in ("try_install_pad_hook", "pad_read_hook", "in_game_toggle_plugin"):
+        for fn in ("try_install_pad_hook", "try_install_move_hook",
+                   "pad_read_hook", "move_read_hook", "combo_feed",
+                   "in_game_toggle_plugin"):
             body = _def_body(code, fn)
             assert body, f"{fn} definition not found"
             assert "g_feature_plugin_enabled" not in body, \
@@ -76,48 +78,124 @@ class TestInGameToggleFlagGating:
     def test_toggle_only_writes_file_not_runtime_state(self):
         """PERSIST-ONLY (plan §2.2): the flip must not change the session's
         runtime state — in_game_toggle_plugin never assigns g_feature_plugin_enabled."""
-        body = _def_body(_code(), "in_game_toggle_plugin")
+        body = _def_body(_code(), "in_game_toggle_plugin", span=6000)
         assert "g_feature_plugin_enabled =" not in body.replace("==", "")
         assert "features.json" in body or "FEATURES_PATH" in body
 
 
 class TestInGameToggleResearchedFacts:
-    """Pins the Exp-278 research: hook target, button bits, hold timing.
-    Verified against the game's real imports (development/scripts/ps4_elf_imports.py
-    + aerolib NID decode) and dual-checked SDK sources (OpenOrbis + shadPS4Plus)."""
+    """Pins the Exp-278/278c research: NID hook resolution (the v0.8049
+    hardware failure's root cause), hook targets, Move button bits, timing.
 
-    def test_hook_target_is_scePadRead(self):
-        """Beat Saber reads pads via scePadRead (NID q1cHNfGycLI in the eboot
-        imports); scePadReadState is NOT imported. Pin the hook target."""
+    v0.8049 hardware result (Exp 278b): dlsym(RTLD_DEFAULT, "scePadRead")
+    FAILED — Sony system libraries export functions under NIDs, not readable
+    names. Resolution is now BY NID: scePadRead = q1cHNfGycLI,
+    sceMoveReadStateRecent = f2bcpK6kJfg (both verified from the game's own
+    import table + the aerolib NID DB).
+    """
+
+    def test_hooks_resolved_by_nid(self):
+        """THE v0.8050 ROOT-CAUSE FIX: NID-first dlsym with readable fallback."""
         code = _code()
-        assert 'dlsym(RTLD_DEFAULT, "scePadRead")' in code
+        assert '#define NID_PAD_READ "q1cHNfGycLI"' in code
+        assert '#define NID_MOVE_READ_RECENT "f2bcpK6kJfg"' in code
+        # NID first, readable name only as fallback
+        assert 'dlsym(RTLD_DEFAULT, NID_PAD_READ)' in code
+        assert 'dlsym(RTLD_DEFAULT, NID_MOVE_READ_RECENT)' in code
+        assert 'dlsym(RTLD_DEFAULT, "scePadRead")' in code  # fallback path
         assert 'dlsym(RTLD_DEFAULT, "scePadReadState")' not in code
 
-    def test_l3_r3_button_bits(self):
-        """L3=0x0002, R3=0x0004 (dual-verified); clean combo = exactly 0x0006."""
+    def test_primary_hook_target_is_sceMoveReadStateRecent(self):
+        """Beat Saber reads both Moves every frame via sceMoveReadStateRecent
+        (NID f2bcpK6kJfg) — the ONLY Move state read in the eboot's imports;
+        sceMoveReadStateLatest is NOT imported. scePadRead (NID q1cHNfGycLI)
+        stays as the secondary DS4 path."""
+        code = _code()
+        assert "move_read_hook" in code
+        assert 'dlsym(RTLD_DEFAULT, "sceMoveReadStateRecent")' in code
+        # the Latest variant must never be a hook target (not imported by the game;
+        # comments documenting that fact are fine)
+        assert 'dlsym(RTLD_DEFAULT, "sceMoveReadStateLatest")' not in code
+
+    def test_move_button_bits_from_game_enum(self):
+        """Move bits reconstructed from the game's OWN PSMoveButton enum
+        (dump.cs: Select=1, [2=trigger], Move=4, Start=8, Triangle=16,
+        Circle=32, Cross=64, Square=128 — the enum skips 2 because the game
+        reads the trigger via GetPSMoveAnalog; the trigger's digital bit is 0x2)."""
+        code = _code()
+        assert "#define MOVE_BUTTON_TRIGGER 0x0002u" in code
+        assert "#define MOVE_BUTTON_MOVE 0x0004u" in code
+        assert "(MOVE_BUTTON_TRIGGER | MOVE_BUTTON_MOVE)" in code
+
+    def test_ds4_combo_bits_kept_for_pad_path(self):
+        """L3=0x2, R3=0x4 (dual-verified) stay for the secondary DS4 path."""
         code = _code()
         assert "#define PAD_BUTTON_L3 0x0002u" in code
         assert "#define PAD_BUTTON_R3 0x0004u" in code
-        assert "(PAD_BUTTON_L3 | PAD_BUTTON_R3)" in code
 
-    def test_clean_combo_exact_match(self):
-        """Anti-accidental-trigger: the trigger requires buttons == the combo
-        EXACTLY (any other digital bit breaks it) — not a bitmask test."""
-        body = _def_body(_code(), "pad_read_hook")
-        assert "buttons == PAD_TOGGLE_COMBO" in body
-        assert "buttons & PAD_TOGGLE_COMBO" not in body
+    def test_move_data_offsets_and_trigger_fallback(self):
+        """SceMoveData layout per shadPS4Plus's SDK-derived OrbisMoveData:
+        button_data u16 @ +0x18, trigger analog u16 @ +0x1A. Trigger counts as
+        held via its digital bit OR the analog value (robust to either
+        reporting form). Raw-word change diagnostics must exist to confirm
+        the offsets empirically on the first hardware boot."""
+        code = _code()
+        assert "#define MOVE_DATA_BUTTON_OFF 0x18" in code
+        assert "#define MOVE_DATA_TRIGGER_OFF 0x1A" in code
+        assert "#define MOVE_TRIGGER_ANALOG_THRESH 0x0080u" in code
+        # change-logging diagnostics (empirical offset confirmation)
+        assert "MOVE_DIAG_CHANGE_MAX" in code
+        assert "g_move_prev_words" in code
+
+    def test_signature_ambiguity_handled_safely(self):
+        """shadPS4 documents sceMoveReadStateRecent as 4-arg
+        (handle, timestamp, data, out_count); a 3-arg form would put the data
+        buffer in RSI instead of RDX. The hook must detect the form at runtime
+        via sceKernelQueryMemoryProtection (the v0.8045-proven signal-free
+        technique) and always pass ALL FOUR registers through."""
+        code = _code()
+        assert "is_mapped_rw_pointer" in code
+        assert "sceKernelQueryMemoryProtection" in code
+        body = _def_body(code, "move_read_hook", span=3000)
+        assert body, "move_read_hook definition not found"
+        assert "form = 4" in body and "form = 3" in body
+        assert "HOOK_CONTINUE(hook_move_read" in body
 
     def test_two_second_hold_with_kernel_time(self):
-        """2 s hold timed by sceKernelGetProcessTime (µs) = 2,000,000."""
+        """2 s hold timed by sceKernelGetProcessTime (µs) = 2,000,000, fed
+        through the shared combo detector (both Move handles interleave — the
+        250 ms gap window keeps one handle's non-combo polls from resetting a
+        hold the other handle sustains)."""
         code = _code()
-        assert "#define PAD_TOGGLE_HOLD_US 2000000ULL" in code
-        assert "sceKernelGetProcessTime()" in _def_body(code, "pad_read_hook")
+        assert "#define COMBO_HOLD_US 2000000ULL" in code
+        assert "#define COMBO_GAP_US 250000ULL" in code
+        cf = _def_body(code, "combo_feed")
+        assert cf, "combo_feed definition not found"
+        assert "sceKernelGetProcessTime()" in cf
+        assert "COMBO_HOLD_US" in cf
 
-    def test_release_latch(self):
-        """After a toggle fires, the combo must be RELEASED before the next."""
-        body = _def_body(_code(), "pad_read_hook")
-        assert "g_toggle_latched = 0" in body  # cleared on non-combo poll
-        assert "!g_toggle_latched" in body      # blocks re-fire while held
+    def test_release_latch_and_cooldown(self):
+        """After a toggle fires: combo must be RELEASED (latch) and a global
+        cooldown prevents double-fires from both hook paths seeing one hold."""
+        cf = _def_body(_code(), "combo_feed")
+        assert "g_combo_latched = 0" in cf
+        assert "!g_combo_latched" in cf
+        assert "TOGGLE_COOLDOWN_US" in cf
+
+    def test_clean_combo_exact_match(self):
+        """Anti-accidental-trigger: the pad path requires buttons == the combo
+        EXACTLY; the Move path requires no OTHER button bit set beyond the
+        combo mask."""
+        code = _code()
+        assert "buttons == PAD_COMBO" in code
+        assert "(bd & ~MOVE_COMBO) == 0" in code
+
+    def test_giveup_flags_stop_retry_spam(self):
+        """v0.8049 re-logged its ERROR on every open_hook call after giving
+        up. The retry loops must set a gave-up flag and stop."""
+        code = _code()
+        assert "g_pad_hook_gave_up" in code
+        assert "g_move_hook_gave_up" in code
 
     def test_surgical_in_place_flip(self):
         """The flip edits the enable_plugin value in place (memmove for the
@@ -130,13 +208,13 @@ class TestInGameToggleResearchedFacts:
     def test_notification_shows_state_and_restart_hint(self):
         code = _code()
         assert "Plugin %s\\nRestart game to apply" in code
-        assert '"ENABLED"' in code.replace('"', '"') and "ENABLED" in code
+        assert "ENABLED" in code
         assert "DISABLED" in code
 
 
 class TestInGameToggleVersions:
     def test_plugin_version_bumped(self):
-        assert '#define PLUGIN_VERSION "v0.8049"' in _code()
+        assert '#define PLUGIN_VERSION "v0.8050"' in _code()
 
     def test_toast_counts_five_flags(self):
         code = _code()
@@ -169,7 +247,7 @@ class TestInGameToggleWebappSurfaces:
         with open(os.path.join(WEBAPP, "static", "app.js"), encoding="utf-8") as f:
             code = f.read()
         assert '"enable_in_game_plugin_toggle"' in code
-        assert 'TOAST_VERSION = "v0.8049"' in code
+        assert 'TOAST_VERSION = "v0.8050"' in code
 
     def test_index_placeholder_five_of_five(self):
         with open(os.path.join(WEBAPP, "static", "index.html"), encoding="utf-8") as f:

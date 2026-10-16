@@ -11,7 +11,7 @@ This document covers pipeline-specific details. See the **[main README](../READM
 
 ## v0.5363 Highlights
 
-- **In-game global plugin toggle (M11, plugin v0.8049)** — no PC needed to switch between all-custom and 100% stock: with a DualShock 4 connected, hold **L3+R3 for 2 seconds** and the plugin flips `enable_plugin` inside `features.json` itself (notification shows the new state; restart Beat Saber to apply — the session never changes mid-game). Arm it once via the webapp Feature Flags tab or `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_in_game_plugin_toggle=true`. Move-proof and accidental-trigger-proof by design (clean L3+R3 combo only; Moves are read via libSceMove and cannot set stick-click bits). Works even while the plugin is toggled OFF, so you can always flip back.
+- **In-game global plugin toggle (M11, plugin v0.8050)** — no PC needed to switch between all-custom and 100% stock: hold **the Move button + trigger together for 2 seconds** on a Move controller (a combination used nowhere else in the game) and the plugin flips `enable_plugin` inside `features.json` itself (notification shows the new state; restart Beat Saber to apply — the session never changes mid-game). Arm it once via the webapp Feature Flags tab or `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_in_game_plugin_toggle=true`. Works even while the plugin is toggled OFF, so you can always flip back.
 
 ## v0.5339 Highlights
 

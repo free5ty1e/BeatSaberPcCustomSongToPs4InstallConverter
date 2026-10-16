@@ -407,7 +407,7 @@ Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
       validation procedure step 5.1b, webapp toast N/4
 - [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears
 
-## M11 — In-Game Global Plugin Enable/Disable Toggle (L3+R3 Hotkey)
+## M11 — In-Game Global Plugin Enable/Disable Toggle (Move Button+Trigger Hotkey)
 **Goal:** Toggle the entire plugin ON/OFF from the couch with only a PS4 controller —
 no PC required. Hold **L3+R3 for 2 seconds** on a DualShock 4 → notification shows the
 new state → restart Beat Saber to apply. Switches between all-custom (47 songs,
@@ -433,11 +433,31 @@ Full plan: [`.agent/plans/in-game-global-plugin-enable-toggle-plan.md`](.agent/p
       plugin already links). 2 s = 2,000,000 µs.
 - [x] **Hook mechanism:** dlsym(RTLD_DEFAULT, "scePadRead") + GoldHEN Detour (the
       proven il2cpp_string_new pattern), lazy install from open_hook with retries.
-- [x] **Design locked with the user:** L3+R3 2 s hold, clean combo (buttons == L3|R3
-      exactly, anti-accidental-trigger), release latch, persist-only semantics (flip
-      `enable_plugin` inside features.json for the NEXT boot — restart to apply,
-      no mid-session behavior change), in-place surgical byte flip preserving all
-      other keys, hotkey NOT gated by the kill switch (one-way-door prevention).
+- [x] **Design locked with the user:** 2 s hold, clean combo, release latch,
+      persist-only semantics (flip `enable_plugin` inside features.json for the
+      NEXT boot — restart to apply, no mid-session behavior change), in-place
+      surgical byte flip preserving all other keys, hotkey NOT gated by the kill
+      switch (one-way-door prevention).
+- [x] **Exp 278b hardware test of v1 (L3+R3 on DS4): NEVER FIRED** — two findings:
+      (1) **ROOT CAUSE: readable-name dlsym fails for Sony system libraries** —
+      they export NIDs, not names (the game imports scePadRead as NID
+      q1cHNfGycLI; the boot log showed 100 failed attempts); (2) the **DS4 is
+      ignored by Beat Saber in VR mode** (user-verified). Logged + archived
+      (v0.8049_hotkey_test_failure_l3r3.txt).
+- [x] **Exp 278c redesign (v0.8050): hotkey moved to the MOVE controller** —
+      user-chosen combo **Move button + trigger held together 2 s** (used nowhere
+      else in the game). All hooks now resolve **BY NID** (sceMoveReadStateRecent =
+      f2bcpK6kJfg — the ONLY Move read in the eboot's imports, called every frame
+      for both Moves; scePadRead = q1cHNfGycLI kept as the secondary DS4 path).
+      Move bits reconstructed from the game's own PSMoveButton enum in dump.cs
+      (trigger=0x2, Move=0x4; SceMoveData buttons u16 @ +0x18, trigger u16 @
+      +0x1A per shadPS4Plus's SDK-derived layout; trigger = digital bit OR
+      analog>0x80). Signature ambiguity (3-arg vs 4-arg) handled safely at
+      runtime via sceKernelQueryMemoryProtection (v0.8045-proven technique) with
+      all four registers always passed through. Raw-word change-diagnostics
+      confirm/correct the offsets empirically from the first boot log. Shared
+      combo detector: 250 ms poll-gap window (two Move handles interleave),
+      release latch + 3 s cooldown. Give-up flags fix the v0.8049 log spam.
 - [x] **Feature flag:** `enable_in_game_plugin_toggle` (defaults false) gates the pad
       hook; boot toast becomes N/5; pipeline DEFAULT_FEATURES + webapp surfaces.
 

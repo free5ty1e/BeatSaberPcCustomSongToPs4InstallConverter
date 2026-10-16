@@ -6,6 +6,10 @@ subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
 
+## 0.6.8 (2026-10-15)
+### Changed
+- **M11 hotkey description updated for the v0.8050 redesign** (Exp 278c): the hotkey is now **Move button + trigger held together for 2 seconds** (the user-verified reality: the DS4 is ignored by Beat Saber in VR mode; the new combo is used nowhere else in the game). `TOAST_VERSION` bumped to v0.8050.
+
 ## 0.6.7 (2026-10-14)
 ### Added
 - **M11: 5th feature flag `enable_in_game_plugin_toggle` surfaced everywhere the app touches flags.** `KNOWN_FLAGS` (adapter), a full `FLAG_DESCRIPTIONS` entry (documents the L3+R3 2-second DS4 hotkey, the restart-to-apply semantics, and that the hotkey deliberately ignores the kill switch so it always works), the toast simulation's `FEATURE_FLAG_KEYS` + `FLAG_ORDER` (toast now reads N/5), `TOAST_VERSION` v0.8049, and the index.html static placeholder (5/5).

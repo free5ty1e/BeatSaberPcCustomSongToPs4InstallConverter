@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8049"
+#define PLUGIN_VERSION "v0.8050"
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -51,7 +51,7 @@ static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
 static int g_feature_beatmap_mode_mapping = 0;
 static int g_feature_song_previews = 0;
-static int g_feature_in_game_plugin_toggle = 0;  // M11: L3+R3 hotkey (gates ONLY this feature)
+static int g_feature_in_game_plugin_toggle = 0;  // M11: Move button+trigger hotkey (gates ONLY this feature)
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -64,7 +64,8 @@ static int METADATA_ARTIST_COUNT = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
-static void try_install_pad_hook(void);  // M11 in-game toggle (defined after the hooks)
+static void try_install_pad_hook(void);   // M11 in-game toggle — pad path (defined after the hooks)
+static void try_install_move_hook(void);  // M11 in-game toggle — Move path (the primary on this game)
 
 static void load_features(void) {
     int fd = open(FEATURES_PATH, O_RDONLY, 0);
@@ -360,9 +361,14 @@ static int open_hook(const char *path, int flags, ...) {
     // Deferred TMP_Text hook — install once after game modules are loaded
     try_install_tmp_hook();
 
-    // Deferred pad hook (M11): libScePad loads with the game (the eboot
-    // imports it), so the first open-hook attempts resolve scePadRead.
+    // Deferred pad hook (M11): libScePad loads with the game (it imports
+    // libScePad), so the first open-hook attempts resolve it.
     try_install_pad_hook();
+
+    // Deferred Move hook (M11 v0.8050): the PRIMARY hotkey path — Beat Saber
+    // reads both Moves every frame via sceMoveReadStateRecent (the only Move
+    // state read in the eboot's imports). libSceMove also loads with the game.
+    try_install_move_hook();
 
     const char *np = NULL;
     if (path) {
@@ -450,6 +456,7 @@ HOOK_INIT(hook_tmp_text_set_text);
 HOOK_INIT(hook_tmp_text_set_text2);
 HOOK_INIT(hook_move_next);
 HOOK_INIT(hook_pad_read);
+HOOK_INIT(hook_move_read);
 static int g_tmp_text_set_text_count = 0;
 
 // Forward-declare IL2CPP's MethodInfo (opaque type)
@@ -825,38 +832,76 @@ static void move_next_hook(void* state_machine) {
     HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);
 }
 
-// ── In-game plugin toggle (M11): L3+R3 hotkey via scePadRead hook ───────────
-// The game (Unity's PS4 input backend) polls connected controllers every
-// frame through native scePadRead(handle, OrbisPadData*, num) — verified in
-// the eboot's imports (Exp 278; scePadReadState is NOT imported; Move
-// controllers are read via the separate libSceMove, so pad polls carry
-// DS4-class pads only and can never carry Move data — a Move physically
-// cannot set the L3/R3 bits).
+// ── In-game plugin toggle (M11): Move button + trigger hotkey ───────────────
+// v0.8050 REDESIGN (Exp 278c). The v0.8049 L3+R3 DS4 hotkey never fired on
+// hardware, and the boot log showed the ROOT CAUSE: dlsym(RTLD_DEFAULT,
+// "scePadRead") FAILED because Sony system libraries export functions under
+// their NIDs, not readable names — the game imports scePadRead as NID
+// q1cHNfGycLI (readable-name dlsym only ever worked for il2cpp_string_new,
+// which the game's eboot genuinely exports by name). All hooks are now
+// resolved BY NID first (readable name kept as fallback).
 //
-// Hotkey: hold L3 + R3 (buttons == 0x0006 EXACTLY — clean combo, no other
-// digital bit, the anti-accidental-trigger guard) for 2 full seconds →
-// flip "enable_plugin" inside features.json IN PLACE (surgical byte edit
-// preserving every other key), send a notification, log it. Persist-only:
-// the CURRENT session's behavior NEVER changes — boot-time feature flags
-// govern runtime, as always; the flip applies at the NEXT boot (user-
-// approved "restart to apply" design — eliminates every mixed-state
-// hazard: already-loaded pack bundles/mode buttons can never desync from
-// per-song bundles mid-session).
+// The real input path on this game is the MOVE controller (the DS4 is
+// ignored in VR mode — user-verified). Beat Saber reads both Moves every
+// frame through native sceMoveReadStateRecent (NID f2bcpK6kJfg) — the ONLY
+// Move state read in the eboot's imports (sceMoveReadStateLatest is NOT
+// imported). Hotkey (user-chosen): hold the Move BUTTON + TRIGGER together
+// for 2 full seconds — a combination used nowhere else in the game.
 //
-// GATED BY enable_in_game_plugin_toggle ONLY — deliberately NOT by the
-// enable_plugin kill switch: if the hotkey died with the kill switch, a
-// user who toggled OFF could never re-enable without a PC (one-way door).
-// The kill switch disables game-behavior features (redirects, metadata,
-// modes, previews), not the plugin's own control surface.
-#define PAD_BUTTON_L3 0x0002u   // verified: OpenOrbis orbis/_types/pad.h + shadPS4Plus
+// Move bit layout (reconstructed from the game's OWN enum in dump.cs —
+// PSVRDeviceManager.PSMoveButton: Select=1, [2 = trigger], Move=4, Start=8,
+// Triangle=16, Circle=32, Cross=64, Square=128; the enum skips 2 because the
+// game reads the trigger via GetPSMoveAnalog — the trigger's DIGITAL bit is
+// 0x2): SceMoveData.button_data u16 @ +0x18, trigger analog u16 @ +0x1A
+// (struct layout per shadPS4Plus's SDK-derived OrbisMoveData). The hook logs
+// the raw data words whenever they change, so the first boot log CONFIRMS or
+// CORRECTS these offsets empirically before we rely on them further.
+//
+// Signature note: shadPS4 documents sceMoveReadStateRecent as 4-arg
+// (handle, timestamp, data, out_count), but the hook detects the form at
+// RUNTIME by validating candidate pointers with sceKernelQueryMemoryProtection
+// (the v0.8045-proven signal-free technique): a 3-arg call leaves RDX holding
+// the sample count (an int, fails validation), a 4-arg call leaves RSI holding
+// a timestamp value (fails validation). ALL FOUR registers are always passed
+// through untouched, so either form works; unknown forms pass through clean.
+//
+// Persist-only semantics + one-way-door prevention: UNCHANGED from v0.8049
+// — the hotkey flips "enable_plugin" inside features.json for the NEXT boot
+// (restart to apply; the current session never changes), and it is gated
+// ONLY by enable_in_game_plugin_toggle — NOT by the enable_plugin kill
+// switch (a toggled-OFF user must always be able to flip back from the
+// couch, or the feature would be a one-way door).
+#define NID_PAD_READ "q1cHNfGycLI"           // scePadRead — verified: eboot imports + aerolib
+#define NID_MOVE_READ_RECENT "f2bcpK6kJfg"   // sceMoveReadStateRecent — same verification
+#define PAD_BUTTON_L3 0x0002u                // DS4 combo (secondary path — kept for pad-mode sessions)
 #define PAD_BUTTON_R3 0x0004u
-#define PAD_TOGGLE_COMBO (PAD_BUTTON_L3 | PAD_BUTTON_R3)  // 0x0006 — exactly these two
-#define PAD_TOGGLE_HOLD_US 2000000ULL                     // 2 s (sceKernelGetProcessTime is µs)
-#define PAD_TOGGLE_DIAG_N 8                               // log the first N scePadRead calls
+#define PAD_COMBO (PAD_BUTTON_L3 | PAD_BUTTON_R3)             // 0x0006
+#define MOVE_BUTTON_TRIGGER 0x0002u          // SceMoveData.button_data digital bits
+#define MOVE_BUTTON_MOVE 0x0004u
+#define MOVE_COMBO (MOVE_BUTTON_TRIGGER | MOVE_BUTTON_MOVE)   // 0x0006
+#define MOVE_TRIGGER_ANALOG_THRESH 0x0080u   // trigger analog u16 @ +0x1A (fallback when bit 0x2 absent)
+#define MOVE_DATA_BUTTON_OFF 0x18            // button_data u16 offset in SceMoveData
+#define MOVE_DATA_TRIGGER_OFF 0x1A           // trigger u16 offset in SceMoveData
+#define COMBO_HOLD_US 2000000ULL             // 2 s hold (sceKernelGetProcessTime is µs)
+#define COMBO_GAP_US 250000ULL               // poll-to-poll continuity window (two Move handles interleave)
+#define TOGGLE_COOLDOWN_US 3000000ULL        // global re-toggle cooldown (shared by both hook paths)
+#define MOVE_DIAG_FIRST_N 10                 // log the first N move calls raw
+#define MOVE_DIAG_CHANGE_MAX 40               // cap on button-change diagnostic logs
+#define PAD_DIAG_N 8                          // log the first N pad calls
 
-static uint64_t g_toggle_hold_started_us = 0;  // 0 = combo not currently held
-static int g_toggle_latched = 0;                // require combo RELEASE before the next toggle
-static int g_pad_call_count = 0;                // total scePadRead calls seen (diagnostics/liveness)
+// Shared combo-hold state (fed by BOTH hook paths). A 2-second hold must be
+// continuous within a 250 ms poll-gap window — the two Move handles
+// interleave calls, so the non-holding handle's polls must not reset a hold
+// in progress. Latched until the combo has been RELEASED for a full gap
+// window; a 3 s cooldown after a fired toggle prevents double-fires.
+static uint64_t g_combo_first_us = 0;       // when the current hold started (0 = none)
+static uint64_t g_combo_last_us = 0;        // last poll that saw the combo
+static uint64_t g_toggle_last_fired_us = 0;  // cooldown guard
+static int g_combo_latched = 0;              // require combo release before the next fire
+static int g_move_call_count = 0;
+static int g_move_change_logs = 0;
+static uint32_t g_move_prev_words[8] = {0};  // last-seen raw SceMoveData words (change logging)
+static int g_pad_call_count = 0;             // total scePadRead calls seen (diagnostics/liveness)
 
 // Flip "enable_plugin" inside features.json in place, preserving every other
 // key/byte (the pipeline's Exp-248 pull-before-push reads the LIVE file, so
@@ -953,8 +998,50 @@ static int in_game_toggle_plugin(void) {
     return new_state;
 }
 
-// scePadRead(handle, OrbisPadData*, num) — most recent sample is data[n-1];
-// the buttons u32 sits at offset 0 of each OrbisPadData (dual-verified).
+// Shared combo-hold detector — see the globals block for the state-machine
+// contract. Feeds from BOTH hooks; each call reports whether THAT poll saw
+// the combo (either path can carry it).
+static void combo_feed(int combo_now) {
+    uint64_t now = sceKernelGetProcessTime();
+    if (combo_now) {
+        if (g_combo_first_us == 0 || (now - g_combo_last_us) > COMBO_GAP_US) {
+            g_combo_first_us = now ? now : 1;   // fresh hold (previous one expired)
+        }
+        g_combo_last_us = now;
+        if (!g_combo_latched && (now - g_combo_first_us) >= COMBO_HOLD_US) {
+            g_combo_latched = 1;  // require combo release before the next fire
+            if (g_toggle_last_fired_us == 0 ||
+                (now - g_toggle_last_fired_us) >= TOGGLE_COOLDOWN_US) {
+                g_toggle_last_fired_us = now;
+                in_game_toggle_plugin();
+            } else {
+                log_write("[TOGGLE] combo held but cooldown active — ignored");
+            }
+        }
+    } else {
+        if ((now - g_combo_last_us) > COMBO_GAP_US) {
+            g_combo_first_us = 0;   // hold broken for a full gap window
+            g_combo_latched = 0;
+        }
+    }
+}
+
+// Signal-free pointer validation (the v0.8045-proven sceKernelQueryMemory
+// Protection technique): resolves the 3-arg vs 4-arg signature ambiguity of
+// sceMoveReadStateRecent at runtime. Only accepts readable+ writable buffers
+// — the output buffer the callee is about to write must be RW-mapped.
+static int is_mapped_rw_pointer(void *p) {
+    if ((uint64_t)p < 0x1000000ULL) return 0;  // below the PS4 module base range
+    void *start = NULL, *end = NULL;
+    int32_t prot = 0;
+    if (sceKernelQueryMemoryProtection(p, &start, &end, &prot) < 0) return 0;
+    return (prot & 0x3) == 0x3;
+}
+
+// scePadRead(handle, OrbisPadData*, num) — SECONDARY path (DS4 L3+R3; kept
+// for any session where the game polls pads). Most recent sample is
+// data[n-1]; the buttons u32 sits at offset 0 of each OrbisPadData
+// (dual-verified). Feeds the shared combo detector.
 static int pad_read_hook(int32_t handle, void *data, int32_t num) {
     int n = HOOK_CONTINUE(hook_pad_read, int (*)(int32_t, void*, int32_t), handle, data, num);
     if (!g_feature_in_game_plugin_toggle) return n;  // flag OFF (belt + braces: hook is not installed)
@@ -963,7 +1050,7 @@ static int pad_read_hook(int32_t handle, void *data, int32_t num) {
     if (data && n >= 1) {
         uint32_t buttons = ((uint32_t *)data)[n - 1];
 
-        if (g_pad_call_count <= PAD_TOGGLE_DIAG_N) {
+        if (g_pad_call_count <= PAD_DIAG_N) {
             char dlog[160];
             snprintf(dlog, sizeof(dlog), "[TOGGLE] padRead#%d handle=%d num=%d ret=%d buttons=0x%08x",
                      g_pad_call_count, handle, num, n, buttons);
@@ -974,36 +1061,87 @@ static int pad_read_hook(int32_t handle, void *data, int32_t num) {
             log_write(clog);
         }
 
-        if (buttons == PAD_TOGGLE_COMBO) {
-            uint64_t now = sceKernelGetProcessTime();
-            if (g_toggle_hold_started_us == 0) {
-                g_toggle_hold_started_us = now ? now : 1;
-            } else if (!g_toggle_latched &&
-                       (now - g_toggle_hold_started_us) >= PAD_TOGGLE_HOLD_US) {
-                g_toggle_latched = 1;  // require combo release before the next toggle
-                in_game_toggle_plugin();
-            }
-        } else {
-            g_toggle_hold_started_us = 0;
-            g_toggle_latched = 0;
-        }
+        combo_feed(buttons == PAD_COMBO);
+    } else {
+        combo_feed(0);
     }
     return n;
 }
 
-// Lazy install: dlsym(RTLD_DEFAULT, "scePadRead") + GoldHEN Detour — the exact
-// pattern proven for il2cpp_string_new in this codebase. At module_start only
-// 3 modules are visible; libScePad loads with the game (the eboot imports
-// it), so the first open_hook attempts resolve it.
+// sceMoveReadStateRecent — the PRIMARY hotkey path. Form detected at runtime
+// (see is_mapped_rw_pointer): 4-arg form carries the SceMoveData buffer in
+// RDX (a3), 3-arg form in RSI (a2). All four registers always pass through,
+// so either form is safe. Button check runs on entry 0 — a 2-second hold
+// spans 100+ frames, so every entry in every call shows the same held-state
+// bits regardless of which entry is "most recent". Raw words are logged on
+// the first calls and whenever they change (a button press lights up the
+// log — empirically confirming the +0x18/+0x1A offsets).
+static int move_read_hook(int32_t handle, int64_t a2, void *a3, int64_t a4) {
+    int rc = HOOK_CONTINUE(hook_move_read, int (*)(int32_t, int64_t, void*, int64_t),
+                           handle, a2, a3, a4);
+    if (!g_feature_in_game_plugin_toggle) return rc;
+
+    g_move_call_count++;
+
+    void *data = NULL;
+    int form = 0;
+    if (is_mapped_rw_pointer(a3) && !is_mapped_rw_pointer((void *)a2)) {
+        data = a3; form = 4;   // (handle, timestamp, data, out_count)
+    } else if (is_mapped_rw_pointer((void *)a2) && !is_mapped_rw_pointer(a3)) {
+        data = (void *)a2; form = 3;   // (handle, data, num)
+    }
+
+    if (data) {
+        uint32_t *w = (uint32_t *)data;
+        int changed = 0;
+        for (int i = 2; i < 8; i++) {
+            if (w[i] != g_move_prev_words[i]) changed = 1;
+        }
+        if (g_move_call_count <= MOVE_DIAG_FIRST_N ||
+            (changed && g_move_change_logs < MOVE_DIAG_CHANGE_MAX)) {
+            char dlog[288];
+            snprintf(dlog, sizeof(dlog),
+                     "[TOGGLE] moveRead#%d form=%d handle=%d rc=%d w=[%08x %08x %08x %08x %08x %08x %08x %08x]",
+                     g_move_call_count, form, handle, rc,
+                     w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]);
+            log_write(dlog);
+            if (changed && g_move_call_count > MOVE_DIAG_FIRST_N) g_move_change_logs++;
+        }
+        for (int i = 0; i < 8; i++) g_move_prev_words[i] = w[i];
+
+        uint16_t bd = *(uint16_t *)((char *)data + MOVE_DATA_BUTTON_OFF);
+        uint16_t trig = *(uint16_t *)((char *)data + MOVE_DATA_TRIGGER_OFF);
+        int move_held = (bd & MOVE_BUTTON_MOVE) != 0;
+        int trig_held = ((bd & MOVE_BUTTON_TRIGGER) != 0) || (trig > MOVE_TRIGGER_ANALOG_THRESH);
+        int clean = (bd & ~MOVE_COMBO) == 0;   // no other button bit set
+        combo_feed(move_held && trig_held && clean);
+    } else {
+        combo_feed(0);
+    }
+    return rc;
+}
+
+// Lazy installs: dlsym BY NID (the v0.8050 root-cause fix — Sony system
+// libraries export NIDs, not readable names; the readable-name dlsym only
+// ever worked for eboot-exported symbols like il2cpp_string_new) + GoldHEN
+// Detour. At module_start only 3 modules are visible; libScePad/libSceMove
+// load with the game (the eboot imports both), so the first open_hook
+// attempts resolve them. Give-up flags stop the retry loop cleanly (the
+// v0.8049 build re-logged its ERROR on every open after giving up).
 static int g_pad_hook_installed = 0;
 static int g_pad_hook_attempts = 0;
+static int g_pad_hook_gave_up = 0;
+static int g_move_hook_installed = 0;
+static int g_move_hook_attempts = 0;
+static int g_move_hook_gave_up = 0;
 
 static void try_install_pad_hook(void) {
-    if (g_pad_hook_installed) return;
+    if (g_pad_hook_installed || g_pad_hook_gave_up) return;
     if (!g_feature_in_game_plugin_toggle) return;  // NOT gated by the kill switch (one-way-door rule)
 
     g_pad_hook_attempts++;
-    void *fn = dlsym(RTLD_DEFAULT, "scePadRead");
+    void *fn = dlsym(RTLD_DEFAULT, NID_PAD_READ);
+    if (!fn) fn = dlsym(RTLD_DEFAULT, "scePadRead");  // readable-name fallback
     if (!fn) {
         if (g_pad_hook_attempts <= 3 || g_pad_hook_attempts % 20 == 0) {
             char alog[128];
@@ -1012,7 +1150,8 @@ static void try_install_pad_hook(void) {
             log_write(alog);
         }
         if (g_pad_hook_attempts < 100) return;  // keep retrying
-        log_write("[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session");
+        g_pad_hook_gave_up = 1;
+        log_write("[TOGGLE] ERROR: scePadRead never found — DS4 path unavailable this session (Move path may still work)");
         return;
     }
 
@@ -1022,7 +1161,38 @@ static void try_install_pad_hook(void) {
 
     char ilog[160];
     snprintf(ilog, sizeof(ilog),
-             "[TOGGLE] scePadRead hooked at %p — hold L3+R3 for 2s on a DS4 to toggle the plugin",
+             "[TOGGLE] scePadRead hooked at %p (NID-resolved) — DS4 L3+R3 secondary path",
+             fn);
+    log_write(ilog);
+}
+
+static void try_install_move_hook(void) {
+    if (g_move_hook_installed || g_move_hook_gave_up) return;
+    if (!g_feature_in_game_plugin_toggle) return;
+
+    g_move_hook_attempts++;
+    void *fn = dlsym(RTLD_DEFAULT, NID_MOVE_READ_RECENT);
+    if (!fn) fn = dlsym(RTLD_DEFAULT, "sceMoveReadStateRecent");  // readable-name fallback
+    if (!fn) {
+        if (g_move_hook_attempts <= 3 || g_move_hook_attempts % 20 == 0) {
+            char alog[128];
+            snprintf(alog, sizeof(alog), "[TOGGLE] sceMoveReadStateRecent not found yet (attempt %d, open #%d)",
+                     g_move_hook_attempts, g_open_count);
+            log_write(alog);
+        }
+        if (g_move_hook_attempts < 100) return;
+        g_move_hook_gave_up = 1;
+        log_write("[TOGGLE] ERROR: sceMoveReadStateRecent never found — in-game toggle unavailable this session");
+        return;
+    }
+
+    Detour_Construct(&Detour_hook_move_read, DetourMode_x64);
+    Detour_DetourFunction(&Detour_hook_move_read, (uint64_t)fn, (void *)move_read_hook);
+    g_move_hook_installed = 1;
+
+    char ilog[160];
+    snprintf(ilog, sizeof(ilog),
+             "[TOGGLE] sceMoveReadStateRecent hooked at %p (NID-resolved) — hold Move button + trigger for 2s to toggle the plugin",
              fn);
     log_write(ilog);
 }
@@ -1146,7 +1316,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     }
 
     if (g_feature_in_game_plugin_toggle) {
-        log_write("[TOGGLE] in-game hotkey ARMED: hold L3+R3 for 2s on a DS4 to flip enable_plugin (restart to apply)");
+        log_write("[TOGGLE] in-game hotkey ARMED: hold the Move button + trigger together for 2s to flip enable_plugin (restart to apply)");
     }
 
     if (!g_feature_custom_song_replacements) {

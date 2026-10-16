@@ -7,18 +7,35 @@ metadata:
 
 # In-Game Global Plugin Toggle (M11)
 
-Shipped in plugin v0.8049 / pipeline v0.5363 / webapp 0.6.7 (Exp 278). Plan:
+Shipped in plugin v0.8049/v0.8050 / pipeline v0.5363 / webapp 0.6.7–0.6.8
+(Exps 278–278c). Plan:
 `.agent/plans/in-game-global-plugin-enable-toggle-plan.md`.
 
 ## What it does
 
-Hold **L3 + R3 together for 2 full seconds** on a DualShock 4 → the plugin flips
-its own global state (`enable_plugin` inside `features.json`) → a PS4
-notification shows the new state → **restart Beat Saber to apply**. Switches the
-game between all-custom (redirects, metadata swaps, mode buttons, previews) and
-100% stock with zero PC involvement. Gated behind `enable_in_game_plugin_toggle`
-(defaults false; enable via the webapp Feature Flags tab or
-`--features-only --set-feature enable_in_game_plugin_toggle=true`).
+Hold **the Move BUTTON + TRIGGER together for 2 full seconds** on a Move
+controller → the plugin flips its own global state (`enable_plugin` inside
+`features.json`) → a PS4 notification shows the new state → **restart Beat
+Saber to apply**. Switches the game between all-custom (redirects, metadata
+swaps, mode buttons, previews) and 100% stock with zero PC involvement.
+Gated behind `enable_in_game_plugin_toggle` (defaults false; enable via the
+webapp Feature Flags tab or `--features-only --set-feature
+enable_in_game_plugin_toggle=true`).
+
+### Design history (two hardware iterations — both instructive)
+- **v0.8049 (Exp 278):** L3+R3 on a DS4. Hardware test (Exp 278b): NEVER
+  fired. Two findings: (1) **root cause — dlsym by readable name failed**
+  because Sony system libraries export NIDs
+  ([[ps4-controller-input-from-plugin]] — the critical lesson); (2) the
+  **DS4 is ignored by Beat Saber in VR mode** (user-verified — a DS4 on the
+  same profile as the headset + Moves never produced pad input).
+- **v0.8050 (Exp 278c):** user-chosen combo **Move button + trigger** (used
+  nowhere else in the game); primary hook `sceMoveReadStateRecent` (NID
+  `f2bcpK6kJfg` — the only Move read in the eboot's imports, called every
+  frame for both Moves); Move bits reconstructed from the game's own
+  `PSVRDeviceManager.PSMoveButton` enum (trigger=0x2, Move=0x4);
+  runtime-safe signature detection via sceKernelQueryMemoryProtection; raw
+  word diagnostics so the first boot log confirms the offsets empirically.
 
 ## The three deliberate design rules
 
@@ -42,22 +59,24 @@ game between all-custom (redirects, metadata swaps, mode buttons, previews) and
 
 ## Anti-accidental-trigger (user requirement: Move gameplay safety)
 
-- **Clean combo:** `buttons == L3|R3` EXACTLY (0x0006). Any other digital bit
-  (face/shoulder/dpad/touchpad-click) resets the hold. Resting on analog L2/R2
-  is harmless — analog values live outside the bitmask.
-- **2-second hold** via `sceKernelGetProcessTime()` µs.
-- **Release latch:** after a toggle fires, the combo must be fully released
-  before the next can arm.
-- **Move-proof:** Moves are read via `libSceMove`, not `scePadRead` — see
-  [[ps4-controller-input-from-plugin]].
+- **Clean combo:** Move button + trigger together (bits 0x4|0x2 = 0x6) with
+  NO other button bit set — any other bit breaks the hold. A combination
+  used nowhere else in the game (user-verified).
+- **2-second hold** via `sceKernelGetProcessTime()` µs, continuous within a
+  250 ms poll-gap window (the two Move handles interleave per-frame polls —
+  the non-holding handle's polls must not reset a hold the other sustains).
+- **Release latch + 3 s cooldown:** after a toggle fires, the combo must be
+  fully released before the next can arm, and a global cooldown prevents
+  double-fires from the two hook paths.
 
 ## Hook architecture
 
-`scePadRead` (the function Beat Saber actually imports) hooked via
-`dlsym(RTLD_DEFAULT, ...)` + GoldHEN Detour, lazily installed from `open_hook()`
-with retries. The hook calls the original first, then reads
-`((uint32_t*)data)[n-1]` (most recent sample's button mask). No threads, no
-signal handlers, no memory probing — the safest hook class in this codebase.
+`sceMoveReadStateRecent` (primary — NID-resolved) + `scePadRead` (secondary
+DS4 path) hooked via `dlsym(RTLD_DEFAULT, <NID>)` + GoldHEN Detour, lazily
+installed from `open_hook()` with retries. The hook calls the original first,
+then reads entry 0's button bits (a 2-second hold spans 100+ frames — every
+entry shows the same held-state bits). **All hooks resolve BY NID** — see
+[[ps4-controller-input-from-plugin]] for the Exp 278b lesson.
 
 ## Rollback / disable
 
