@@ -9,6 +9,10 @@ This document covers pipeline-specific details. See the **[main README](../READM
 - **Clean-slate crash fixed (Exp 225)** — the v0.5342 auto-discovery change left two deploy gates checking the (now empty) pinned pack list: a first-song deploy on a clean PS4 shipped the patched pack bundle WITHOUT its catalog → CE-34878-0. Gates now use `_resolve_active_packs`; **failed post-deploy validation exits 1** so a broken state can never look green.
 - **Zero hardcoded pack expectations (Exp 224, user directive)** — `pack_modes.packs` defaults `[]`; the active pack set is auto-discovered from what you actually deployed (pinned list → redirects.json → local builds). All FTP paths quoted (`_ftp_quote` — `Scream&Shout` split at `&` silently); uploads verified by remote listing, not lftp exit codes.
 
+## v0.5363 Highlights
+
+- **In-game global plugin toggle (M11, plugin v0.8050)** — no PC needed to switch between all-custom and 100% stock: hold **the Move button + trigger together for 2 seconds** on a Move controller (a combination used nowhere else in the game) and the plugin flips `enable_plugin` inside `features.json` itself (notification shows the new state; restart Beat Saber to apply — the session never changes mid-game). Arm it once via the webapp Feature Flags tab or `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_in_game_plugin_toggle=true`. Works even while the plugin is toggled OFF, so you can always flip back.
+
 ## v0.5339 Highlights
 
 - **Global kill switch** — `python3 tools/full_custom_song_pipeline.py --features-only --set-feature enable_plugin=false` makes the plugin fully inert on the next boot (all song redirects and metadata swaps off — the game plays 100% official content). `...=true` restores the custom setup. No plugins.ini edit, no PS4 clean. Requires plugin v0.8043+.

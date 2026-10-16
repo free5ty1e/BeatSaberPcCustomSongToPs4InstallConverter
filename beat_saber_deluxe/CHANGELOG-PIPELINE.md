@@ -1,5 +1,9 @@
 # Pipeline Changelog
 
+## v0.5363 (2026-10-14)
+### Added
+- **M11 flag plumbing (Exp 278): `enable_in_game_plugin_toggle` (default False) added to `DEFAULT_FEATURES`.** The new plugin hotkey (L3+R3 2s on a DS4 → flip `enable_plugin` inside features.json, restart to apply) needs nothing else from the pipeline: `apply_feature_flags`' Exp-248 pull-before-push already bases every flag deploy on the LIVE features.json, so in-game flips are picked up, preserved, and surfaced by the webapp/ps4_state automatically. New reusable development script: `development/scripts/ps4_elf_imports.py` (PS4 ELF dynsym dumper — DT_SCE_* tags are offsets relative to the PT_SCE_DYNLIBDATA segment; game imports are NID-obfuscated, decode against a NID DB such as shadPS4's aerolib.inl).
+
 ## v0.5362 (2026-10-12)
 ### Fixed — release-layout findings (Exp 270a, found validating the v0.8048-pipeline-0.5361-webapp-0.6.4 zip from a clean extraction)
 - **The web app showed 0 example packs from an extracted release zip (latent since the FIRST M9 release).** The release zip layout is FLAT (webapp/, tools/, docs/ at the zip root — no beat_saber_deluxe/ wrapper), so `RELEASE_ROOT` (one level above the zip root) pointed at nothing; the batch adapter's `EXAMPLE_DIRS` never probed the zip root itself. Fix: `paths.py` gains `release_root_surname()`/`release_path()` — probing BOTH layout levels — and every RELEASE_ROOT consumer (batch dirs, runner cwd, backup paths, validator) is layout-agnostic now. Verified from a true clean extraction: 34 packs parse.

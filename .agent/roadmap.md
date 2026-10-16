@@ -374,7 +374,7 @@ Full plan: [`.agent/plans/web-app-song-conversion-pipeline-interface.md`](.agent
 - [ ] **Re-test Chromeo slots** (all 6) after v0.5328 redeploy with `--deploy-full`.
 - [ ] **Generalization test**: target a FRESH music pack / song end-to-end via pipeline config only (user directive: support ANY song pack / song in the game).
 
-## M10 — Song Previews: Redirect Menu Preview Playback to Custom Audio (In Progress — Exp 268+)
+## M10 — Song Previews: Redirect Menu Preview Playback to Custom Audio — ✅ COMPLETE (Exps 268-277; shipped in v0.8048-pipeline-0.5362-webapp-0.6.6)
 **Goal:** when the player highlights a custom song in the song menu, play a ~10s
 excerpt of the CUSTOM song's own audio (mapper's `_previewStartTime`) instead of
 the confusing stock-song preview. Patched into the pack bundles'
@@ -406,3 +406,102 @@ Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
       lftp pitfall 9), README banner/table/toast, feature doc shipped in the release zip,
       validation procedure step 5.1b, webapp toast N/4
 - [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears
+
+## M11 — In-Game Global Plugin Enable/Disable Toggle (Move Button+Trigger Hotkey)
+**Goal:** Toggle the entire plugin ON/OFF from the couch with only a PS4 controller —
+no PC required. Hold **L3+R3 for 2 seconds** on a DualShock 4 → notification shows the
+new state → restart Beat Saber to apply. Switches between all-custom (47 songs,
+4 modes, previews) and 100% stock.
+
+Full plan: [`.agent/plans/in-game-global-plugin-enable-toggle-plan.md`](.agent/plans/in-game-global-plugin-enable-toggle-plan.md)
+(renamed from the exploration doc after research completed)
+
+### Research — COMPLETE (Exp 278, all open questions resolved)
+- [x] **Hook target verified against the game's real imports:** Beat Saber reads pads
+      via native **`scePadRead`** (NOT `scePadReadState`; NOT a managed Input.GetKey
+      hook) — proven by decoding all 849 NID-obfuscated imports of eboot.bin against
+      shadPS4Plus's aerolib NID database. New reusable script:
+      `development/scripts/ps4_elf_imports.py` (PS4 ELF dynsym dumper — DT_SCE_*
+      tags are offsets relative to the PT_SCE_DYNLIBDATA segment).
+- [x] **Move-proof by construction:** Moves are read via the separate `libSceMove`
+      (`sceMoveReadStateRecent` in the imports) — `scePadRead` polls carry DS4-class
+      pads only; Moves cannot set L3/R3 bits.
+- [x] **Button bits dual-verified** (OpenOrbis headers + shadPS4Plus): L3=0x0002,
+      R3=0x0004; `buttons` u32 at offset 0 of `OrbisPadData`; most-recent sample =
+      `data[n-1]` of `scePadRead(handle, data, num)`.
+- [x] **Time source:** `sceKernelGetProcessTime()` (µs monotonic; same libkernel the
+      plugin already links). 2 s = 2,000,000 µs.
+- [x] **Hook mechanism:** dlsym(RTLD_DEFAULT, "scePadRead") + GoldHEN Detour (the
+      proven il2cpp_string_new pattern), lazy install from open_hook with retries.
+- [x] **Design locked with the user:** 2 s hold, clean combo, release latch,
+      persist-only semantics (flip `enable_plugin` inside features.json for the
+      NEXT boot — restart to apply, no mid-session behavior change), in-place
+      surgical byte flip preserving all other keys, hotkey NOT gated by the kill
+      switch (one-way-door prevention).
+- [x] **Exp 278b hardware test of v1 (L3+R3 on DS4): NEVER FIRED** — two findings:
+      (1) **ROOT CAUSE: readable-name dlsym fails for Sony system libraries** —
+      they export NIDs, not names (the game imports scePadRead as NID
+      q1cHNfGycLI; the boot log showed 100 failed attempts); (2) the **DS4 is
+      ignored by Beat Saber in VR mode** (user-verified). Logged + archived
+      (v0.8049_hotkey_test_failure_l3r3.txt).
+- [x] **Exp 278e RCA (v0.8051 hung the game at a black screen): the Detour trampoline over
+      scePadRead's real code corrupted its non-relocatable prologue — the first call after
+      install killed the calling thread (the GOT resolution itself WORKED: pad slot bound at
+      open #1). Also discovered: PS4 JUMP_SLOTs bind LAZILY (the move slot held the sentinel
+      0xeffffffe000001a0 until the game's first call). v0.8052: **GOT HIJACKING** — mprotect
+      the RELRO page RW, write the hook address into the slot (atomic 8-byte write, zero
+      races), the hook calls the saved original pointer directly — no trampoline, no code
+      patching, the crash class is structurally eliminated. Release-lean logging (user
+      directive): per-call diagnostics behind #ifdef VERBOSE_LOG (DEBUG=1 build only);
+      release logs one-time events; form detection cached (no hot-path syscalls). Debug
+      variant deployed for this test round (--debug-logging; plain --deploy-plugin restores
+      release after confirmation). Suite 894/894. Awaiting the Move-combo hardware test.
+- [x] **Exp 278d RCA (v0.8050 also failed): NID dlsym finds NOTHING either** — dlsym(RTLD_DEFAULT) cannot
+      see kernel-loaded Sony SPRX exports AT ALL (only game-module exports like il2cpp_string_new ever
+      resolved). The DEFINITIVE mechanism (v0.8051): resolve via the EBOOT'S GOT — JMPREL r_offset RVAs
+      precomputed from the decrypted dump (sceMoveReadStateRecent → 0x1c634e8, scePadRead → 0x1c63500)
+      hold the loader-bound final addresses; plugin finds eboot.bin by name (module[0] from the first
+      open), reads the slot, validates via sceKernelQueryMemoryProtection, Detours the resolved address.
+      Deployed + strings-verified. Suite 890/890. Awaiting the Move-combo hardware re-test.
+- [x] **Exp 278c redesign (v0.8050): hotkey moved to the MOVE controller** —
+      user-chosen combo **Move button + trigger held together 2 s** (used nowhere
+      else in the game). All hooks now resolve **BY NID** (sceMoveReadStateRecent =
+      f2bcpK6kJfg — the ONLY Move read in the eboot's imports, called every frame
+      for both Moves; scePadRead = q1cHNfGycLI kept as the secondary DS4 path).
+      Move bits reconstructed from the game's own PSMoveButton enum in dump.cs
+      (trigger=0x2, Move=0x4; SceMoveData buttons u16 @ +0x18, trigger u16 @
+      +0x1A per shadPS4Plus's SDK-derived layout; trigger = digital bit OR
+      analog>0x80). Signature ambiguity (3-arg vs 4-arg) handled safely at
+      runtime via sceKernelQueryMemoryProtection (v0.8045-proven technique) with
+      all four registers always passed through. Raw-word change-diagnostics
+      confirm/correct the offsets empirically from the first boot log. Shared
+      combo detector: 250 ms poll-gap window (two Move handles interleave),
+      release latch + 3 s cooldown. Give-up flags fix the v0.8049 log spam.
+- [x] **Feature flag:** `enable_in_game_plugin_toggle` (defaults false) gates the pad
+      hook; boot toast becomes N/5; pipeline DEFAULT_FEATURES + webapp surfaces.
+
+### Implementation Phases
+- [x] **M11.1** — Research + plan (Exp 278) — everything above
+- [x] **M11.2** — Plugin v0.8049: flag parse, pad hook (dlsym scePadRead, lazy install),
+      L3+R3 clean-combo 2 s hold, in-place features.json flip, notification,
+      toast N/5, first-8-calls + periodic diagnostics
+- [x] **M11.3** — Pipeline v0.5363: DEFAULT_FEATURES gains the flag (Exp-248
+      pull-before-push picks up in-game flips automatically — zero other changes)
+- [x] **M11.4** — Webapp 0.6.7: KNOWN_FLAGS + FLAG_DESCRIPTIONS + toast sim N/5 +
+      TOAST_VERSION v0.8049 + index.html 5/5 placeholder
+- [x] **M11.5** — Tests: new tests/test_in_game_toggle.py (gating, one-way-door,
+      scePadRead pin, combo constants, persist-only) + toast-count test updated
+- [ ] **M11.6** — Deploy via web UI (Feature Flags tab: enable the toggle flag; deploy
+      plugin v0.8049) — needs PS4 powered on
+- [ ] **M11.7** — Hardware test (user, DS4 connected at boot): toggle OFF → restart →
+      stock → toggle ON from the OFF state (one-way-door test) → restart → customs;
+      anti-accidental check during Move gameplay; log diagnostics confirm DS4 polling
+- [ ] **M11.8** — Docs polish: README hotkey section, KB feature-flags 5th row,
+      release notes at next tag
+
+### To verify on hardware (only remaining unknown)
+- That the game polls a boot-connected DS4 every frame via scePadRead (expected —
+  Unity's PS4 input backend polls all opened handles; v1 logs first 8 calls + a
+  periodic counter to confirm from the boot log). If a mid-session-connected DS4
+  is not polled, v1.1 adds an own-handle fallback (scePadOpen + poll our handle
+  inside the hook tick). v1 guidance: connect the DS4 before booting.

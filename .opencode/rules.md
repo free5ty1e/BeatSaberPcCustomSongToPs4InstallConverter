@@ -4,8 +4,13 @@ You MUST follow these rules for every task in this project. These rules are
 enforced by the files they reference — read them if you haven't already.
 
 ## 0. Rule Synchronization
-- **Any changes to this file MUST be mirrored in `.opencode/rules.md`.**
-- If an agent or user asks for a rule change, ensure both files are updated to maintain consistency.
+- **The rules MUST stay synchronized across ALL THREE rule files:**
+  1. `CLAUDE.md` (Claude Code)
+  2. `.opencode/rules.md` (OpenCode — this file)
+  3. `AGENTS.md` (Pi and AGENTS.md-standard agents)
+- If an agent or user asks for a rule change (addition, edit, removal), update
+  **ALL THREE files in the same change** to maintain consistency. Never edit
+  just one.
 
 ## 0.5 Session Transcripts (MANDATORY, every development cycle)
 - **Before sending ANY response message to the user, store/maintain/update a

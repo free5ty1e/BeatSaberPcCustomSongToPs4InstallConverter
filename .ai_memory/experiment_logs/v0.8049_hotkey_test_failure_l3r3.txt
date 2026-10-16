@@ -1,0 +1,1491 @@
+=== BS Deluxe v0.8049 started ===
+v0.8049 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 53 redirects from config
+  e.g. billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> /data/GoldHEN/AFR/CUSA12878/billieeilish_pack_modes_previews_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+  breakdown: 47 songs, 5 packs, 1 catalog
+features: plugin=1 custom_song_replacements=1 metadata_modification=1 beatmap_mode_mapping=1 song_previews=1 in_game_plugin_toggle=1
+loaded song_metadata: 47 name replacements, 7 artist replacements
+FEATURE FLAGS: plugin=ON  custom_song_replacements=ON  metadata_modification=ON  beatmap_mode_mapping=ON  song_previews=ON  in_game_plugin_toggle=ON
+[TOGGLE] in-game hotkey ARMED: hold L3+R3 for 2s on a DS4 to flip enable_plugin (restart to apply)
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 1, open #1) — retrying
+[TOGGLE] scePadRead not found yet (attempt 1, open #1)
+[OPEN #1] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+hooks installed
+[TOGGLE] scePadRead not found yet (attempt 2, open #2)
+[OPEN #2] /dev/notification0
+[TOGGLE] scePadRead not found yet (attempt 3, open #3)
+[OPEN #3] /dev/notification0
+[OPEN #4] /dev/notification1
+[OPEN #5] /dev/urandom
+[OPEN #6] /app0/sce_discmap.plt
+[OPEN #7] /app0/sce_discmap_patch.plt
+[OPEN #8] /app0/sce_discmap.plt
+[OPEN #9] /app0/sce_discmap_patch.plt
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 2, open #10) — retrying
+[OPEN #10] /app0/media/boot.config
+[METADATA] Found 5 modules
+[METADATA] Found IL2CPP module: Il2CppUserAssemblies.prx at 0x806c0000 (3 segments)
+[METADATA] IL2CPP base: 0x806c0000, set_text: 0x833f5be0, SetText: 0x833fe1d0, MoveNext: 0x823f77c0 (attempt 3, open #11)
+[METADATA] TMP_Text.set_text + SetText + MoveNext hooks installed
+[OPEN #11] /dev/urandom
+[OPEN #12] /app0/debug.log
+[OPEN #13] /app0/archive.psarc
+[OPEN #14] /app0/archive_patch.psarc
+[OPEN #15] /app0/Media/Metadata/global-metadata.dat
+[OPEN #16] /app0/Media/il2cpp.usym
+[OPEN #17] /archive/mount/point/Media/RuntimeInitializeOnLoads.json
+[OPEN #18] /app0/Media/RuntimeInitializeOnLoads.json
+[OPEN #19] /archive/mount/point/Media/ScriptingAssemblies.json
+[TOGGLE] scePadRead not found yet (attempt 20, open #20)
+[OPEN #20] /app0/Media/ScriptingAssemblies.json
+[OPEN #21] /dev/dce
+[OPEN #22] /dev/hid
+[OPEN #23] /dev/hid
+[OPEN #24] /dev/hid
+[OPEN #25] /dev/urandom
+[OPEN #26] /archive/mount/point/Media/globalgamemanagers
+[OPEN #27] /app0/Media/globalgamemanagers
+[OPEN #28] /savedata0/memory.dat
+[OPEN #29] /app0/Media/UnitySubsystems
+[OPEN #30] /archive/mount/point/Media/UnitySubsystems/PSVRXRSDKPlugin/UnitySubsystemsManifest.json
+[OPEN #31] /app0/Media/UnitySubsystems/PSVRXRSDKPlugin/UnitySubsystemsManifest.json
+[OPEN #32] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #33] /app0/Media/Resources/unity default resources
+[OPEN #34] /dev/ajm
+[OPEN #35] /archive/mount/point/Media/globalgamemanagers.assets
+[OPEN #36] /app0/Media/globalgamemanagers.assets
+[OPEN #37] /archive/mount/point/Media/globalgamemanagers.assets.resS
+[OPEN #38] /app0/Media/globalgamemanagers.assets.resS
+[OPEN #39] /archive/mount/point/Media/Resources/unity_builtin_extra
+[TOGGLE] scePadRead not found yet (attempt 40, open #40)
+[OPEN #40] /app0/Media/Resources/unity_builtin_extra
+[OPEN #41] /app0/Media/Resources/mscorlib.dll-resources.dat
+[OPEN #42] /dev/hmd_cmd
+[OPEN #43] /dev/hmd_snsr
+[OPEN #44] /dev/hmd_3da
+[OPEN #45] /dev/hmd_dist
+[OPEN #46] /archive/mount/point/Media/sharedassets0.assets
+[OPEN #47] /app0/Media/sharedassets0.assets
+[OPEN #48] /archive/mount/point/Media/level0
+[OPEN #49] /app0/Media/level0
+[OPEN #50] /archive/mount/point/Media/level0.resS
+[OPEN #51] /app0/Media/level0.resS
+[OPEN #52] /archive/mount/point/Media/sharedassets1.assets
+[OPEN #53] /app0/Media/sharedassets1.assets
+[OPEN #54] /archive/mount/point/Media/level1
+[OPEN #55] /app0/Media/level1
+[OPEN #56] /dev/urandom
+[OPEN #57] /app0/Media/StreamingAssets/aa/settings.json
+[OPEN #58] /app0/Media/StreamingAssets/aa/catalog.json -> REDIRECTED
+[OPEN #59] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[TOGGLE] scePadRead not found yet (attempt 60, open #60)
+[OPEN #60] /archive/mount/point/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #61] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #62] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #63] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #64] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #65] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #66] /app0/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #67] /app0/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #68] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #69] /archive/mount/point/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #70] /archive/mount/point/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #71] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #72] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #73] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #74] /app0/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #75] /app0/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #76] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #77] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #78] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #79] /archive/mount/point/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[TOGGLE] scePadRead not found yet (attempt 80, open #80)
+[OPEN #80] /app0/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[OPEN #81] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #82] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[OPEN #83] /archive/mount/point/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #84] /app0/Media/StreamingAssets/aa/PS4/multiplayerenvironment_assets_all_3244d589df2a23004804d913ea2b912f.bundle
+[OPEN #85] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #86] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[OPEN #87] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #88] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[OPEN #89] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #90] /app0/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[OPEN #91] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #92] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[OPEN #93] /archive/mount/point/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #94] /app0/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[OPEN #95] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #96] /app0/Media/Resources/unity default resources
+[OPEN #97] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #98] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[OPEN #99] /archive/mount/point/Media/resources.assets
+[TOGGLE] scePadRead not found yet (attempt 100, open #100)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #100] /app0/Media/resources.assets
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #101] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #102] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #103] /archive/mount/point/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #104] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #105] /app0/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #106] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #107] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #108] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #109] /archive/mount/point/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #110] /archive/mount/point/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #111] /archive/mount/point/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #112] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #113] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #114] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #115] /archive/mount/point/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #116] /archive/mount/point/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #117] /archive/mount/point/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #118] /archive/mount/point/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #119] /archive/mount/point/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[TOGGLE] scePadRead not found yet (attempt 120, open #120)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #120] /app0/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #121] /app0/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #122] /app0/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #123] /app0/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #124] /app0/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #125] /app0/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #126] /app0/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #127] /app0/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #128] /app0/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #129] /app0/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #130] /app0/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #131] /app0/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #132] /app0/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #133] /archive/mount/point/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #134] /app0/Media/StreamingAssets/aa/PS4/default_assets_all_c0a66ca4e8e19777fe5c3eee0092a84d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #135] /archive/mount/point/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #136] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #137] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #138] /app0/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #139] /app0/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[TOGGLE] scePadRead not found yet (attempt 140, open #140)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #140] /app0/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #141] /archive/mount/point/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #142] /app0/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #143] /archive/mount/point/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #144] /archive/mount/point/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #145] /archive/mount/point/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #146] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #147] /archive/mount/point/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #148] /app0/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #149] /app0/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #150] /app0/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #151] /app0/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #152] /app0/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #153] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #154] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #155] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #156] /app0/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #157] /app0/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #158] /app0/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #159] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] scePadRead not found yet (attempt 160, open #160)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #160] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #161] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #162] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #163] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #164] /app0/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #165] /app0/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #166] /archive/mount/point/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #167] /archive/mount/point/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #168] /app0/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #169] /app0/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #170] /app0/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #171] /archive/mount/point/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #172] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #173] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #174] /app0/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #175] /app0/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #176] /app0/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #177] /archive/mount/point/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #178] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #179] /app0/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[TOGGLE] scePadRead not found yet (attempt 180, open #180)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #180] /app0/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #181] /archive/mount/point/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #182] /archive/mount/point/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #183] /app0/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #184] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #185] /archive/mount/point/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #186] /app0/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #187] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #188] /app0/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #189] /app0/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #190] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #191] /archive/mount/point/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #192] /app0/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #193] /archive/mount/point/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #194] /app0/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #195] /app0/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #196] /app0/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #197] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #198] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #199] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[TOGGLE] scePadRead not found yet (attempt 200, open #200)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #200] /app0/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #201] /app0/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #202] /app0/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #203] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #204] /archive/mount/point/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #205] /app0/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #206] /app0/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #207] /archive/mount/point/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #208] /app0/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #209] /archive/mount/point/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #210] /archive/mount/point/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #211] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #212] /app0/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #213] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #214] /archive/mount/point/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #215] /app0/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #216] /app0/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #217] /app0/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #218] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #219] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[TOGGLE] scePadRead not found yet (attempt 220, open #220)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #220] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #221] /app0/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #222] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #223] /archive/mount/point/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #224] /app0/Media/StreamingAssets/aa/PS4/bigmirrorenvironment_assets_all_0b5c258a68e9ac9dc12f24bff08fcc79.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #225] /archive/mount/point/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #226] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #227] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #228] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #229] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #230] /archive/mount/point/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #231] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #232] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #233] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #234] /app0/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #235] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #236] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #237] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #238] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #239] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] scePadRead not found yet (attempt 240, open #240)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #240] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #241] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #242] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #243] /app0/Media/StreamingAssets/aa/PS4/billieenvironment_assets_all_5b9da05fe43656f43859c54df59f6bc4.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #244] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #245] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #246] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #247] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #248] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #249] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #250] /archive/mount/point/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #251] /app0/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #252] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #253] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #254] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #255] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #256] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #257] /archive/mount/point/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #258] /app0/Media/StreamingAssets/aa/PS4/colliderenvironment_assets_all_81145b51f098e1b357564fcb46d8ae78.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #259] /savedata0/PlayerData.dat
+[TOGGLE] scePadRead not found yet (attempt 260, open #260)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #260] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #261] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #262] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #263] /app0/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #264] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #265] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #266] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #267] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #268] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #269] /app0/Media/StreamingAssets/aa/PS4/britneyenvironment_assets_all_642c70118cc1e0898476882b7270eaa5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #270] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #271] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #272] /archive/mount/point/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #273] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #274] /app0/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #275] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #276] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #277] /app0/Media/StreamingAssets/aa/PS4/dragons2environment_assets_all_5981a8bfa07cb796991f57b5be505fd6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #278] /archive/mount/point/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #279] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] scePadRead not found yet (attempt 280, open #280)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #280] /app0/Media/StreamingAssets/aa/PS4/crabraveenvironment_assets_all_265389ff45cfa3d111355ee97ccf47eb.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #281] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #282] /archive/mount/point/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #283] /app0/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #284] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #285] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #286] /app0/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #287] /app0/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #288] /archive/mount/point/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #289] /app0/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #290] /savedata0/settings.cfg
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #291] /archive/mount/point/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #292] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #293] /app0/Media/StreamingAssets/aa/PS4/dragonsenvironment_assets_all_4785f937d96fef6eab434193a14e19d2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #294] /app0/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #295] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #296] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #297] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #298] /app0/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #299] /app0/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[TOGGLE] scePadRead not found yet (attempt 300, open #300)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #300] /app0/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #301] /archive/mount/point/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #302] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #303] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #304] /app0/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #305] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #306] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #307] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #308] /app0/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #309] /archive/mount/point/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #310] /app0/Media/StreamingAssets/aa/PS4/glassdesertenvironment_assets_all_6e519f6e73d7ccd1465c1406d4a8b04d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #311] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #312] /app0/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #313] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #314] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #315] /app0/Media/StreamingAssets/aa/PS4/daftpunkenvironment_assets_all_bfd22ef23732dd7d08f51af0e1b91454.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #316] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #317] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #318] /app0/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #319] /archive/mount/point/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[TOGGLE] scePadRead not found yet (attempt 320, open #320)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #320] /app0/Media/StreamingAssets/aa/PS4/edmenvironment_assets_all_c4a9d2e98e762059cf39b610677f4230.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #321] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #322] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #323] /app0/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #324] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #325] /archive/mount/point/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #326] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #327] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #328] /app0/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #329] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #330] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #331] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #332] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #333] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #334] /app0/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #335] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #336] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #337] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #338] /archive/mount/point/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #339] /app0/Media/StreamingAssets/aa/PS4/fitbeatenvironment_assets_all_81b5aa2d79e85bc54d3717be6652e192.bundle
+[TOGGLE] scePadRead not found yet (attempt 340, open #340)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #340] /archive/mount/point/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #341] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #342] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #343] /app0/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #344] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #345] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #346] /archive/mount/point/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #347] /app0/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #348] /archive/mount/point/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #349] /app0/Media/StreamingAssets/aa/PS4/halloweenenvironment_assets_all_5d386b505e0d612cdf63678beb5623a0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #350] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #351] /app0/Media/StreamingAssets/aa/PS4/hiphopenvironment_assets_all_2add750ce4e7b7313cfd5b71fac71879.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #352] /archive/mount/point/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #353] /app0/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #354] /archive/mount/point/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #355] /app0/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #356] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #357] /app0/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #358] /archive/mount/point/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #359] /app0/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[TOGGLE] scePadRead not found yet (attempt 360, open #360)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #360] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #361] /app0/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #362] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #363] /app0/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #364] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #365] /app0/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #366] /archive/mount/point/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #367] /app0/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #368] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #369] /app0/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #370] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #371] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #372] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #373] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #374] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #375] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #376] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #377] /app0/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #378] /archive/mount/point/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #379] /app0/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[TOGGLE] scePadRead not found yet (attempt 380, open #380)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #380] /archive/mount/point/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #381] /app0/Media/StreamingAssets/aa/PS4/thefirstenvironment_assets_all_bfa7b77310bb544ed09a43d475a5ad7c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #382] /archive/mount/point/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #383] /app0/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #384] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #385] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #386] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #387] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #388] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #389] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #390] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #391] /app0/Media/StreamingAssets/aa/PS4/interscopeenvironment_assets_all_777d3c82684454460175a706782d103a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #392] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #393] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #394] /archive/mount/point/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #395] /app0/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #396] /archive/mount/point/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #397] /app0/Media/StreamingAssets/aa/PS4/kaleidoscopeenvironment_assets_all_fde07e0f432db46c6b565e8bccb568f7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #398] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #399] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] scePadRead not found yet (attempt 400, open #400)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #400] /archive/mount/point/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #401] /app0/Media/StreamingAssets/aa/PS4/gagaenvironment_assets_all_22a177c5bcc557f278e717788ac82c4e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #402] /archive/mount/point/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #403] /app0/Media/StreamingAssets/aa/PS4/coretrackdefinitions_assets_all_b417cfc198d3544578a905f3306ba836.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #404] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #405] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #406] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #407] /app0/Media/StreamingAssets/aa/PS4/linkinparkenvironment_assets_all_6579d7b3654a1254f675a438236f5956.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #408] /archive/mount/point/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #409] /app0/Media/StreamingAssets/aa/PS4/latticeenvironment_assets_all_5a86438f6d535f21480180ba4698be83.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #410] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #411] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #412] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #413] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #414] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #415] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #416] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #417] /app0/Media/StreamingAssets/aa/PS4/lizzoenvironment_assets_all_c5cd475280702a4329a15cf097fafe66.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #418] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #419] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] scePadRead not found yet (attempt 420, open #420)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #420] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #421] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #422] /archive/mount/point/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #423] /app0/Media/StreamingAssets/aa/PS4/kdaenvironment_assets_all_2add65b199fa5c7db8655e5e1ee2f65b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #424] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #425] /app0/Media/StreamingAssets/aa/PS4/linkinpark2environment_assets_all_e0bd3281712d2870cc51c7c83ead4ffc.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #426] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #427] /app0/Media/StreamingAssets/aa/PS4/monstercat2environment_assets_all_e88e17f4c42190c75701cb4fc1c3bddd.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #428] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #429] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #430] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #431] /app0/Media/StreamingAssets/aa/PS4/metallicaenvironment_assets_all_7c355705664da62170d2ea4311daf87c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #432] /archive/mount/point/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #433] /app0/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #434] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #435] /app0/Media/StreamingAssets/aa/PS4/monstercatenvironment_assets_all_927d731fabe5d10a482daf2f7b326b96.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #436] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #437] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #438] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #439] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] scePadRead not found yet (attempt 440, open #440)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #440] /archive/mount/point/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #441] /app0/Media/StreamingAssets/aa/PS4/panic2environment_assets_all_f71e4bc88dcfd2957d1578e795b61710.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #442] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #443] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #444] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #445] /app0/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #446] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #447] /app0/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #448] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #449] /app0/Media/StreamingAssets/aa/PS4/panicenvironment_assets_all_1e4cbe9df950b7f22578396df8ed0859.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #450] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #451] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #452] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #453] /app0/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #454] /archive/mount/point/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #455] /app0/Media/StreamingAssets/aa/PS4/niceenvironment_assets_all_7daf57f0a0a400cba4abaca618fd2b5e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #456] /archive/mount/point/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #457] /app0/Media/StreamingAssets/aa/PS4/originsenvironment_assets_all_6b98c4e23b66b23451a3e56528bfdea0.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #458] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #459] /app0/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[TOGGLE] scePadRead not found yet (attempt 460, open #460)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #460] /archive/mount/point/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #461] /app0/Media/StreamingAssets/aa/PS4/pyroenvironment_assets_all_967e8bacd6707a645bb5fce209214930.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #462] /archive/mount/point/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #463] /app0/Media/StreamingAssets/aa/PS4/queenenvironment_assets_all_174a7921d6263202c96359e903063ef2.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #464] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #465] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #466] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #467] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #468] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #469] /app0/Media/StreamingAssets/aa/PS4/rockmixtapeenvironment_assets_all_bb0cb40ee5f580152164ead174bc9077.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #470] /archive/mount/point/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #471] /app0/Media/StreamingAssets/aa/PS4/thesecondenvironment_assets_all_eb214fc62047b3e70e99e2f4c6502f7b.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #472] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #473] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #474] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #475] /app0/Media/StreamingAssets/aa/PS4/therollingstonesenvironment_assets_all_5f388be575d0fd3f0da0c6a1c25219b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #476] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #477] /app0/Media/StreamingAssets/aa/PS4/rocketenvironment_assets_all_fd4c2a7d7e46be295ef7bcc494b655ea.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #478] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #479] /app0/Media/StreamingAssets/aa/PS4/skrillexenvironment_assets_all_ab7ac6e1a4381ae29ad2722fb9519c3f.bundle
+[TOGGLE] scePadRead not found yet (attempt 480, open #480)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #480] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #481] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #482] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #483] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #484] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #485] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #486] /archive/mount/point/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #487] /app0/Media/StreamingAssets/aa/PS4/triangleenvironment_assets_all_bb69c00b3b457988b73f1825f60bf6df.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #488] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #489] /app0/Media/StreamingAssets/aa/PS4/timbalandenvironment_assets_all_eb3e15722f1c36b837feedef0a4c073a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #490] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #491] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #492] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #493] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #494] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #495] /app0/Media/StreamingAssets/aa/PS4/theweekndenvironment_assets_all_dbe916ac0f54465c9588dd19632a4559.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #496] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #497] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #498] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #499] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[TOGGLE] scePadRead not found yet (attempt 500, open #500)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #500] /archive/mount/point/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #501] /app0/Media/StreamingAssets/aa/PS4/debug_pack_assets_all_178856dd8696c8b148d47e99b7cd1977.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #502] /archive/mount/point/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #503] /app0/Media/StreamingAssets/aa/PS4/weaveenvironment_assets_all_79198da24f28e8c9e9ac9c258ae11662.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #504] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #505] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #506] /archive/mount/point/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #507] /app0/Media/StreamingAssets/aa/PS4/bts_pack_assets_all_afc090dc65861e4430777fbe496d5a7e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #508] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #509] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #510] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #511] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #512] /archive/mount/point/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #513] /app0/Media/StreamingAssets/aa/PS4/greendayenvironment_assets_all_9eb75482b309165869ccb8a51b34984a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #514] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #515] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #516] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #517] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #518] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #519] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] scePadRead not found yet (attempt 520, open #520)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #520] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #521] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #522] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #523] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #524] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #525] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #526] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #527] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #528] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #529] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #530] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #531] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #532] /archive/mount/point/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #533] /app0/Media/StreamingAssets/aa/PS4/btsenvironment_assets_all_557c0be5165b5d4ea74c37c471ad0a29.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #534] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #535] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #536] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #537] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #538] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #539] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] scePadRead not found yet (attempt 540, open #540)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #540] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #541] /app0/Media/StreamingAssets/aa/PS4/ostvol2_pack_assets_all_c5f14abbd3060a65ad9020ee2c7dfcc9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #542] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #543] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #544] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #545] /app0/Media/StreamingAssets/aa/PS4/ostvol4_pack_assets_all_223981efa5bc43e83c3926f8d141b466.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #546] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #547] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #548] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #549] /app0/Media/StreamingAssets/aa/PS4/ostvol3_pack_assets_all_9dbecd664115a79f917a565963a09b93.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #550] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #551] /app0/Media/StreamingAssets/aa/PS4/ostvol5_pack_assets_all_c328930031222b8bdb2fb492b04cff21.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #552] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #553] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #554] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #555] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #556] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #557] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #558] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #559] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] scePadRead not found yet (attempt 560, open #560)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #560] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #561] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #562] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #563] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #564] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #565] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #566] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #567] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #568] /archive/mount/point/Media/StreamingAssets/aa/PS4/camellia_pack_assets_all_91d9d25ee1641047d08834b4bb3ec0ac.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #569] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #570] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #571] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #572] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #573] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #574] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #575] /archive/mount/point/Media/StreamingAssets/aa/PS4/britneyspears_pack_assets_all_18d2741e11e15c97493346b2797ea847.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #576] /archive/mount/point/Media/StreamingAssets/aa/PS4/therollingstones_pack_assets_all_a99482a8a3da9e991e5ae36f2fea209c.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #577] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #578] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #579] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] scePadRead not found yet (attempt 580, open #580)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #580] /app0/Media/StreamingAssets/aa/PS4/ostvol6_pack_assets_all_6fd14657d1a76a45e73d60348476b84e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #581] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #582] /app0/Media/StreamingAssets/aa/PS4/ostvol7_pack_assets_all_12bc27285a5ab70ed55bc8669dc39096.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #583] /archive/mount/point/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #584] /app0/Media/StreamingAssets/aa/PS4/extras_pack_assets_all_299af14275d67d8d416f07563fc24e0a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #585] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #586] /app0/Media/StreamingAssets/aa/PS4/monstercat_pack_assets_all_bc7eacd8b59117ddd4a8bd66402238a6.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #587] /archive/mount/point/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #588] /app0/Media/StreamingAssets/aa/PS4/rocketleague_pack_assets_all_13c8131ec931087ef7f9b8e4824491b9.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #589] /archive/mount/point/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #590] /app0/Media/StreamingAssets/aa/PS4/greenday_pack_assets_all_79a88517419af9e7d47c0a56fed7b201.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #591] /archive/mount/point/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #592] /app0/Media/StreamingAssets/aa/PS4/timbaland_pack_assets_all_2ce28c5b4ffb9523df0ccf229b092135.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #593] /dev/hmd_cmd
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #594] /dev/hmd_snsr
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #595] /dev/hmd_3da
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #596] /dev/hmd_dist
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #597] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #598] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #599] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] scePadRead not found yet (attempt 600, open #600)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #600] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #601] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #602] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #603] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #604] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #605] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #606] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #607] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #608] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #609] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #610] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #611] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #612] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #613] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #614] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #615] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #616] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #617] /archive/mount/point/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #618] /app0/Media/StreamingAssets/aa/PS4/theweeknd_pack_assets_all_ebe0e37816bd9fa171c3e96a2220190a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #619] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] scePadRead not found yet (attempt 620, open #620)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #620] /app0/Media/StreamingAssets/aa/PS4/linkinpark_pack_assets_all_8972ec97e0ea56fa799873f31c2742b1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #621] /archive/mount/point/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #622] /app0/Media/StreamingAssets/aa/PS4/linkinpark2_pack_assets_all_cce8a819387a119f72eb1a3211e6fbb7.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #623] /archive/mount/point/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #624] /app0/Media/StreamingAssets/aa/PS4/daftpunk_pack_assets_all_9855164048e362e6d374087b9b96851c.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #625] /archive/mount/point/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #626] /app0/Media/StreamingAssets/aa/PS4/hiphop_pack_assets_all_113a326224ae04d1a3e95d6be298cdec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #627] /archive/mount/point/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #628] /app0/Media/StreamingAssets/aa/PS4/monstercatvol2_pack_assets_all_6332e520682f2cf1a67bcdd44ce791ec.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #629] /archive/mount/point/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #630] /app0/Media/StreamingAssets/aa/PS4/metallica_pack_assets_all_30f6a060b08a18e2b9f1d422c3fbb05f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #631] /archive/mount/point/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #632] /app0/Media/StreamingAssets/aa/PS4/shockdrop_pack_assets_all_053675c7a6d0be532b79e39e2fafdea1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #633] /savedata0/AvatarData.dat
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #634] /archive/mount/point/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #635] /app0/Media/StreamingAssets/aa/PS4/interscope_pack_assets_all_c30f1bc42a5cbd3dd316d7debf9926ef.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #636] /archive/mount/point/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #637] /app0/Media/StreamingAssets/aa/PS4/skrillex_pack_assets_all_940d7944e80112156c32d45e559610f8.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #638] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #639] /archive/mount/point/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] scePadRead not found yet (attempt 640, open #640)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #640] /app0/Media/StreamingAssets/aa/PS4/ladygaga_pack_assets_all_94fdc48d903336ebaaac1fe70a59345d.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #641] /archive/mount/point/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #642] /app0/Media/StreamingAssets/aa/PS4/falloutboy_pack_assets_all_226ce29ae7b8e4e8ae36153d2186922f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #643] /archive/mount/point/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #644] /app0/Media/StreamingAssets/aa/PS4/edm_pack_assets_all_fd5b5a9f58abd096dc4c96383aec27b5.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #645] /archive/mount/point/Media/StreamingAssets/aa/PS4/lizzo_pack_assets_all_8bf3db217732cc18af0b9a2a32d13a9a.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #646] /dev/hmd_cmd
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #647] /archive/mount/point/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #648] /app0/Media/StreamingAssets/aa/PS4/rockmixtape_pack_assets_all_1b6b0b3e14e56a26146ad0342f364741.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #649] /archive/mount/point/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #650] /app0/Media/StreamingAssets/aa/PS4/imaginedragons_pack_assets_all_721ae13bcd9ea4fcaa0d618ef57bf14a.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #651] /archive/mount/point/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #652] /app0/Media/StreamingAssets/aa/PS4/panicatthedisco_pack_assets_all_fdbdcc48ebf9108d6004919ff3b4f736.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #653] /archive/mount/point/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #654] /app0/Media/StreamingAssets/aa/PS4/queen_pack_assets_all_d70de03c84414bd1751375eedf2c6a77.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #655] /archive/mount/point/Media/Resources/unity default resources
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #656] /app0/Media/Resources/unity default resources
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #657] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #658] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #659] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] scePadRead not found yet (attempt 660, open #660)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #660] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #661] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #662] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #663] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #664] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #665] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #666] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #667] /archive/mount/point/Media/Resources/unity default resources
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #668] /app0/Media/Resources/unity default resources
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #669] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #670] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #671] /archive/mount/point/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #672] /app0/Media/StreamingAssets/aa/PS4/sharedassets_assets_all_068cd59e9a6fba13da706dc9269bf759.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #673] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #674] /app0/Media/StreamingAssets/aa/PS4/core_assets_all_5afbf2bf386402d19840c6817d40a530.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #675] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #676] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #677] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #678] /app0/Media/StreamingAssets/aa/PS4/maincore_assets_all_78417536719ebdd2be7cfdf321a78844.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #679] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] scePadRead not found yet (attempt 680, open #680)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #680] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #681] /archive/mount/point/Media/Resources/unity_builtin_extra
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #682] /app0/Media/Resources/unity_builtin_extra
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #683] /archive/mount/point/Media/resources.assets
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #684] /app0/Media/resources.assets
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #685] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #686] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #687] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #688] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #689] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #690] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #691] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #692] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #693] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #694] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #695] /archive/mount/point/Media/Resources/unity default resources
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #696] /app0/Media/Resources/unity default resources
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #697] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #698] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_unitybuiltinshaders_1af9a914aeb7ccb9356fd04b7902ff65.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #699] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] scePadRead not found yet (attempt 700, open #700)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #700] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #701] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #702] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #703] /archive/mount/point/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #704] /app0/Media/StreamingAssets/aa/PS4/ps4init_scenes_all_4b548312a44df5122d7a764fd3132b5f.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #705] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #706] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #707] /archive/mount/point/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #708] /app0/Media/StreamingAssets/aa/PS4/core_scenes_all_f6e2e48c91219dae0e16300f13a8a150.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #709] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #710] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #711] /archive/mount/point/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #712] /app0/Media/StreamingAssets/aa/PS4/maincore_scenes_all_b6a5ff607ac8a91de6cf408edfef3037.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #713] /archive/mount/point/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #714] /app0/Media/StreamingAssets/aa/PS4/0f6ffd593b5cc9f4c930676fe30cfcc3_monoscripts_118f3eae9656120eb382730d1d6c7c20.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #715] /archive/mount/point/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #716] /app0/Media/StreamingAssets/aa/PS4/textmeshprofonts_assets_all_29eea4a1ebd503af0c872266eea3a9f1.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #717] /archive/mount/point/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #718] /app0/Media/StreamingAssets/aa/PS4/beatavatarsadapter_assets_all_b88698e392e008859e28618ef0bb149e.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #719] /archive/mount/point/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] scePadRead not found yet (attempt 720, open #720)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #720] /app0/Media/StreamingAssets/aa/PS4/ostvol1_pack_assets_all_774a625d0b21a1d013d9b5f1c404c6d3.bundle
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #721] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] il2cpp_string_new NOT found — using manual string creation
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #722] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #1: author 'Camellia' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #723] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] REPLACE #1: this=2a3b1a000 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #724] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #2: songName 'all the good girls go to hell' -> 'Mirror / Ado'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #725] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #3: author 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #726] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #4: songName 'bad guy' -> 'Odo / Ado'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #727] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #5: author 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #728] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #6: songName 'bellyache' -> 'ATTITUDE / IVE'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #729] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #7: author 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #730] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #8: songName 'bury a friend' -> 'Baddie / IVE'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #731] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #9: author 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #732] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #10: songName 'Happier Than Ever' -> 'Cosmic / Red Velvet'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #733] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #11: author 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #734] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #12: songName 'I Didn't Change My Number' -> 'Mr. Brightside / The Killers'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #735] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #13: author 'Billie Eilish' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #736] /archive/mount/point/Media/StreamingAssets/aa/PS4/billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> REDIRECTED
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #737] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #14: songName '2 Be Loved (Am I Ready)' -> 'Yes I'm A Mess / AJR'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #738] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #15: author 'Lizzo' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #739] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #16: songName 'About Damn Time' -> 'The Middle / Jimmy Eat World'
+[TOGGLE] scePadRead not found yet (attempt 740, open #740)
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #740] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #17: author 'Lizzo' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #741] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #18: songName 'Cuz I Love You' -> 'Bring It On / Giga-P'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #742] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #19: author 'Lizzo' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #743] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #20: songName 'Everybody's Gay' -> 'Queencard ( / G)I-DLE'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #744] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #21: author 'Lizzo' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #745] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #22: songName 'Good As Hell' -> 'Do You Wanna Taste It / Wig Wam'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #746] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #23: author 'Lizzo' -> ' '
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #747] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #24: songName 'Juice' -> 'One More / SG Lewis feat. Nile Rodgers'
+[TOGGLE] ERROR: scePadRead never found — in-game toggle unavailable this session
+[OPEN #748] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+[METADATA] MoveNext #25: author 'Lizzo' -> ' '

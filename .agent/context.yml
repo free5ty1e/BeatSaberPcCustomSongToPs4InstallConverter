@@ -8,8 +8,8 @@ description: >
   redirection, hooks MoveNext() for song name/artist replacement in the UI).
 
 # Current Versions
-plugin_version: "0.8047"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8047: Unicode metadata matching (json_unescape_inplace \uXXXX + fold_utf8_to_ascii key fold mirroring extract_utf16_string's '?' projection; create_il2cpp_string UTF-8→UTF-16LE fix); v0.8046: enable_beatmap_mode_mapping REALLY gates; v0.8045: one combined boot toast
-pipeline_version: "0.5356" # in beat_saber_deluxe/VERSION - Exp 264: verify size check scoped to SESSION uploads (_SESSION_UPLOADED_BUNDLES ledger; hard-fail only what this deploy uploaded; standalone --verify-ps4 = full audit; out-of-scope stale-local mismatches informational). Exp 263: redirect case-healing fix (_ensure_mass_song_redirects takes the live AFR listing; a value naming a real PS4 file is NEVER rewritten; dangling values heal toward the on-disk case variant; found by validating webapp-0.6.0-alpha01 against the live PS4 — the release's own post-deploy check caught 11 lowercased values of which 5 dangled). Exp 254: clear-target removes every case-insensitive slot-bundle variant. Exp 235: release plugin deployment end-to-end (build_plugin falls back to bundled CI-built prx when no Makefile; canonical remote name beat_saber_deluxe.prx for both variants; --debug-logging swaps in place). Exp 233: 3-file deletion truly fixed (wipe compared git repo-RELATIVE paths vs rglob ABSOLUTE — never equal; now resolved-absolute string sets + E2E scratch-repo test); --no-prompt on all 34 example scripts; last CI live-state test class gated. Exp 232: chained-deploy regression fixed (stale-sweep validates pack redirects by LOCAL bundle existence — clean-slate wipe made each script delete the previous packs' redirects; validity now = current pair OR deployed-per-state-file). Exp 231: NoArrows dot pass re-applied AFTER v4/v2 conversion at injection (v4 columnar rows clobbered generator dots via row-over-event merge — 15 Minutes/Oxytocin shipped arrowed NoArrows; both redeployed all-dots); backup-script wipe pinned to `git -C <script_dir>` (cwd-dependent bug deleted the 3 tracked files on every non-repo launch). Exp 230: 17 lint findings fixed IN CODE (dead stores/imports/f-prefixes/import order — zero functional, normalize_v3_schema byte-equivalence proven; per-file-ignores removed, fully lint-enforced); user re-QA pending. Exp 229 (docs/tests/CI): CI fixed (repo-relative test paths, hardware skip gates, pipefail, ruff clean via config); release zip ships all 69 example files + ps4_dump disclaimer; clean-slate wipe preserves git-tracked assets. Exp 228: song_metadata.json raw UTF-8 (ensure_ascii=False); V4 columnar beatmap support (is_v4_beatmap/convert_v4_to_v3 + V4 Info.dat song.title/author + audio.bpm); --metadata-only mode. Exp 227: _resolve_deployed_packs; authoritative packs= scope; --clean-ps4 wipes ALL local state.
+plugin_version: "0.8052"    # in beat_saber_deluxe/src/main.cpp (PLUGIN_VERSION) — v0.8050 (M11/Exp 278c): Move button+trigger 2 s hotkey — hooks resolved BY NID (THE v0.8049 failure root cause: Sony system libraries export NIDs, not readable names; sceMoveReadStateRecent=f2bcpK6kJfg PRIMARY — the only Move read in the eboot imports, called every frame for both Moves; scePadRead=q1cHNfGycLI secondary DS4 path), runtime-safe arity detection via sceKernelQueryMemoryProtection (all 4 regs passed through), Move bits from the game PSMoveButton enum in dump.cs (trigger=0x2, Move=0x4; SceMoveData buttons u16 @ +0x18, trigger u16 @ +0x1A; trigger = digital bit OR analog>0x80), 250 ms poll-gap window + release latch + 3 s global cooldown, raw-word change diagnostics (first-10 + on-change, capped) confirm the offsets empirically from the boot log, give-up flags fix retry spam. PERSIST-ONLY flip of enable_plugin inside features.json (in-place surgical byte edit preserving all other keys; restart to apply — session never changes mid-game), one-way-door prevention (hotkey gated ONLY by enable_in_game_plugin_toggle, NOT the kill switch), notification + boot toast N/5. v0.8049: L3+R3 DS4 hotkey — hardware-FAILED (dlsym root cause + DS4 ignored in VR mode, Exp 278b). v0.8048: enable_song_previews flag + Exp-222 pack/catalog gate. v0.8047: Unicode metadata matching; v0.8046: enable_beatmap_mode_mapping REALLY gates; v0.8045: one combined boot toast
+pipeline_version: "0.5363" # in beat_saber_deluxe/VERSION — v0.5363 (Exp 278): M11 flag plumbing (enable_in_game_plugin_toggle in DEFAULT_FEATURES — the only change needed; Exp-248 pull-before-push picks up in-game flips automatically). New reusable dev script: development/scripts/ps4_elf_imports.py (PS4 ELF dynsym dumper; DT_SCE_* tags are PT_SCE_DYNLIBDATA-relative offsets; game imports are NIDs — decode vs shadPS4 aerolib). Exp 264: verify size check scoped to SESSION uploads. Exp 263: redirect case-healing fix (a value naming a real PS4 file is NEVER rewritten). Exp 254: clear-target removes every case-insensitive slot-bundle variant. Exp 235: release plugin deployment end-to-end (bundled-prx fallback; canonical remote name; --debug-logging swaps in place). Exp 233: 3-file deletion truly fixed (resolved-absolute string sets + E2E scratch-repo test); --no-prompt on all 34 example scripts. Exp 232: chained-deploy regression fixed (stale-sweep validity = current pair OR deployed-per-state-file). Exp 231: NoArrows dot pass re-applied AFTER v4/v2 conversion. Exp 230: lint fixed in code. Exp 229: CI fixed + release zip audit. Exp 228: song_metadata.json raw UTF-8 + V4 beatmap support + --metadata-only. Exp 227: _resolve_deployed_packs; --clean-ps4 wipes ALL local state.
 
 # Platform Constraints
 target_platform: PS4
@@ -246,7 +246,7 @@ example_command: |
 
 # Testing
 test_command: cd beat_saber_deluxe && python3 -m pytest tests/ -v
-test_count: "451 tests (as of v0.5322); +6 TestCatalogValidation (v0.5322)"
+test_count: "884 tests as of pipeline v0.5363 (M11/Exp 278; +18 test_in_game_toggle.py; hardware-env tests self-skip via HAS_DUMP/HAS_BUILT gates)"
 test_conftest: beat_saber_deluxe/tests/conftest.py (shared fixtures)
 integration_test: beat_saber_deluxe/tests/test_integration.py (FSB5 build + V2->V3)
 ci_workflow: .github/workflows/ci.yml (pytest + ruff on push/PR)
@@ -281,10 +281,14 @@ kb_note: >
 experiment_log_active: .ai_memory/beat-saber-ps4-custom-songs/experiment_log.md
 experiment_log_archive_dir: .ai_memory/beat-saber-ps4-custom-songs/experiment_log_archive/
 experiment_log_note: >
-  Active log holds ONLY the current feature (Generalized Pack Patch — Pack Modes, Exp 188+).
+  Active log holds ONLY the current feature (M11 In-Game Plugin Toggle, Exp 278+).
   Prior features archived in experiment_log_archive/:
   - experiment_log_exp001-159_prior-features_2026-06-08_to_2026-07-31.md (Exp 1-159)
   - experiment_log_beatmap-mode-mapping_exp160-183_2026-07-28_to_2026-08-11.md (Exp 160-183)
+  - experiment_log_chromeo-source-recovery-mass-redeploy_exp184-187_2026-08-12_to_2026-08-13.md (Exp 184-187)
+  - experiment_log_generalized-pack-patch_exp188-243_2026-08-14_to_2026-09-28.md (Exp 188-243)
+  - experiment_log_web-app-interface_exp244-267_2026-09-28_to_2026-10-09.md (Exp 244-267)
+  - experiment_log_song-previews_exp268-277_2026-10-09_to_2026-10-14.md (Exp 268-277, M10)
   Experiment numbers are globally sequential — when rotating, archive the old
   feature's log into experiment_log_archive/ and rewrite experiment_log.md fresh.
 
@@ -329,11 +333,20 @@ release_readiness:
   remaining: "user screenshots/videos; PR body push (draft at .pr_temp/updated_pr_description.md, awaiting approval); release-day checklist at the bottom of the procedure doc (default-TAG bump, final-tag validation, tag+push, spot-check)"
   release_zip_now_includes: "validation-procedure .md + .sh (docs/) — consumers can validate their own deployment"
 
-# Current Branch (post-release): feature/web-app-song-conversion-pipeline
+# Current Branch / Feature: M11 in-game plugin toggle (L3+R3 hotkey)
 current_feature:
-  branch: "feature/web-app-song-conversion-pipeline (fresh off merged main, Exp 243+)"
-  transcript: ".agent/transcripts/2026-09-28_web-app-interface-m9.md (this feature's session transcript)"
-  release_state: "v0.8047-pipeline-0.5351 MERGED + TAGGED + VALIDATED 35/35 (final form, zero anomalies)"
+  branch: "feature/next (M10 release merged to main; M11 work continues here)"
+  milestone: "M11 — in-game global plugin enable/disable toggle (L3+R3 2s hotkey)"
+  plan: ".agent/plans/in-game-global-plugin-enable-toggle-plan.md (research complete, design locked, implemented — hardware test pending)"
+  transcript: ".agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md (this feature's session transcript)"
+  feature_flag: "enable_in_game_plugin_toggle (defaults false; webapp Feature Flags tab or --features-only --set-feature enable_in_game_plugin_toggle=true)"
+  key_facts: "HOTKEY = Move button + trigger held together 2 s (user-chosen; used nowhere else in the game). HOTKEY HOOKING = EBOOT-GOT HIJACKING (Exp 278e): dlsym cannot see Sony SPRX exports AND Detouring library code hangs the game (trampoline over non-relocatable prologue — the v0.8051 black-screen hang); instead overwrite the GOT slot value after sceKernelMprotect RW (atomic 8-byte write; hook calls the saved original pointer directly; no trampoline). JUMP_SLOTs bind LAZILY on the game first call (sentinel 0xeffffffe000001a0 until then — wait for it; pad slot binds at open #1, move slot at VR init). RVAs from the dump JMPREL: sceMoveReadStateRecent=f2bcpK6kJfg GOT RVA 0x1c634e8 PRIMARY — the only Move read in the eboot imports, called every frame for both Moves; scePadRead=q1cHNfGycLI secondary DS4 path). Move bits from the game PSMoveButton enum in dump.cs (trigger digital bit=0x2, Move button=0x4); SceMoveData buttons u16 @ +0x18, trigger u16 @ +0x1A (shadPS4Plus SDK layout; raw-word change-diagnostics confirm empirically from the boot log); arity ambiguity detected once + cached via sceKernelQueryMemoryProtection; per-call diagnostics are DEBUG-BUILD ONLY (#ifdef VERBOSE_LOG) per the release-performance directive; 250 ms poll-gap window + release latch + 3 s cooldown. The DS4 is IGNORED in VR mode (hardware-verified). PERSIST-ONLY: flip enable_plugin in features.json for next boot (restart to apply; session never changes mid-game). ONE-WAY-DOOR: hotkey gated ONLY by enable_in_game_plugin_toggle, NOT the kill switch."
+  hardware_test: "webapp → enable flag + deploy plugin v0.8049 → boot with DS4 connected → L3+R3 2s → 'DISABLED, restart to apply' → restart → stock → L3+R3 from OFF state (one-way-door proof) → restart → customs back; anti-accidental check during Move gameplay; boot log's first-8-calls diagnostics answer the per-frame-DS4-poll question"
+  release_state: "v0.8048-pipeline-0.5362-webapp-0.6.6 LIVE (M10 shipped, fully validated); M11 carries plugin v0.8049 / pipeline v0.5363 / webapp 0.6.7"
+
+# Rules Files (3-way sync, user directive Exp 278)
+rules_files:
+  note: "CLAUDE.md ↔ .opencode/rules.md ↔ AGENTS.md MUST stay synchronized — any rule change updates ALL THREE in the same change (§0 in each file). AGENTS.md is the Pi/AGENTS.md-standard rule file (full transcription; the duplicated end-of-file guardrails block was a misfired script artifact — az/gh rules consolidated into the single guardrails section)."
 
 # Current Milestone — Web App Interface (roadmap M9) — Phase 1 BUILT (Exp 244)
 webapp_m9:
