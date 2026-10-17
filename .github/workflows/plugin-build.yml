@@ -190,6 +190,7 @@ jobs:
           cp beat_saber_deluxe/docs/features/song-metadata-modification.md release-zip/docs/features/
           cp beat_saber_deluxe/docs/features/beatmap-mode-mapping.md release-zip/docs/features/
           cp beat_saber_deluxe/docs/features/song-previews.md release-zip/docs/features/
+          cp beat_saber_deluxe/docs/features/in-game-plugin-toggle.md release-zip/docs/features/
 
           # Example / how-to docs
           cp beat_saber_deluxe/docs/camellia-pack-example.md release-zip/docs/examples/

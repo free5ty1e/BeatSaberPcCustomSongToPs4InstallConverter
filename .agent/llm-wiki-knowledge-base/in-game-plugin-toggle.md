@@ -7,16 +7,19 @@ metadata:
 
 # In-Game Global Plugin Toggle (M11)
 
-Shipped in plugin v0.8049/v0.8050 / pipeline v0.5363 / webapp 0.6.7–0.6.8
-(Exps 278–278c). Plan:
+Shipped in plugin v0.8049→v0.8053 / pipeline v0.5363 / webapp 0.6.7–0.6.11
+(Exps 278–278f). **HARDWARE-CONFIRMED 2026-10-16**: toggled OFF from VR,
+booted OFF (hotkey still armed — one-way-door proven), toggled back ON.
+Plan:
 `.agent/plans/in-game-global-plugin-enable-toggle-plan.md`.
 
 ## What it does
 
 Hold **the Move BUTTON + TRIGGER together for 2 full seconds** on a Move
 controller → the plugin flips its own global state (`enable_plugin` inside
-`features.json`) → a PS4 notification shows the new state → **restart Beat
-Saber to apply**. Switches the game between all-custom (redirects, metadata
+`features.json`) → a PS4 notification sounds (in VR the popup may not be
+visible — the SOUND is the confirmation) → **restart Beat Saber to apply**.
+Confirmed on hardware: OFF-flip, OFF-boot with the hotkey live, ON-flip. Switches the game between all-custom (redirects, metadata
 swaps, mode buttons, previews) and 100% stock with zero PC involvement.
 Gated behind `enable_in_game_plugin_toggle` (defaults false; enable via the
 webapp Feature Flags tab or `--features-only --set-feature
@@ -104,6 +107,24 @@ entry shows the same held-state bits). **All hooks resolve BY NID** — see
 Feature Flags tab) — hotkey gone next boot; everything else untouched. The
 toggle only ever writes the `enable_plugin` key, so the
 [[pack-bundle-patching]] catalog-CRC invariant family is structurally unaffected.
+
+## Hardware-confirmed facts (Exp 278f, from the success log)
+
+- The eboot GOT hijack fires at open #1 for `scePadRead` (slot bound that
+  early — input init calls it) and at VR-init for `sceMoveReadStateRecent`
+  (the lazy slot binds on the game's first call; orig=0x80081db00 observed).
+- **The call form is 4-arg** (handle, timestamp, data, out_count) — shadPS4's
+  SDK-derived signature was correct.
+- The bit layout is proven by the toggle itself: buttons u16 @ +0x18 with
+  trigger=0x2, Move=0x4, clean-combo mask 0x6 — the flip fired exactly on the
+  2-second hold in both directions.
+- **Diagnostic-design note:** the raw-word change-logging budget (40 lines)
+  burns up instantly on live tracking data (the accelerometer/gyro words at
+  +0x00..+0x17 churn every frame) — future button diagnostics should compare
+  ONLY the button words (+0x18/+0x1A). The feature needs no diagnostics now
+  that it is confirmed.
+- The user's VR observation: notifications are AUDIBLE but often not visible
+  in VR — the notification SOUND is the practical confirmation.
 
 ## Related
 - [[ps4-controller-input-from-plugin]] — the underlying pad research

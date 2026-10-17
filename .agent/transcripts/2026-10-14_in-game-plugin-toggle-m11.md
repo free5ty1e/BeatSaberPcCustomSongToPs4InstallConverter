@@ -207,3 +207,17 @@
 **Verification:** release build 105,440 B (lean strings only) + debug 105,504 B (full diagnostics); suite **894/894**; ruff clean; deployed the DEBUG variant via `--deploy-plugin --debug-logging` + strings-verified (moveRead raw-word format strings in the deployed bytes).
 
 **Status:** ✅ v4 deployed (debug variant for this test round). After user confirmation: plain `--deploy-plugin` restores the quiet release build. The log will now show every layer: pad hijack (open #1) → move hijack (VR init) → form detected → raw words on every button press (debug) → toggle flip.
+
+---
+
+## Cycle 10 — 🎉 HARDWARE SUCCESS (Exp 278f): hotkey confirmed both directions; v0.8053 + release-prep flush
+
+**User:** the combo WORKED — notification sound at ~3s hold (popup invisible in VR — the sound is the confirmation), restart → plugin OFF; combo again → back ON. Directives: DEBUG-variant toast indicator; README detailed feature list with per-feature doc links; audit KB/release notes/PR+release CI; update PR #8; get release-ready. (Also reminded me to pull/archive the log — done at cycle start: v0.8052_hotkey_hardware_success.txt, 5,121 lines, PS4 log cleared.)
+
+**Log analysis:** 3 sessions; every layer confirmed (hijacks per session: pad at open #1 / move at VR init orig=0x80081db00; form=4-arg; flip-to-OFF line 1711; session 2 booted OFF with hotkey ARMED → flip-to-ON line 3413; session 3 ON). Move bits proven by the working toggle. Diagnostic note: change-log budget burns on accel/gyro churn (whole-word compare) — future diagnostics compare only +0x18/+0x1A; no action needed.
+
+**Implemented (v0.8053):** PLUGIN_VARIANT (" DEBUG" under VERBOSE_LOG) in boot toast (ON+OFF forms) + log banner; release verified DEBUG-string-free; **release build redeployed** (production posture); suite 895/895.
+
+**Docs flush:** NEW docs/features/in-game-plugin-toggle.md (full user guide; ships in zip — plugin-build.yml updated to 5 docs); README feature list overhauled (every row → its doc; statuses current; VR sound note); flag table + usage section + banner; pipeline README; CI_RELEASE (5th flag + N/5 toast + debug note + doc row); validation procedure step 5.1c (hotkey round-trip incl. one-way-door + log check); KB hardware-confirmed updates ×3; roadmap ✅ M11 COMPLETE; webapp 0.6.11.
+
+**Status:** M11 complete. Next: PR #8 description update → tag → CI watch → release validation.

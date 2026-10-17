@@ -501,6 +501,33 @@ timeout 600 python3 tools/full_custom_song_pipeline.py     --deploy-pack-modes -
 # untouched packs log "already fresh (inputs unchanged) — skipped".
 ```
 
+### 5.1c In-game plugin toggle (M11) — hotkey round-trip (hardware; requires Moves + headset)
+
+```bash
+# Arm the hotkey (plugin v0.8049+ must be deployed)
+timeout 300 python3 tools/full_custom_song_pipeline.py     --features-only --set-feature enable_in_game_plugin_toggle=true 2>&1 | tail -2
+```
+
+1. Boot Beat Saber with the Moves as usual — boot toast reads **"(5/5 features ON)"**.
+2. Hold the **Move button + trigger together for 2 full seconds** on one Move —
+   the PS4 notification *sounds* (in VR the popup may not be visible): "BS Deluxe:
+   Plugin DISABLED — restart game to apply".
+3. Restart — toast reads **"(OFF) — official songs only"**; the song list shows stock
+   names, stock previews, no mode buttons.
+4. Hold **Move button + trigger 2 s again — from the OFF state** (the one-way-door
+   proof: the hotkey must survive the kill switch) — notification sounds
+   "Plugin ENABLED — restart game to apply".
+5. Restart — toast **(5/5)**; customs fully back.
+6. Post-check the log (`get bs_log.txt`): `[TOGGLE] enable_plugin flipped to ...`
+   lines; a DEBUG build additionally shows the pad/Move GOT-hijack lines and
+   `call form detected: 4-arg` (release shows only the one-time lines; a DEBUG
+   build also banners its version with a " DEBUG" suffix).
+
+```bash
+# RESTORE for the rest of the procedure: the plugin is already back ON (steps 4-5).
+# To disable the hotkey entirely: --set-feature enable_in_game_plugin_toggle=false
+```
+
 ### 5.2 `--deploy-mass-bundles` (validation config has no slots)
 
 ```bash

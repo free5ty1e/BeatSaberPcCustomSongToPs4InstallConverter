@@ -20,7 +20,16 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8052"
+#define PLUGIN_VERSION "v0.8053"
+// Debug-variant indicator (Exp 278f, user request): the boot toast + the
+// log banner carry " DEBUG" when running the DEBUG=1 build (VERBOSE_LOG),
+// nothing for the release build — so logs and in-game toasts always show
+// WHICH build produced them.
+#ifdef VERBOSE_LOG
+#define PLUGIN_VARIANT " DEBUG"
+#else
+#define PLUGIN_VARIANT ""
+#endif
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -1422,7 +1431,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     OrbisNotificationRequest notif;
 
     ensure_dir();
-    log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
+    log_write("=== BS Deluxe " PLUGIN_VERSION PLUGIN_VARIANT " started ===");
     log_write(PLUGIN_VERSION " — dynamic redirect config (reads redirects.json from AFR)");
     log_write("config: " CONFIG_PATH);
 
@@ -1488,12 +1497,12 @@ extern "C" int module_start(size_t argc, const void *args) {
         memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
         if (g_feature_plugin_enabled) {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/5 features ON)",
-                     PLUGIN_VERSION, enabled_count);
+                     "BS Deluxe %s%s (ON)\nBy Chris Primeish\n(%d/5 features ON)",
+                     PLUGIN_VERSION, PLUGIN_VARIANT, enabled_count);
         } else {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s (OFF)\nBy Chris Primeish\n(official songs only)",
-                     PLUGIN_VERSION);
+                     "BS Deluxe %s%s (OFF)\nBy Chris Primeish\n(official songs only)",
+                     PLUGIN_VERSION, PLUGIN_VARIANT);
         }
         sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
     }

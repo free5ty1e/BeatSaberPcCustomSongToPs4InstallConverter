@@ -4,6 +4,14 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8053] — 2026-10-16
+### Added — M11 HARDWARE-CONFIRMED (Exp 278f)
+- **🎉 THE HOTKEY WORKS ON REAL HARDWARE — both directions.** The v0.8052 debug build's log (archived: `v0.8052_hotkey_hardware_success.txt`, 3 boot sessions) confirms every layer: eboot-GOT hijacks install each session (`scePadRead` at open #1, `sceMoveReadStateRecent` at VR init, orig=0x80081db00), the call form is **4-arg** (shadPS4's SDK signature correct), and the Move button + trigger 2-second combo fired `enable_plugin flipped to false (OFF)` from inside VR, then — after a restart into the OFF state with the hotkey STILL ARMED (the one-way-door design working) — `flipped to true (ON)`. User-confirmed in-game; the notification is AUDIBLE in VR even when the popup is not visible.
+- **Debug-variant indicator (user request):** the boot toast and the log banner now carry a ` DEBUG` suffix when running the DEBUG=1 build (`PLUGIN_VARIANT`) — logs and in-game toasts always show WHICH build produced them. The release build reports plain `v0.8053` (verified: zero DEBUG strings in the release binary).
+- Release build redeployed to the console (production posture restored after the debug test round).
+### Known design note (no action)
+- The debug build's raw-word change-logging budget (40 lines) exhausts instantly on live tracking data — the accelerometer/gyro words churn every frame. Future button diagnostics should compare only the button words (+0x18/+0x1A). Irrelevant to the release build (diagnostics are VERBOSE_LOG-gated) and to the now-confirmed feature.
+
 ## [v0.8052] — 2026-10-16
 ### Fixed — v0.8051 black-screen hang RCA (Exp 278e): GOT HIJACKING replaces code Detour
 - **THE HANG:** the v0.8051 hardware test hung the game at a black screen before the VR screen. The log showed the GOT resolution WORKED (eboot.bin base 0x400000; scePadRead slot bound → "hooked at 800439fe0") — and then ZERO padRead diagnostics: the **Detour trampoline over scePadRead's real code corrupted its non-relocatable prologue (dense RIP-relative library code) and the first call killed the calling thread**. Two more discoveries from the same log: **PS4 JUMP_SLOT imports bind LAZILY** (the move slot held the sentinel `0xeffffffe000001a0` — encoding the relocation index 0x1A0 — until the game's first call binds it; the file-initial values are the in-eboot PLT resolver stub addresses 0x1822480/0x18224b0), so the move hook must WAIT for binding.

@@ -499,9 +499,8 @@ Full plan: [`.agent/plans/in-game-global-plugin-enable-toggle-plan.md`](.agent/p
 - [ ] **M11.8** — Docs polish: README hotkey section, KB feature-flags 5th row,
       release notes at next tag
 
-### To verify on hardware (only remaining unknown)
-- That the game polls a boot-connected DS4 every frame via scePadRead (expected —
-  Unity's PS4 input backend polls all opened handles; v1 logs first 8 calls + a
-  periodic counter to confirm from the boot log). If a mid-session-connected DS4
-  is not polled, v1.1 adds an own-handle fallback (scePadOpen + poll our handle
-  inside the hook tick). v1 guidance: connect the DS4 before booting.
+### Status: ✅ M11 FEATURE COMPLETE (hardware-confirmed 2026-10-16, plugin v0.8053)
+The only leftover design note: the debug build's raw-word change-logging budget burns
+on accelerometer/gyro churn (it compares whole words 2-7) — future button diagnostics
+should compare only the button words (+0x18/+0x1A). No action needed: the feature is
+confirmed and release logging is one-time events only.

@@ -6,6 +6,10 @@ subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
 
+## 0.6.11 (2026-10-16)
+### Changed
+- `TOAST_VERSION` bumped to v0.8053. The simulated boot toast now documents the debug-variant suffix convention (a real DEBUG build reports `vX DEBUG` in its toast/banner).
+
 ## 0.6.10 (2026-10-16)
 ### Changed
 - `TOAST_VERSION` bumped to v0.8052 (GOT-hijack build). Note: this round deploys the DEBUG plugin variant (`--deploy-logging`) for full move-data diagnostics; `--deploy-plugin` restores the quiet release build after confirmation.

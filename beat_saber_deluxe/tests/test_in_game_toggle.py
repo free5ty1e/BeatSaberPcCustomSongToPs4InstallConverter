@@ -284,7 +284,18 @@ class TestInGameToggleResearchedFacts:
 
 class TestInGameToggleVersions:
     def test_plugin_version_bumped(self):
-        assert '#define PLUGIN_VERSION "v0.8052"' in _code()
+        assert '#define PLUGIN_VERSION "v0.8053"' in _code()
+
+    def test_debug_variant_indicator(self):
+        """Exp 278f (user request): the boot toast + log banner carry ' DEBUG'
+        when running the DEBUG=1 (VERBOSE_LOG) build — logs and in-game toasts
+        always show WHICH build produced them."""
+        code = _code()
+        assert '#ifdef VERBOSE_LOG\n#define PLUGIN_VARIANT " DEBUG"' in code.replace('\r\n', '\n')
+        assert '#define PLUGIN_VARIANT ""' in code
+        assert 'log_write("=== BS Deluxe " PLUGIN_VERSION PLUGIN_VARIANT " started ===")' in code
+        assert '"BS Deluxe %s%s (ON)\\nBy Chris Primeish\\n(%d/5 features ON)"' in code
+        assert 'PLUGIN_VERSION, PLUGIN_VARIANT, enabled_count' in code
 
     def test_toast_counts_five_flags(self):
         code = _code()
@@ -317,7 +328,7 @@ class TestInGameToggleWebappSurfaces:
         with open(os.path.join(WEBAPP, "static", "app.js"), encoding="utf-8") as f:
             code = f.read()
         assert '"enable_in_game_plugin_toggle"' in code
-        assert 'TOAST_VERSION = "v0.8052"' in code
+        assert 'TOAST_VERSION = "v0.8053"' in code
 
     def test_index_placeholder_five_of_five(self):
         with open(os.path.join(WEBAPP, "static", "index.html"), encoding="utf-8") as f:
