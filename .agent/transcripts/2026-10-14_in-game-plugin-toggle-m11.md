@@ -221,3 +221,25 @@
 **Docs flush:** NEW docs/features/in-game-plugin-toggle.md (full user guide; ships in zip — plugin-build.yml updated to 5 docs); README feature list overhauled (every row → its doc; statuses current; VR sound note); flag table + usage section + banner; pipeline README; CI_RELEASE (5th flag + N/5 toast + debug note + doc row); validation procedure step 5.1c (hotkey round-trip incl. one-way-door + log check); KB hardware-confirmed updates ×3; roadmap ✅ M11 COMPLETE; webapp 0.6.11.
 
 **Status:** M11 complete. Next: PR #8 description update → tag → CI watch → release validation.
+
+---
+
+## Cycle 11 — Stale flag description RCA + polish; demo video documented (Exp 278g, webapp 0.6.12)
+
+**User:** webapp regression pass green (spot deploy → clear → batch). Reported the flag description still mentions R3+L3; added the demo video (youtu.be/NsUhL8NioCA) to PR + README + docs/demos.md; committed progress (c1f7617).
+
+**RCA:** repo code correct since 0.6.8 — but a webapp server process started in the Exp 278b cycle was still running and serving the OLD L3+R3 FLAG_DESCRIPTIONS from memory (reproduced empirically: old process → L3 text; fresh process → Move text). The webapp must be RESTARTED after pulling changes.
+
+**Fixes:** description polished (dropped the staling "(v0.8050)" version ref → "hardware-confirmed" + VR sound note + feature-guide pointer); Demo section added to docs/features/in-game-plugin-toggle.md with the video; webapp 0.6.12 + changelog (restart lesson documented); devcontainer stale processes killed + fresh server verified.
+
+**Verification:** suite 895/895; ruff clean; live /api/flags confirmed serving the polished text with zero L3 mentions.
+
+---
+
+## Cycle 12 — Resilient web-app launcher (Exp 278h, webapp 0.6.13)
+
+**User:** launching the webapp hit Errno 98 (a leftover devcontainer server instance held port 8765 — the same stale-process class as 278g). Directives: defensively program around it; launcher should be resilient + intelligent; present options when run; every error includes a suggested course of action.
+
+**Implemented:** pre-bind port probe → occupant identification (/api/ping: our-webapp-with-versions + STALE/CURRENT staleness check, or unknown) → 3-option menu (use existing / fresh on next port / stop our instance(s) + restart on the preferred port) with smart defaults (current→reuse, stale-of-ours→stop+restart, unknown→never kill); non-interactive auto-default with notice; every error path ends with "To fix: …"; stop-and-rebind failure warns + auto-falls back. Live-verified the full menu + non-interactive flow against a real held port.
+
+**Tests:** tests/test_webapp_launch.py (10; incl. the never-kill-unknown pin + the fix-on-every-error pin). Test-artifact lesson: listen(1) fake occupants exhaust backlog under repeated probes → listen(128). Suite 905/905; ruff clean. Devcontainer instances killed; port left free for the user's own launches.

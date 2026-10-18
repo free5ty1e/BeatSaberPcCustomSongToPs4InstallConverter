@@ -2,6 +2,8 @@
 
 **Status:** ✅ Working — hardware-confirmed 2026-10-16 (plugin v0.8049+; current v0.8053) · **Feature flag:** `enable_in_game_plugin_toggle`
 
+**Demo:** [Demo video — the Move button + trigger hotkey toggling the plugin off and back on](https://youtu.be/NsUhL8NioCA) (more demos in [docs/demos.md](../../docs/demos.md))
+
 ## What it does
 
 Hold **the Move button and the trigger together for 2 full seconds** on a PlayStation

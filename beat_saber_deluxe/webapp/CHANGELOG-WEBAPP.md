@@ -369,3 +369,16 @@ that actually deploys.
 - Every PS4 read uses the `get`-to-temp-dir banner-free transport (never
   `lftp cat`) with first-`{`-to-last-`}` JSON extraction and retries
   (`.agent/llm-wiki-knowledge-base/lftp-ftp-pitfalls.md`, plan §9.4 invariant 3).
+## 0.6.12 (2026-10-17)
+### Fixed
+- **Feature-flag description for `enable_in_game_plugin_toggle` polished** (user report of stale text): the repo description had been correct since 0.6.8, but the user's observation exposed TWO issues: (1) a long-running web-app server process from before the 0.6.8 change was still serving the old L3+R3 wording from memory — **restart the web app after pulling changes** (its FastAPI process holds code in memory; the UI won't see new descriptions until relaunch); (2) the description carried a hard-coded "(v0.8050)" version reference that stales with every bump — now removed in favor of "hardware-confirmed" phrasing, the VR notification-sound note, and a pointer to the full feature guide (docs/features/in-game-plugin-toggle.md).
+- The feature doc gained the user's demo video (README + docs/demos.md already carried it).
+
+## 0.6.13 (2026-10-17)
+### Added — resilient + intelligent launcher (user directives, Exp 278h)
+- **Port-collision handling that presents options instead of dying.** When the preferred port (default 8765) is busy, the launcher now IDENTIFIES the occupant — it pings `/api/ping` and can tell "Beat Saber Deluxe web app 0.6.12 (pipeline 0.5363, plugin v0.8053) — ⚠️ STALE: it predates this checkout" from an unknown process — then presents a menu:
+  1. use the existing instance (opens it; nothing new started),
+  2. start a FRESH instance on the next free port,
+  3. STOP the running web app instance(s) (found by scanning `/proc` for this server.py) and start fresh on the preferred port.
+  Smart defaults: a CURRENT instance → reuse it; a STALE one of ours → stop + restart on the same port (the exact pain that produced Errno 98: a long-running server process serving old code); an unknown occupant → never kill it, take the next port. Non-interactive contexts (stdin not a TTY) take the default automatically with a printed notice.
+- **Every error message now carries a suggested course of action** ("To fix: …") — the all-ports-busy error tells you to stop instances (`ps aux | grep '[s]erver.py'` + kill) or pick a port with `--port`; a failed stop-and-rebind warns and falls back to the next free port automatically instead of crashing.

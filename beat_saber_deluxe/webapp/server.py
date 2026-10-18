@@ -224,7 +224,7 @@ FLAG_DESCRIPTIONS = {
     "enable_song_metadata_modification": "Gates the in-game song-list name/artist swaps. OFF = songs show their official titles even when customs are deployed.",
     "enable_beatmap_mode_mapping": "Gates the extra game-mode buttons (OneSaber / NoArrows / 90Degree). OFF = the stock pack bundles + catalog are served (Standard only) — the safe posture while a pack is only partially deployed.",
     "enable_song_previews": "Gates the custom SONG PREVIEWS in the song menu (M10): highlighting a custom song plays its own ~10s audio instead of the stock song's clip. Previews ride inside the patched pack bundles — ON deploys the modes+previews bundle variant; OFF serves stock previews (the pack/mode redirects are shared with mode mapping: either flag ON keeps the patched pair live).",
-    "enable_in_game_plugin_toggle": "M11 (v0.8050): arms the MOVE-CONTROLLER hotkey — hold the Move button + trigger together for 2 full seconds (a combination used nowhere else in the game) to flip the global plugin state. A notification shows the new state; restart Beat Saber to apply it (the current session never changes mid-game). The hotkey keeps working even when the plugin itself is toggled OFF, so you can always flip it back on without a PC. Deliberately NOT affected by the kill switch — only this flag disables the hotkey.",
+    "enable_in_game_plugin_toggle": "In-game plugin toggle (M11, hardware-confirmed): arms the Move-controller hotkey — hold the Move button + trigger together for 2 full seconds (a combination used nowhere else in the game) to flip the global plugin state. You'll hear the PS4 notification sound (in VR the popup may not be visible); restart Beat Saber to apply the new state — the current session never changes mid-game. The hotkey keeps working even while the plugin itself is toggled OFF, so you can always flip it back on without a PC. Deliberately NOT affected by the kill switch — only this flag disables the hotkey. Full guide: docs/features/in-game-plugin-toggle.md.",
 }
 
 
@@ -702,15 +702,178 @@ def main() -> None:
                         help="don't auto-open the browser on start")
     args = parser.parse_args()
 
-    print(f"Beat Saber Deluxe web app — http://{args.host}:{args.port}")
+    port = _resolve_launch_port(args.host, args.port, open_browser=not args.no_browser)
+
+    print(f"Beat Saber Deluxe web app — http://{args.host}:{port}")
     print(f"  release root: {paths.RELEASE_ROOT}")
     print(f"  pipeline:     {paths.find_pipeline()}")
     if not args.no_browser:
         import webbrowser
         threading.Timer(1.0, lambda: webbrowser.open(
-            f"http://{args.host}:{args.port}")).start()
+            f"http://{args.host}:{port}")).start()
     import uvicorn
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    uvicorn.run(app, host=args.host, port=port, log_level="warning")
+
+
+# ── Resilient launch (Exp 278h, user directives) ──────────────────────
+# When the preferred port is busy, IDENTIFY the occupant and PRESENT OPTIONS
+# instead of dying with uvicorn's raw "[Errno 98] address already in use".
+# Non-interactive contexts (stdin not a TTY / EOF) take the smart default with
+# a printed notice. EVERY error message carries a suggested course of action.
+def _port_in_use(host: str, port: int) -> bool:
+    """True when something is already listening on host:port (TCP connect probe)."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.4)
+        return s.connect_ex((host, port)) == 0
+
+
+def _who_is_on(host: str, port: int) -> tuple[str | None, dict | None]:
+    """Identify a Beat Saber Deluxe web app instance already on the port.
+    Returns (human description, ping payload) — (None, None) when the listener
+    is not one of ours (or unreachable)."""
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"http://{host}:{port}/api/ping", timeout=1.5) as r:
+            payload = json.loads(r.read())
+        if isinstance(payload, dict) and payload.get("mode") == "local-backend":
+            desc = (f"Beat Saber Deluxe web app {payload.get('webapp_version', '?')} "
+                    f"(pipeline {payload.get('pipeline_version', '?')}, "
+                    f"plugin {payload.get('plugin_version', '?')})")
+            return desc, payload
+    except Exception:
+        pass
+    return None, None
+
+
+def _our_server_pids() -> list[int]:
+    """PIDs of OUR OWN web app server processes (cmdline contains this
+    server.py) — candidates for the stop-and-restart option. Linux/devcontainer."""
+    import glob
+    import os
+    me = os.getpid()
+    pids: list[int] = []
+    for cmdline_file in glob.glob("/proc/[0-9]*/cmdline"):
+        try:
+            raw = open(cmdline_file, "rb").read().decode("utf-8", "replace")
+        except OSError:
+            continue
+        parts = [p for p in raw.split("\0") if p]
+        if any("server.py" in p and "webapp" in p for p in parts):
+            try:
+                pid = int(cmdline_file.split("/")[2])
+            except (IndexError, ValueError):
+                continue
+            if pid != me:
+                pids.append(pid)
+    return sorted(set(pids))
+
+
+def _next_free_port(host: str, preferred: int, max_tries: int = 10) -> int:
+    for p in range(preferred + 1, preferred + 1 + max_tries):
+        if not _port_in_use(host, p):
+            return p
+    raise SystemExit(
+        f"ERROR: ports {preferred}..{preferred + max_tries} are all in use.\n"
+        f"To fix: stop the running web app instances (ps aux | grep '[s]erver.py', "
+        f"then kill <PID>), or start on a port of your choice with --port <PORT>.")
+
+
+def _resolve_launch_port(host: str, preferred: int, open_browser: bool = True) -> int:
+    """Free port → use it. Occupied → identify the occupant, present options,
+    and resolve. Never kills anything it cannot identify as its own web app."""
+    if not _port_in_use(host, preferred):
+        return preferred
+
+    desc, ping = _who_is_on(host, preferred)
+    stale = bool(ping) and ping.get("webapp_version") != _webapp_version()
+    if desc:
+        state = ("⚠️ STALE — it predates this checkout (it will keep serving old code "
+                 "until restarted)") if stale else "current"
+        print(f"\nPort {preferred} is already in use by: {desc} — {state}.")
+    else:
+        print(f"\nPort {preferred} is already in use by an unknown process "
+              f"(not a Beat Saber Deluxe web app — it will NOT be touched).")
+
+    pids = _our_server_pids()
+    options: list[tuple[str, str]] = []  # (menu label, action)
+    if desc:
+        options.append((f"use the existing instance at http://{host}:{preferred} "
+                        f"(open it in the browser; no new server started)", "use_existing"))
+    options.append(("start a FRESH instance on the next free port "
+                    "(the existing listener keeps running)", "next_port"))
+    if desc and pids:
+        options.append((f"STOP the running web app instance(s) (PID {', '.join(map(str, pids))}) "
+                        f"and start fresh on {preferred}", "kill_and_take"))
+
+    # Smart defaults: a CURRENT instance of ours → reuse it; a STALE one of ours
+    # → stop + restart on the same port (the classic pain this resolver exists
+    # for); an unknown occupant → never kill, take the next port.
+    if desc and not stale:
+        default_action = "use_existing"
+    elif desc and stale and pids:
+        default_action = "kill_and_take"
+    else:
+        default_action = "next_port"
+    default = next((i for i, (_l, a) in enumerate(options, 1) if a == default_action), 1)
+
+    print("How would you like to proceed?")
+    for i, (label, _action) in enumerate(options, 1):
+        marker = "   ← default" if i == default else ""
+        print(f"  [{i}] {label}{marker}")
+
+    choice = default
+    interactive = False
+    try:
+        import sys as _sys
+        interactive = _sys.stdin.isatty()
+    except Exception:
+        interactive = False
+    if interactive:
+        try:
+            raw = input(f"Choose [1-{len(options)}] (Enter = {default}): ").strip()
+            if raw:
+                try:
+                    picked = int(raw)
+                except ValueError:
+                    picked = -1
+                if 1 <= picked <= len(options):
+                    choice = picked
+                else:
+                    print(f"  ⚠️ '{raw}' is not one of the options — using the default ({default}).")
+                    choice = default
+        except EOFError:
+            choice = default
+    else:
+        print(f"  (non-interactive context — taking option {default} automatically)")
+
+    action = options[choice - 1][1]
+    if action == "use_existing":
+        if open_browser:
+            import webbrowser
+            webbrowser.open(f"http://{host}:{preferred}")
+        print(f"Existing instance: http://{host}:{preferred} — nothing new started. "
+              "(If it behaves oddly, it may be stale — re-run and choose the "
+              "stop-and-restart option to replace it with this checkout's code.)")
+        raise SystemExit(0)
+    if action == "kill_and_take":
+        import os
+        import signal
+        import time as _time
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError as e:
+                print(f"  ⚠️ could not stop PID {pid} ({e}) — it may already be gone.")
+        for _ in range(20):
+            if not _port_in_use(host, preferred):
+                print(f"Stopped the stale instance(s) — starting fresh on {preferred}.")
+                return preferred
+            _time.sleep(0.25)
+        print("⚠️ the port did not free in time after stopping the instance(s). "
+              "To fix: check what still holds it (ps aux | grep '[s]erver.py', "
+              "kill the PID manually) — falling back to the next free port automatically.")
+    return _next_free_port(host, preferred)
 
 
 if __name__ == "__main__":
