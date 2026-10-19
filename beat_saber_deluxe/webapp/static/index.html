@@ -153,6 +153,22 @@
         <button id="btn-verify" class="hidden">Verify PS4</button>
       </div>
     </div>
+
+    <div class="card">
+      <h3>Plugin only — deploy or update the BSD plugin (v0.8054+)</h3>
+      <p class="muted">Deploys <code>beat_saber_deluxe.prx</code> (builds it from
+      source when available; falls back to the bundled <code>plugins/</code>
+      binary in a release extraction) and ensures the <code>plugins.ini</code>
+      entry. No songs are touched. Restart Beat Saber to run the new plugin.</p>
+      <div class="row">
+        <button id="btn-deploy-plugin" class="primary">Deploy plugin</button>
+        <label class="chk"><input type="checkbox" id="opt-plugin-debug">
+          Debug logging (deploys the <b>DEBUG</b> build — verbose log lines + the
+          boot toast reports a <code>DEBUG</code> version suffix)</label>
+      </div>
+      <pre id="deploy-plugin-log" class="log hidden"></pre>
+      <div id="deploy-plugin-status" class="result"></div>
+    </div>
   </section>
 
   <!-- ================= PS4 ================= -->
@@ -582,12 +598,22 @@ python3 webapp/server.py</pre>
       </div>
 
       <div class="card start-step">
-        <h3>5 · Run the Setup Wizard (once)</h3>
+        <h3>5 · Set up (once) — plugin, connection, song data</h3>
         <ol>
-          <li>Point it at your <code>ps4_dump/</code> folder — it validates the
-          dump live (patch version, eboot, catalog, found-DLC list)</li>
-          <li>Enter your PS4's IP → <b>Test Connection</b></li>
-          <li><b>Save configuration</b></li>
+          <li><b>Deploy the BSD plugin</b> to your PS4 — one click:
+            <div class="row" style="margin-top:6px">
+              <button id="btn-deploy-plugin-start" class="primary">Deploy plugin to PS4</button>
+              <span class="muted" id="deploy-plugin-start-status">(restart Beat Saber
+                afterwards to run the new plugin)</span>
+            </div>
+            <pre id="deploy-plugin-start-log" class="log hidden"></pre>
+          </li>
+          <li>Run the <b>Setup Wizard</b>: enter your PS4's IP →
+              <b>Test Connection</b> → <b>Save configuration</b></li>
+          <li><b>New users — no dump needed:</b> the <a href="#" data-nav="guide">Dump
+              Guide</a>'s <b>Option A</b> builds your song data straight from your
+              console (the plugin extracts it during a normal boot). A
+              <code>ps4_dump/</code> folder is only needed for development.</li>
           <li>Pick a song and deploy 🎉</li>
         </ol>
       </div>

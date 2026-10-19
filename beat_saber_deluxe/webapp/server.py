@@ -966,6 +966,21 @@ def jobs_game_data_pull():
     return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
 
 
+@app.post("/api/jobs/deploy-plugin")
+def jobs_deploy_plugin(body: dict):
+    """Plugin-only deploy (M12, Exp 280b — the fresh-user bootstrap): builds
+    (or falls back to the bundled binary) + deploys beat_saber_deluxe.prx and
+    ensures the plugins.ini entry. body.debug deploys the DEBUG build."""
+    _require_config()
+    debug = bool((body or {}).get("debug", False))
+    argv = deploy.plugin_deploy_command(debug=debug)
+    try:
+        job = RUNNER.start(argv, label=f"deploy plugin{' (DEBUG)' if debug else ''}")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
+
+
 @app.post("/api/game-data/use-cache")
 def game_data_use_cache():
     """Point paths.game_dump_dir at the local game_data cache (after a pull)."""

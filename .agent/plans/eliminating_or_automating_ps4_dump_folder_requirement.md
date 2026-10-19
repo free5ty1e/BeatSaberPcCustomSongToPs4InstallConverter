@@ -1,6 +1,6 @@
 # Eliminating or Automating the ps4_dump Folder Requirement
 
-**Status:** 🟢 Path A IMPLEMENTED (Exp 280, 2026-10-19): plugin v0.8054 + pipeline v0.5364 + webapp 0.6.14 — hardware validation (M12.4) pending
+**Status:** 🟢 Path A IMPLEMENTED (Exps 280-280b, 2026-10-19): plugin v0.8054 + pipeline v0.5364 + webapp 0.6.15 — M12.4 validation IN PROGRESS (see the Execution Log)
 **Goal:** a legally committable repository where a new user checks out the code and can
 immediately add custom songs to their jailbroken PS4's Beat Saber — without sourcing,
 dumping, or hand-placing a 4.9GB `ps4_dump/` folder first.
@@ -111,8 +111,7 @@ The existing **Game Dump Guide** tab becomes a two-mode surface:
       `game_dump_dir` switch + scoped validation
 - [ ] **M12.3** — Tests: manifest computation (from target selection), request/status
       round-trip, cache layout parity (a built bundle from cache == built from dump)
-- [ ] **M12.4** — Hardware validation: fresh-cache → full 5-pack deploy from
-      `game_data/` alone, `--verify-ps4` PASSED
+- [ ] **M12.4** — Hardware validation (the detailed procedure in the Execution Log below; simulated release first, then a real release build)
 - [ ] **M12.5** — Docs: README (dump no longer required — extractor flow instead),
       CI_RELEASE, feature doc for the extractor flag, release-validation step
 
@@ -199,3 +198,142 @@ the full limitations list.
   with the plugin — picks songs, boots the game once, deploys.
 - **M13:** Beat Sage + local-folder support (companion plan).
 - **M14 (exploration):** the custom album — start with U1 research when scheduled.
+
+---
+
+# EXECUTION LOG (work appended as we go — this plan is now the M12 execution record)
+
+## 2026-10-19 · Exp 280 — Implementation (M12.1–M12.3 + M12.5)
+
+All implemented + verified (930/930 at the time, ruff clean, both plugin
+builds, webapp endpoints live-tested). Full detail in the experiment log
+(Exp 280): plugin v0.8054 extractor, pipeline v0.5364 modes, webapp flow,
+feature doc, README/CI_RELEASE/config updates.
+
+## 2026-10-19 · Exp 280b — The phantom-button gap + the plugin-only deploy surface
+
+**User finding (the M12.4 checklist broke at step 1):** "I couldn't find any
+Deploy Plugin tab or button anywhere." — CORRECT: it never existed. Plugin
+deploys historically rode on song deploys (`--deploy-full` implies
+`--deploy-plugin`). The fresh-user flow exposed the chicken-and-egg: the
+extractor lives in the plugin, but with no cache there is no song to deploy.
+
+**Fixed (webapp 0.6.15):** `POST /api/jobs/deploy-plugin` → `--deploy-plugin`;
+the **Deploy tab** gains a "Plugin only" card (+ the DEBUG-logging option —
+Deploy-tab-only per the user's directive); **Get Started step 5** gains a
+one-click deploy button (release build only). 5 tests (argv both builds,
+thin-layer --help proof, UI-surface static audit, debug-option placement).
+Suite 935/935.
+
+Also this cycle: **`development/scripts/make_simulated_release.py`** — builds a
+disposable simulated-release folder mirroring the release-zip layout from the
+working tree (plugins pair, tools, webapp, all docs, example scripts,
+single-source-generated templates), with a pre-made ps4_config.json whose
+`game_dump_dir` points at a deliberately-absent `./ps4_dump_local` (the
+"Use the extracted cache" switch is validated for real; the folder cannot see
+the developer's `/workspace/ps4_dump`). Built at **`/workspace/release-test`**:
+plugin v0.8054 pair · pipeline 0.5364 · webapp 0.6.15; boot-verified from its
+own folder with the deploy-plugin endpoint resolving
+release-root-relatively.
+
+**Transparency note:** the boot-verification curl to the live release-test
+server started a REAL `--deploy-plugin` job against the reachable PS4 —
+v0.8054 (release build, 105,568 B) is now deployed on the console. Harmless
+(the Phase-0 Clear resets it) — and it proved the endpoint end-to-end.
+
+## 2026-10-19 · M12.4 — THE VALIDATION PROCEDURE (detailed + corrected)
+
+**Environment discipline:** everything in Phase 1 runs from the SIMULATED
+RELEASE (`/workspace/release-test`) — a self-contained fresh-user environment
+whose config cannot see the developer's dump. Phase 2 repeats the identical
+flow from an actual tagged release zip.
+
+### Phase 0 — Reset the console to a known-clean slate
+
+0.1 **Backup the current known-good state** (your plan): web app →
+**Backup / Restore** tab → *Backup* — check **Clean PS4** on the same run
+(backs up first, then clears). CLI equivalent from the simulation folder:
+`python3 backup-beat-saber-deluxe-files.py backup --clean-ps4`.
+A clean slate = what a brand-new user's console looks like: AFR/CUSA12878
+cleared (bundles, redirects, features.json, song_metadata.json, any leftover
+`game_data/` + requests/status files), the plugins.ini BSD entry removed, the
+plugin prx removed.
+
+0.2 **Confirm the reset:** web app → **PS4 state** tab → reports "clean slate".
+
+### Phase 1 — The simulated-release run (fresh-user simulation)
+
+1. **Start the app from the simulation** (not the dev checkout):
+   `cd /workspace/release-test/webapp && python3 server.py --port 8799`
+   → the version badge reads webapp **0.6.15** · pipeline **0.5364** · plugin
+   **bundled**. (If you leave the dev web app running on 8765, the new
+   launcher offers to reuse/replace/next-port — any choice works.)
+
+2. **Deploy the plugin** (the bootstrap step): **Get Started step 5 →
+   "Deploy plugin to PS4"** (or the Deploy tab's *Plugin only* card — the
+   same job; DEBUG stays unchecked for the primary run; the DEBUG option is
+   Deploy-tab-only). EXPECT: the Exp-235 bundled-binary fallback (no src/ in
+   the extraction), `beat_saber_deluxe.prx` uploaded (105,568 B — the v0.8054
+   release build), plugins.ini entry ensured. Job log ends
+   "Plugin deployment complete".
+
+3. **Arm the extractor flag:** **Feature Flags** tab →
+   `enable_game_data_extractor` → Apply. EXPECT: pull-before-push reads the
+   (absent → defaults) live state, materializes all 6 keys, deploys
+   features.json; the flags list shows it ON.
+
+4. **Request the first extraction:** **Dump Guide** tab → *Option A — Let the
+   game extract it* → check **lizzo** (9 slots — a fast first pass: 11 files,
+   ~140MB) → **Request extraction**. EXPECT: "Requesting game-data
+   extraction: 9 slot template(s), 1 pack bundle(s), catalog.json" + the
+   request write confirmed on the PS4.
+
+5. **Boot Beat Saber once** (a full restart if you were in-game). EXPECT on
+   this boot: the BSD toast `(6/6 features ON)`; later visible in the log:
+   `[EXTRACT] game-data extractor ARMED`, 11 `[EXTRACT] ✓ …` lines, and the
+   summary "run complete: 11 new (… bytes) … ready for the web app to pull".
+   (~140MB of copies add a few seconds to the splash.)
+
+6. **Pull the extracted files:** back at the web app → **Pull extracted
+   files**. EXPECT: status "11 file(s) ready"; the mirror downloads into
+   `/workspace/release-test/game_data/` (resumable); the completion summary
+   lists the local cache (files + MB).
+
+7. **Switch the pipeline to the cache:** **Use the extracted cache**. EXPECT:
+   `paths.game_dump_dir` → the game_data dir, and the state shows "✅ active".
+   (Control: BEFORE this step a song deploy would correctly FAIL — the
+   config's original `./ps4_dump_local` doesn't exist. That's the proof that
+   cache-only builds are really cache-only.)
+
+8. **Deploy a song from cache-only:** **Deploy** tab → pick any BeatSaver
+   song → target a **lizzo** slot → Deploy to PS4. EXPECT: the full build
+   (audio + beatmaps + modes + previews management) using ONLY the cache,
+   redirects + post-deploy validation PASSED. No ps4_dump anywhere in play.
+
+9. **Play + verify:** boot → toast `(6/6 features ON)` → the lizzo pack
+   shows your custom song (swapped name/artist, custom preview audio, 4 mode
+   buttons) → play it. Then **PS4 state** tab → Verify: EXPECT PASSED.
+
+10. **(Optional stretch) Full-loadout proof:** request the other four packs
+    (the request list is cumulative-safe), boot once more, pull, then run a
+    Batch deploy of a full example pack from the cache.
+
+### Phase 2 — The real release build (identical flow, shipped artifact)
+
+After Phase 1 is green: commit → tag
+`v0.8054-pipeline-0.5364-webapp-0.6.15-alpha01` → watch CI → download the
+zip → extract to a FRESH folder → `python3 webapp/server.py` → repeat Phase 1
+steps 2-9 from that extraction (no simulation, no dev tree, no devcontainer
+state files). The release-validation procedure doc gains an M12 step after
+Phase 1 confirms the flow.
+
+### Parity check (developer-side)
+
+Build one song from `/workspace/release-test/game_data/` and the identical
+song from `/workspace/ps4_dump/` — the built bundles should be byte-identical
+(the mirrored inputs are identical). Regenerate the simulation any time:
+`python3 beat_saber_deluxe/development/scripts/make_simulated_release.py
+/workspace/release-test` (after `rm -rf` — it is disposable).
+
+**PHASE 1 STATUS: awaiting the user's run.** (Console on; v0.8054 was
+harmlessly deployed during endpoint verification — Phase 0's Clear resets it.)

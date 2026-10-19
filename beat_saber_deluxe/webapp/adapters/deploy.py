@@ -143,3 +143,10 @@ def game_data_request_command(packs: list[str] | None,
 def game_data_pull_command() -> list[str]:
     """argv for --pull-game-data (M12: mirror the extractor output locally)."""
     return ["--pull-game-data"]
+
+
+def plugin_deploy_command(debug: bool = False) -> list[str]:
+    """argv for a plugin-only deploy (M12, Exp 280b). In a source checkout the
+    pipeline builds via make; in a release extraction it falls back to the
+    bundled plugins/ binary (Exp 235). --debug-logging deploys the DEBUG build."""
+    return ["--deploy-plugin"] + (["--debug-logging"] if debug else [])

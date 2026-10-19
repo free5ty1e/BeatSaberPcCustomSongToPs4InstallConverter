@@ -1543,6 +1543,9 @@ document.addEventListener("DOMContentLoaded", () => {
   if (gdReq) gdReq.addEventListener("click", gamedataRequest);
   if (gdPull) gdPull.addEventListener("click", gamedataPull);
   if (gdUse) gdUse.addEventListener("click", gamedataUseCache);
+  const dpBtn = $("btn-deploy-plugin"), dpStartBtn = $("btn-deploy-plugin-start");
+  if (dpBtn) dpBtn.addEventListener("click", () => deployPlugin(false));
+  if (dpStartBtn) dpStartBtn.addEventListener("click", () => deployPlugin(true));
   // lazy-load tab data on first visit
   document.querySelectorAll("#nav button").forEach(b =>
     b.addEventListener("click", () => {
@@ -1558,6 +1561,43 @@ document.addEventListener("DOMContentLoaded", () => {
   // respect the mode: pages → startPage stays; local → wizard.
   if (state.mode !== "pages") showPage("wizard");
 });
+
+// Plugin-only deploy (M12, Exp 280b) — fromStart picks the Get Started
+// surface's log/status elements; otherwise the Deploy tab's card.
+async function deployPlugin(fromStart) {
+  const suffix = fromStart ? "-start" : "";
+  const logEl = $("deploy-plugin" + suffix + "-log");
+  const stEl = $("deploy-plugin" + suffix + "-status");
+  const debug = !fromStart && $("opt-plugin-debug") && $("opt-plugin-debug").checked;
+  try {
+    const res = await fetch("/api/jobs/deploy-plugin", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({debug}),
+    });
+    const start = await res.json();
+    if (!res.ok) {
+      stEl.textContent = "❌ " + (start.detail || "could not start the job");
+      return;
+    }
+    logEl.classList.remove("hidden");
+    let idx = 0;
+    for (;;) {
+      await new Promise(r => setTimeout(r, 900));
+      const j = await (await fetch(`/api/jobs/lines?after=${idx}`)).json();
+      if (j.lines && j.lines.length) {
+        logEl.textContent += j.lines.join("\n") + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      idx = j.index || idx;
+      if (!j.running && j.job) {
+        stEl.innerHTML = j.job.exit_code === 0
+          ? `✅ Plugin deployed${debug ? " (DEBUG build)" : ""} — restart Beat Saber to run it.`
+          : `❌ Plugin deploy failed (exit ${j.job.exit_code}) — the log lines above carry the fix`;
+        return;
+      }
+    }
+  } catch (e) { stEl.textContent = "❌ " + e; }
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // M12 Game-data extraction (Exp 280) — the "no dump required" flow.
