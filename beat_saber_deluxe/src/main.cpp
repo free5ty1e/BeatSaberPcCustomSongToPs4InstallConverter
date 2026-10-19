@@ -20,7 +20,16 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8048"
+#define PLUGIN_VERSION "v0.8053"
+// Debug-variant indicator (Exp 278f, user request): the boot toast + the
+// log banner carry " DEBUG" when running the DEBUG=1 build (VERBOSE_LOG),
+// nothing for the release build — so logs and in-game toasts always show
+// WHICH build produced them.
+#ifdef VERBOSE_LOG
+#define PLUGIN_VARIANT " DEBUG"
+#else
+#define PLUGIN_VARIANT ""
+#endif
 #define AFR_BASE  "/data/GoldHEN/AFR"
 #define TITLE_ID "CUSA12878"
 #define LOG_PATH AFR_BASE "/" TITLE_ID "/bs_log.txt"
@@ -51,6 +60,7 @@ static int g_feature_custom_song_replacements = 0;
 static int g_feature_song_metadata_modification = 0;
 static int g_feature_beatmap_mode_mapping = 0;
 static int g_feature_song_previews = 0;
+static int g_feature_in_game_plugin_toggle = 0;  // M11: Move button+trigger hotkey (gates ONLY this feature)
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -63,6 +73,8 @@ static int METADATA_ARTIST_COUNT = 0;
 
 // ── Forward declarations ────────────────────────────────────────────────────
 static int log_write(const char *msg);
+static void try_install_pad_hook(void);   // M11 in-game toggle — pad path (defined after the hooks)
+static void try_install_move_hook(void);  // M11 in-game toggle — Move path (the primary on this game)
 
 static void load_features(void) {
     int fd = open(FEATURES_PATH, O_RDONLY, 0);
@@ -112,12 +124,14 @@ static void load_features(void) {
             g_feature_beatmap_mode_mapping = val;
         } else if (strcmp(key, "enable_song_previews") == 0) {
             g_feature_song_previews = val;
+        } else if (strcmp(key, "enable_in_game_plugin_toggle") == 0) {
+            g_feature_in_game_plugin_toggle = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d",
-             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews);
+    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d in_game_plugin_toggle=%d",
+             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews, g_feature_in_game_plugin_toggle);
     log_write(logmsg);
     if (!g_feature_plugin_enabled) {
         log_write("DISABLED: enable_plugin is false — ALL plugin behavior off (stock game)");
@@ -355,6 +369,15 @@ static int open_hook(const char *path, int flags, ...) {
 
     // Deferred TMP_Text hook — install once after game modules are loaded
     try_install_tmp_hook();
+
+    // Deferred pad hook (M11): libScePad loads with the game (it imports
+    // libScePad), so the first open-hook attempts resolve it.
+    try_install_pad_hook();
+
+    // Deferred Move hook (M11 v0.8050): the PRIMARY hotkey path — Beat Saber
+    // reads both Moves every frame via sceMoveReadStateRecent (the only Move
+    // state read in the eboot's imports). libSceMove also loads with the game.
+    try_install_move_hook();
 
     const char *np = NULL;
     if (path) {
@@ -816,6 +839,504 @@ static void move_next_hook(void* state_machine) {
     HOOK_CONTINUE(hook_move_next, void (*)(void*), state_machine);
 }
 
+// ── In-game plugin toggle (M11): Move button + trigger hotkey ───────────────
+// v0.8050 REDESIGN (Exp 278c). The v0.8049 L3+R3 DS4 hotkey never fired on
+// hardware, and the boot log showed the ROOT CAUSE: dlsym(RTLD_DEFAULT,
+// "scePadRead") FAILED because Sony system libraries export functions under
+// their NIDs, not readable names — the game imports scePadRead as NID
+// q1cHNfGycLI (readable-name dlsym only ever worked for il2cpp_string_new,
+// which the game's eboot genuinely exports by name). All hooks are now
+// resolved BY NID first (readable name kept as fallback).
+//
+// The real input path on this game is the MOVE controller (the DS4 is
+// ignored in VR mode — user-verified). Beat Saber reads both Moves every
+// frame through native sceMoveReadStateRecent (NID f2bcpK6kJfg) — the ONLY
+// Move state read in the eboot's imports (sceMoveReadStateLatest is NOT
+// imported). Hotkey (user-chosen): hold the Move BUTTON + TRIGGER together
+// for 2 full seconds — a combination used nowhere else in the game.
+//
+// Move bit layout (reconstructed from the game's OWN enum in dump.cs —
+// PSVRDeviceManager.PSMoveButton: Select=1, [2 = trigger], Move=4, Start=8,
+// Triangle=16, Circle=32, Cross=64, Square=128; the enum skips 2 because the
+// game reads the trigger via GetPSMoveAnalog — the trigger's DIGITAL bit is
+// 0x2): SceMoveData.button_data u16 @ +0x18, trigger analog u16 @ +0x1A
+// (struct layout per shadPS4Plus's SDK-derived OrbisMoveData). The hook logs
+// the raw data words whenever they change, so the first boot log CONFIRMS or
+// CORRECTS these offsets empirically before we rely on them further.
+//
+// Signature note: shadPS4 documents sceMoveReadStateRecent as 4-arg
+// (handle, timestamp, data, out_count), but the hook detects the form at
+// RUNTIME by validating candidate pointers with sceKernelQueryMemoryProtection
+// (the v0.8045-proven signal-free technique): a 3-arg call leaves RDX holding
+// the sample count (an int, fails validation), a 4-arg call leaves RSI holding
+// a timestamp value (fails validation). ALL FOUR registers are always passed
+// through untouched, so either form works; unknown forms pass through clean.
+//
+// Persist-only semantics + one-way-door prevention: UNCHANGED from v0.8049
+// — the hotkey flips "enable_plugin" inside features.json for the NEXT boot
+// (restart to apply; the current session never changes), and it is gated
+// ONLY by enable_in_game_plugin_toggle — NOT by the enable_plugin kill
+// switch (a toggled-OFF user must always be able to flip back from the
+// couch, or the feature would be a one-way door).
+#define NID_PAD_READ "q1cHNfGycLI"           // scePadRead — verified: eboot imports + aerolib
+#define NID_MOVE_READ_RECENT "f2bcpK6kJfg"   // sceMoveReadStateRecent — same verification
+// GOT slot vaddrs (r_offset from the eboot's JMPREL relocations, type
+// R_X86_64_JUMP_SLOT) — computed from the decrypted dump's dynlib data via
+// the ps4_elf_imports.py methodology (Exp 278d).
+//
+// THE v0.8052 MECHANISM (Exp 278e): GOT HIJACKING, never code Detour.
+// The v0.8051 hardware test proved Detouring a Sony library function's real
+// code is FATAL — its prologue is not relocatable (RIP-relative density in
+// lib code), so the trampoline corrupted the first call → the game hung at a
+// black screen before the VR screen. Instead we overwrite the GOT SLOT VALUE
+// with our hook's address (an aligned 8-byte write is atomic — zero races)
+// after mprotecting the RELRO page RW, and the hook calls the SAVED original
+// pointer directly — no trampoline, no code patching, no relocation risk.
+//
+// LAZY BINDING (the v0.8051 surprise): JUMP_SLOT imports bind on the GAME'S
+// FIRST CALL, not at module load — until then the slot holds a lazy
+// sentinel (observed 0xeffffffe000001a0, encoding the relocation index) or
+// the in-eboot PLT resolver stub address (file-initial values 0x1822480/
+// 0x18224b0). Therefore the hijack must WAIT until the slot holds a
+// canonical pointer OUTSIDE the eboot's own text (the pad slot was already
+// bound at open #1; the move slot binds when VR init first polls the Moves).
+#define GOT_RVA_SCE_MOVE_READ_RECENT 0x1c634e8
+#define GOT_RVA_SCE_PAD_READ         0x1c63500
+// eboot text span (first PT_LOAD) — slot values INSIDE it are lazy PLT stubs
+#define EBOOT_TEXT_SPAN 0x2000000ULL
+// hijack retry caps: the pad slot binds at open #1 (observed); the move slot
+// binds at VR init — file keeps opening through the menus, so give it room
+#define PAD_HIJACK_MAX_ATTEMPTS 100
+#define MOVE_HIJACK_MAX_ATTEMPTS 2000
+#define PAD_BUTTON_L3 0x0002u                // DS4 combo (secondary path — kept for pad-mode sessions)
+#define PAD_BUTTON_R3 0x0004u
+#define PAD_COMBO (PAD_BUTTON_L3 | PAD_BUTTON_R3)             // 0x0006
+#define MOVE_BUTTON_TRIGGER 0x0002u          // SceMoveData.button_data digital bits
+#define MOVE_BUTTON_MOVE 0x0004u
+#define MOVE_COMBO (MOVE_BUTTON_TRIGGER | MOVE_BUTTON_MOVE)   // 0x0006
+#define MOVE_TRIGGER_ANALOG_THRESH 0x0080u   // trigger analog u16 @ +0x1A (fallback when bit 0x2 absent)
+#define MOVE_DATA_BUTTON_OFF 0x18            // button_data u16 offset in SceMoveData
+#define MOVE_DATA_TRIGGER_OFF 0x1A           // trigger u16 offset in SceMoveData
+#define COMBO_HOLD_US 2000000ULL             // 2 s hold (sceKernelGetProcessTime is µs)
+#define COMBO_GAP_US 250000ULL               // poll-to-poll continuity window (two Move handles interleave)
+#define TOGGLE_COOLDOWN_US 3000000ULL        // global re-toggle cooldown (shared by both hook paths)
+#define MOVE_DIAG_FIRST_N 10                 // log the first N move calls raw
+#define MOVE_DIAG_CHANGE_MAX 40               // cap on button-change diagnostic logs
+#define PAD_DIAG_N 8                          // log the first N pad calls
+
+// Shared combo-hold state (fed by BOTH hook paths). A 2-second hold must be
+// continuous within a 250 ms poll-gap window — the two Move handles
+// interleave calls, so the non-holding handle's polls must not reset a hold
+// in progress. Latched until the combo has been RELEASED for a full gap
+// window; a 3 s cooldown after a fired toggle prevents double-fires.
+// Saved ORIGINAL function addresses (read from the GOT slots before the
+// hijack) — the hooks call these directly; no trampolines exist.
+static int (*g_orig_pad_read)(int32_t, void *, int32_t);
+static int (*g_orig_move_read)(int64_t, int64_t, int64_t, int64_t);  // 4-arg tolerant
+static int g_move_form = 0;  // cached call form: 0 unknown, 3 = (h,data,num), 4 = (h,ts,data,out_count)
+
+static uint64_t g_combo_first_us = 0;       // when the current hold started (0 = none)
+static uint64_t g_combo_last_us = 0;        // last poll that saw the combo
+static uint64_t g_toggle_last_fired_us = 0;  // cooldown guard
+static int g_combo_latched = 0;              // require combo release before the next fire
+static int g_move_call_count = 0;
+static int g_move_change_logs = 0;
+static uint32_t g_move_prev_words[8] = {0};  // last-seen raw SceMoveData words (change logging)
+static int g_pad_call_count = 0;             // total scePadRead calls seen (diagnostics/liveness)
+
+// Flip "enable_plugin" inside features.json in place, preserving every other
+// key/byte (the pipeline's Exp-248 pull-before-push reads the LIVE file, so
+// in-game flips flow into webapp/ps4_state/pipeline deploys automatically).
+// Returns the NEW state (1=enabled, 0=disabled), or -1 on failure.
+static int in_game_toggle_plugin(void) {
+    char buf[4096];
+    int fd = sceKernelOpen(FEATURES_PATH, O_RDONLY, 0);
+    if (fd < 0) {
+        log_write("[TOGGLE] ERROR: cannot open features.json — toggle aborted");
+        return -1;
+    }
+    ssize_t got = sceKernelRead(fd, buf, sizeof(buf) - 1);
+    sceKernelClose(fd);
+    if (got <= 0 || got >= (ssize_t)sizeof(buf) - 1) {
+        log_write("[TOGGLE] ERROR: features.json unreadable — toggle aborted");
+        return -1;
+    }
+    buf[got] = '\0';
+
+    int new_state = -1;
+    char *p = strstr(buf, "\"enable_plugin\"");
+    if (p) {
+        p = strchr(p + 15, ':');  // 15 == strlen("\"enable_plugin\""); land after the key
+        if (p) {
+            p++;
+            while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') p++;
+            if (*p == 't') {
+                // "true" -> "false": grow by one byte
+                memmove(p + 1, p, strlen(p) + 1);
+                memcpy(p, "false", 5);
+                got += 1;
+                new_state = 0;
+            } else if (*p == 'f') {
+                // "false" -> "true": shrink by one byte
+                memcpy(p, "true", 4);
+                memmove(p + 4, p + 5, strlen(p + 5) + 1);
+                got -= 1;
+                new_state = 1;
+            }
+        }
+    } else {
+        // Key absent (hand-edited file): absent defaults ON, so the flip is
+        // OFF — rewrite the file with all known keys from the boot parse.
+        // (The pipeline always materializes enable_plugin, so this is rare;
+        // any unknown keys are lost here but re-materialized by the next
+        // pipeline deploy per the Exp 221 merge rule.)
+        new_state = 0;
+        got = snprintf(buf, sizeof(buf),
+                       "{\n"
+                       "  \"enable_plugin\": false,\n"
+                       "  \"enable_custom_song_replacements\": %s,\n"
+                       "  \"enable_song_metadata_modification\": %s,\n"
+                       "  \"enable_beatmap_mode_mapping\": %s,\n"
+                       "  \"enable_song_previews\": %s\n"
+                       "}\n",
+                       g_feature_custom_song_replacements ? "true" : "false",
+                       g_feature_song_metadata_modification ? "true" : "false",
+                       g_feature_beatmap_mode_mapping ? "true" : "false",
+                       g_feature_song_previews ? "true" : "false");
+    }
+
+    if (new_state < 0) {
+        log_write("[TOGGLE] ERROR: could not locate the enable_plugin value — toggle aborted");
+        return -1;
+    }
+
+    fd = sceKernelOpen(FEATURES_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        log_write("[TOGGLE] ERROR: cannot write features.json — toggle aborted");
+        return -1;
+    }
+    sceKernelFchmod(fd, 0644);
+    sceKernelWrite(fd, buf, got);
+    sceKernelClose(fd);
+
+    {
+        char tlog[192];
+        snprintf(tlog, sizeof(tlog),
+                 "[TOGGLE] enable_plugin flipped to %s in features.json (persist-only; restart to apply)",
+                 new_state ? "true (ON)" : "false (OFF)");
+        log_write(tlog);
+    }
+    {
+        OrbisNotificationRequest notif;
+        memset(&notif, 0, sizeof(notif));
+        notif.type = (OrbisNotificationRequestType)0;
+        notif.targetId = -1;
+        snprintf(notif.message, sizeof(notif.message),
+                 "BS Deluxe: Plugin %s\nRestart game to apply",
+                 new_state ? "ENABLED" : "DISABLED");
+        sceKernelSendNotificationRequest(0, &notif, sizeof(notif), 0);
+    }
+    return new_state;
+}
+
+// Shared combo-hold detector — see the globals block for the state-machine
+// contract. Feeds from BOTH hooks; each call reports whether THAT poll saw
+// the combo (either path can carry it).
+static void combo_feed(int combo_now) {
+    uint64_t now = sceKernelGetProcessTime();
+    if (combo_now) {
+        if (g_combo_first_us == 0 || (now - g_combo_last_us) > COMBO_GAP_US) {
+            g_combo_first_us = now ? now : 1;   // fresh hold (previous one expired)
+        }
+        g_combo_last_us = now;
+        if (!g_combo_latched && (now - g_combo_first_us) >= COMBO_HOLD_US) {
+            g_combo_latched = 1;  // require combo release before the next fire
+            if (g_toggle_last_fired_us == 0 ||
+                (now - g_toggle_last_fired_us) >= TOGGLE_COOLDOWN_US) {
+                g_toggle_last_fired_us = now;
+                in_game_toggle_plugin();
+            } else {
+                log_write("[TOGGLE] combo held but cooldown active — ignored");
+            }
+        }
+    } else {
+        if ((now - g_combo_last_us) > COMBO_GAP_US) {
+            g_combo_first_us = 0;   // hold broken for a full gap window
+            g_combo_latched = 0;
+        }
+    }
+}
+
+// Signal-free pointer validation (the v0.8045-proven sceKernelQueryMemory
+// Protection technique): resolves the 3-arg vs 4-arg signature ambiguity of
+// sceMoveReadStateRecent at runtime. Only accepts readable+ writable buffers
+// — the output buffer the callee is about to write must be RW-mapped.
+static int is_mapped_rw_pointer(void *p) {
+    if ((uint64_t)p < 0x1000000ULL) return 0;  // below the PS4 module base range
+    void *start = NULL, *end = NULL;
+    int32_t prot = 0;
+    if (sceKernelQueryMemoryProtection(p, &start, &end, &prot) < 0) return 0;
+    return (prot & 0x3) == 0x3;
+}
+
+// scePadRead(handle, OrbisPadData*, num) — SECONDARY path (DS4 L3+R3; kept
+// for any session where the game polls pads). Called via the HIJACKED GOT
+// slot: calls the saved original directly (no trampoline). Steady-state cost
+// is a handful of instructions; per-call diagnostics are DEBUG-BUILD ONLY
+// (VERBOSE_LOG) per the v0.8052 release-performanance directive.
+static int pad_read_hook(int32_t handle, void *data, int32_t num) {
+    if (!g_orig_pad_read) return -1;
+    int n = g_orig_pad_read(handle, data, num);
+    if (!g_feature_in_game_plugin_toggle) return n;  // flag OFF (hook would not be armed)
+
+    g_pad_call_count++;
+    if (data && n >= 1) {
+        uint32_t buttons = ((uint32_t *)data)[n - 1];
+
+#ifdef VERBOSE_LOG
+        if (g_pad_call_count <= PAD_DIAG_N) {
+            char dlog[160];
+            snprintf(dlog, sizeof(dlog), "[TOGGLE] padRead#%d handle=%d num=%d ret=%d buttons=0x%08x",
+                     g_pad_call_count, handle, num, n, buttons);
+            log_write(dlog);
+        } else if (g_pad_call_count % 10000 == 0) {
+            char clog[96];
+            snprintf(clog, sizeof(clog), "[TOGGLE] pad poll counter: %d calls", g_pad_call_count);
+            log_write(clog);
+        }
+#endif
+
+        combo_feed(buttons == PAD_COMBO);
+    } else {
+        combo_feed(0);
+    }
+    return n;
+}
+
+// sceMoveReadStateRecent — the PRIMARY hotkey path, called via the HIJACKED
+// GOT slot (calls the saved original directly; no trampoline). Form detected
+// ONCE and cached (g_move_form) — the steady-state path is a handful of
+// instructions + no syscalls. All raw-word diagnostics are DEBUG-BUILD ONLY
+// (VERBOSE_LOG); release logging is one-time events only (per the v0.8052
+// release-performance directive). A 2-second hold spans 100+ frames, so
+// entry 0 carries the held-state bits regardless of which entry is "most
+// recent".
+static int move_read_hook(int32_t handle, int64_t a2, void *a3, int64_t a4) {
+    if (!g_orig_move_read) return -1;
+    int rc = g_orig_move_read(handle, a2, (int64_t)a3, a4);
+    if (!g_feature_in_game_plugin_toggle) return rc;
+
+    g_move_call_count++;
+
+    void *data = NULL;
+    if (g_move_form == 0) {
+        // First calls: detect the call form ONCE via signal-free pointer
+        // validation (a 3-arg call leaves RDX = sample count (an int, fails
+        // RW validation); a 4-arg call leaves RSI = timestamp (fails it)).
+        if (is_mapped_rw_pointer(a3) && !is_mapped_rw_pointer((void *)a2)) {
+            g_move_form = 4;   // (handle, timestamp, data, out_count)
+        } else if (is_mapped_rw_pointer((void *)a2) && !is_mapped_rw_pointer(a3)) {
+            g_move_form = 3;   // (handle, data, num)
+        }
+        if (g_move_form) {
+            char flog[128];
+            snprintf(flog, sizeof(flog), "[TOGGLE] sceMoveReadStateRecent call form detected: %d-arg", g_move_form);
+            log_write(flog);
+        }
+    }
+    data = (g_move_form == 4) ? a3 : (g_move_form == 3) ? (void *)a2 : NULL;
+
+    if (data) {
+        uint32_t *w = (uint32_t *)data;
+#ifdef VERBOSE_LOG
+        int changed = 0;
+        for (int i = 2; i < 8; i++) {
+            if (w[i] != g_move_prev_words[i]) changed = 1;
+        }
+        if (g_move_call_count <= MOVE_DIAG_FIRST_N ||
+            (changed && g_move_change_logs < MOVE_DIAG_CHANGE_MAX)) {
+            char dlog[288];
+            snprintf(dlog, sizeof(dlog),
+                     "[TOGGLE] moveRead#%d form=%d handle=%d rc=%d w=[%08x %08x %08x %08x %08x %08x %08x %08x]",
+                     g_move_call_count, g_move_form, handle, rc,
+                     w[0], w[1], w[2], w[3], w[4], w[5], w[6], w[7]);
+            log_write(dlog);
+            if (changed && g_move_call_count > MOVE_DIAG_FIRST_N) g_move_change_logs++;
+        }
+#endif
+#ifdef VERBOSE_LOG
+        for (int i = 0; i < 8; i++) g_move_prev_words[i] = w[i];
+#endif
+
+        uint16_t bd = *(uint16_t *)((char *)data + MOVE_DATA_BUTTON_OFF);
+        uint16_t trig = *(uint16_t *)((char *)data + MOVE_DATA_TRIGGER_OFF);
+        int move_held = (bd & MOVE_BUTTON_MOVE) != 0;
+        int trig_held = ((bd & MOVE_BUTTON_TRIGGER) != 0) || (trig > MOVE_TRIGGER_ANALOG_THRESH);
+        int clean = (bd & ~MOVE_COMBO) == 0;   // no other button bit set
+        combo_feed(move_held && trig_held && clean);
+    } else {
+        combo_feed(0);
+    }
+    return rc;
+}
+
+// Resolve a system-library function via the EBOOT'S GOT (Exp 278d/e — the
+// definitive mechanism). dlsym cannot see kernel-loaded SPRX exports on PS4
+// (v0.8049/v0.8050 hardware-proven: readable names AND NIDs both fail), but
+// the eboot's import slots — filled by the OS module loader at bind time
+// (LAZILY for JUMP_SLOTs: not until the game's first call) — hold the final
+// resolved addresses. The plugin finds eboot.bin by name via the module
+// list (it is module[0] from the very first open — log-verified), waits for
+// the slot to hold a canonical pointer outside the eboot's own text (lazy
+// PLT stubs live inside it), then HIJACKS the slot (see
+// try_hijack_got_slot below) — routing every call through the plugin hook
+// with no trampoline and no code patching.
+static uint64_t g_eboot_base = 0;
+
+static uint64_t find_eboot_base(void) {
+    if (g_eboot_base) return g_eboot_base;
+    OrbisKernelModule modules[256];
+    size_t available = 0;
+    if (sceKernelGetModuleList(modules, 256, &available) < 0) return 0;
+    for (size_t i = 0; i < available; i++) {
+        OrbisKernelModuleInfo info;
+        memset(&info, 0, sizeof(info));
+        info.size = sizeof(info);
+        if (sceKernelGetModuleInfo(modules[i], &info) < 0) continue;
+        if (strcmp(info.name, "eboot.bin") == 0 && info.segmentCount > 0) {
+            g_eboot_base = (uint64_t)info.segmentInfo[0].address;
+            char blog[128];
+            snprintf(blog, sizeof(blog), "[TOGGLE] eboot.bin base: 0x%lx", g_eboot_base);
+            log_write(blog);
+            return g_eboot_base;
+        }
+    }
+    return 0;
+}
+
+// Hijack a GOT slot (Exp 278e — THE mechanism). Steps: find eboot.bin,
+// read the slot, and WAIT until it holds a canonical pointer OUTSIDE the
+// eboot's own text (lazy JUMP_SLOTs hold a sentinel or the in-eboot PLT
+// resolver stub until the game's first call binds them — hijacking those
+// would break lazy resolution). Once bound: mprotect the slot's page RW,
+// save the original, write our hook's address (atomic 8-byte write — zero
+// races; readers see old-or-new, both valid), restore the page protection.
+// The hook then receives the original call and invokes the saved original
+// directly — NO trampoline, NO code patching (the v0.8051 Detour-trampoline
+// approach corrupted scePadRead's non-relocatable prologue and hung the game
+// at a black screen on the first call).
+static int try_hijack_got_slot(uint64_t got_rva, const char *label, void **out_orig, void *hook) {
+    uint64_t base = find_eboot_base();
+    if (!base) return 0;  // module not visible yet — caller retries
+
+    uint64_t slot_addr = base + got_rva;
+    uint64_t fn_addr = *(uint64_t *)slot_addr;
+    if (fn_addr < 0x1000000ULL) return 0;                       // below the module range — unbound
+    if (fn_addr >= base && fn_addr < base + EBOOT_TEXT_SPAN) return 0;  // lazy PLT stub — wait for binding
+
+    void *start = NULL, *end = NULL;
+    int32_t prot = 0;
+    if (sceKernelQueryMemoryProtection((void *)fn_addr, &start, &end, &prot) < 0 || !(prot & 0x1)) {
+        return 0;  // sentinel/unmapped (e.g. 0xeffffffe000001a0) — unbound; caller retries
+    }
+
+    // Query the slot's page, flip it RW, write, restore.
+    void *page_start = NULL, *page_end = NULL;
+    int32_t page_prot = 0;
+    if (sceKernelQueryMemoryProtection((void *)slot_addr, &page_start, &page_end, &page_prot) < 0) {
+        char elog[160];
+        snprintf(elog, sizeof(elog), "[TOGGLE] %s: slot page query failed — giving up", label);
+        log_write(elog);
+        return -1;
+    }
+    if (sceKernelMprotect(page_start, (size_t)((char *)page_end - (char *)page_start), 0x3) < 0) {
+        char elog[192];
+        snprintf(elog, sizeof(elog), "[TOGGLE] %s: mprotect RW failed (page 0x%lx) — giving up, no write attempted",
+                 label, (uint64_t)page_start);
+        log_write(elog);
+        return -1;
+    }
+    *out_orig = (void *)fn_addr;      // save the original BEFORE the write
+    *(uint64_t *)slot_addr = (uint64_t)hook;
+    sceKernelMprotect(page_start, (size_t)((char *)page_end - (char *)page_start), page_prot);
+
+    char ilog[192];
+    snprintf(ilog, sizeof(ilog), "[TOGGLE] %s: GOT slot 0x%lx hijacked (orig=0x%lx) — slot calls now route through the plugin hook",
+             label, slot_addr, fn_addr);
+    log_write(ilog);
+    return 1;
+}
+
+// Lazy hijack installs — called from open_hook (eboot.bin is module[0] from
+// the first open). The pad slot binds at open #1 (observed); the move slot
+// binds when VR init first polls the Moves — file opens continue through
+// the menus, so the retry cadence catches it. Give-up flags stop the loops
+// cleanly. Retry-progress logging is DEBUG-BUILD ONLY (VERBOSE_LOG).
+static int g_pad_hijack_done = 0;
+static int g_pad_hijack_attempts = 0;
+static int g_pad_hijack_gave_up = 0;
+static int g_move_hijack_done = 0;
+static int g_move_hijack_attempts = 0;
+static int g_move_hijack_gave_up = 0;
+
+static void try_install_pad_hook(void) {
+    if (g_pad_hijack_done || g_pad_hijack_gave_up) return;
+    if (!g_feature_in_game_plugin_toggle) return;  // NOT gated by the kill switch (one-way-door rule)
+
+    g_pad_hijack_attempts++;
+    int rc = try_hijack_got_slot(GOT_RVA_SCE_PAD_READ, "scePadRead",
+                                 (void **)&g_orig_pad_read, (void *)pad_read_hook);
+    if (rc == 1) {
+        g_pad_hijack_done = 1;
+        return;
+    }
+    if (rc == -1) {
+        g_pad_hijack_gave_up = 1;  // mprotect/query failed — never crash the game for a hotkey
+        return;
+    }
+#ifdef VERBOSE_LOG
+    if (g_pad_hijack_attempts <= 3 || g_pad_hijack_attempts % 50 == 0) {
+        char alog[128];
+        snprintf(alog, sizeof(alog), "[TOGGLE] scePadRead slot not bound yet (attempt %d, open #%d)",
+                 g_pad_hijack_attempts, g_open_count);
+        log_write(alog);
+    }
+#endif
+    if (g_pad_hijack_attempts >= PAD_HIJACK_MAX_ATTEMPTS) {
+        g_pad_hijack_gave_up = 1;
+        log_write("[TOGGLE] ERROR: scePadRead slot never bound — DS4 path unavailable this session (Move path may still work)");
+    }
+}
+
+static void try_install_move_hook(void) {
+    if (g_move_hijack_done || g_move_hijack_gave_up) return;
+    if (!g_feature_in_game_plugin_toggle) return;
+
+    g_move_hijack_attempts++;
+    int rc = try_hijack_got_slot(GOT_RVA_SCE_MOVE_READ_RECENT, "sceMoveReadStateRecent",
+                                 (void **)&g_orig_move_read, (void *)move_read_hook);
+    if (rc == 1) {
+        g_move_hijack_done = 1;
+        return;
+    }
+    if (rc == -1) {
+        g_move_hijack_gave_up = 1;
+        return;
+    }
+#ifdef VERBOSE_LOG
+    if (g_move_hijack_attempts <= 3 || g_move_hijack_attempts % 500 == 0) {
+        char alog[128];
+        snprintf(alog, sizeof(alog), "[TOGGLE] sceMoveReadStateRecent slot not bound yet (attempt %d, open #%d)",
+                 g_move_hijack_attempts, g_open_count);
+        log_write(alog);
+    }
+#endif
+    if (g_move_hijack_attempts >= MOVE_HIJACK_MAX_ATTEMPTS) {
+        g_move_hijack_gave_up = 1;
+        log_write("[TOGGLE] ERROR: sceMoveReadStateRecent slot never bound — in-game toggle unavailable this session");
+    }
+}
+
 // ── IL2CPP module base ──────────────────────────────────────────────────────
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[256];
@@ -910,7 +1431,7 @@ extern "C" int module_start(size_t argc, const void *args) {
     OrbisNotificationRequest notif;
 
     ensure_dir();
-    log_write("=== BS Deluxe " PLUGIN_VERSION " started ===");
+    log_write("=== BS Deluxe " PLUGIN_VERSION PLUGIN_VARIANT " started ===");
     log_write(PLUGIN_VERSION " — dynamic redirect config (reads redirects.json from AFR)");
     log_write("config: " CONFIG_PATH);
 
@@ -924,12 +1445,18 @@ extern "C" int module_start(size_t argc, const void *args) {
     // Log feature flag state for debugging
     {
         char flog[256];
-        snprintf(flog, sizeof(flog), "FEATURE FLAGS: plugin=%s  custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s",
+        snprintf(flog, sizeof(flog), "FEATURE FLAGS: plugin=%s  custom_song_replacements=%s  metadata_modification=%s  beatmap_mode_mapping=%s  song_previews=%s  in_game_plugin_toggle=%s",
                  g_feature_plugin_enabled ? "ON" : "OFF",
                  g_feature_custom_song_replacements ? "ON" : "OFF",
                  g_feature_song_metadata_modification ? "ON" : "OFF",
-                 g_feature_beatmap_mode_mapping ? "ON" : "OFF");
+                 g_feature_beatmap_mode_mapping ? "ON" : "OFF",
+                 g_feature_song_previews ? "ON" : "OFF",
+                 g_feature_in_game_plugin_toggle ? "ON" : "OFF");
         log_write(flog);
+    }
+
+    if (g_feature_in_game_plugin_toggle) {
+        log_write("[TOGGLE] in-game hotkey ARMED: hold the Move button + trigger together for 2s to flip enable_plugin (restart to apply)");
     }
 
     if (!g_feature_custom_song_replacements) {
@@ -965,16 +1492,17 @@ extern "C" int module_start(size_t argc, const void *args) {
         int enabled_count = g_feature_custom_song_replacements
                           + g_feature_song_metadata_modification
                           + g_feature_beatmap_mode_mapping
-                          + g_feature_song_previews;
+                          + g_feature_song_previews
+                          + g_feature_in_game_plugin_toggle;
         memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
         if (g_feature_plugin_enabled) {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s (ON)\nBy Chris Primeish\n(%d/4 features ON)",
-                     PLUGIN_VERSION, enabled_count);
+                     "BS Deluxe %s%s (ON)\nBy Chris Primeish\n(%d/5 features ON)",
+                     PLUGIN_VERSION, PLUGIN_VARIANT, enabled_count);
         } else {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s (OFF)\nBy Chris Primeish\n(official songs only)",
-                     PLUGIN_VERSION);
+                     "BS Deluxe %s%s (OFF)\nBy Chris Primeish\n(official songs only)",
+                     PLUGIN_VERSION, PLUGIN_VARIANT);
         }
         sceKernelSendNotificationRequest(0,&notif,sizeof(notif),0);
     }

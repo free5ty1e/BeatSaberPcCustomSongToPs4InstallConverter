@@ -6,6 +6,26 @@ subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
 
+## 0.6.11 (2026-10-16)
+### Changed
+- `TOAST_VERSION` bumped to v0.8053. The simulated boot toast now documents the debug-variant suffix convention (a real DEBUG build reports `vX DEBUG` in its toast/banner).
+
+## 0.6.10 (2026-10-16)
+### Changed
+- `TOAST_VERSION` bumped to v0.8052 (GOT-hijack build). Note: this round deploys the DEBUG plugin variant (`--deploy-logging`) for full move-data diagnostics; `--deploy-plugin` restores the quiet release build after confirmation.
+
+## 0.6.9 (2026-10-16)
+### Changed
+- `TOAST_VERSION` bumped to v0.8051 (GOT-resolution build; UI otherwise unchanged).
+
+## 0.6.8 (2026-10-15)
+### Changed
+- **M11 hotkey description updated for the v0.8050 redesign** (Exp 278c): the hotkey is now **Move button + trigger held together for 2 seconds** (the user-verified reality: the DS4 is ignored by Beat Saber in VR mode; the new combo is used nowhere else in the game). `TOAST_VERSION` bumped to v0.8050.
+
+## 0.6.7 (2026-10-14)
+### Added
+- **M11: 5th feature flag `enable_in_game_plugin_toggle` surfaced everywhere the app touches flags.** `KNOWN_FLAGS` (adapter), a full `FLAG_DESCRIPTIONS` entry (documents the L3+R3 2-second DS4 hotkey, the restart-to-apply semantics, and that the hotkey deliberately ignores the kill switch so it always works), the toast simulation's `FEATURE_FLAG_KEYS` + `FLAG_ORDER` (toast now reads N/5), `TOAST_VERSION` v0.8049, and the index.html static placeholder (5/5).
+
 ## 0.6.6 (2026-10-13)
 ### Added
 - **Demos link (lower-left, both surfaces).** A small footer link — 🎬 Demos — opens the project's collected demo-video + screenshot gallery (`docs/demos.md` on the MAIN branch: <https://github.com/free5ty1e/BeatSaberPcCustomSongToPs4InstallConverter/blob/main/docs/demos.md>). Mirrors the version badge's corner-chip styling (rounded on the outer edge, hidden when printing, hover accent); `target="_blank" rel="noopener"`. The main-branch URL is stable across releases and goes live the moment the feature PR merges (404s before that, by design).
@@ -349,3 +369,16 @@ that actually deploys.
 - Every PS4 read uses the `get`-to-temp-dir banner-free transport (never
   `lftp cat`) with first-`{`-to-last-`}` JSON extraction and retries
   (`.agent/llm-wiki-knowledge-base/lftp-ftp-pitfalls.md`, plan §9.4 invariant 3).
+## 0.6.12 (2026-10-17)
+### Fixed
+- **Feature-flag description for `enable_in_game_plugin_toggle` polished** (user report of stale text): the repo description had been correct since 0.6.8, but the user's observation exposed TWO issues: (1) a long-running web-app server process from before the 0.6.8 change was still serving the old L3+R3 wording from memory — **restart the web app after pulling changes** (its FastAPI process holds code in memory; the UI won't see new descriptions until relaunch); (2) the description carried a hard-coded "(v0.8050)" version reference that stales with every bump — now removed in favor of "hardware-confirmed" phrasing, the VR notification-sound note, and a pointer to the full feature guide (docs/features/in-game-plugin-toggle.md).
+- The feature doc gained the user's demo video (README + docs/demos.md already carried it).
+
+## 0.6.13 (2026-10-17)
+### Added — resilient + intelligent launcher (user directives, Exp 278h)
+- **Port-collision handling that presents options instead of dying.** When the preferred port (default 8765) is busy, the launcher now IDENTIFIES the occupant — it pings `/api/ping` and can tell "Beat Saber Deluxe web app 0.6.12 (pipeline 0.5363, plugin v0.8053) — ⚠️ STALE: it predates this checkout" from an unknown process — then presents a menu:
+  1. use the existing instance (opens it; nothing new started),
+  2. start a FRESH instance on the next free port,
+  3. STOP the running web app instance(s) (found by scanning `/proc` for this server.py) and start fresh on the preferred port.
+  Smart defaults: a CURRENT instance → reuse it; a STALE one of ours → stop + restart on the same port (the exact pain that produced Errno 98: a long-running server process serving old code); an unknown occupant → never kill it, take the next port. Non-interactive contexts (stdin not a TTY) take the default automatically with a printed notice.
+- **Every error message now carries a suggested course of action** ("To fix: …") — the all-ports-busy error tells you to stop instances (`ps aux | grep '[s]erver.py'` + kill) or pick a port with `--port`; a failed stop-and-rebind warns and falls back to the next free port automatically instead of crashing.

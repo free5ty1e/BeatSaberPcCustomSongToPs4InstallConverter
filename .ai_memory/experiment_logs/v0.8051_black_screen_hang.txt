@@ -1,0 +1,109 @@
+=== BS Deluxe v0.8051 started ===
+v0.8051 — dynamic redirect config (reads redirects.json from AFR)
+config: /data/GoldHEN/AFR/CUSA12878/redirects.json
+loaded 53 redirects from config
+  e.g. billieeilish_pack_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle -> /data/GoldHEN/AFR/CUSA12878/billieeilish_pack_modes_previews_assets_all_ba4a0db5570760b21ebcbb2ec7a8d321.bundle
+  breakdown: 47 songs, 5 packs, 1 catalog
+features: plugin=1 custom_song_replacements=1 metadata_modification=1 beatmap_mode_mapping=1 song_previews=1 in_game_plugin_toggle=1
+loaded song_metadata: 47 name replacements, 7 artist replacements
+FEATURE FLAGS: plugin=ON  custom_song_replacements=ON  metadata_modification=ON  beatmap_mode_mapping=ON  song_previews=ON  in_game_plugin_toggle=ON
+[TOGGLE] in-game hotkey ARMED: hold the Move button + trigger together for 2s to flip enable_plugin (restart to apply)
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 1, open #1) — retrying
+[TOGGLE] eboot.bin base: 0x400000
+[TOGGLE] scePadRead: GOT 0x2063500 -> 0x800439fe0 (prot=0x5)
+[TOGGLE] scePadRead hooked at 800439fe0 (GOT-resolved) — DS4 L3+R3 secondary path
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[TOGGLE] sceMoveReadStateRecent not resolvable yet (attempt 1, open #1)
+[OPEN #1] /data/GoldHEN/AFR/CUSA12878/bs_log.txt
+hooks installed
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[TOGGLE] sceMoveReadStateRecent not resolvable yet (attempt 2, open #2)
+[OPEN #2] /dev/notification0
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[TOGGLE] sceMoveReadStateRecent not resolvable yet (attempt 3, open #3)
+[OPEN #3] /dev/notification0
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #4] /dev/notification1
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #5] /dev/urandom
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #6] /app0/sce_discmap.plt
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #7] /app0/sce_discmap_patch.plt
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #8] /app0/sce_discmap.plt
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #9] /app0/sce_discmap_patch.plt
+[METADATA] Found 3 modules
+[METADATA] IL2CPP module not found. First 20 modules:
+  [0] eboot.bin
+  [1] libSceFios2.prx
+  [2] libc.prx
+[METADATA] Module not found (attempt 2, open #10) — retrying
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #10] /app0/media/boot.config
+[METADATA] Found 5 modules
+[METADATA] Found IL2CPP module: Il2CppUserAssemblies.prx at 0x806c0000 (3 segments)
+[METADATA] IL2CPP base: 0x806c0000, set_text: 0x833f5be0, SetText: 0x833fe1d0, MoveNext: 0x823f77c0 (attempt 3, open #11)
+[METADATA] TMP_Text.set_text + SetText + MoveNext hooks installed
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #11] /dev/urandom
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #12] /app0/debug.log
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #13] /app0/archive.psarc
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #14] /app0/archive_patch.psarc
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #15] /app0/Media/Metadata/global-metadata.dat
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #16] /app0/Media/il2cpp.usym
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #17] /archive/mount/point/Media/RuntimeInitializeOnLoads.json
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #18] /app0/Media/RuntimeInitializeOnLoads.json
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #19] /archive/mount/point/Media/ScriptingAssemblies.json
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[TOGGLE] sceMoveReadStateRecent not resolvable yet (attempt 20, open #20)
+[OPEN #20] /app0/Media/ScriptingAssemblies.json
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #21] /dev/dce
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 holds 0xeffffffe000001a0 (unmapped/unreadable — not bound yet?), retrying
+[OPEN #22] /dev/hid
+[TOGGLE] sceMoveReadStateRecent: GOT 0x20634e8 -> 0x80081db00 (prot=0x5)
+[TOGGLE] sceMoveReadStateRecent hooked at 80081db00 (GOT-resolved) — hold Move button + trigger for 2s to toggle the plugin
+[OPEN #23] /dev/hid
+[OPEN #24] /dev/hid
+[OPEN #25] /dev/urandom
+[OPEN #26] /archive/mount/point/Media/globalgamemanagers
+[OPEN #27] /app0/Media/globalgamemanagers
+[OPEN #28] /savedata0/memory.dat
+[OPEN #29] /app0/Media/UnitySubsystems
+[OPEN #30] /archive/mount/point/Media/UnitySubsystems/PSVRXRSDKPlugin/UnitySubsystemsManifest.json
+[OPEN #31] /app0/Media/UnitySubsystems/PSVRXRSDKPlugin/UnitySubsystemsManifest.json
+[OPEN #32] /archive/mount/point/Media/Resources/unity default resources
+[OPEN #33] /app0/Media/Resources/unity default resources
+[OPEN #34] /dev/ajm
+[OPEN #35] /archive/mount/point/Media/globalgamemanagers.assets
+[OPEN #36] /app0/Media/globalgamemanagers.assets
+[OPEN #37] /archive/mount/point/Media/globalgamemanagers.assets.resS
+[OPEN #38] /app0/Media/globalgamemanagers.assets.resS
+[OPEN #39] /archive/mount/point/Media/Resources/unity_builtin_extra
+[OPEN #40] /app0/Media/Resources/unity_builtin_extra
+[OPEN #41] /app0/Media/Resources/mscorlib.dll-resources.dat
+[OPEN #42] /dev/hmd_cmd
+[OPEN #43] /dev/hmd_snsr
+[OPEN #44] /dev/hmd_3da
+[OPEN #45] /dev/hmd_dist
+[OPEN #46] /archive/mount/point/Media/sharedassets0.assets
+[OPEN #47] /app0/Media/sharedassets0.assets
+[OPEN #48] /archive/mount/point/Media/level0
+[OPEN #49] /app0/Media/level0
+[OPEN #50] /archive/mount/point/Media/level0.resS
+[OPEN #51] /app0/Media/level0.resS

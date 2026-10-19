@@ -578,3 +578,25 @@ to the repo; every static check green (FSELF, strings, pinned deps, 69 examples,
 backup script, relative config); ping carries 3 versions; Batch 34 packs.
 
 **VERDICT: validated. Merge PR #7 → tag the real v0.8048-pipeline-0.5362-webapp-0.6.6.**
+
+---
+
+## Cycle 15 — THE RELEASE: v0.8048-pipeline-0.5362-webapp-0.6.6 validated (Exp 277)
+
+**User:** merged PR #7 + tagged the real release. Watched + validated thoroughly.
+
+**Build:** all green — main-merge runs (CI, plugin-build, Pages 28s) + the tag build (2m2s;
+866 → 743 passed + 123 gated; pinned ruff 0.16.0). Release published; releases/latest →
+this tag.
+
+**Zip (clean extraction):** every static check green; all fix markers; demos link
+(main-branch URL); 5 core files byte-identical; webapp boots (3-version ping), Batch 34
+packs, catalog 36.
+
+**LIVE Pages:** demos link live; badge 0.6.6/0.5362/v0.8048; Exp-266 landing guard intact
+(app.js line 1564); assets 200; dumper.cfg split=3; docs/demos.md renders on main (200).
+
+**End-to-end M10 from the REAL zip:** shipped pipeline built the lizzo variant (9/9 previews,
+crc 3710284817) → decode-verified 9 clips @ 10.0s + 9 SOs @ 4 mode sets.
+
+**M10 CLOSED.** Remaining: PS4-side procedure at next power-on (state already verified green).

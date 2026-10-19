@@ -36,7 +36,7 @@ PS4_SONG_METADATA = f"{AFR_TITLE_DIR}/song_metadata.json"
 DEFAULTS_TRUE = {"enable_plugin"}
 KNOWN_FLAGS = ("enable_plugin", "enable_beatmap_mode_mapping",
                "enable_song_metadata_modification", "enable_custom_song_replacements",
-               "enable_song_previews")
+               "enable_song_previews", "enable_in_game_plugin_toggle")
 
 
 @dataclass

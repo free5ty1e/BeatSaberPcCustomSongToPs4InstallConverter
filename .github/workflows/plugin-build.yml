@@ -107,21 +107,6 @@ jobs:
           echo "redirects.json generated (empty template):"
           python3 -m json.tool redirects.json
 
-      - name: Generate features.json (default feature flags)
-        run: |
-          # Default runtime feature flags (v0.5340+): all features on, global
-          # kill switch enabled. The plugin shows their state in the boot toast.
-          cat > features.json << 'JSONEOF'
-          {
-            "enable_plugin": true,
-            "enable_custom_song_replacements": true,
-            "enable_song_metadata_modification": true,
-            "enable_beatmap_mode_mapping": true
-          }
-          JSONEOF
-          echo "features.json generated:"
-          python3 -m json.tool features.json
-
       - name: Run tests with coverage
         run: |
           pip install -r beat_saber_deluxe/requirements-test.txt
@@ -131,6 +116,42 @@ jobs:
 
       - name: Smoke-test the web app server
         run: |
+          # Import + route check (no network): proves the webapp in the zip
+          # boots. The same UI serves the GitHub Pages build.
+          cd beat_saber_deluxe
+          python3 - <<'PYEOF'
+          import sys
+          sys.path.insert(0, "webapp")
+          import server
+          routes = {getattr(r, "path", "") for r in server.app.routes}
+          required = {"/api/ping", "/api/loadout", "/api/jobs/deploy"}
+          missing = required - routes
+          assert not missing, f"webapp missing routes: {missing}"
+          assert ( __import__("pathlib").Path("webapp/static/index.html").exists()
+                   and __import__("pathlib").Path("webapp/static/app.js").exists() ), \
+              "webapp static UI files missing"
+          print(f"webapp OK: {len(routes)} routes, static UI present")
+          PYEOF
+
+      - name: Generate features.json (from the pipeline's DEFAULT_FEATURES — single source of truth)
+        run: |
+          # Generated from the pipeline's DEFAULT_FEATURES (Exp 278i audit
+          # finding): the previous HARDCODED copy went stale across M10/M11
+          # and shipped a template missing enable_song_previews AND
+          # enable_in_game_plugin_toggle — a manual install from the zip
+          # booted with previews + the in-game toggle silently OFF.
+          # Runs AFTER the test step so the pipeline's import deps
+          # (lz4 et al.) are installed.
+          python3 - << 'PYEOF'
+          import json, sys
+          sys.path.insert(0, 'beat_saber_deluxe/tools')
+          from full_custom_song_pipeline import DEFAULT_FEATURES
+          with open('features.json', 'w') as f:
+              json.dump(DEFAULT_FEATURES, f, indent=2)
+              f.write('\n')
+          PYEOF
+          echo "features.json generated from DEFAULT_FEATURES:"
+          python3 -m json.tool features.json
           # Import + route check (no network): proves the webapp in the zip
           # boots. The same UI serves the GitHub Pages build.
           cd beat_saber_deluxe
@@ -190,6 +211,7 @@ jobs:
           cp beat_saber_deluxe/docs/features/song-metadata-modification.md release-zip/docs/features/
           cp beat_saber_deluxe/docs/features/beatmap-mode-mapping.md release-zip/docs/features/
           cp beat_saber_deluxe/docs/features/song-previews.md release-zip/docs/features/
+          cp beat_saber_deluxe/docs/features/in-game-plugin-toggle.md release-zip/docs/features/
 
           # Example / how-to docs
           cp beat_saber_deluxe/docs/camellia-pack-example.md release-zip/docs/examples/
