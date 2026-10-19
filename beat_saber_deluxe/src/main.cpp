@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8053"
+#define PLUGIN_VERSION "v0.8054"
 // Debug-variant indicator (Exp 278f, user request): the boot toast + the
 // log banner carry " DEBUG" when running the DEBUG=1 build (VERBOSE_LOG),
 // nothing for the release build — so logs and in-game toasts always show
@@ -61,6 +61,7 @@ static int g_feature_song_metadata_modification = 0;
 static int g_feature_beatmap_mode_mapping = 0;
 static int g_feature_song_previews = 0;
 static int g_feature_in_game_plugin_toggle = 0;  // M11: Move button+trigger hotkey (gates ONLY this feature)
+static int g_feature_game_data_extractor = 0;    // M12: in-console extractor (gates ONLY this feature — like the hotkey, it is console-maintenance tooling, NOT game behavior, so the enable_plugin kill switch does not gate it)
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -75,6 +76,7 @@ static int METADATA_ARTIST_COUNT = 0;
 static int log_write(const char *msg);
 static void try_install_pad_hook(void);   // M11 in-game toggle — pad path (defined after the hooks)
 static void try_install_move_hook(void);  // M11 in-game toggle — Move path (the primary on this game)
+static void try_run_game_data_extractor(void);  // M12 in-console extractor (defined after the hooks)
 
 static void load_features(void) {
     int fd = open(FEATURES_PATH, O_RDONLY, 0);
@@ -126,12 +128,14 @@ static void load_features(void) {
             g_feature_song_previews = val;
         } else if (strcmp(key, "enable_in_game_plugin_toggle") == 0) {
             g_feature_in_game_plugin_toggle = val;
+        } else if (strcmp(key, "enable_game_data_extractor") == 0) {
+            g_feature_game_data_extractor = val;
         }
     }
 
     char logmsg[256];
-    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d in_game_plugin_toggle=%d",
-             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews, g_feature_in_game_plugin_toggle);
+    snprintf(logmsg, sizeof(logmsg), "features: plugin=%d custom_song_replacements=%d metadata_modification=%d beatmap_mode_mapping=%d song_previews=%d in_game_plugin_toggle=%d game_data_extractor=%d",
+             g_feature_plugin_enabled, g_feature_custom_song_replacements, g_feature_song_metadata_modification, g_feature_beatmap_mode_mapping, g_feature_song_previews, g_feature_in_game_plugin_toggle, g_feature_game_data_extractor);
     log_write(logmsg);
     if (!g_feature_plugin_enabled) {
         log_write("DISABLED: enable_plugin is false — ALL plugin behavior off (stock game)");
@@ -378,6 +382,12 @@ static int open_hook(const char *path, int flags, ...) {
     // reads both Moves every frame via sceMoveReadStateRecent (the only Move
     // state read in the eboot's imports). libSceMove also loads with the game.
     try_install_move_hook();
+
+    // M12 game-data extractor: pulls the files the pipeline needs out of the
+    // game's own decrypted mounts (per-user extraction — eliminates the
+    // PC-side dump requirement for users). Lazy: mounts must be up, which
+    // they are by the time the game opens files.
+    try_run_game_data_extractor();
 
     const char *np = NULL;
     if (path) {
@@ -1337,6 +1347,235 @@ static void try_install_move_hook(void) {
     }
 }
 
+// ── Game-data extractor (M12, Exp 280): in-console extraction of the files the
+// pipeline needs — eliminates the PC-side dump requirement for USERS ─────
+// The game reads its own assets from /archive/mount/point/Media/... and
+// /app0/Media/... (log-proven: 1,067 + 1,073 opens in the archived boot
+// logs) — both mounts are readable IN-PROCESS, so the plugin can copy
+// exactly the files the pipeline reads (per-slot template bundles ~13MB,
+// pack bundles ~7MB, aa/catalog.json ~0.8MB; 658MB for a full 5-pack
+// loadout) to the AFR dir during a normal boot. The web app pulls them over
+// FTP into a local ./game_data cache that mirrors the dump layout —
+// zero pipeline changes.
+//
+// OWNERSHIP (pull-before-push doctrine): game_data_requests.txt is WEB-APP
+// OWNED (one relative path per line, # comments) — the plugin only READS it.
+// game_data_status.txt is PLUGIN OWNED (one extracted path per line;
+// "ERR <rel> <reason>" lines mark failures) — the web app only READS it.
+// No file is written by both sides.
+//
+// IDEMPOTENCE + RETRIES: successes are recorded in the status file and
+// SKIPPED on later boots; failures (ERR lines) never match a request line, so
+// they are re-attempted on the next boot automatically. The run happens once
+// per boot from the first open_hook call where the game mounts resolve.
+//
+// GATED BY enable_game_data_extractor ONLY (like the M11 hotkey, this is
+// console-maintenance tooling, not game behavior — the enable_plugin kill
+// switch deliberately does not gate it, so a user can fill their game-data
+// cache regardless of the plugin's game-behavior state).
+#define GAMEDATA_REQUESTS_PATH AFR_BASE "/" TITLE_ID "/game_data_requests.txt"
+#define GAMEDATA_STATUS_PATH  AFR_BASE "/" TITLE_ID "/game_data_status.txt"
+#define GAMEDATA_DIR          AFR_BASE "/" TITLE_ID "/game_data"
+#define GAMEDATA_REQ_MAX      256   // max request lines
+#define GAMEDATA_LINE_MAX     300   // max path length per line
+#define GAMEDATA_READ_MAX     (64 * 1024)  // requests/status read cap
+#define GAMEDATA_BUF_SIZE     (256 * 1024)  // static copy buffer
+
+static char g_gamedata_buf[GAMEDATA_BUF_SIZE];
+static int g_extractor_state = 0;     // 0 = not run yet this boot, 1 = done (or nothing to do)
+static int g_extractor_attempts = 0;
+
+// Line-exact containment: does buf contain a line exactly equal to line?
+// (strstr would false-match "catalog.json\n" inside "aa/catalog.json\n".)
+static int gamedata_line_present(const char *buf, const char *line) {
+    const char *p = buf;
+    size_t len = strlen(line);
+    while (p && *p) {
+        const char *nl = strchr(p, '\n');
+        size_t linelen = nl ? (size_t)(nl - p) : strlen(p);
+        if (linelen == len && strncmp(p, line, len) == 0) return 1;
+        p = nl ? nl + 1 : NULL;
+    }
+    return 0;
+}
+
+// Append one line to the plugin-owned status file.
+static void gamedata_status_append(const char *line) {
+    int fd = sceKernelOpen(GAMEDATA_STATUS_PATH, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    if (fd < 0) return;
+    sceKernelFchmod(fd, 0644);
+    sceKernelWrite(fd, line, strlen(line));
+    sceKernelWrite(fd, "\n", 1);
+    sceKernelClose(fd);
+}
+
+// Create the game_data/<dirname-of-rel> chain (mkdir -p equivalent).
+static void gamedata_mkdirs_for(const char *rel) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s", GAMEDATA_DIR);
+    sceKernelMkdir(path, 0777);
+    const char *p = rel;
+    while ((p = strchr(p, '/')) != NULL) {
+        size_t consumed = (size_t)(p - rel);
+        snprintf(path, sizeof(path), "%s/%.*s", GAMEDATA_DIR, (int)consumed, rel);
+        sceKernelMkdir(path, 0777);
+        p++;
+    }
+}
+
+// Copy one requested relative path from the game mounts. Returns bytes
+// copied, or -1 (with an ERR status line + log).
+static int64_t gamedata_extract_one(const char *rel) {
+    static const char *src_prefixes[2] = {"/archive/mount/point/", "/app0/"};
+    char src_path[512];
+    int src_fd = -1;
+    int used_prefix = -1;
+    for (int i = 0; i < 2; i++) {
+        snprintf(src_path, sizeof(src_path), "%s%s", src_prefixes[i], rel);
+        src_fd = sceKernelOpen(src_path, O_RDONLY, 0);
+        if (src_fd >= 0) {
+            used_prefix = i;
+            break;
+        }
+    }
+    if (src_fd < 0) {
+        char err[GAMEDATA_LINE_MAX + 64];
+        snprintf(err, sizeof(err), "ERR %s not-found-on-mounts", rel);
+        gamedata_status_append(err);
+        char elog[512];
+        snprintf(elog, sizeof(elog), "[EXTRACT] ERR %s — not found on either mount", rel);
+        log_write(elog);
+        return -1;
+    }
+
+    gamedata_mkdirs_for(rel);
+    char dst_path[512];
+    snprintf(dst_path, sizeof(dst_path), "%s/%s", GAMEDATA_DIR, rel);
+    int dst_fd = sceKernelOpen(dst_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (dst_fd < 0) {
+        sceKernelClose(src_fd);
+        char err[GAMEDATA_LINE_MAX + 64];
+        snprintf(err, sizeof(err), "ERR %s dest-open-failed", rel);
+        gamedata_status_append(err);
+        log_write("[EXTRACT] ERR dest open failed (AFR dir full/unwritable?)");
+        return -1;
+    }
+    sceKernelFchmod(dst_fd, 0644);
+
+    int64_t total = 0;
+    for (;;) {
+        ssize_t n = sceKernelRead(src_fd, g_gamedata_buf, sizeof(g_gamedata_buf));
+        if (n <= 0) break;
+        ssize_t off = 0;
+        while (off < n) {
+            ssize_t w = sceKernelWrite(dst_fd, (char *)g_gamedata_buf + off, n - off);
+            if (w <= 0) {
+                off = -1;
+                break;
+            }
+            off += w;
+        }
+        if (off < 0) {
+            total = -1;
+            break;
+        }
+        total += n;
+    }
+    sceKernelClose(src_fd);
+    sceKernelClose(dst_fd);
+
+    if (total < 0) {
+        char err[GAMEDATA_LINE_MAX + 64];
+        snprintf(err, sizeof(err), "ERR %s copy-write-failed", rel);
+        gamedata_status_append(err);
+        log_write("[EXTRACT] ERR write failed mid-copy");
+        return -1;
+    }
+
+    gamedata_status_append(rel);
+    char oklog[512];
+    snprintf(oklog, sizeof(oklog), "[EXTRACT] ✓ %s — %lld bytes (from %s)",
+             rel, (long long)total, used_prefix == 0 ? "/archive/mount/point" : "/app0");
+    log_write(oklog);
+    return total;
+}
+
+// The extractor entry point — lazy from open_hook, once per boot.
+static void try_run_game_data_extractor(void) {
+    if (!g_feature_game_data_extractor) return;  // NOT gated by the kill switch (see section header)
+    if (g_extractor_state) return;               // done (or nothing to do) this boot
+
+    g_extractor_attempts++;
+
+    // Read the request manifest (web-app-owned). Missing file = nothing to do.
+    int fd = sceKernelOpen(GAMEDATA_REQUESTS_PATH, O_RDONLY, 0);
+    if (fd < 0) {
+        g_extractor_state = 1;
+        if (g_extractor_attempts == 1) {
+            log_write("[EXTRACT] no game_data_requests.txt present — nothing to do this boot");
+        }
+        return;
+    }
+    static char req[GAMEDATA_READ_MAX];
+    ssize_t got = sceKernelRead(fd, req, sizeof(req) - 1);
+    sceKernelClose(fd);
+    if (got <= 0) {
+        g_extractor_state = 1;
+        log_write("[EXTRACT] game_data_requests.txt empty — nothing to do");
+        return;
+    }
+    req[got] = '\0';
+
+    // Read the plugin-owned status (already-extracted + ERR lines).
+    static char status[GAMEDATA_READ_MAX];
+    status[0] = '\0';
+    fd = sceKernelOpen(GAMEDATA_STATUS_PATH, O_RDONLY, 0);
+    if (fd >= 0) {
+        ssize_t sg = sceKernelRead(fd, status, sizeof(status) - 1);
+        sceKernelClose(fd);
+        if (sg > 0) status[sg] = '\0';
+    }
+
+    ensure_dir();
+    sceKernelMkdir(GAMEDATA_DIR, 0777);
+
+    // Process each request line; skip blanks/# comments; skip already-done.
+    int done_count = 0, new_count = 0, err_count = 0;
+    int64_t total_bytes = 0;
+    char *line = req;
+    while (line && *line) {
+        char *nl = strchr(line, '\n');
+        size_t len = nl ? (size_t)(nl - line) : strlen(line);
+        char rel[GAMEDATA_LINE_MAX];
+        if (len > 0 && len < sizeof(rel) && line[0] != '#' && line[0] != '\r') {
+            // strip trailing CR
+            while (len > 0 && (line[len - 1] == '\r' || line[len - 1] == ' ')) len--;
+            snprintf(rel, sizeof(rel), "%.*s", (int)len, line);
+            if (rel[0] != '\0') {
+                if (gamedata_line_present(status, rel)) {
+                    done_count++;
+                } else {
+                    int64_t n = gamedata_extract_one(rel);
+                    if (n >= 0) {
+                        new_count++;
+                        total_bytes += n;
+                    } else {
+                        err_count++;
+                    }
+                }
+            }
+        }
+        line = nl ? nl + 1 : NULL;
+    }
+
+    g_extractor_state = 1;
+    char sum[192];
+    snprintf(sum, sizeof(sum),
+             "[EXTRACT] run complete: %d new (%lld bytes), %d already done, %d errors — game_data/ is ready for the web app to pull",
+             new_count, (long long)total_bytes, done_count, err_count);
+    log_write(sum);
+}
+
 // ── IL2CPP module base ──────────────────────────────────────────────────────
 static uint64_t find_il2cpp_module_base(void) {
     OrbisKernelModule modules[256];
@@ -1458,6 +1697,9 @@ extern "C" int module_start(size_t argc, const void *args) {
     if (g_feature_in_game_plugin_toggle) {
         log_write("[TOGGLE] in-game hotkey ARMED: hold the Move button + trigger together for 2s to flip enable_plugin (restart to apply)");
     }
+    if (g_feature_game_data_extractor) {
+        log_write("[EXTRACT] game-data extractor ARMED: reads game_data_requests.txt and copies requested files to game_data/");
+    }
 
     if (!g_feature_custom_song_replacements) {
         log_write("DISABLED: custom_song_replacements is OFF — redirects will NOT fire");
@@ -1493,11 +1735,12 @@ extern "C" int module_start(size_t argc, const void *args) {
                           + g_feature_song_metadata_modification
                           + g_feature_beatmap_mode_mapping
                           + g_feature_song_previews
-                          + g_feature_in_game_plugin_toggle;
+                          + g_feature_in_game_plugin_toggle
+                          + g_feature_game_data_extractor;
         memset(&notif,0,sizeof(notif)); notif.type=(OrbisNotificationRequestType)0; notif.targetId=-1;
         if (g_feature_plugin_enabled) {
             snprintf(notif.message,sizeof(notif.message),
-                     "BS Deluxe %s%s (ON)\nBy Chris Primeish\n(%d/5 features ON)",
+                     "BS Deluxe %s%s (ON)\nBy Chris Primeish\n(%d/6 features ON)",
                      PLUGIN_VERSION, PLUGIN_VARIANT, enabled_count);
         } else {
             snprintf(notif.message,sizeof(notif.message),

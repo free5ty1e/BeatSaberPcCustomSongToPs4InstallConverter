@@ -275,7 +275,7 @@
         <div class="ps4-toast" id="toast-sim">
           <b id="toast-title">BS Deluxe v0.8047 (ON)</b><br>
           <span class="toast-author">By Chris Primeish</span><br>
-          <span id="toast-count">(5/5 features ON)</span>
+          <span id="toast-count">(6/6 features ON)</span>
         </div>
       </div>
       <p class="muted" id="toast-note">Reference format: the boot toast shows the
@@ -605,8 +605,41 @@ python3 webapp/server.py</pre>
   <section id="page-guide" class="page hidden">
     <h2>Game Dump Guide</h2>
     <p class="muted">Beat Saber Deluxe replaces songs in your own copy of the game —
-    it never distributes game content. You need a decrypted dump of
-    <b>Beat Saber CUSA12878 patch 2.04</b>.</p>
+    it never distributes game content.</p>
+
+    <div class="card" id="gamedata-auto-card" style="border-left:4px solid var(--accent)">
+      <h3>✨ Option A — Let the game extract it (recommended; no dump needed)</h3>
+      <p>The plugin can copy the exact files the pipeline needs (per-slot
+      templates, pack bundles, the catalog) out of the game's own data during a
+      normal boot — you never make or hold a decrypted dump on this PC.
+      <b>Legally clean:</b> everything is extracted from your own console.</p>
+      <ol>
+        <li>Arm the extractor flag (once): the <a href="#" data-nav="flags">Feature
+            Flags</a> tab → <code>enable_game_data_extractor</code> → Apply
+            (needs plugin v0.8054+ deployed).</li>
+        <li>Pick the packs you want below and <b>Request extraction</b> — the web app
+            writes the file list to the PS4.</li>
+        <li><b>Boot Beat Saber once.</b> The plugin extracts during a normal boot
+            (idempotent — failures retry on the next boot).</li>
+        <li>Back here: <b>Pull extracted files</b> → the web app mirrors them into
+            the local <code>game_data/</code> cache.</li>
+        <li><b>Use the extracted cache</b> — points the pipeline at the cache.
+            You're done: deploy songs as usual, no dump anywhere.</li>
+      </ol>
+      <div id="gamedata-pack-list" class="row wrap"></div>
+      <div class="row">
+        <button class="primary" id="gamedata-request-btn">Request extraction</button>
+        <button id="gamedata-pull-btn">Pull extracted files</button>
+        <button id="gamedata-use-btn">Use the extracted cache</button>
+      </div>
+      <div id="gamedata-status" class="muted" style="margin-top:8px">Loading extraction state…</div>
+    </div>
+
+    <div class="card">
+      <h3>Option B — I already have a decrypted dump (the classic recipe)</h3>
+      <p class="muted">You need a decrypted dump of <b>Beat Saber CUSA12878
+      patch 2.04</b> on this machine. Only needed for development/repair —
+      Option A covers everything else.</p>
 
     <div class="card">
       <h3>What you need</h3>

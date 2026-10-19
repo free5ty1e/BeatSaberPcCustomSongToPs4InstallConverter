@@ -42,3 +42,17 @@
 6. project_summary + context.yml updated to the M12 era.
 
 **Status:** ✅ research + planning complete. Awaiting the user's pick: M12 (extractor + cache) and/or M13 (Beat Sage + local folder) — both are implementation-ready plans.
+
+---
+
+## Cycle 2 — M12 IMPLEMENTED (Exp 280): plugin v0.8054 + pipeline v0.5364 + webapp 0.6.14
+
+**User:** plans approved; M12 then M13; the goal locked: only the developer needs ps4_dump. Branch renamed feature/eliminate-ps4-dump-requirement-and-support-beat-sage.
+
+**Implemented (full detail in the Exp-280 log entry):** the plugin extractor (both-mount copy loop, requests/status text formats, idempotent + ERR-retry, kill-switch-independent, toast N/6); the pipeline's --request-game-data/--pull-game-data modes (manifest from the ids file — no dump needed; slot requests auto-include pack bundles; every error carries a fix); the webapp's Option A flow (pack checkboxes + 5-step guide + live state + use-cache switch; both operations are pipeline subprocesses — the thin-layer doctrine held). Config gains paths.game_data_dir (./game_data).
+
+**Bugs found + fixed during the build:** (1) webapp endpoints appended after the __main__ guard → 404s — reordered before it; (2) the Exp-278f DEFAULT_FEATURES pin caught the 6th flag; (3) three stale N/5 toast pins + two grown-open_hook test windows updated; (4) ambiguous list-comp var + missing os import (ruff).
+
+**Verification:** manifest math verified live (lizzo=11, 2BeLoved=3, 5-pack=53); both plugin builds clean with extractor strings; suite 930/930; ruff clean; the webapp serves the new endpoints (state endpoint live-tested: PS4 off → clean unreachable state).
+
+**Status:** M12.1-M12.3 + M12.5 complete. M12.4 (hardware) pending: deploy v0.8054 + flag → request lizzo → boot once → pull → use-cache → cache-only deploy → verify. Then M13.

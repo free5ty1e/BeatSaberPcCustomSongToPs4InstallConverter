@@ -1,6 +1,6 @@
 # Eliminating or Automating the ps4_dump Folder Requirement
 
-**Status:** 🟡 Research complete — three paths defined, Path A recommended (Exp 279, 2026-10-19)
+**Status:** 🟢 Path A IMPLEMENTED (Exp 280, 2026-10-19): plugin v0.8054 + pipeline v0.5364 + webapp 0.6.14 — hardware validation (M12.4) pending
 **Goal:** a legally committable repository where a new user checks out the code and can
 immediately add custom songs to their jailbroken PS4's Beat Saber — without sourcing,
 dumping, or hand-placing a 4.9GB `ps4_dump/` folder first.

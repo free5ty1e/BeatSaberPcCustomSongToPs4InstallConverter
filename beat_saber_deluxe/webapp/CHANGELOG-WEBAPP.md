@@ -374,6 +374,13 @@ that actually deploys.
 - **Feature-flag description for `enable_in_game_plugin_toggle` polished** (user report of stale text): the repo description had been correct since 0.6.8, but the user's observation exposed TWO issues: (1) a long-running web-app server process from before the 0.6.8 change was still serving the old L3+R3 wording from memory — **restart the web app after pulling changes** (its FastAPI process holds code in memory; the UI won't see new descriptions until relaunch); (2) the description carried a hard-coded "(v0.8050)" version reference that stales with every bump — now removed in favor of "hardware-confirmed" phrasing, the VR notification-sound note, and a pointer to the full feature guide (docs/features/in-game-plugin-toggle.md).
 - The feature doc gained the user's demo video (README + docs/demos.md already carried it).
 
+## 0.6.14 (2026-10-19)
+### Added — M12: the "no dump required" flow (Dump Guide rework)
+- **Dump Guide tab gains "Option A — Let the game extract it (recommended)":** a 5-step guided flow (arm flag → pick packs from live checkboxes → request → boot the game once → pull → use the cache) with live state polling (requested/extracted/pending/errors + local cache summary + whether the cache is active as game_dump_dir). "Option B" keeps the classic manual recipe for developers/repair.
+- **New endpoints (thin layer — both operations are pipeline subprocesses):** `POST /api/jobs/game-data-request` (--request-game-data argv builder), `POST /api/jobs/game-data-pull` (--pull-game-data), `GET /api/game-data/state` (requests + status + cache + pending computation), `POST /api/game-data/use-cache` (points paths.game_dump_dir at the cache; refuses an empty cache with a fix message).
+- **6th feature flag surfaced everywhere:** `enable_game_data_extractor` (KNOWN_FLAGS + a full FLAG_DESCRIPTIONS entry + the toast-simulation list — toast now reads N/6; TOAST_VERSION v0.8054).
+- Job watching for the request/pull buttons (a compact direct poller into the status area with the job's tail lines + exit verdict).
+
 ## 0.6.13 (2026-10-17)
 ### Added — resilient + intelligent launcher (user directives, Exp 278h)
 - **Port-collision handling that presents options instead of dying.** When the preferred port (default 8765) is busy, the launcher now IDENTIFIES the occupant — it pings `/api/ping` and can tell "Beat Saber Deluxe web app 0.6.12 (pipeline 0.5363, plugin v0.8053) — ⚠️ STALE: it predates this checkout" from an unknown process — then presents a menu:

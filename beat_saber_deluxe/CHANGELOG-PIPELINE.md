@@ -1,5 +1,12 @@
 # Pipeline Changelog
 
+## v0.5364 (2026-10-19)
+### Added — M12: game-data extraction management (the "no dump required" flow)
+- **`--request-game-data [--game-data-packs p1,p2] [--game-data-slots s1,s2]`:** computes the extraction manifest from `beat_saber_song_ids.json` (per-slot templates + per-pack bundles + catalog — a slot request automatically includes its pack's bundle) and writes `game_data_requests.txt` to the PS4. NO dump needed to compute it. Upload verified via remote listing; the "no targets" error carries a fix suggestion (Exp-278h policy).
+- **`--pull-game-data`:** mirrors the console's `game_data/` into the local cache (`paths.game_data_dir`, new default `./game_data`, PROJECT_ROOT-relative) via resumable lftp mirror; reads the plugin-owned `game_data_status.txt` first; missing files post-pull are reported; every failure path carries a "To fix:" suggestion. The cache mirrors the dump layout exactly — pointing `paths.game_dump_dir` at it is the ONLY change a user makes (the web app's "Use the extracted cache" button does it).
+- **OWNERSHIP (pull-before-push doctrine):** requests.txt is pipeline/web-app-owned (the plugin only reads it); status.txt is plugin-owned (the pipeline only reads it). No file is written by both sides.
+- `DEFAULT_FEATURES` gains `enable_game_data_extractor: False` — deliberately the only flag-plumbing change.
+
 ## v0.5363 (2026-10-14)
 ### Added
 - **M11 flag plumbing (Exp 278): `enable_in_game_plugin_toggle` (default False) added to `DEFAULT_FEATURES`.** The new plugin hotkey (L3+R3 2s on a DS4 → flip `enable_plugin` inside features.json, restart to apply) needs nothing else from the pipeline: `apply_feature_flags`' Exp-248 pull-before-push already bases every flag deploy on the LIVE features.json, so in-game flips are picked up, preserved, and surfaced by the webapp/ps4_state automatically. New reusable development script: `development/scripts/ps4_elf_imports.py` (PS4 ELF dynsym dumper — DT_SCE_* tags are offsets relative to the PT_SCE_DYNLIBDATA segment; game imports are NID-obfuscated, decode against a NID DB such as shadPS4's aerolib.inl).

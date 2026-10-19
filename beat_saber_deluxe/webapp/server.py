@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -225,6 +226,7 @@ FLAG_DESCRIPTIONS = {
     "enable_beatmap_mode_mapping": "Gates the extra game-mode buttons (OneSaber / NoArrows / 90Degree). OFF = the stock pack bundles + catalog are served (Standard only) — the safe posture while a pack is only partially deployed.",
     "enable_song_previews": "Gates the custom SONG PREVIEWS in the song menu (M10): highlighting a custom song plays its own ~10s audio instead of the stock song's clip. Previews ride inside the patched pack bundles — ON deploys the modes+previews bundle variant; OFF serves stock previews (the pack/mode redirects are shared with mode mapping: either flag ON keeps the patched pair live).",
     "enable_in_game_plugin_toggle": "In-game plugin toggle (M11, hardware-confirmed): arms the Move-controller hotkey — hold the Move button + trigger together for 2 full seconds (a combination used nowhere else in the game) to flip the global plugin state. You'll hear the PS4 notification sound (in VR the popup may not be visible); restart Beat Saber to apply the new state — the current session never changes mid-game. The hotkey keeps working even while the plugin itself is toggled OFF, so you can always flip it back on without a PC. Deliberately NOT affected by the kill switch — only this flag disables the hotkey. Full guide: docs/features/in-game-plugin-toggle.md.",
+    "enable_game_data_extractor": "M12: arms the in-console game-data extractor — the plugin copies the files the pipeline needs (per-slot templates ~13MB each, pack bundles, the catalog) out of the game's own data during a normal boot, so you never need to make or hold a decrypted dump on your PC. Use the Dump Guide tab's 'let the game extract it' flow: request the packs/songs you want, boot the game once, then pull the files into the local game_data cache. Idempotent (failures retry on the next boot); console-maintenance tooling like the M11 hotkey — deliberately NOT gated by the kill switch.",
 }
 
 
@@ -874,6 +876,110 @@ def _resolve_launch_port(host: str, preferred: int, open_browser: bool = True) -
               "To fix: check what still holds it (ps aux | grep '[s]erver.py', "
               "kill the PID manually) — falling back to the next free port automatically.")
     return _next_free_port(host, preferred)
+
+
+# --------------------------------------------------------------------------
+# Game-data extraction (M12, Exp 280) — the "no dump required" flow.
+# The pipeline owns both operations (--request-game-data / --pull-game-data
+# as job subprocesses — thin layer); these endpoints read state + start jobs.
+# --------------------------------------------------------------------------
+
+def _local_game_data_summary() -> dict:
+    """Local cache summary (paths.game_data_dir)."""
+    cfg = config.load_config()
+    gd = cfg.get("paths", {}).get("game_data_dir", "game_data")
+    gd_path = paths.PROJECT_DIR / gd if not str(gd).startswith("/") else Path(gd)
+    files = 0
+    total = 0
+    if gd_path.is_dir():
+        for dp, _, fs in os.walk(gd_path):
+            for f in fs:
+                files += 1
+                try:
+                    total += os.path.getsize(os.path.join(dp, f))
+                except OSError:
+                    pass
+    current_dump_dir = cfg.get("paths", {}).get("game_dump_dir", "")
+    return {
+        "dir": str(gd_path),
+        "exists": gd_path.is_dir(),
+        "files": files,
+        "bytes": total,
+        "game_dump_dir_current": current_dump_dir,
+        "cache_is_active": str(current_dump_dir).endswith("game_data"),
+    }
+
+
+@app.get("/api/game-data/state")
+def game_data_state():
+    """Live extraction state: requested (requests.txt), extracted/failed
+    (status.txt), and the local cache summary."""
+    requests_res = ps4.read_game_data_requests()
+    status_res = ps4.read_game_data_status()
+    out = {
+        "ok": requests_res.ok and status_res.ok,
+        "error": requests_res.error if not requests_res.ok else status_res.error,
+        "requests": requests_res.data or [],
+        "extracted": (status_res.data or {}).get("done", []) if status_res.ok else [],
+        "errors": (status_res.data or {}).get("errors", []) if status_res.ok else [],
+        "cache": _local_game_data_summary(),
+    }
+    if out["ok"]:
+        req = set(out["requests"])
+        done = set(out["extracted"])
+        out["pending"] = sorted(req - done)
+        out["missing_from_requests"] = sorted(done - req)
+    return out
+
+
+@app.post("/api/jobs/game-data-request")
+def jobs_game_data_request(body: dict):
+    """Write the extraction manifest to the PS4 (one pipeline subprocess)."""
+    _require_config()
+    packs = body.get("packs") or None
+    slots = body.get("slots") or None
+    if not packs and not slots:
+        raise HTTPException(400, "packs or slots required (comma-separated)")
+    if isinstance(packs, list):
+        packs = [str(p).strip() for p in packs if str(p).strip()]
+    if isinstance(slots, list):
+        slots = [str(s).strip() for s in slots if str(s).strip()]
+    argv = deploy.game_data_request_command(packs, slots)
+    label = "request game data " + (f"packs={','.join(packs)}" if packs else
+                                    f"slots={','.join(slots)}")
+    try:
+        job = RUNNER.start(argv, label=label)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
+
+
+@app.post("/api/jobs/game-data-pull")
+def jobs_game_data_pull():
+    """Mirror the console's game_data/ into the local cache (resumable)."""
+    _require_config()
+    argv = deploy.game_data_pull_command()
+    try:
+        job = RUNNER.start(argv, label="pull game data")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
+
+
+@app.post("/api/game-data/use-cache")
+def game_data_use_cache():
+    """Point paths.game_dump_dir at the local game_data cache (after a pull)."""
+    cfg = config.load_config()
+    summary = _local_game_data_summary()
+    if not summary["exists"] or summary["files"] == 0:
+        raise HTTPException(400, "the local cache is empty — run the pull first "
+                                  "(Boot the game once with the extractor armed, then "
+                                  "Pull extracted files. To fix: nothing is broken — "
+                                  "the cache just has no files yet.)")
+    cfg.setdefault("paths", {})["game_dump_dir"] = summary["dir"]
+    written = config.save_config(cfg)
+    return {"ok": True, "config_path": str(written),
+            "game_dump_dir": summary["dir"]}
 
 
 if __name__ == "__main__":

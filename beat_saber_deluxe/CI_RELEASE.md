@@ -50,7 +50,7 @@ This document describes the CI/CD pipeline for Beat Saber Deluxe and serves as t
 | `README.md` | Main documentation (pipeline, features, feature flags, clean slate) |
 | `PIPELINE-README.md` | Pipeline-internal README |
 | `CHANGELOG-PLUGIN.md` / `CHANGELOG-PIPELINE.md` | Full change history |
-| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping, song previews, **in-game plugin toggle** |
+| `docs/features/*.md` | Feature docs: custom-song replacement, song metadata modification, beatmap mode mapping, song previews, in-game plugin toggle, **game-data extractor** |
 | `docs/examples/`, `docs/how-to-replace-pack.md` | Pack-replacement walkthroughs |
 | `docs/example-scripts/example_*` | **All 69 ready-to-run example files** — per-music-pack command docs (`.md`) + shell scripts (`.sh`) for every DLC pack, with verified BeatSaver MAP_IDs for five packs (billie eilish, britney spears, camelia, lizzo, rolling stones) and `[REPLACE_WITH_MAP_ID]` templates for the rest |
 | `docs/release-validation-test-procedure.md` + `.sh` | **Release validation procedure + the automated validator** — the exact hardware test this release passed (read-only verify, build quality, end-to-end deploy incl. the bundled plugin, feature-flag and kill-switch round-trips, surgical revert + restore, state-integrity auto-restore, song-previews variant + flag round-trip). Run it against your own PS4 to validate your deployment |
@@ -133,10 +133,11 @@ See the main `README.md` for full pipeline documentation.
 | `enable_song_metadata_modification` | `false` | Gates song name/artist swaps in the UI |
 | `enable_beatmap_mode_mapping` | `false` | Gates extra game modes (OneSaber/NoArrows/90Degree) — OFF serves stock pack bundles + catalog |
 | `enable_song_previews` | `false` | Gates **song previews**: highlighting a custom song in the menu plays its own ~10s audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles — either this flag or `enable_beatmap_mode_mapping` keeps the patched pair live |
+| `enable_game_data_extractor` | `false` | **M12: the no-dump flow** — the plugin copies the files the pipeline needs (per-slot templates, pack bundles, catalog) out of the game's own data during a normal boot; the web app pulls them into the local `game_data/` cache (a drop-in for `ps4_dump/`). Full details: `docs/features/game-data-extractor.md` |
 | `enable_in_game_plugin_toggle` | `false` | **In-game plugin toggle (hardware-confirmed):** arms the Move hotkey — hold the **Move button + trigger together for 2 seconds** to flip the global plugin state (a notification sounds; **restart Beat Saber to apply**). Works even while the plugin is toggled OFF so you can always flip back without a PC. Full details: `docs/features/in-game-plugin-toggle.md` |
 
 On boot the plugin shows one combined toast with its state:
-`BS Deluxe vX (ON) / By Chris Primeish / (5/5 features ON)` — or
+`BS Deluxe vX (ON) / By Chris Primeish / (6/6 features ON)` — or
 `BS Deluxe vX (OFF) / By Chris Primeish / (official songs only)`. The debug
 build (`--deploy-plugin --debug-logging`) reports its version with a ` DEBUG`
 suffix so logs and toasts always show which build is live.

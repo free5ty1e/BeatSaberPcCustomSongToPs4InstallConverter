@@ -644,19 +644,20 @@ async function loadoutRefresh() {
 // ---------------------------------------------------------------- feature flags
 const FLAG_ORDER = ["enable_plugin", "enable_custom_song_replacements",
                      "enable_song_metadata_modification", "enable_beatmap_mode_mapping",
-                     "enable_in_game_plugin_toggle"];
+                     "enable_in_game_plugin_toggle", "enable_game_data_extractor"];
 // NOTE: the pipeline's canonical key is the PLURAL enable_custom_song_replacements.
 let flagsDirty = false;
 
 // Simulated PS4 launch toast — mirrors the plugin's exact format
 // (main.cpp module_start): "BS Deluxe vX (ON)\nBy Chris Primeish\n(N/4 features ON)"
 // — or "(OFF) … (official songs only)" when the kill switch is off.
-const TOAST_VERSION = "v0.8053";
+const TOAST_VERSION = "v0.8054";
 const FEATURE_FLAG_KEYS = ["enable_custom_song_replacements",
                            "enable_song_metadata_modification",
                            "enable_beatmap_mode_mapping",
                            "enable_song_previews",
-                           "enable_in_game_plugin_toggle"];
+                           "enable_in_game_plugin_toggle",
+                           "enable_game_data_extractor"];
 
 function updateToastSim() {
   const checks = $("flags-list").querySelectorAll("input[type=checkbox]");
@@ -1537,12 +1538,18 @@ document.addEventListener("DOMContentLoaded", () => {
     api("/api/jobs/cancel", { method: "POST" }).catch(() => {});
   });
   $("btn-fr-open").addEventListener("click", frOpen);
+  const gdReq = $("gamedata-request-btn"), gdPull = $("gamedata-pull-btn"),
+        gdUse = $("gamedata-use-btn");
+  if (gdReq) gdReq.addEventListener("click", gamedataRequest);
+  if (gdPull) gdPull.addEventListener("click", gamedataPull);
+  if (gdUse) gdUse.addEventListener("click", gamedataUseCache);
   // lazy-load tab data on first visit
   document.querySelectorAll("#nav button").forEach(b =>
     b.addEventListener("click", () => {
       if (b.dataset.page === "flagsPage") flagsRefresh();
       if (b.dataset.page === "backupPage") backupRefresh();
       if (b.dataset.page === "batchPage") batchRefresh();
+      if (b.dataset.page === "guide") { gamedataLoadPacks(); gamedataRefresh(); }
     }));
   // Landing (Exp 266): pages mode lands on the guided download funnel — but
   // detectMode()'s startBtn click already ran, and this DOMContentLoaded
@@ -1551,3 +1558,140 @@ document.addEventListener("DOMContentLoaded", () => {
   // respect the mode: pages → startPage stays; local → wizard.
   if (state.mode !== "pages") showPage("wizard");
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// M12 Game-data extraction (Exp 280) — the "no dump required" flow.
+// Thin layer: two pipeline job subprocesses + one state read + one config
+// switch. The pack list comes from /api/catalog (same data as the picker).
+// ═════════════════════════════════════════════════════════════════════════════
+
+let gamedataPacksLoaded = false;
+
+async function gamedataRefresh() {
+  const el = $("gamedata-status");
+  if (!el) return;
+  try {
+    const st = await (await fetch("/api/game-data/state")).json();
+    if (!st.ok) {
+      el.innerHTML = `❌ PS4 unreachable — ${esc(st.error || "")}. ` +
+        `To fix: power on the PS4 with GoldHEN's FTP (README Prerequisites).`;
+      return;
+    }
+    const nReq = st.requests.length, nDone = st.extracted.length;
+    const pending = st.pending || [];
+    const errs = st.errors || [];
+    const c = st.cache || {};
+    let html = "";
+    if (nReq === 0) {
+      html += `No extraction request on the PS4 yet — pick packs below and ` +
+              `<b>Request extraction</b>.<br>`;
+    } else {
+      html += `Requested: <b>${nReq}</b> file(s) · extracted on console: ` +
+              `<b>${nDone}</b>${pending.length ? ` · pending: <b>${pending.length}</b>` : ""}`;
+      if (nDone >= nReq && nReq > 0) html += ` ✅ <b>all extracted — boot done, pull when ready</b>`;
+      html += `<br>`;
+    }
+    if (errs.length) {
+      html += `⚠️ ${errs.length} extraction error(s) on the console — the log ` +
+              `(bs_log.txt) has details; they retry on the next boot.<br>`;
+    }
+    if (c.files > 0) {
+      html += `Local cache: <b>${c.files}</b> file(s), ` +
+              `<b>${(c.bytes / 1e6).toFixed(1)} MB</b> at <code>${esc(c.dir)}</code>` +
+              (c.cache_is_active ? ` — <b>✅ active</b> (game_dump_dir points here)` : ``);
+    } else {
+      html += `Local cache: empty — pull after the boot step.`;
+    }
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `❌ ${esc(String(e))}`;
+  }
+}
+
+async function gamedataLoadPacks() {
+  if (gamedataPacksLoaded) return;
+  const holder = $("gamedata-pack-list");
+  if (!holder) return;
+  try {
+    const cat = await (await fetch("/api/catalog")).json();
+    holder.innerHTML = "";
+    for (const album of cat.albums) {
+      const id = `gamedata-pack-${album.pack}`;
+      const chip = document.createElement("label");
+      chip.className = "chip";
+      chip.innerHTML = `<input type="checkbox" id="${id}" data-pack="${esc(album.pack)}"> ` +
+        `${esc(album.pack)} <span class="muted">(${album.songs.length} slots)</span>`;
+      holder.appendChild(chip);
+    }
+    gamedataPacksLoaded = true;
+  } catch (e) {
+    holder.innerHTML = `<span class="muted">could not load the pack list: ${esc(String(e))}</span>`;
+  }
+}
+
+async function gamedataRequest() {
+  const packs = [...document.querySelectorAll("#gamedata-pack-list input:checked")]
+    .map(cb => cb.dataset.pack);
+  if (!packs.length) {
+    alert("Pick at least one pack (or use the deploy flow's per-song request).");
+    return;
+  }
+  const res = await fetch("/api/jobs/game-data-request", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({packs}),
+  });
+  await gamedataWatchJob(res);
+  setTimeout(gamedataRefresh, 2000);
+}
+
+async function gamedataPull() {
+  const res = await fetch("/api/jobs/game-data-pull", {method: "POST"});
+  await gamedataWatchJob(res);
+  setTimeout(gamedataRefresh, 2000);
+}
+
+// Watch a game-data job: poll the shared job lines, show tail + verdict.
+async function gamedataWatchJob(startRes) {
+  const el = $("gamedata-status");
+  const start = await startRes.json();
+  if (!start.ok) {
+    el.innerHTML = `❌ could not start: ${esc(start.detail || "job runner busy")}`;
+    return;
+  }
+  let idx = 0;
+  for (;;) {
+    await new Promise(r => setTimeout(r, 900));
+    try {
+      const j = await (await fetch(`/api/jobs/lines?after=${idx}`)).json();
+      const lines = j.lines || [];
+      if (lines.length) {
+        el.innerHTML = `<pre style="white-space:pre-wrap">` +
+          esc(lines.slice(-6).join("\n")) + `</pre>`;
+      }
+      idx = j.index || idx;
+      if (!j.running && j.job) {
+        el.innerHTML += (j.job.exit_code === 0
+          ? `<br>✅ done — refresh follows`
+          : `<br>❌ job failed (exit ${j.job.exit_code}) — the log lines above carry the fix`);
+        return;
+      }
+    } catch (e) { /* transient */ }
+  }
+}
+
+async function gamedataUseCache() {
+  try {
+    const res = await fetch("/api/game-data/use-cache", {method: "POST"});
+    const data = await res.json();
+    if (!res.ok) {
+      $("gamedata-status").innerHTML =
+        `❌ ${esc(data.detail || "could not switch config")}`;
+      return;
+    }
+    $("gamedata-status").innerHTML =
+      `✅ The pipeline now uses the extracted cache: ` +
+      `<code>${esc(data.game_dump_dir)}</code> — deploy songs as usual!`;
+  } catch (e) {
+    $("gamedata-status").innerHTML = `❌ ${esc(String(e))}`;
+  }
+}

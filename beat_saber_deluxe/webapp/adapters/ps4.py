@@ -275,3 +275,61 @@ def test_connection() -> ReadResult:
     else:
         res.data = {"status": "unreachable", "error": res.error}
     return res
+
+
+# --------------------------------------------------------------------------
+# Game-data extraction reads (M12, Exp 280) — the web-app side of the
+# in-console extractor. OWNERSHIP: requests.txt is WEB-APP/PIPELINE owned
+# (read here only to VERIFY what the web app last wrote); status.txt is
+# PLUGIN owned (read here to report progress). Neither is written here.
+# --------------------------------------------------------------------------
+
+def read_game_data_requests() -> ReadResult:
+    """The current extraction manifest on the PS4 (one path per line)."""
+    cfg = load_config()
+    cfg_paths = cfg.get("paths", {})
+    afr = cfg_paths.get("afr_base", "/data/GoldHEN/AFR")
+    title = cfg.get("title", {}).get("id", "CUSA12878")
+    remote = f"{afr}/{title}/game_data_requests.txt"
+    host, user_part, port = _ps4_endpoint()
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        local_tmp = os.path.join(td, "req.txt")
+        rc, out = _run_lftp(host, user_part, port,
+                            [f"get {remote} -o {local_tmp}"], timeout=15)
+        if rc == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            lines = [ln.strip() for ln in
+                     open(local_tmp, encoding="utf-8", errors="replace").read().splitlines()
+                     if ln.strip() and not ln.startswith("#")]
+            return ReadResult(ok=True, data=lines, raw_bytes=os.path.getsize(local_tmp))
+        if rc == 0:
+            return ReadResult(ok=True, data=[], error="")  # absent = nothing requested yet
+        return ReadResult(ok=False, error=out.strip()[-200:] or "unreachable")
+
+
+def read_game_data_status() -> ReadResult:
+    """The plugin-owned extraction status (paths done; 'ERR …' lines = failures)."""
+    cfg = load_config()
+    cfg_paths = cfg.get("paths", {})
+    afr = cfg_paths.get("afr_base", "/data/GoldHEN/AFR")
+    title = cfg.get("title", {}).get("id", "CUSA12878")
+    remote = f"{afr}/{title}/game_data_status.txt"
+    host, user_part, port = _ps4_endpoint()
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        local_tmp = os.path.join(td, "status.txt")
+        rc, out = _run_lftp(host, user_part, port,
+                            [f"get {remote} -o {local_tmp}"], timeout=15)
+        if rc == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            lines = [ln.strip() for ln in
+                     open(local_tmp, encoding="utf-8", errors="replace").read().splitlines()
+                     if ln.strip()]
+            done = [ln for ln in lines if not ln.startswith("ERR ")]
+            errors = [ln for ln in lines if ln.startswith("ERR ")]
+            return ReadResult(ok=True, data={"done": done, "errors": errors},
+                              raw_bytes=os.path.getsize(local_tmp))
+        if rc == 0:
+            return ReadResult(ok=True, data={"done": [], "errors": []})
+        return ReadResult(ok=False, error=out.strip()[-200:] or "unreachable")

@@ -59,6 +59,7 @@ class TestFeaturesJsonSingleSource:
             "enable_beatmap_mode_mapping": True,
             "enable_song_previews": False,
             "enable_in_game_plugin_toggle": False,
+            "enable_game_data_extractor": False,
         }
         assert fp.DEFAULT_FEATURES == expected
 

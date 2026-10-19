@@ -518,11 +518,11 @@ Full plan: [`.agent/plans/eliminating_or_automating_ps4_dump_folder_requirement.
 and `/app0/Media/...` — both openable in-process by the plugin; 1,067 + 1,073 opens in
 the archived boot logs).
 
-- [ ] **M12.1** — Plugin: `enable_game_data_extractor` flag + manifest reader + copy loop
-- [ ] **M12.2** — Web app: manifest writer + cache puller + dump-guide rework + `game_dump_dir` switch + scoped validation (Path B import in the same surface for existing dumpers)
-- [ ] **M12.3** — Tests: manifest computation, request/status round-trip, cache-layout parity
+- [x] **M12.1** — Plugin v0.8054: `enable_game_data_extractor` flag + manifest reader + copy loop (both mounts, idempotent, ERR-retry, kill-switch-independent)
+- [x] **M12.2** — Pipeline v0.5364 modes (--request-game-data / --pull-game-data) + webapp 0.6.14 (endpoints + Dump Guide Option A + use-cache switch); Path B import deferred (manual recipe stays for devs)
+- [x] **M12.3** — tests/test_game_data.py (19) + all N/5→N/6 pin updates; suite 930/930; ruff clean
 - [ ] **M12.4** — Hardware: fresh-cache → full 5-pack deploy from `game_data/` alone, verify PASSED
-- [ ] **M12.5** — Docs: README (dump no longer required), CI_RELEASE, extractor feature doc, validation step
+- [x] **M12.5** — Feature doc (ships in the zip) + README prerequisite row + CI_RELEASE (6th flag, N/6) + example config + KB
 
 ## M13 — Beat Sage + Local Song Folder Support (Web App Pick-a-Song Tab) (Planned)
 **Goal:** below the BeatSaver search: a **Beat Sage** section (generate a map from any

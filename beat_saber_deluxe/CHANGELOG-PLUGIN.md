@@ -4,6 +4,14 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8054] — 2026-10-19
+### Added — M12: the in-console game-data extractor (eliminates the PC-side dump requirement for users)
+- **`enable_game_data_extractor` feature flag** (defaults false; console-maintenance tooling like the M11 hotkey — deliberately NOT gated by the enable_plugin kill switch). When armed, the plugin reads `game_data_requests.txt` (web-app/pipeline-owned: one relative path per line) and **stream-copies each requested file from the game's own decrypted mounts to `game_data/` in the AFR dir during a normal boot** — the game reads its assets from `/archive/mount/point/Media/...` and `/app0/Media/...` (log-proven: 1,067 + 1,073 opens in the archived boot logs; both prefixes tried per file).
+- **What it extracts:** the exact files the pipeline needs — per-slot template bundles (~13MB each), the target packs' `_pack_assets_all_` bundles, and `aa/catalog.json`. ~658MB for a full 5-pack/47-song loadout (vs the 4.9GB dump); ~140MB per pack; one ~13MB file per single-song addition. **Legally clean:** per-user extraction from their own console; the repo ships only tooling.
+- **Idempotence + retries:** `game_data_status.txt` (plugin-owned) records one extracted path per line; already-done files are skipped on later boots; failures append `ERR <rel> <reason>` lines that never match a request line, so they **retry automatically on the next boot**. Line-exact matching (a rel that is a suffix of another can never false-match as done).
+- **Robustness:** mkdir-p chain for the target layout; 256KB static copy buffer (zero stack pressure); once-per-boot state; per-file logging with byte counts + which mount served each file; generous summary line. All extraction I/O via direct `sceKernelOpen` (bypasses our own open-hook — no redirection interference).
+- Boot toast now counts **N/6 features**; the `features:` boot log line + the ARMED lines gain the extractor.
+
 ## [v0.8053] — 2026-10-16
 ### Added — M11 HARDWARE-CONFIRMED (Exp 278f)
 - **🎉 THE HOTKEY WORKS ON REAL HARDWARE — both directions.** The v0.8052 debug build's log (archived: `v0.8052_hotkey_hardware_success.txt`, 3 boot sessions) confirms every layer: eboot-GOT hijacks install each session (`scePadRead` at open #1, `sceMoveReadStateRecent` at VR init, orig=0x80081db00), the call form is **4-arg** (shadPS4's SDK signature correct), and the Move button + trigger 2-second combo fired `enable_plugin flipped to false (OFF)` from inside VR, then — after a restart into the OFF state with the hotkey STILL ARMED (the one-way-door design working) — `flipped to true (ON)`. User-confirmed in-game; the notification is AUDIBLE in VR even when the popup is not visible.

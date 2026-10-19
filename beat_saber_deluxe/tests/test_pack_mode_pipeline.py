@@ -799,7 +799,7 @@ class TestFeatureFlagGating:
         # Find the open_hook function's redirect matching section
         open_hook_start = code.find("static int open_hook(")
         assert open_hook_start > 0, "open_hook function not found"
-        open_hook_code = code[open_hook_start:open_hook_start + 1500]
+        open_hook_code = code[open_hook_start:open_hook_start + 8000]
 
         # The actual redirect matching (strstr lower_path, LOWER_REDIRECT_KEYS) must be gated
         assert "g_feature_custom_song_replacements" in open_hook_code, \
@@ -893,7 +893,7 @@ class TestFeatureFlagGatingAudit:
         with open(self.MAIN_CPP) as f:
             return f.read()
 
-    def _open_hook_code(self, code, span=4000):
+    def _open_hook_code(self, code, span=8000):
         start = code.find("static int open_hook(")
         assert start > 0
         return code[start:start + span]
@@ -1015,11 +1015,11 @@ class TestSongPreviewsFlagGating:
         import full_custom_song_pipeline as fp
         assert fp.DEFAULT_FEATURES.get("enable_song_previews") is False
 
-    def test_toast_counts_five_flags(self):
+    def test_toast_counts_six_flags(self):
         main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")
         with open(main_cpp) as f:
             code = f.read()
-        assert "(%d/5 features ON)" in code
+        assert "(%d/6 features ON)" in code
         # every feature flag participates in the enabled_count sum (M11 added
         # the 5th: enable_in_game_plugin_toggle)
         tail = code.split("enabled_count =")[1].split("memset")[0]
@@ -1027,5 +1027,6 @@ class TestSongPreviewsFlagGating:
                      "g_feature_song_metadata_modification",
                      "g_feature_beatmap_mode_mapping",
                      "g_feature_song_previews",
-                     "g_feature_in_game_plugin_toggle"):
+                     "g_feature_in_game_plugin_toggle",
+                     "g_feature_game_data_extractor"):
             assert flag in tail, f"{flag} missing from the toast enabled_count"

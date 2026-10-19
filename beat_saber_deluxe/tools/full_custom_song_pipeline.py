@@ -83,6 +83,10 @@ def load_config(config_path: str) -> dict:
             "afr_base": "/data/GoldHEN/AFR",
             "afr_target_suffix": "_v3.bundle",
             "game_dump_dir": dump_rel,
+            # M12 (Exp 280): local cache the in-console extractor's output is
+            # pulled into — mirrors the dump layout exactly, so it is a
+            # drop-in for game_dump_dir. Users need NO PC-side dump.
+            "game_data_dir": os.path.join(PROJECT_ROOT, 'game_data'),
             "template_dir": "Media/StreamingAssets/BeatmapLevelsData",
             "output_dir": os.path.join(PROJECT_ROOT, 'custom_songs')
         },
@@ -4260,6 +4264,12 @@ DEFAULT_FEATURES = {
     # pull-before-push (Exp 248) reads the LIVE file, so in-game flips flow into
     # webapp/ps4_state/pipeline deploys automatically — zero other pipeline changes.
     "enable_in_game_plugin_toggle": False,
+    # M12 (Exp 280): arms the in-console game-data extractor — the plugin copies
+    # the files the pipeline needs (per-slot templates, pack bundles, catalog)
+    # out of the game's own mounts during a normal boot; --pull-game-data then
+    # mirrors them into the local game_data cache. Console-maintenance tooling
+    # like the M11 hotkey: NOT gated by the enable_plugin kill switch.
+    "enable_game_data_extractor": False,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:
@@ -4451,6 +4461,223 @@ def apply_feature_flags(set_features: list, config: dict):
 
 SONG_METADATA_FILENAME = "song_metadata.json"
 SONG_IDS_FILENAME = "beat_saber_song_ids.json"
+
+# ============================================================================
+# Game-Data Extraction Management (M12, Exp 280) — eliminates the PC-side
+# dump requirement for USERS: the plugin extracts the files the pipeline
+# needs from the game's own decrypted mounts (/archive/mount/point + /app0,
+# log-proven) during a normal boot; the web app drives these two modes.
+#
+# OWNERSHIP (pull-before-push doctrine): game_data_requests.txt is
+# PIPELINE/WEB-APP OWNED (we write it, the plugin only reads it — one
+# relative path per line, # comments allowed); game_data_status.txt is
+# PLUGIN OWNED (one extracted path per line; "ERR <rel> <reason>" lines mark
+# failures — they never match a request line, so failures retry on the next
+# boot automatically). No file is written by both sides.
+#
+# The local cache (paths.game_data_dir, default ./game_data) mirrors the
+# dump's relative layout EXACTLY, so pointing paths.game_dump_dir at it is
+# the only change a user (or the web app) makes.
+# ============================================================================
+GAMEDATA_REQUESTS_FILENAME = "game_data_requests.txt"
+GAMEDATA_STATUS_FILENAME = "game_data_status.txt"
+GAMEDATA_REMOTE_DIRNAME = "game_data"
+
+
+def _get_remote_game_data_paths(config: dict) -> tuple[str, str, str]:
+    """(requests, status, dir) remote AFR paths for the game-data flow."""
+    cfg_paths = config.get('paths', {})
+    afr_base = cfg_paths.get('afr_base', '/data/GoldHEN/AFR')
+    title_id = config.get('title', {}).get('id', 'CUSA12878')
+    base = f"{afr_base}/{title_id}"
+    return (f"{base}/{GAMEDATA_REQUESTS_FILENAME}",
+            f"{base}/{GAMEDATA_STATUS_FILENAME}",
+            f"{base}/{GAMEDATA_REMOTE_DIRNAME}")
+
+
+def _get_local_game_data_dir(config: dict) -> str:
+    """The local cache dir (paths.game_data_dir, PROJECT_ROOT-relative)."""
+    gd = config.get('paths', {}).get('game_data_dir',
+                                     os.path.join(PROJECT_ROOT, 'game_data'))
+    if not os.path.isabs(gd):
+        gd = os.path.join(PROJECT_ROOT, gd)
+    return gd
+
+
+def compute_game_data_manifest(config: dict, packs=None, slots=None) -> list[str]:
+    """The relative paths (dump layout) the pipeline needs for the requested
+    packs/slots: every targeted slot's template file + every involved pack's
+    pack bundle + the origin catalog. Computed from beat_saber_song_ids.json
+    (ships with the repo/release) — NO dump required to compute this."""
+    ids_path = config.get('pack_modes', {}).get('song_ids_path')
+    if not ids_path or not os.path.exists(ids_path):
+        ids_path = os.path.join(PROJECT_ROOT, SONG_IDS_FILENAME)
+    with open(ids_path, 'r', encoding='utf-8') as f:
+        ids = json.load(f)
+    packs = set(packs or [])
+    slots = set(slots or [])
+    rels: set[str] = set()
+    involved_packs: set[str] = set()
+    for album in ids.get('albums', []):
+        pack_name = album.get('pack', '')
+        pack_requested = pack_name in packs
+        if pack_requested:
+            involved_packs.add(pack_name)
+        for song in album.get('songs', []):
+            slot_id = song.get('songID', '')
+            if pack_requested or slot_id in slots:
+                # Per-slot template file (the PS4 FS is case-insensitive for
+                # the plugin's read; the cached file keeps the ids-file casing
+                # so --template resolves it on the case-sensitive PC side).
+                rels.add(f"Media/StreamingAssets/BeatmapLevelsData/{slot_id}")
+                if slot_id in slots:
+                    involved_packs.add(pack_name)  # a slot request needs its pack bundle too
+        if pack_name in involved_packs:
+            bundle = album.get('packBundle', '')
+            if bundle:
+                rels.add(f"Media/StreamingAssets/aa/PS4/{bundle}")
+    if rels:
+        rels.add("Media/StreamingAssets/aa/catalog.json")
+    return sorted(rels)
+
+
+def request_game_data(config: dict, packs=None, slots=None):
+    """Write the extraction manifest to the PS4 (game_data_requests.txt).
+    REQUIRES the plugin's enable_game_data_extractor flag; the extraction
+    happens on the next boot of the game. Safe to re-run (the file is fully
+    owned by the pipeline/web app — the plugin never writes it)."""
+    import subprocess as sp
+    import tempfile
+
+    rels = compute_game_data_manifest(config, packs, slots)
+    if not rels:
+        log.error("❌ Nothing to request — pass --game-data-packs and/or --game-data-slots "
+                  "(comma-separated pack ids like 'lizzo,billieeilish' and/or slot ids like "
+                  "'2BeLoved,AboutDamnTime').")
+        sys.exit(1)
+
+    req_remote, _status_remote, _dir_remote = _get_remote_game_data_paths(config)
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    user_part = f"{user},{password}" if password else f"{user},"
+
+    n_templates = sum(1 for r in rels if 'BeatmapLevelsData' in r)
+    n_packs = sum(1 for r in rels if '_pack_assets_all_' in r)
+    log.info(f"🎮 Requesting game-data extraction: {n_templates} slot template(s), "
+             f"{n_packs} pack bundle(s), catalog.json")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_req = os.path.join(tmpdir, GAMEDATA_REQUESTS_FILENAME)
+        with open(local_req, 'w', encoding='utf-8') as f:
+            f.write("# game_data_requests v1 — one relative path per line\n")
+            for r in rels:
+                f.write(r + "\n")
+        cmd = ["lftp", "-u", user_part, "-p", str(port), host, "-e",
+               f"put {_ftp_quote(local_req)} -o {_ftp_quote(req_remote)}; "
+               f"ls -la {_ftp_quote(req_remote)}; quit"]
+        result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            log.error(f"  ⚠️  Could not reach the PS4 to write the request: {result.stderr.strip()}")
+            log.error("     To fix: check the PS4 is on + GoldHEN's FTP (see README Prerequisites).")
+            sys.exit(1)
+        # Verify the upload by the remote listing (never trust lftp's rc alone)
+        want = os.path.getsize(local_req)
+        if str(want) not in (result.stdout or ''):
+            log.warning("  ⚠️  Request upload could not be verified via remote listing — "
+                        "re-run or inspect with the web app's PS4 state tab.")
+
+    log.info("  ✅ Request written to the PS4")
+    log.info("")
+    log.info("NEXT STEPS:")
+    log.info("  1. Make sure the plugin's enable_game_data_extractor flag is ON "
+             "(--features-only --set-feature enable_game_data_extractor=true)" +
+             ("" if config.get('features', {}).get('enable_game_data_extractor') else
+              "  ← it is currently OFF in the local features.json"))
+    log.info("  2. Boot Beat Saber once — the plugin extracts the requested files "
+             "to game_data/ on the console (idempotent; failures retry next boot)")
+    log.info("  3. Run --pull-game-data to mirror them into the local cache, then "
+             "point paths.game_dump_dir at it (the web app does both for you)")
+
+
+def pull_game_data(config: dict):
+    """Mirror the console's game_data/ (the extractor's output) into the local
+    cache (paths.game_data_dir) — resumable (lftp mirror skips identical-size
+    files), and a drop-in replacement for paths.game_dump_dir once pulled."""
+    import subprocess as sp
+
+    req_remote, status_remote, dir_remote = _get_remote_game_data_paths(config)
+    local_dir = _get_local_game_data_dir(config)
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    user_part = f"{user},{password}" if password else f"{user},"
+
+    # Read the plugin-owned status file first (banner-free get-to-temp).
+    status_lines: list[str] = []
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_tmp = os.path.join(tmpdir, "status.txt")
+        cmd = ["lftp", "-u", user_part, "-p", str(port), host, "-e",
+               f"get {_ftp_quote(status_remote)} -o {_ftp_quote(local_tmp)}; quit"]
+        result = sp.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            status_lines = [line.strip() for line in
+                            open(local_tmp, encoding='utf-8', errors='replace').read().splitlines()
+                            if line.strip()]
+        elif result.returncode != 0:
+            log.error("❌ Could not reach the PS4 to read the extraction status.")
+            log.error("   To fix: check the PS4 is on + GoldHEN's FTP (README Prerequisites).")
+            sys.exit(1)
+
+    done = [line for line in status_lines
+            if not line.startswith('ERR ') and not line.startswith('#')]
+    errors = [line for line in status_lines if line.startswith('ERR ')]
+    if not done:
+        log.error("❌ Nothing has been extracted yet (no game_data_status.txt entries).")
+        log.error("   To fix: write a request first (--request-game-data ...), make sure "
+                  "enable_game_data_extractor is ON, and boot Beat Saber once — "
+                  "the plugin extracts during a normal boot.")
+        sys.exit(1)
+
+    log.info(f"📦 Extraction status on the console: {len(done)} file(s) ready")
+    for e in errors:
+        log.warning(f"  ⚠️  {e}")
+
+    os.makedirs(local_dir, exist_ok=True)
+    log.info(f"📥 Mirroring game_data/ → {local_dir} (resumable; identical files skip)")
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host, "-e",
+           f"mirror --verbose --parallel=4 {_ftp_quote(dir_remote)} {_ftp_quote(local_dir)}; quit"]
+    try:
+        result = sp.run(cmd, capture_output=True, text=True, timeout=1800)
+    except sp.TimeoutExpired:
+        log.error("❌ The mirror transfer timed out after 30 minutes — re-run "
+                  "--pull-game-data (it resumes where it left off).")
+        sys.exit(1)
+    if result.returncode != 0:
+        log.error(f"❌ Mirror failed: {(result.stdout + result.stderr).strip()[:500]}")
+        log.error("   To fix: re-run (mirror resumes); if it persists, check the FTP "
+                  "connection and the web app's PS4 state tab.")
+        sys.exit(1)
+
+    # Verify: every status success line should exist locally now.
+    missing = [r for r in done if not os.path.exists(os.path.join(local_dir, r))]
+    if missing:
+        log.warning(f"  ⚠️  {len(missing)} file(s) missing after the mirror — "
+                    f"first: {missing[0]}")
+        log.warning("     To fix: re-run --pull-game-data (mirror is resumable).")
+    total = sum(os.path.getsize(os.path.join(dp, f))
+                for dp, _, fs in os.walk(local_dir) for f in fs)
+    log.info(f"  ✅ Local cache: {len(done) - len(missing)}/{len(done)} files, "
+             f"{total / 1e6:.1f} MB at {local_dir}")
+    log.info("")
+    log.info("The cache mirrors the dump layout — point paths.game_dump_dir at it")
+    log.info(f"(the web app's game-data flow does this for you): "
+             f"\"paths.game_dump_dir\": {local_dir!r}")
 
 def _read_info_song_metadata(info: dict) -> tuple:
     """
@@ -5254,6 +5481,28 @@ Examples:
                              'to PS4, then exit. No song processing, no plugin deploy. '
                              'Useful to toggle a runtime feature flag on the PS4 without '
                              'reprocessing a song or rebuilding the plugin.')
+    # ── Game-data extraction management (M12, Exp 280) ────────────────────
+    parser.add_argument('--request-game-data', action='store_true',
+                        help='Write the game-data extraction manifest (game_data_requests.txt) '
+                             'to the PS4, then exit. Requires the plugin flag '
+                             'enable_game_data_extractor; the extraction happens on the '
+                             'next boot of the game. Combine with --game-data-packs and/or '
+                             '--game-data-slots to scope what is extracted (per-slot '
+                             'templates + per-pack bundles + catalog.json).')
+    parser.add_argument('--pull-game-data', action='store_true',
+                        help='Mirror the console game_data/ (the extractor output) into the '
+                             'local cache (paths.game_data_dir, default ./game_data), then '
+                             'exit. Resumable (identical files skip). Point '
+                             'paths.game_dump_dir at the cache afterwards — it is a '
+                             'drop-in replacement for the dump.')
+    parser.add_argument('--game-data-packs', default=None,
+                        help='Comma-separated pack ids for --request-game-data '
+                             '(e.g. lizzo,billieeilish) — requests every slot template of '
+                             'those packs + their pack bundles.')
+    parser.add_argument('--game-data-slots', default=None,
+                        help='Comma-separated slot ids for --request-game-data '
+                             '(e.g. 2BeLoved,AboutDamnTime) — requests those slots + '
+                             'their packs bundles + catalog.')
     parser.add_argument('--metadata-only', action='store_true',
                         help='Update and/or deploy song_metadata.json to the PS4, then exit. '
                              'No song processing, no plugin deploy, no redirects. '
@@ -5415,6 +5664,19 @@ Examples:
         if args.verify_ps4 or (args.deploy or args.deploy_config or args.sync_config or args.enforce_config):
             if not args.no_verify_ps4:
                 verify_ps4_deployment(deploy_cfg)
+        sys.exit(0)
+
+    # Game-data extraction management (M12): standalone modes before the
+    # song-processing requirement (mirror the --features-only pattern).
+    if args.request_game_data:
+        packs = ([p.strip() for p in args.game_data_packs.split(',') if p.strip()]
+                 if args.game_data_packs else None)
+        slots = ([s.strip() for s in args.game_data_slots.split(',') if s.strip()]
+                 if args.game_data_slots else None)
+        request_game_data(config, packs=packs, slots=slots)
+        sys.exit(0)
+    if args.pull_game_data:
+        pull_game_data(config)
         sys.exit(0)
 
     # Plugin toggle mode: enable/disable without processing any song
