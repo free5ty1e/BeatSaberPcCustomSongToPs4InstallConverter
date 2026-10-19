@@ -259,3 +259,13 @@
 **Fix:** workflow now GENERATES features.json from DEFAULT_FEATURES (single source of truth; moved after the pip-install step for the lz4 import); verified it emits all 6 flags. NEW tests/test_release_workflow.py (6 pins: single-source, no-heredoc, ordering, content, coverage-report-intent, all-docs-bundled). Suite 911/911; ruff clean; workflow YAML validated.
 
 **Status:** alpha01 functionally perfect; CI-only fix staged — re-tag -alpha02 after commit.
+
+---
+
+## Cycle 14 — alpha02 validated (Exp 278j): THE RELEASE CANDIDATE
+
+**User:** tagged v0.8053-pipeline-0.5363-webapp-0.6.13-alpha02.
+
+**CI:** green; 911 collected → 788+123 gated (new workflow tests ran in CI); log confirms "features.json generated from DEFAULT_FEATURES". **The fix ships**: the zip's template carries all 6 flags. **Zip-diff vs alpha01**: only features.json + regenerated coverage HTML differ — everything else byte-identical (the CI-only delta proven). Spot-checks re-verified (FSELF, v0.8053, hijack string, webapp boot from zip, Batch 34).
+
+**Verdict:** alpha02 is the release candidate. Next: merge PR #8 → tag the final (non-alpha) → release live.
