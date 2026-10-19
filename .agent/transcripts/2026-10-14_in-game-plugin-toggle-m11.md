@@ -243,3 +243,19 @@
 **Implemented:** pre-bind port probe → occupant identification (/api/ping: our-webapp-with-versions + STALE/CURRENT staleness check, or unknown) → 3-option menu (use existing / fresh on next port / stop our instance(s) + restart on the preferred port) with smart defaults (current→reuse, stale-of-ours→stop+restart, unknown→never kill); non-interactive auto-default with notice; every error path ends with "To fix: …"; stop-and-rebind failure warns + auto-falls back. Live-verified the full menu + non-interactive flow against a real held port.
 
 **Tests:** tests/test_webapp_launch.py (10; incl. the never-kill-unknown pin + the fix-on-every-error pin). Test-artifact lesson: listen(1) fake occupants exhaust backlog under repeated probes → listen(128). Suite 905/905; ruff clean. Devcontainer instances killed; port left free for the user's own launches.
+
+---
+
+## Cycle 13 — alpha01 release validation (Exp 278i): all green except ONE latent template bug, fixed at the source
+
+**User:** tagged v0.8053-pipeline-0.5363-webapp-0.6.13-alpha01 for monitoring + thorough validation.
+
+**CI:** tag build green (build 96s + release 10s; 905 → 782 passed + 123 gated; ruff 0.16.0 + fsb5 installed; 1,075,686 B zip published).
+
+**Clean-extraction validation:** FSELF both PRXs; v0.8053 strings (debug banner ✓, release DEBUG-free ✓); byte parity ✓ (pipeline, song_previews, webapp, feature doc); webapp boots from the zip (3-version ping) + Batch parses 34 packs; 5 feature docs + 69 examples + validation docs + pinned requirements all ship; README M11 rows present.
+
+**Audit findings:** (1) coverage-report/ in the zip → NOT a bug — the user requested it back in the M10-era release (verified shipped in v0.8048 too). (2) **THE REAL FINDING: the workflow's hardcoded features.json template (v0.5340-era) never grew with the feature set — missing enable_song_previews AND enable_in_game_plugin_toggle; shipped in every release zip to date.** Manual installs booted 3/5 with previews + hotkey silently off.
+
+**Fix:** workflow now GENERATES features.json from DEFAULT_FEATURES (single source of truth; moved after the pip-install step for the lz4 import); verified it emits all 6 flags. NEW tests/test_release_workflow.py (6 pins: single-source, no-heredoc, ordering, content, coverage-report-intent, all-docs-bundled). Suite 911/911; ruff clean; workflow YAML validated.
+
+**Status:** alpha01 functionally perfect; CI-only fix staged — re-tag -alpha02 after commit.
