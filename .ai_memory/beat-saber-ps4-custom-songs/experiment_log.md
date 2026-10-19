@@ -107,3 +107,10 @@ switch between all-custom and 100% stock. Feature flag:
 - **Zip-diff proof vs alpha01:** the ONLY content differences are features.json (the fix) and the 19 regenerated coverage-report HTML files (expected churn — the new tests add coverage + timestamps). Every other file byte-identical — the CI-only change shipped exactly as intended, nothing else moved.
 - **Spot-checks re-verified on alpha02:** FSELF magic both PRXs (4f153d1d), v0.8053 in both, hijack string in the release build; webapp boots from the zip (3-version ping 0.6.13/0.5363/bundled) + Batch parses 34 packs.
 - **Status:** ✅ **alpha02 is the release candidate** — ready to merge PR #8 and tag the final `v0.8053-pipeline-0.5363-webapp-0.6.13` (content identical to alpha02 apart from regenerated coverage/timestamps).
+
+### Experiment 278k: 🎉 THE RELEASE — v0.8053-pipeline-0.5363-webapp-0.6.13 live + fully validated; M11 SHIPPED (2026-10-19)
+- **User:** merged PR #8 + tagged the final `v0.8053-pipeline-0.5363-webapp-0.6.13`.
+- **Build (watched):** all green — build 2m27s + release 9s; **911 collected → 788 passed + 123 hardware-gated skips**; release published (1,075,712 B zip); **releases/latest resolves to THIS tag**.
+- **Clean-extraction validation:** FSELF magic both PRXs (4f153d1d); v0.8053 in both; the corrected 6-flag features.json template ships (the Exp-278i fix in the final artifact); 5 feature docs (in-game-plugin-toggle.md ✓); 69 examples; byte parity (pipeline md5 identical to the repo); webapp boots from the zip (3-version ping 0.6.13/0.5363/bundled) + Batch parses 34 packs.
+- **LIVE PAGES (post-merge):** the hosted site's version badge carries all three versions (v0.8053 / 0.5363 / 0.6.13); the demos link present; docs/demos.md renders on main (200) — the M11 demo video's target is live.
+- **Status:** ✅✅ **M11 SHIPPED — THE IN-GAME PLUGIN TOGGLE IS IN A RELEASE.** The feature: hold the Move button + trigger 2s → notification sound → restart → all-custom ↔ 100% stock, no PC required, one-way-door safe. Hardware-confirmed both directions before release. M11 CLOSED.

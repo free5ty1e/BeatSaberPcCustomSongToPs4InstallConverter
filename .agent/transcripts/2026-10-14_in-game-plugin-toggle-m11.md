@@ -269,3 +269,11 @@
 **CI:** green; 911 collected → 788+123 gated (new workflow tests ran in CI); log confirms "features.json generated from DEFAULT_FEATURES". **The fix ships**: the zip's template carries all 6 flags. **Zip-diff vs alpha01**: only features.json + regenerated coverage HTML differ — everything else byte-identical (the CI-only delta proven). Spot-checks re-verified (FSELF, v0.8053, hijack string, webapp boot from zip, Batch 34).
 
 **Verdict:** alpha02 is the release candidate. Next: merge PR #8 → tag the final (non-alpha) → release live.
+
+---
+
+## Cycle 15 — 🎉 THE RELEASE (Exp 278k): M11 SHIPPED
+
+**User:** merged PR #8 + tagged the final v0.8053-pipeline-0.5363-webapp-0.6.13.
+
+**Validated:** build green (911 → 788+123 gated); release published (1,075,712 B); releases/latest → this tag; clean extraction: FSELF PRXs, v0.8053, 6-flag template (fix in the final artifact), 5 docs, 69 examples, byte parity, webapp-from-zip boot (3-version ping + Batch 34); LIVE Pages badge = v0.8053/0.5363/0.6.13 + demos link + demos.md 200. **M11 CLOSED — the in-game plugin toggle ships.**

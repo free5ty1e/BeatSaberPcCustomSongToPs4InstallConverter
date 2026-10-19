@@ -407,7 +407,7 @@ Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
       validation procedure step 5.1b, webapp toast N/4
 - [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears
 
-## M11 — In-Game Global Plugin Enable/Disable Toggle (Move Button+Trigger Hotkey)
+## M11 — In-Game Global Plugin Enable/Disable Toggle (Move Button+Trigger Hotkey) — ✅ SHIPPED in v0.8053-pipeline-0.5363-webapp-0.6.13 (2026-10-19)
 **Goal:** Toggle the entire plugin ON/OFF from the couch with only a PS4 controller —
 no PC required. Hold **L3+R3 for 2 seconds** on a DualShock 4 → notification shows the
 new state → restart Beat Saber to apply. Switches between all-custom (47 songs,

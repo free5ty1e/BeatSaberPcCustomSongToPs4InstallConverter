@@ -22,7 +22,7 @@ Three components, versioned independently:
 | **Pipeline** (`v0.53XX`) | Python: downloads from BeatSaver, converts audio (FSB5 PCM16) + beatmaps (V2/V3/V4→PS4 V3), builds AssetBundles, surgically patches music-pack bundles + the Addressables catalog, deploys over FTP, self-validates | `beat_saber_deluxe/tools/full_custom_song_pipeline.py` (the ONE entry point) |
 | **Web app** (`0.6.X`) | FastAPI local UI + GitHub Pages static build — a thin layer over the pipeline CLI (every button = one pipeline subprocess) | `beat_saber_deluxe/webapp/` |
 
-**Current state (Oct 2026):** Milestones M0–M10 complete. 47 custom songs
+**Current state (Oct 2026):** Milestones M0–M11 complete. 47 custom songs
 across 5 music packs live on the user's PS4 (Britney Spears, Rolling Stones,
 Lizzo, Billie Eilish, Camellia), each showing 4 gameplay modes
 (Standard/OneSaber/NoArrows/90Degree), with in-game song previews that play
@@ -158,12 +158,14 @@ designing anything** — this project has already made most mistakes once.
 └── docs/example-scripts/         ← 69 ready-to-run per-pack examples
 ```
 
-## 7. Current versions & next steps (as of 2026-10-12)
+## 7. Current versions & next steps (as of 2026-10-19)
 
-- Plugin **v0.8048** · Pipeline **v0.5362** · Web app **0.6.6**
-- Latest release: **`v0.8048-pipeline-0.5362-webapp-0.6.6`** (LIVE, fully validated;
-  M10 song previews shipped — 46 previews across 5 packs, hardware-confirmed).
-- M10 (song previews) is SHIPPED (merged PR #7, release live). The next
+- Plugin **v0.8053** · Pipeline **v0.5363** · Web app **0.6.13**
+- Latest release: **`v0.8053-pipeline-0.5363-webapp-0.6.13`** (LIVE, fully validated;
+  M11 in-game plugin toggle shipped — hold the Move button + trigger together for
+  2 seconds to flip the whole plugin on/off from the couch, hardware-confirmed
+  both directions; PRX debug builds self-identify with a DEBUG version suffix).
+- M11 (in-game plugin toggle) is SHIPPED (merged PR #8, release live). The next
   feature is whatever the user picks from the roadmap (M3 note-color
   customization is the standing candidate; the user may also choose fresh
   ideas).
