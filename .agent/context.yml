@@ -336,7 +336,7 @@ release_readiness:
 # Current Branch / Feature: M11 in-game plugin toggle (L3+R3 hotkey)
 current_feature:
   branch: "feature/next (M10 release merged to main; M11 work continues here)"
-  milestone: "M11 — in-game global plugin enable/disable toggle — ✅ COMPLETE (hardware-confirmed 2026-10-16)"
+  milestone: "M12 era — eliminate/automate the ps4_dump requirement (in-game extractor + game_data cache) + M13 Beat Sage/local-folder webapp support; plans written, awaiting implementation pick"
   plan: ".agent/plans/in-game-global-plugin-enable-toggle-plan.md (COMPLETE — feature doc ships in the zip: docs/features/in-game-plugin-toggle.md)"
   transcript: ".agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md (this feature's session transcript)"
   feature_flag: "enable_in_game_plugin_toggle (defaults false; webapp Feature Flags tab or --features-only --set-feature enable_in_game_plugin_toggle=true)"

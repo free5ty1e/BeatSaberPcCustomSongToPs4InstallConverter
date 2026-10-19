@@ -27,6 +27,37 @@ and slot visually, then copy the generated pipeline command if you prefer the
 CLI. See [**Web App (deploy without the CLI)**](#31b-web-app--deploy-without-the-cli-m9)
 below for the local app's full feature tour.
 
+## Prerequisites
+
+| Requirement | Why it is needed |
+|---|---|
+| **A jailbroken PS4** (firmware 9.00) with **GoldHEN** | The plugin + file redirection only run under GoldHEN |
+| **⚠️ FTP access to your PS4 (GoldHEN's FTP server, port 2121)** — i.e. your PC and the PS4 on the same network | **This is REQUIRED for the repository to be useful to you.** Every deploy, plugin update, feature-flag change, backup, validation, and log pull happens over this FTP connection |
+| Beat Saber (CUSA12878) **patch 2.04** installed | The plugin's hook offsets + the pipeline's slot catalog target exactly this version |
+| A **decrypted dump** of the game (`ps4_dump/CUSA12878-patch/`) — user-supplied, never committed | The pipeline builds custom content by patching stock game assets (per-slot template bundles + pack bundles + the addressables catalog). ~660MB of it is actually read for a 5-pack loadout; the web app's dump guide covers making one. **[Work in progress: an in-game extractor that removes this step](.agent/plans/eliminating_or_automating_ps4_dump_folder_requirement.md)** |
+| Python 3.10+ on your PC | The pipeline + web app |
+
+### Limitations without FTP access to the PS4
+
+Without that FTP connection you can still *build* custom-song bundles locally
+(the pipeline's `--local` build paths work offline), but **nothing can reach
+your console**:
+
+- ❌ No installing or updating custom songs, packs, previews, or mode buttons
+- ❌ No plugin deployment or updates (v0.8049+)
+- ❌ No feature-flag changes from the web app or CLI (including arming the in-game toggle)
+- ❌ No backups / restores / clean-slate operations
+- ❌ No post-deploy validation, no PS4-state dashboard, no log pulls
+
+**The one thing that keeps working without a PC entirely:** once your setup is
+deployed, the **in-game hotkey** (hold the Move button + trigger together for
+2 seconds — [feature doc](beat_saber_deluxe/docs/features/in-game-plugin-toggle.md))
+toggles the whole plugin on/off on the console itself. But arming that hotkey,
+or changing anything else, required FTP the last time it was configured.
+
+There is no alternative transport on GoldHEN — FTP is its file-transfer
+surface, and every tool in this repository builds on it.
+
 ## Web UI Screenshots
 
 <img width="942" height="831" alt="image" src="https://github.com/user-attachments/assets/f77ada23-b167-4c38-ab06-a819e1faa2d9" />
