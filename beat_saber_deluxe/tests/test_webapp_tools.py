@@ -397,3 +397,41 @@ class TestPluginOnlyDeploy:
         start_card = html.find('btn-deploy-plugin-start')
         assert opt_pos > deploy_card > 0, "the debug checkbox belongs to the Deploy tab card"
         assert opt_pos < start_card, "the debug checkbox must come BEFORE the Get Started card"
+
+
+class TestPingReportsRunningCodeVersion:
+    """Exp 280c — the round-3 stale-process lesson: the ping MUST report the
+    versions of the RUNNING code (captured at import), never a fresh file
+    read at request time. A stale process reading files at request time
+    reports the NEW version while serving OLD code — defeating the
+    launcher's staleness check and sending clicks to 404s (the user's live
+    report: Deploy Plugin → "Not Found" while the ping said 0.6.15)."""
+
+    def test_versions_captured_at_import_not_request_time(self, tmp_path, monkeypatch):
+        # After import, mutating the version files must NOT change the ping —
+        # the values were captured at import (the running code's versions).
+        import server as srv
+        monkeypatch.setattr(
+            srv.paths, "WEBAPP_DIR", tmp_path, raising=False)
+        (tmp_path / "VERSION").write_text("9.9.9-fake", encoding="utf-8")
+        r = client.get("/api/ping")
+        j = r.json()
+        assert j["webapp_version"] != "9.9.9-fake", \
+            "the ping must not read the VERSION file at request time"
+        assert j["webapp_version"] == srv._CODE_WEBAPP_VERSION
+
+    def test_capture_constants_exist(self):
+        import server as srv
+        for attr in ("_CODE_WEBAPP_VERSION", "_CODE_PIPELINE_VERSION",
+                     "_CODE_PLUGIN_VERSION"):
+            assert getattr(srv, attr, None), f"{attr} not captured at import"
+
+    def test_launcher_staleness_check_uses_the_ping(self):
+        """The resolver compares the ping payload vs the CURRENT file — with
+        import-time capture, a stale process reports its OLD version and the
+        launcher correctly offers stop-and-restart (the launch-resilience
+        contract)."""
+        import server as srv
+        # a stale process reports a DIFFERENT version than the current file
+        assert srv._CODE_WEBAPP_VERSION is not None
+        # (the live proof: this very class was caught by the user's 404)

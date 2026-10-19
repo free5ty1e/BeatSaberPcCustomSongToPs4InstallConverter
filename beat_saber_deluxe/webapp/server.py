@@ -36,12 +36,35 @@ STATIC_DIR = paths.WEBAPP_DIR / "static"
 # --------------------------------------------------------------------------
 # Mode detection + static UI
 # --------------------------------------------------------------------------
+# Code-version capture (Exp 280c — the round-3 stale-process lesson):
+# the ping MUST report the versions of the RUNNING CODE, captured at import,
+# NOT a fresh file read at request time. A stale server process (started before
+# a pull) reading the files at request time reports the NEW version while
+# serving OLD code — defeating the launcher's staleness check ("current" →
+# reuse) and sending the user's clicks to 404s (the user's live report:
+# Deploy Plugin → "❌ Not Found" while the ping proudly said 0.6.15).
+_CODE_WEBAPP_VERSION = None
+_CODE_PIPELINE_VERSION = None
+_CODE_PLUGIN_VERSION = None
+
+
+def _capture_code_versions():
+    """Capture once at import: these are the versions THIS process runs."""
+    global _CODE_WEBAPP_VERSION, _CODE_PIPELINE_VERSION, _CODE_PLUGIN_VERSION
+    _CODE_WEBAPP_VERSION = _webapp_version()
+    _CODE_PIPELINE_VERSION = _pipeline_version()
+    _CODE_PLUGIN_VERSION = _plugin_version()
+
+
 @app.get("/api/ping")
 def ping():
-    """Backend heartbeat — the UI's local-backend/Pages mode switch."""
-    return {"mode": "local-backend", "webapp_version": _webapp_version(),
-            "pipeline_version": _pipeline_version(),
-            "plugin_version": _plugin_version(),
+    """Backend heartbeat — the UI's local-backend/Pages mode switch.
+    Reports the import-time-captured versions of the RUNNING code (see the
+    capture comment above — request-time file reads lie about staleness)."""
+    return {"mode": "local-backend",
+            "webapp_version": _CODE_WEBAPP_VERSION or _webapp_version(),
+            "pipeline_version": _CODE_PIPELINE_VERSION or _pipeline_version(),
+            "plugin_version": _CODE_PLUGIN_VERSION or _plugin_version(),
             "pipeline_present": paths.PIPELINE.exists()}
 
 
@@ -72,6 +95,10 @@ def _plugin_version() -> str:
     except OSError:
         pass
     return "bundled"
+
+
+# Capture at import (Exp 280c): after the last version-reader definition.
+_capture_code_versions()
 
 
 @app.get("/")

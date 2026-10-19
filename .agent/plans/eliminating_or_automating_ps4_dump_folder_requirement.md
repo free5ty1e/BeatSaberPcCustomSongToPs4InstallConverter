@@ -335,5 +335,22 @@ song from `/workspace/ps4_dump/` — the built bundles should be byte-identical
 `python3 beat_saber_deluxe/development/scripts/make_simulated_release.py
 /workspace/release-test` (after `rm -rf` — it is disposable).
 
+## 2026-10-19 · Exp 280c — The Deploy-Plugin 404 (the version-lie stale process)
+
+**User smoke test:** Deploy Plugin → "❌ Not Found".
+**RCA:** the dev web app's server process predated the plugin endpoint, but its
+ping read the VERSION file at REQUEST time → reported 0.6.15 while serving
+0.6.14 code — the same stale-process class as 278g, now with a version-lie
+twist that also defeated the launcher's staleness check. **Fix (in 0.6.15):**
+all three ping versions are captured at import (`_capture_code_versions()`);
+stale processes honestly report their own version → the launcher flags them
+STALE → stop-and-restart. **Symptom signature recorded in the KB:** new button
+exists + the API 404s + the version badge looks current → the process is
+stale; restart (or re-run the launcher and take its default).
+
+**For the validation run:** if any new button ever 404s, re-run
+`python3 server.py` — the launcher now detects stale instances by their honest
+version report and stops+restarts them by default.
+
 **PHASE 1 STATUS: awaiting the user's run.** (Console on; v0.8054 was
 harmlessly deployed during endpoint verification — Phase 0's Clear resets it.)

@@ -64,3 +64,8 @@
 **User:** broke at checklist step 1 (no Deploy Plugin button — correct, it never existed); asked for the KB audit, a simulated release folder that can't see the dev dump, backup+clear for a clean slate, and the plan as an execution log with a revised detailed procedure. Then: Deploy Plugin on the Deploy tab AND Get Started; DEBUG option only on the Deploy tab.
 
 **Done:** webapp 0.6.15 (plugin-only deploy: endpoint + Deploy-tab card w/ DEBUG checkbox + Get Started step-5 button; 5 tests; suite 935/935); KB new page game-data-extractor.md + index; make_simulated_release.py + /workspace/release-test built + boot-verified (deploy-plugin endpoint fired a REAL deploy against the reachable PS4 — v0.8054 now on the console, transparently noted, Phase-0 Clear resets it); the plan doc is now the execution log with Phase 0 (backup+clean) / Phase 1 (simulated 10-step) / Phase 2 (real release) + the parity check.
+
+## Cycle 4 — Exp 280c: the Deploy-Plugin 404 RCA'd (the version-lie stale process)
+
+**User:** Deploy Plugin smoke test → "❌ Not Found".
+**RCA:** the running server was an Exp-280-era process serving 0.6.14 code, but the ping read the VERSION file at REQUEST time → reported 0.6.15 → looked current → (and would have defeated the launcher's staleness check the same way). **Fix:** import-time capture of all three versions (`_capture_code_versions()`); ping reports the RUNNING code's versions — a stale process now honestly reports its own version → the launcher flags STALE → stop-and-restart. 3 regression tests; stale process killed + fresh verified (route present); the simulation rebuilt + verified. Suite 938/938; ruff clean. KB round-3 lesson recorded with the symptom signature.

@@ -94,6 +94,17 @@ don't assume "the pipeline can do it" means "the user can click it."**
   forever, so the decorators below it never execute (symptom: 404 on new
   endpoints while `import server` looks fine). All route definitions must
   live before the guard.
+- **The stale-process version-lie (round 3 of the class):** a version
+  endpoint that reads the VERSION FILE at request time reports the NEW
+  version while a stale process serves OLD code — the user sees the new UI
+  (browser cache / newer instance earlier) + the ping proudly says current,
+  yet new endpoints 404. This also defeats the launcher's staleness check
+  (ping == current file → "current" → reuse the stale server!). **Fix:
+  capture all version values at import** (`_capture_code_versions()`) and
+  report those — a stale process then honestly reports its own version and
+  the launcher offers stop-and-restart. Symptom signature for the future:
+  "new button exists, but the API 404s, and the version badge looks
+  current" → check process age (`ps aux | grep '[s]erver.py'`), restart.
 - The DEBUG plugin option is deliberately exposed only on the Deploy tab (user
   directive) — Get Started's plugin button always deploys the release build.
 - `--pull-game-data` uses lftp `mirror --parallel=4` (resumable; identical
