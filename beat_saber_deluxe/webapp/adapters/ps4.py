@@ -82,7 +82,10 @@ def _run_lftp(host: str, user_part: str, port: int, commands: list[str],
     letting the UI surface unreachable state immediately. The subprocess
     timeout stays as the belt-and-suspenders bound.
     """
-    joined = ("set net:timeout 5; set net:max-retries 1; set net:connect-timeout 5; "
+    # NOTE (Exp 281b): net:connect-timeout does not exist in this lftp build
+    # ("no such variable" polluted every error message) — net:timeout +
+    # net:max-retries carry the fast-fail behavior alone.
+    joined = ("set net:timeout 5; set net:max-retries 1; "
               + "; ".join(commands) + "; quit")
     try:
         r = subprocess.run(
@@ -340,8 +343,10 @@ def read_game_data_requests() -> ReadResult:
                      open(local_tmp, encoding="utf-8", errors="replace").read().splitlines()
                      if ln.strip() and not ln.startswith("#")]
             return ReadResult(ok=True, data=lines, raw_bytes=os.path.getsize(local_tmp))
-        if rc == 0:
-            return ReadResult(ok=True, data=[], error="")  # absent = nothing requested yet
+        if rc == 0 or _looks_absent(out):
+            # absent (fresh console / nothing requested) = the clean state,
+            # never an error (Exp 280d/281b)
+            return ReadResult(ok=True, data=[], error="", absent=True)
         return ReadResult(ok=False, error=out.strip()[-200:] or "unreachable")
 
 
@@ -367,6 +372,9 @@ def read_game_data_status() -> ReadResult:
             errors = [ln for ln in lines if ln.startswith("ERR ")]
             return ReadResult(ok=True, data={"done": done, "errors": errors},
                               raw_bytes=os.path.getsize(local_tmp))
-        if rc == 0:
-            return ReadResult(ok=True, data={"done": [], "errors": []})
+        if rc == 0 or _looks_absent(out):
+            # absent (fresh console / no boot yet) = the pending state,
+            # never an error (Exp 281b — the user's console booted nothing yet)
+            return ReadResult(ok=True, data={"done": [], "errors": []},
+                              absent=True)
         return ReadResult(ok=False, error=out.strip()[-200:] or "unreachable")

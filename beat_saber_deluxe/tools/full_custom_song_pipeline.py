@@ -1227,12 +1227,39 @@ def _ensure_mass_song_redirects(redirect_data: dict, config: dict,
         log.info(f"  🎵 Ensured {len(configured)} song redirects point at deployed bundles ({changed} entries updated)")
     return changed
 
+def _ensure_afr_title_dir(config: dict):
+    """Create the AFR title dir if absent (Exp 281b — the fresh-console
+    bootstrap bug): after Clear PS4 with no plugin boot yet, the dir does not
+    exist and EVERY AFR upload fails ('Access failed: 550' on the put).
+    Idempotent: lftp mkdir -p -f creates intermediate dirs and stays silent
+    when they already exist. Runs as its own quick lftp session before any
+    AFR write."""
+    import subprocess as sp
+
+    ps4_cfg = config.get('ps4', {})
+    host = ps4_cfg.get('ip', '192.168.100.117')
+    port = ps4_cfg.get('ftp_port', 2121)
+    user = ps4_cfg.get('ftp_user', 'anonymous')
+    password = ps4_cfg.get('ftp_password', '')
+    user_part = f"{user},{password}" if password else f"{user},"
+    afr_base = config.get('paths', {}).get('afr_base', '/data/GoldHEN/AFR')
+    title_id = config.get('title', {}).get('id', 'CUSA12878')
+    remote_dir = f"{afr_base}/{title_id}"
+    cmd = ["lftp", "-u", user_part, "-p", str(port), host, "-e",
+           f"mkdir -p -f {_ftp_quote(remote_dir)}; quit"]
+    try:
+        sp.run(cmd, capture_output=True, text=True, timeout=15)
+    except sp.TimeoutExpired:
+        pass  # the following put will surface a real failure if the PS4 is gone
+
+
 def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
     """
     Upload the bundle to the PS4 via FTP.
     Target path: {afr_base}/{title_id}/{remote_name}
     All paths read from config.
     """
+    _ensure_afr_title_dir(config)
     import subprocess as sp
 
     # Session upload ledger (Exp 264): record the remote names this PROCESS
@@ -4312,6 +4339,7 @@ def _deploy_features_to_ps4(config: dict):
     flag existed) must not deploy with that flag silently absent (Exp 221: the
     local file lacked enable_beatmap_mode_mapping → plugin booted 2/3 flags).
     """
+    _ensure_afr_title_dir(config)
     import subprocess as sp
 
     ps4_cfg = config.get('ps4', {})
@@ -4576,6 +4604,7 @@ def request_game_data(config: dict, packs=None, slots=None):
             f.write("# game_data_requests v1 — one relative path per line\n")
             for r in rels:
                 f.write(r + "\n")
+        _ensure_afr_title_dir(config)  # fresh-console bootstrap (Exp 281b)
         cmd = ["lftp", "-u", user_part, "-p", str(port), host, "-e",
                f"put {_ftp_quote(local_req)} -o {_ftp_quote(req_remote)}; "
                f"ls -la {_ftp_quote(req_remote)}; quit"]

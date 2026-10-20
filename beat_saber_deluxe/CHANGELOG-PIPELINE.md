@@ -2,6 +2,7 @@
 
 ## v0.5365 (2026-10-19)
 ### Changed — Fresh-install defaults (Exp 281, user directive)
+- **Fresh-console write robustness (Exp 281b):** `_ensure_afr_title_dir()` — `mkdir -p -f` on the AFR title dir before any AFR write (request puts, features.json deploys, bundle uploads). The clean normally leaves the dir, but the bootstrap makes every AFR write robust against its absence. 2 regression tests (the mkdir command + its ordering before the put).
 - **`DEFAULT_FEATURES` is now ALL-ON** (previews, the M11 toggle, and the M12 extractor flip to True). A fresh install works out of the box; every flag surface (the plugin's absent-file defaults, this dict, the webapp's DEFAULTS_TRUE/KNOWN_FLAGS, the CI-generated features.json template) now carries the same truth.
 
 ## v0.5364 (2026-10-19)

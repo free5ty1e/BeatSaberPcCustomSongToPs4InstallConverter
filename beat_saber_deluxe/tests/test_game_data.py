@@ -233,3 +233,56 @@ class TestPluginSourcePins:
         assert "(%d/6 features ON)" in code
         tail = code.split("enabled_count =")[1].split("memset")[0]
         assert "g_feature_game_data_extractor" in tail
+
+
+class TestFreshConsoleBootstrap:
+    """Exp 281b (user report): after Clear PS4 with no plugin boot yet, the
+    AFR/CUSA12878 dir does not exist — EVERY AFR upload fails (550 on the
+    put; the user's first Request extraction never landed). The pipeline must
+    mkdir the title dir before any AFR write."""
+
+    def test_ensure_afr_title_dir_runs_mkdir(self, monkeypatch):
+        fp = _pipeline()
+        import subprocess
+        cmds = []
+        def fake_run(cmd, **kw):
+            cmds.append(cmd)
+            class R:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+            return R()
+        monkeypatch.setattr(subprocess, "run", fake_run)
+        fp._ensure_afr_title_dir(_config())
+        assert any("mkdir -p -f" in " ".join(c) and
+                   "AFR/CUSA12878" in " ".join(c) for c in cmds), \
+            "the fresh-console bootstrap must mkdir -p the AFR title dir"
+
+    def test_request_calls_bootstrap_before_put(self, monkeypatch):
+        fp = _pipeline()
+        import subprocess
+        calls = []
+        def fake_run(cmd, **kw):
+            calls.append(" ".join(cmd))
+            class R:
+                returncode = 0
+                stdout = "123"
+                stderr = ""
+            return R()
+        monkeypatch.setattr(subprocess, "run", fake_run)
+        fp.request_game_data(_config(), packs=["lizzo"])
+        mkdir_idx = next((i for i, c in enumerate(calls) if "mkdir -p -f" in c), -1)
+        put_idx = next((i for i, c in enumerate(calls) if "put" in c and "game_data_requests" in c), -1)
+        assert mkdir_idx >= 0 and put_idx >= 0 and mkdir_idx < put_idx, \
+            "the mkdir must run before the request put"
+
+
+class TestExtractorCompletionNotification:
+    """Exp 281b (user request: PS4-side feedback): the plugin sends a
+    notification when an extraction run produced files."""
+
+    def test_completion_notification_sent_only_when_new(self):
+        code = open(MAIN_CPP, encoding="utf-8").read()
+        assert "BSD: game data ready" in code
+        assert "if (new_count > 0)" in code, \
+            "the notification must fire only when files were actually extracted"

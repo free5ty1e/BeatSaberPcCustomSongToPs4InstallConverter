@@ -77,3 +77,7 @@
 ## Cycle 6 — Exp 281: the invisible extractor + fresh-install defaults all-ON
 
 **User:** no extractor on the flags tab (RIGHT — the KNOWN_FLAGS edit was lost in a failed edit call and never re-applied) + the directive: all flags default ON on a fresh install. **Implemented everywhere:** plugin v0.8055 (absent-file defaults all-ON), pipeline 0.5365 (DEFAULT_FEATURES all-True), webapp 0.6.17 (KNOWN_FLAGS 7 flags + DEFAULTS_TRUE = all + description updates), all doc surfaces, the CLAUDE.md §2 doctrine change (3-way synced), 6 test files re-pinned + the fresh-install all-ON pin. The simulation rebuilt + live-verified: all 7 flags ON against the clean console; the extractor needs no arming. Also fixed the hardcoded version label in make_simulated_release (parses the PRX banner now).
+
+## Cycle 7 — Exp 281b: request-succeeded-but-looked-failed
+
+**User:** request flow errored "PS4 unreachable"; wants Select-all + PS4/web-app feedback. **RCA (live):** the request SUCCEEDED (the 11-file manifest is on the console); the status reader misclassified absent-as-unreachable (pre-280d code path) + the invalid net:connect-timeout variable noise. The dir-missing theory disproven (malformed ls -la probe) — the mkdir bootstrap stays as a safety net. **Added:** absent-classification in the game-data readers (verified live: pending: 11), Select all/none + size estimates, the 5s auto-poll with the "⏳ boot the game" state, the plugin's "BSD: game data ready" notification. Suite 857+93; ruff clean; simulation rebuilt + live-verified.

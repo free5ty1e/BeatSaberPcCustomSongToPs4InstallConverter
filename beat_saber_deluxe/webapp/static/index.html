@@ -652,6 +652,11 @@ python3 webapp/server.py</pre>
         <li><b>Use the extracted cache</b> — points the pipeline at the cache.
             You're done: deploy songs as usual, no dump anywhere.</li>
       </ol>
+      <div class="row" style="margin-bottom:4px">
+        <button id="gamedata-select-all-btn" class="muted">Select all packs</button>
+        <button id="gamedata-select-none-btn" class="muted">Select none</button>
+        <span class="muted" id="gamedata-size-hint"></span>
+      </div>
       <div id="gamedata-pack-list" class="row wrap"></div>
       <div class="row">
         <button class="primary" id="gamedata-request-btn">Request extraction</button>

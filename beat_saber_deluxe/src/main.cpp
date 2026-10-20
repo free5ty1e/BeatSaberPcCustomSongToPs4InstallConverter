@@ -1579,6 +1579,21 @@ static void try_run_game_data_extractor(void) {
              "[EXTRACT] run complete: %d new (%lld bytes), %d already done, %d errors — game_data/ is ready for the web app to pull",
              new_count, (long long)total_bytes, done_count, err_count);
     log_write(sum);
+
+    // PS4-side feedback (Exp 281b, user request: "see/hear something on the
+    // PS4 side"): a notification when the extraction actually produced files
+    // — the user's cue that the web app can pull now. Silent when there was
+    // nothing to do (the common already-extracted boot).
+    if (new_count > 0) {
+        OrbisNotificationRequest notif;
+        memset(&notif, 0, sizeof(notif));
+        notif.type = (OrbisNotificationRequestType)0;
+        notif.targetId = -1;
+        snprintf(notif.message, sizeof(notif.message),
+                 "BSD: game data ready\n%d file(s) extracted — pull them from the web app",
+                 new_count);
+        sceKernelSendNotificationRequest(0, &notif, sizeof(notif), 0);
+    }
 }
 
 // ── IL2CPP module base ──────────────────────────────────────────────────────

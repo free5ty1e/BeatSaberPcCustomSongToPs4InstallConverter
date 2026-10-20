@@ -16,6 +16,7 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 - **Idempotence + retries:** `game_data_status.txt` (plugin-owned) records one extracted path per line; already-done files are skipped on later boots; failures append `ERR <rel> <reason>` lines that never match a request line, so they **retry automatically on the next boot**. Line-exact matching (a rel that is a suffix of another can never false-match as done).
 - **Robustness:** mkdir-p chain for the target layout; 256KB static copy buffer (zero stack pressure); once-per-boot state; per-file logging with byte counts + which mount served each file; generous summary line. All extraction I/O via direct `sceKernelOpen` (bypasses our own open-hook — no redirection interference).
 - Boot toast now counts **N/6 features**; the `features:` boot log line + the ARMED lines gain the extractor.
+- **PS4-side extraction feedback (Exp 281b, user request):** when an extraction run actually produced files, the plugin sends a notification — "BSD: game data ready — N file(s) extracted — pull them from the web app" — the user's in-VR cue that the web app can pull. Silent on already-extracted boots (the common case).
 
 ## [v0.8053] — 2026-10-16
 ### Added — M11 HARDWARE-CONFIRMED (Exp 278f)

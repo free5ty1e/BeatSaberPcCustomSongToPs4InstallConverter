@@ -1637,8 +1637,13 @@ async function gamedataRefresh() {
     } else {
       html += `Requested: <b>${nReq}</b> file(s) · extracted on console: ` +
               `<b>${nDone}</b>${pending.length ? ` · pending: <b>${pending.length}</b>` : ""}`;
-      if (nDone >= nReq && nReq > 0) html += ` ✅ <b>all extracted — boot done, pull when ready</b>`;
+      if (nDone >= nReq && nReq > 0) html += ` ✅ <b>all extracted — pull when ready</b>`;
       html += `<br>`;
+      if (nDone === 0) {
+        html += `⏳ <b>Extraction pending — boot Beat Saber once.</b> The plugin ` +
+                `extracts during a normal boot (you'll see a PS4 notification ` +
+                `when it finishes). This page updates automatically — no need to click.<br>`;
+      }
     }
     if (errs.length) {
       html += `⚠️ ${errs.length} extraction error(s) on the console — the log ` +
@@ -1652,10 +1657,22 @@ async function gamedataRefresh() {
       html += `Local cache: empty — pull after the boot step.`;
     }
     el.innerHTML = html;
+    // Auto-poll while an extraction is pending (requests on the console,
+    // nothing extracted yet) — the web app is "listening": the boot's
+    // extraction shows up here within seconds of the game finishing it.
+    if (pending.length > 0 || (st.requests.length > 0 && st.extracted.length === 0)) {
+      if (!gamedataPollTimer) {
+        gamedataPollTimer = setInterval(gamedataRefresh, 5000);
+      }
+    } else if (gamedataPollTimer && st.requests.length === 0) {
+      clearInterval(gamedataPollTimer); gamedataPollTimer = null;
+    }
   } catch (e) {
     el.innerHTML = `❌ ${esc(String(e))}`;
   }
 }
+
+let gamedataPollTimer = null;
 
 async function gamedataLoadPacks() {
   if (gamedataPacksLoaded) return;
@@ -1668,11 +1685,29 @@ async function gamedataLoadPacks() {
       const id = `gamedata-pack-${album.pack}`;
       const chip = document.createElement("label");
       chip.className = "chip";
-      chip.innerHTML = `<input type="checkbox" id="${id}" data-pack="${esc(album.pack)}"> ` +
+      chip.innerHTML = `<input type="checkbox" id="${id}" data-pack="${esc(album.pack)}" data-slots="${album.songs.length}"> ` +
         `${esc(album.pack)} <span class="muted">(${album.songs.length} slots)</span>`;
       holder.appendChild(chip);
     }
     gamedataPacksLoaded = true;
+    // size hint: slots × ~13MB per pack (measured average)
+    const allBoxes = () => [...document.querySelectorAll("#gamedata-pack-list input")];
+    const updateHint = () => {
+      const n = allBoxes().filter(cb => cb.checked).length;
+      const slots = allBoxes().filter(cb => cb.checked)
+        .reduce((sum, cb) => sum + (parseInt(cb.dataset.slots) || 0), 0);
+      $("gamedata-size-hint").textContent = n
+        ? `${n} pack(s) · ${slots} slots · ~${(slots * 13 / 1000).toFixed(1)}GB to extract`
+        : "";
+    };
+    allBoxes().forEach(cb => cb.addEventListener("change", updateHint));
+    const sa = $("gamedata-select-all-btn"), sn = $("gamedata-select-none-btn");
+    if (sa) sa.addEventListener("click", () => {
+      allBoxes().forEach(cb => cb.checked = true); updateHint();
+    });
+    if (sn) sn.addEventListener("click", () => {
+      allBoxes().forEach(cb => cb.checked = false); updateHint();
+    });
   } catch (e) {
     holder.innerHTML = `<span class="muted">could not load the pack list: ${esc(String(e))}</span>`;
   }

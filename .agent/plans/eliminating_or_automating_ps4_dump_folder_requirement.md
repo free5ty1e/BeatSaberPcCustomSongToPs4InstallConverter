@@ -449,3 +449,35 @@ Apply re-enables it.
 **NEXT (user): resume Phase 1 at step 3** — the app on 8799 is the rebuilt
 simulation (verify: badge `webapp 0.6.17 · plugin v0.8055`). Steps: Dump
 Guide → request lizzo → boot once → pull → use cache → deploy a song.
+
+### RUN LOG — Round 3 (Exp 281b): request-succeeded-but-looked-failed + the UX upgrades
+
+**User reports:** (1) "Select all" missing — wants everything needed for any
+target song at will; (2) the request flow showed "❌ PS4 unreachable …550…
+game_data_status.txt"; (3) wants PS4-side + web-app-side feedback while the
+extraction is pending/running.
+
+**RCA (live-verified):** the user's Request extraction SUCCEEDED — the 11-file
+lizzo manifest IS on the console. The failure was my `read_game_data_status`
+predating the Exp-280d absent doctrine: the status file's absence (no boot
+yet) fell to `ok=False` → "PS4 unreachable" (plus the `net:connect-timeout`
+lftp-variable noise). The true fresh-console dir-missing theory was disproven
+(the clean deletes files, not the dir; my `ls -la` probe was itself malformed
+on GoldHEN FTPD) — but the `mkdir -p -f` bootstrap stays as a robustness net.
+
+**Fixed/added:**
+- The game-data status/requests readers apply the absent doctrine (550 → ok=True + absent) — the live state now correctly reads "requested: 11 · extracted: 0 · pending: 11".
+- **Select all / Select none** buttons + a live size estimate (N packs · M slots · ~GB) on the Dump Guide — one click requests the full 36-pack catalog (~5GB across boots) for "any target song at will".
+- **The web app now listens:** "⏳ Extraction pending — boot Beat Saber once" + auto-poll every 5s while pending (no clicking).
+- **The PS4 side (plugin v0.8055):** a notification — "BSD: game data ready — N file(s) extracted — pull them from the web app" — fires when an extraction run produced files (silent on already-extracted boots).
+- The invalid lftp variable removed (error-message noise).
+
+**Verification:** suite 857+93 gated; ruff clean; the rebuilt simulation
+(0.6.17/v0.8055/0.5365) live-verified: state reads clean on the fresh console,
+the request re-lands, pending shows correctly.
+
+**NEXT (user):** re-deploy the plugin from the rebuilt app (Get Started →
+Deploy plugin — now ships v0.8055) → boot once (the extractor is ON by
+default; expect the "BSD: game data ready" notification + the auto-polling
+status flipping to "all extracted") → Pull → Use the extracted cache →
+deploy a song.
