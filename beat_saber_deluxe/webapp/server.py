@@ -275,7 +275,7 @@ def ps4_state():
 # Feature flags (read live; apply via --features-only job)
 # --------------------------------------------------------------------------
 FLAG_DESCRIPTIONS = {
-    "enable_plugin": "Global kill switch. OFF = the plugin is fully inert and the game plays 100% official songs on the next boot — no uninstall needed. The only flag that defaults ON when absent.",
+    "enable_plugin": "Global kill switch. OFF = the plugin is fully inert and the game plays 100% official songs on the next boot — no uninstall needed. All flags default ON when features.json is absent (fresh installs work out of the box); this one stays as the master switch.",
     "enable_custom_song_replacements": "Gates all custom-song bundle redirects. OFF = every song loads its original stock audio and beatmaps (metadata labels stay).",
     "enable_song_metadata_modification": "Gates the in-game song-list name/artist swaps. OFF = songs show their official titles even when customs are deployed.",
     "enable_beatmap_mode_mapping": "Gates the extra game-mode buttons (OneSaber / NoArrows / 90Degree). OFF = the stock pack bundles + catalog are served (Standard only) — the safe posture while a pack is only partially deployed.",

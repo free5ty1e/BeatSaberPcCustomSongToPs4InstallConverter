@@ -9,7 +9,7 @@ metadata:
 
 Shipped in plugin v0.8054 / pipeline v0.5364 / webapp 0.6.14 (Exp 280).
 User-facing doc: `docs/features/game-data-extractor.md` (ships in the release zip).
-Feature flag: `enable_game_data_extractor` (defaults false; console-maintenance
+Feature flag: `enable_game_data_extractor` (ON by default — Exp 281 fresh-install defaults; console-maintenance
 tooling — NOT gated by the kill switch, like [[in-game-plugin-toggle]]).
 
 ## The core discovery — the game's own mounts are readable in-process

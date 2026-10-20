@@ -1,6 +1,6 @@
 # Game-Data Extractor
 
-**Status:** ✅ Working (plugin v0.8054+, pipeline v0.5364+) · **Feature flag:** `enable_game_data_extractor`
+**Status:** ✅ Working (plugin v0.8055+, pipeline v0.5365+) · **Feature flag:** `enable_game_data_extractor` (**ON by default** — fresh installs work out of the box)
 
 ## What it does
 

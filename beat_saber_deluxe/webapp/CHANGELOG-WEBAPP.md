@@ -374,6 +374,12 @@ that actually deploys.
 - **Feature-flag description for `enable_in_game_plugin_toggle` polished** (user report of stale text): the repo description had been correct since 0.6.8, but the user's observation exposed TWO issues: (1) a long-running web-app server process from before the 0.6.8 change was still serving the old L3+R3 wording from memory — **restart the web app after pulling changes** (its FastAPI process holds code in memory; the UI won't see new descriptions until relaunch); (2) the description carried a hard-coded "(v0.8050)" version reference that stales with every bump — now removed in favor of "hardware-confirmed" phrasing, the VR notification-sound note, and a pointer to the full feature guide (docs/features/in-game-plugin-toggle.md).
 - The feature doc gained the user's demo video (README + docs/demos.md already carried it).
 
+## 0.6.17 (2026-10-19)
+### Fixed — the invisible extractor flag (user report) + fresh-install defaults (Exp 281)
+- **`enable_game_data_extractor` was MISSING from `KNOWN_FLAGS`** — a missed edit from the M12 cycle (the user hit it live: "I don't see any mention of an extractor" on the Feature Flags tab). Now present; the tab renders all 7 flags.
+- **All flags default ON when features.json is absent** (user directive: "These feature flags should all default to ON on a fresh install"). `DEFAULTS_TRUE` = every KNOWN_FLAG; a clean console renders with everything ON; the kill-switch description updated (it is no longer "the only flag that defaults ON"). Matches the plugin's v0.8055 absent-file defaults and the pipeline's all-True DEFAULT_FEATURES.
+- `TOAST_VERSION` v0.8055.
+
 ## 0.6.16 (2026-10-19)
 ### Fixed — Exp 280d (from the user's Phase 0/1 run)
 - **A clean console is now reported as a CLEAN SLATE, not a wall of errors.** After Clear PS4, every state read showed "⚠ Couldn't read … (get: Access failed: 550 … File unavailable)" — but a decisive 550 (file does not exist) is the CORRECT empty state. `fetch_remote_json` now classifies 550/no-such-file signatures as `ok=True, data=None` (absent — never retried, never an error); only genuine failures (connectivity, parse) stay errors. The **PS4 State tab shows a "✅ Clean slate" banner** with per-row "not present — clean slate (fresh install / after Clear PS4)" when all three state files are absent; the Full Loadout tab's post-clear warnings vanish (it renders the zero state cleanly). An absent AFR dir listing is the same clean state (`list_afr_dir`: ok=True, count=0, absent=True).

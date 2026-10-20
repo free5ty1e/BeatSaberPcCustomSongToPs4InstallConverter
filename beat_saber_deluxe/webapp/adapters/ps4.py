@@ -28,15 +28,19 @@ PS4_FEATURES = f"{AFR_TITLE_DIR}/features.json"
 PS4_REDIRECTS = f"{AFR_TITLE_DIR}/redirects.json"
 PS4_SONG_METADATA = f"{AFR_TITLE_DIR}/song_metadata.json"
 
-# enable_plugin defaults TRUE when absent — the ONLY flag that does
-# (plan §9.4 invariant 5). Unknown/absent renders as ON for that key.
+# enable_plugin and ALL feature flags default TRUE when absent (Exp 281,
+# user directive: fresh installs work out of the box — the flag list IS the
+# product's feature set; a clean console boots with everything ON until the
+# user turns things off). The plugin's absent-file defaults and the
+# pipeline's DEFAULT_FEATURES must stay in sync with this.
 # NOTE the plural key: the pipeline's canonical flag is
 # enable_custom_song_replacements (DEFAULT_FEATURES in the pipeline) — the
 # wire format on the PS4 features.json uses the plural form.
-DEFAULTS_TRUE = {"enable_plugin"}
 KNOWN_FLAGS = ("enable_plugin", "enable_beatmap_mode_mapping",
                "enable_song_metadata_modification", "enable_custom_song_replacements",
-               "enable_song_previews", "enable_in_game_plugin_toggle")
+               "enable_song_previews", "enable_in_game_plugin_toggle",
+               "enable_game_data_extractor")
+DEFAULTS_TRUE = frozenset(KNOWN_FLAGS)
 
 
 @dataclass

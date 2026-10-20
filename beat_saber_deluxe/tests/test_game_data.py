@@ -152,8 +152,10 @@ class TestCliWiring:
             assert flag in r.stdout, f"{flag} missing from --help"
 
     def test_default_features_has_extractor_flag(self):
+        """Exp 281 (user directive): ALL flags default ON — the extractor
+        included (console-maintenance tooling; inert without a requests file)."""
         fp = _pipeline()
-        assert fp.DEFAULT_FEATURES.get("enable_game_data_extractor") is False
+        assert fp.DEFAULT_FEATURES.get("enable_game_data_extractor") is True
 
     def test_config_defaults_gain_game_data_dir(self):
         """The local cache path ships as a default (PROJECT_ROOT-relative)."""
@@ -224,7 +226,7 @@ class TestPluginSourcePins:
         assert "g_extractor_state" in code
 
     def test_plugin_version_bumped(self):
-        assert '#define PLUGIN_VERSION "v0.8054"' in self._code()
+        assert '#define PLUGIN_VERSION "v0.8055"' in self._code()
 
     def test_toast_counts_six_flags(self):
         code = self._code()

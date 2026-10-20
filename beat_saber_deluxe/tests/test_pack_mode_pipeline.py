@@ -1012,8 +1012,9 @@ class TestSongPreviewsFlagGating:
             "pack gate must serve the patched pair when EITHER flag is ON"
 
     def test_default_features_has_previews(self):
+        """Exp 281: ALL flags default ON (fresh installs work out of the box)."""
         import full_custom_song_pipeline as fp
-        assert fp.DEFAULT_FEATURES.get("enable_song_previews") is False
+        assert fp.DEFAULT_FEATURES.get("enable_song_previews") is True
 
     def test_toast_counts_six_flags(self):
         main_cpp = os.path.join(PROJECT_ROOT, "src", "main.cpp")

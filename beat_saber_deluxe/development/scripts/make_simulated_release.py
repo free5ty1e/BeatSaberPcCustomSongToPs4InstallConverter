@@ -136,8 +136,12 @@ def build(target: Path, ps4_ip: str) -> int:
         json.dump(cfg, f, indent=4)
         f.write("\n")
 
+    import re
+    m = re.search(rb"BS Deluxe v(\d+\.\d+) started",
+                   (target / "plugins" / "beat_saber_deluxe.prx").read_bytes())
+    plugin_ver = "v" + m.group(1).decode() if m else "unknown"
     print(f"✅ Simulated release built at {target}")
-    print(f"   versions: plugin v0.8054 pair · pipeline "
+    print(f"   versions: plugin {plugin_ver} pair · pipeline "
           f"{(target / 'VERSION').read_text().strip()} · webapp "
           f"{(target / 'webapp' / 'VERSION').read_text().strip()}")
     print(f"   config: PS4 {ps4_ip}:2121 · game_dump_dir=./ps4_dump_local (ABSENT by design)")

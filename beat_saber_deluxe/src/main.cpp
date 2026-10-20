@@ -20,7 +20,7 @@
 #include <orbis/libkernel.h>
 #include <GoldHEN/Common.h>
 
-#define PLUGIN_VERSION "v0.8054"
+#define PLUGIN_VERSION "v0.8055"
 // Debug-variant indicator (Exp 278f, user request): the boot toast + the
 // log banner carry " DEBUG" when running the DEBUG=1 build (VERBOSE_LOG),
 // nothing for the release build — so logs and in-game toasts always show
@@ -56,12 +56,17 @@ static int REDIRECT_COUNT = 0;
 // game to 100% stock behavior (no redirects, no metadata swaps) without
 // touching plugins.ini or clearing the AFR directory.
 static int g_feature_plugin_enabled = 1;
-static int g_feature_custom_song_replacements = 0;
-static int g_feature_song_metadata_modification = 0;
-static int g_feature_beatmap_mode_mapping = 0;
-static int g_feature_song_previews = 0;
-static int g_feature_in_game_plugin_toggle = 0;  // M11: Move button+trigger hotkey (gates ONLY this feature)
-static int g_feature_game_data_extractor = 0;    // M12: in-console extractor (gates ONLY this feature — like the hotkey, it is console-maintenance tooling, NOT game behavior, so the enable_plugin kill switch does not gate it)
+// Fresh-install defaults (Exp 281, user directive): ALL feature flags default
+// ON when features.json is absent — a clean console boots with the full
+// product (redirects, metadata swaps, mode buttons, previews, the in-game
+// toggle, the game-data extractor). The pipeline's DEFAULT_FEATURES and the
+// webapp's KNOWN_FLAGS/DEFAULTS_TRUE mirror this — keep them in sync.
+static int g_feature_custom_song_replacements = 1;
+static int g_feature_song_metadata_modification = 1;
+static int g_feature_beatmap_mode_mapping = 1;
+static int g_feature_song_previews = 1;
+static int g_feature_in_game_plugin_toggle = 1;   // M11: Move button+trigger hotkey (gates ONLY this feature)
+static int g_feature_game_data_extractor = 1;    // M12: in-console extractor (console-maintenance tooling; NOT gated by the kill switch)
 
 // ── Song metadata replacement table ──────────────────────────────────────────
 // Loaded from /data/GoldHEN/AFR/CUSA12878/song_metadata.json
@@ -82,7 +87,7 @@ static void load_features(void) {
     int fd = open(FEATURES_PATH, O_RDONLY, 0);
     if (fd < 0) fd = sceKernelOpen(FEATURES_PATH, O_RDONLY, 0);
     if (fd < 0) {
-        log_write("features.json not found — all feature flags OFF (default)");
+        log_write("features.json not found — fresh-install defaults active (ALL features ON — Exp 281)");
         return;
     }
 
@@ -90,7 +95,7 @@ static void load_features(void) {
     ssize_t got = read(fd, buf, sizeof(buf) - 1);
     close(fd);
     if (got <= 0) {
-        log_write("features.json is empty — all feature flags OFF");
+        log_write("features.json is empty — fresh-install defaults active (ALL features ON)");
         return;
     }
     buf[got] = '\0';

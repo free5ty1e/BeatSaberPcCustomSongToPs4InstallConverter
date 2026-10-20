@@ -4,6 +4,11 @@ All notable changes to the GoldHEN plugin (`beat_saber_deluxe.prx`) are document
 
 **Version scheme:** Increment by **0.0001** per experiment (e.g. v0.80 → v0.8001 → v0.8002). This gives ample room to iterate before reaching v1.00.
 
+## [v0.8055] — 2026-10-19
+### Changed — Fresh-install defaults (Exp 281, user directive): ALL feature flags default ON
+- **A fresh install now works out of the box.** When `features.json` is absent (a clean console — after Clear PS4 or a brand-new user), the plugin boots with **every feature ON** (redirects, metadata swaps, mode buttons, previews, the M11 in-game toggle, the M12 game-data extractor) instead of the old all-OFF-absent-kill-switch behavior. The user's words: "These feature flags should all default to ON on a fresh install." The `enable_plugin` kill switch remains the master off. The pipeline's `DEFAULT_FEATURES` and the webapp's `DEFAULTS_TRUE`/`KNOWN_FLAGS` mirror this exactly — the three must stay in sync (the sync rule is now in CLAUDE.md §2).
+- Also fixes a missed M12 edit found by the user mid-validation: the webapp's `KNOWN_FLAGS` never gained `enable_game_data_extractor` (a failed edit call that was never re-applied) — the flag was invisible on the Feature Flags tab. Now present + the fresh-install defaults render it ON.
+
 ## [v0.8054] — 2026-10-19
 ### Added — M12: the in-console game-data extractor (eliminates the PC-side dump requirement for users)
 - **`enable_game_data_extractor` feature flag** (defaults false; console-maintenance tooling like the M11 hotkey — deliberately NOT gated by the enable_plugin kill switch). When armed, the plugin reads `game_data_requests.txt` (web-app/pipeline-owned: one relative path per line) and **stream-copies each requested file from the game's own decrypted mounts to `game_data/` in the AFR dir during a normal boot** — the game reads its assets from `/archive/mount/point/Media/...` and `/app0/Media/...` (log-proven: 1,067 + 1,073 opens in the archived boot logs; both prefixes tried per file).

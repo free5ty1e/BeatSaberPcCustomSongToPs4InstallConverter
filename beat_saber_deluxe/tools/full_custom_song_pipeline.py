@@ -4254,22 +4254,23 @@ FEATURES_FILENAME = "features.json"
 # This allows partial pack deployments (some songs custom, some stock) to
 # coexist without crashes — stock songs won't show extra mode buttons.
 DEFAULT_FEATURES = {
+    # Fresh-install defaults (Exp 281, user directive): ALL flags ON — a fresh
+    # install works out of the box; the flag list IS the product's feature set.
+    # The plugin's absent-file defaults and the webapp's DEFAULTS_TRUE mirror
+    # this dict exactly — keep the three in sync.
     "enable_plugin": True,
     "enable_custom_song_replacements": True,
     "enable_song_metadata_modification": True,
     "enable_beatmap_mode_mapping": True,
-    "enable_song_previews": False,
-    # M11 (Exp 278): L3+R3 2s hotkey flips enable_plugin inside features.json
-    # in place (persist-only; restart to apply). The plugin's apply_feature_flags
-    # pull-before-push (Exp 248) reads the LIVE file, so in-game flips flow into
-    # webapp/ps4_state/pipeline deploys automatically — zero other pipeline changes.
-    "enable_in_game_plugin_toggle": False,
-    # M12 (Exp 280): arms the in-console game-data extractor — the plugin copies
-    # the files the pipeline needs (per-slot templates, pack bundles, catalog)
-    # out of the game's own mounts during a normal boot; --pull-game-data then
-    # mirrors them into the local game_data cache. Console-maintenance tooling
-    # like the M11 hotkey: NOT gated by the enable_plugin kill switch.
-    "enable_game_data_extractor": False,
+    "enable_song_previews": True,
+    # M11: the Move button+trigger 2s hotkey flips enable_plugin in place
+    # (persist-only; restart to apply). The plugin's pull-before-push (Exp 248)
+    # reads the LIVE file, so in-game flips flow into webapp/pipeline deploys.
+    "enable_in_game_plugin_toggle": True,
+    # M12: the in-console game-data extractor — the plugin copies the files the
+    # pipeline needs out of the game's own mounts during a normal boot;
+    # --pull-game-data mirrors them into the local game_data cache.
+    "enable_game_data_extractor": True,
 }
 
 def _get_local_features_path(project_root: str = PROJECT_ROOT) -> str:

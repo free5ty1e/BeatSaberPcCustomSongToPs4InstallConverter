@@ -1,5 +1,9 @@
 # Pipeline Changelog
 
+## v0.5365 (2026-10-19)
+### Changed — Fresh-install defaults (Exp 281, user directive)
+- **`DEFAULT_FEATURES` is now ALL-ON** (previews, the M11 toggle, and the M12 extractor flip to True). A fresh install works out of the box; every flag surface (the plugin's absent-file defaults, this dict, the webapp's DEFAULTS_TRUE/KNOWN_FLAGS, the CI-generated features.json template) now carries the same truth.
+
 ## v0.5364 (2026-10-19)
 ### Added — M12: game-data extraction management (the "no dump required" flow)
 - **`--request-game-data [--game-data-packs p1,p2] [--game-data-slots s1,s2]`:** computes the extraction manifest from `beat_saber_song_ids.json` (per-slot templates + per-pack bundles + catalog — a slot request automatically includes its pack's bundle) and writes `game_data_requests.txt` to the PS4. NO dump needed to compute it. Upload verified via remote listing; the "no targets" error carries a fix suggestion (Exp-278h policy).

@@ -408,3 +408,44 @@ on the next build). ruff clean. webapp 0.6.16.
 **NEXT (user):** re-run Backup + Clean PS4 (now truly removes the stale
 bundles) → the PS4 State tab should show "✅ Clean slate" → resume Phase 1
 steps 1-4 from the rebuilt /workspace/release-test app (running now on 8799).
+
+### RUN LOG — Round 2: the invisible extractor + the fresh-install defaults doctrine (Exp 281)
+
+**User finding:** "I don't see any mention of an extractor" on the Feature
+Flags tab — CORRECT: the M12-cycle edit that adds `enable_game_data_extractor`
+to the webapp's `KNOWN_FLAGS` was part of a FAILED edit call and was never
+re-applied. Both the dev tree and the simulation shipped the 6-flag list. A
+genuine missed-edit bug (not a stale process this time).
+
+**User directive:** "These feature flags should all default to ON on a fresh
+install, why are they all off?" — adopted as the fresh-install defaults
+doctrine (Exp 281): **ALL flags default TRUE when features.json is absent.**
+Implemented across every surface:
+
+- **Plugin v0.8055**: absent-file defaults all-ON (the `g_feature_*`
+  initializers + the boot-log wording); kill switch stays the master off.
+- **Pipeline 0.5365**: `DEFAULT_FEATURES` all-True (previews + toggle +
+  extractor flip ON) — the CI-generated features.json template follows.
+- **Webapp 0.6.17**: `KNOWN_FLAGS` gains the 7th flag (THE missed edit);
+  `DEFAULTS_TRUE` = every flag; kill-switch description updated.
+- **Docs**: README/CI_RELEASE default columns → all `true`; both feature
+  docs; KB feature-flags + extractor/toggle pages + index.
+- **Rules**: CLAUDE.md §2 amended (flags default TRUE when absent; the three
+  surfaces MUST stay in sync; genuinely experimental flags may ship OFF with
+  explicit user approval) — synced to .opencode/rules.md + AGENTS.md per §0.
+- **Tests**: all DEFAULT_FEATURES/default pins updated (release-workflow,
+  toggle, game-data, previews ×2, webapp adapter defaults — the fresh-install
+  all-ON pin); ruff clean; suite **854 passed + 93 gated skips**.
+- **The simulated release rebuilt + live-verified**: ping 0.6.17 / v0.8055;
+  the flags tab now renders **all 7 flags ON** against the user's clean
+  console; clean_slate=True. (Also fixed: make_simulated_release's version
+  label was hardcoded — now extracted from the PRX banner.)
+
+**Answer to "how do I arm the extractor": with the Exp-281 defaults, nothing
+to arm — a fresh console boots with the extractor ON (and everything else).**
+If a flag was ever explicitly turned off, the Feature Flags tab's toggle +
+Apply re-enables it.
+
+**NEXT (user): resume Phase 1 at step 3** — the app on 8799 is the rebuilt
+simulation (verify: badge `webapp 0.6.17 · plugin v0.8055`). Steps: Dump
+Guide → request lizzo → boot once → pull → use cache → deploy a song.

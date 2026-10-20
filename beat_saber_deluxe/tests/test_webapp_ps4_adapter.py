@@ -136,13 +136,21 @@ class TestExtractJsonObject:
 
 
 class TestFeatureDefaults:
-    def test_enable_plugin_defaults_true_when_absent(self, monkeypatch):
+    def test_fresh_install_defaults_all_on_when_absent(self, monkeypatch):
+        """Exp 281 (user directive): ALL flags default ON when the live file
+        omits them — a fresh install works out of the box. The kill switch
+        stays the master off; users turn individual features off explicitly."""
         raw = json.dumps({"features": {"enable_beatmap_mode_mapping": True}})
         monkeypatch.setattr(ps4, "_run_lftp", FakeLftp(raw))
         res = ps4.read_features()
         assert res.ok
-        assert res.data["enable_plugin"] is True  # absent → ON (the only one)
-        assert res.data["enable_song_metadata_modification"] is False  # absent → OFF
+        for flag in ("enable_plugin", "enable_custom_song_replacements",
+                     "enable_song_metadata_modification",
+                     "enable_beatmap_mode_mapping", "enable_song_previews",
+                     "enable_in_game_plugin_toggle",
+                     "enable_game_data_extractor"):
+            assert res.data.get(flag) is True, \
+                f"{flag} must default ON when absent (fresh install)"
 
     def test_explicit_false_stays_false(self, monkeypatch):
         raw = json.dumps({"features": {"enable_plugin": False}})

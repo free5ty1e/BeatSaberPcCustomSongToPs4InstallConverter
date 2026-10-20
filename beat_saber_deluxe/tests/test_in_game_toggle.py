@@ -284,7 +284,7 @@ class TestInGameToggleResearchedFacts:
 
 class TestInGameToggleVersions:
     def test_plugin_version_bumped(self):
-        assert '#define PLUGIN_VERSION "v0.8054"' in _code()
+        assert '#define PLUGIN_VERSION "v0.8055"' in _code()
 
     def test_debug_variant_indicator(self):
         """Exp 278f (user request): the boot toast + log banner carry ' DEBUG'
@@ -307,8 +307,9 @@ class TestInGameToggleVersions:
 
 class TestInGameTogglePipeline:
     def test_default_features_has_toggle_flag(self):
+        """Exp 281: ALL flags default ON (fresh installs work out of the box)."""
         import full_custom_song_pipeline as fp
-        assert fp.DEFAULT_FEATURES.get("enable_in_game_plugin_toggle") is False
+        assert fp.DEFAULT_FEATURES.get("enable_in_game_plugin_toggle") is True
 
 
 class TestInGameToggleWebappSurfaces:
@@ -328,7 +329,7 @@ class TestInGameToggleWebappSurfaces:
         with open(os.path.join(WEBAPP, "static", "app.js"), encoding="utf-8") as f:
             code = f.read()
         assert '"enable_in_game_plugin_toggle"' in code
-        assert 'TOAST_VERSION = "v0.8054"' in code
+        assert 'TOAST_VERSION = "v0.8055"' in code
 
     def test_index_placeholder_five_of_five(self):
         with open(os.path.join(WEBAPP, "static", "index.html"), encoding="utf-8") as f:

@@ -232,7 +232,7 @@ def main():
     print("--- Feature Flags (PS4 features.json — plugin behavior on next boot) ---")
     fx = cat_remote(f"{AFR_DIR}/features.json")
     if fx is None:
-        print("  (features.json not found on PS4 — plugin defaults: all features OFF)")
+        print("  (features.json not found on PS4 — fresh-install defaults: ALL features ON — Exp 281)")
     else:
         try:
             decoder = json.JSONDecoder()

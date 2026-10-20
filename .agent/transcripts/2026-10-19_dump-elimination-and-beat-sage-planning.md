@@ -73,3 +73,7 @@
 ## Cycle 5 — Exp 280d/280e: the user's Round-1 findings all fixed
 
 **User:** bundled plugin needs a version number; post-clear errors instead of clean-slate reporting. **Fixed:** 550→absent classification (fetch_remote_json + ReadResult.absent riding through the readers' transformations — the plumbing bug I found while verifying), the explicit "✅ Clean slate" banner, the PRX-banner version extraction (v0.8054 verified live), the backup script's clean pattern gap (5 stale previews-variant bundles survived — + the M12 extractor files added). Two of my own orphaned server instances caught (the 280c capture exposed one honestly). Suite 854+93 gated; ruff clean. The simulation rebuilt + running on 8799; clean_slate=True verified against the real console.
+
+## Cycle 6 — Exp 281: the invisible extractor + fresh-install defaults all-ON
+
+**User:** no extractor on the flags tab (RIGHT — the KNOWN_FLAGS edit was lost in a failed edit call and never re-applied) + the directive: all flags default ON on a fresh install. **Implemented everywhere:** plugin v0.8055 (absent-file defaults all-ON), pipeline 0.5365 (DEFAULT_FEATURES all-True), webapp 0.6.17 (KNOWN_FLAGS 7 flags + DEFAULTS_TRUE = all + description updates), all doc surfaces, the CLAUDE.md §2 doctrine change (3-way synced), 6 test files re-pinned + the fresh-install all-ON pin. The simulation rebuilt + live-verified: all 7 flags ON against the clean console; the extractor needs no arming. Also fixed the hardcoded version label in make_simulated_release (parses the PRX banner now).

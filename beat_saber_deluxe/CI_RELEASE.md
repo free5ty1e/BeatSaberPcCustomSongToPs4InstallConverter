@@ -129,12 +129,12 @@ See the main `README.md` for full pipeline documentation.
 | Flag | Default | Purpose |
 |------|---------|---------|
 | `enable_plugin` | `true` (when absent) | Global kill switch — `false` = fully inert plugin, 100% official songs on next boot |
-| `enable_custom_song_replacements` | `false` | Gates all bundle redirects |
-| `enable_song_metadata_modification` | `false` | Gates song name/artist swaps in the UI |
-| `enable_beatmap_mode_mapping` | `false` | Gates extra game modes (OneSaber/NoArrows/90Degree) — OFF serves stock pack bundles + catalog |
-| `enable_song_previews` | `false` | Gates **song previews**: highlighting a custom song in the menu plays its own ~10s audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles — either this flag or `enable_beatmap_mode_mapping` keeps the patched pair live |
-| `enable_game_data_extractor` | `false` | **M12: the no-dump flow** — the plugin copies the files the pipeline needs (per-slot templates, pack bundles, catalog) out of the game's own data during a normal boot; the web app pulls them into the local `game_data/` cache (a drop-in for `ps4_dump/`). Full details: `docs/features/game-data-extractor.md` |
-| `enable_in_game_plugin_toggle` | `false` | **In-game plugin toggle (hardware-confirmed):** arms the Move hotkey — hold the **Move button + trigger together for 2 seconds** to flip the global plugin state (a notification sounds; **restart Beat Saber to apply**). Works even while the plugin is toggled OFF so you can always flip back without a PC. Full details: `docs/features/in-game-plugin-toggle.md` |
+| `enable_custom_song_replacements` | **`true`** | Gates all bundle redirects |
+| `enable_song_metadata_modification` | **`true`** | Gates song name/artist swaps in the UI |
+| `enable_beatmap_mode_mapping` | **`true`** | Gates extra game modes (OneSaber/NoArrows/90Degree) — OFF serves stock pack bundles + catalog |
+| `enable_song_previews` | **`true`** | Gates **song previews**: highlighting a custom song in the menu plays its own ~10s audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles — either this flag or `enable_beatmap_mode_mapping` keeps the patched pair live |
+| `enable_game_data_extractor` | **`true`** | **M12: the no-dump flow** — the plugin copies the files the pipeline needs (per-slot templates, pack bundles, catalog) out of the game's own data during a normal boot; the web app pulls them into the local `game_data/` cache (a drop-in for `ps4_dump/`). Full details: `docs/features/game-data-extractor.md` |
+| `enable_in_game_plugin_toggle` | **`true`** | **In-game plugin toggle (hardware-confirmed):** arms the Move hotkey — hold the **Move button + trigger together for 2 seconds** to flip the global plugin state (a notification sounds; **restart Beat Saber to apply**). Works even while the plugin is toggled OFF so you can always flip back without a PC. Full details: `docs/features/in-game-plugin-toggle.md` |
 
 On boot the plugin shows one combined toast with its state:
 `BS Deluxe vX (ON) / By Chris Primeish / (6/6 features ON)` — or

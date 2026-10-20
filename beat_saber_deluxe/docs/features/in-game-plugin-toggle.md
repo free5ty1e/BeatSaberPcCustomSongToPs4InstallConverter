@@ -28,7 +28,8 @@ One-time setup (pick either):
   ```
 
 Requires plugin v0.8049 or newer (deployed via `--deploy-plugin` or any `--deploy-full`).
-The flag defaults to **false**, so nothing changes until you enable it.
+Fresh-install defaults (Exp 281): the flag is **ON by default** — a fresh install
+has the hotkey armed from the first boot.
 
 ## Using the hotkey
 
