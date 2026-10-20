@@ -41,12 +41,17 @@ KNOWN_FLAGS = ("enable_plugin", "enable_beatmap_mode_mapping",
 
 @dataclass
 class ReadResult:
-    """A read that can fail loudly — never collapse failure into emptiness."""
+    """A read that can fail loudly — never collapse failure into emptiness.
+    `absent` (Exp 280e): the file legitimately does not exist — the clean-
+    slate state (decisive 550), ok=True. Readers may transform `data`; the
+    absent flag must survive the transformation so state consumers can tell
+    'empty because clean' from 'empty counts from an empty file'."""
 
     ok: bool = False
     data: dict | None = None
     error: str = ""
     raw_bytes: int = 0
+    absent: bool = False
 
 
 def _ps4_endpoint() -> tuple[str, str, int]:
@@ -109,9 +114,26 @@ def _extract_json_object(text: str) -> dict | None:
     return None
 
 
+def _looks_absent(text: str) -> bool:
+    """A decisive 'file does not exist' answer from the FTP server — the
+    CLEAN-SLATE case (after Clear PS4, or before first use). NOT a failure.
+    Exp 280d: the user's post-clear console showed every state read as an
+    error ("Access failed: 550 … File unavailable") when it was actually the
+    correct, healthy, empty state. Signatures: the 550 status, 'no such
+    file', 'file unavailable'."""
+    low = text.lower()
+    return ("550" in text or "no such file" in low
+            or "file unavailable" in low)
+
+
 def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
     """
     Banner-free JSON read from the PS4 (the one transport, everywhere).
+
+    Absent files are a VALID state: after Clear PS4 (or before first use)
+    redirects/features/metadata legitimately do not exist — a decisive 550
+    returns ok=True with data=None (the clean-slate truth), NOT an error
+    (Exp 280d). Only genuine failures (connectivity, parse) return ok=False.
 
     Retry policy (Exp 263 finding): retries exist for genuine connection
     FLAKES (transfer drops mid-file) — a fast, decisive "No route to host"
@@ -137,6 +159,11 @@ def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
                                       raw_bytes=len(text))
                 last_err = f"parse failed (attempt {attempt})"
             else:
+                # Decisive file-absent (550): the clean-slate state — a valid
+                # answer, never retried, never an error (Exp 280d/280e).
+                if _looks_absent(out):
+                    return ReadResult(ok=True, data=None, error="",
+                                      absent=True)
                 last_err = out.strip().splitlines()[-1] if out.strip() else f"lftp rc={rc}"
                 # Connectivity refusal (host down/unreachable): dead host,
                 # not a flake — further attempts cannot succeed and each one
@@ -149,9 +176,14 @@ def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
 
 
 def list_afr_dir() -> ReadResult:
-    """List the AFR title dir with sizes — the Test-Connection payload."""
+    """List the AFR title dir with sizes — the Test-Connection payload.
+    An absent dir (post-Clear-PS4) is the clean-slate state, not an error
+    (Exp 280d): ok=True with an empty listing."""
     host, user_part, port = _ps4_endpoint()
     rc, out = _run_lftp(host, user_part, port, [f"ls {AFR_TITLE_DIR}"])
+    if _looks_absent(out):
+        return ReadResult(ok=True, data={"files": {}, "count": 0,
+                                        "absent": True})
     if rc != 0 or not out.strip():
         return ReadResult(ok=False, error=out.strip() or "empty listing")
     files: dict[str, int] = {}
@@ -164,7 +196,8 @@ def list_afr_dir() -> ReadResult:
             except ValueError:
                 continue
     if not files:
-        return ReadResult(ok=False, error="no parsable entries")
+        return ReadResult(ok=True, data={"files": {}, "count": 0,
+                                        "absent": True})
     return ReadResult(ok=True, data={"files": files, "count": len(files)})
 
 

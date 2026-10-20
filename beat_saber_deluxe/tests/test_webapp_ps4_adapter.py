@@ -172,3 +172,84 @@ class TestRedirectsSummary:
         assert res.data["song_count"] == 2
         assert res.data["pack_count"] == 1
         assert res.data["catalog_redirect_present"] is True
+
+
+class TestAbsentFileIsCleanSlate:
+    """Exp 280d (user report): after Clear PS4, every state read showed as an
+    ERROR ("Access failed: 550 … File unavailable") when the console was in
+    the CORRECT clean-slate state. A decisive 550 is a valid answer:
+    ok=True + data=None — only genuine failures (connectivity, parse) are
+    ok=False. The state payload reports absent sections + clean_slate=True."""
+
+    def test_550_classified_as_absent_not_error(self, monkeypatch):
+        from adapters import ps4 as ps4_mod
+        def fake_lftp(host, user_part, port, commands, timeout=30):
+            return 1, ("get: Access failed: 550 Requested action not taken. "
+                       "File unavailable. (/data/GoldHEN/AFR/CUSA12878/redirects.json)")
+        monkeypatch.setattr(ps4_mod, "_run_lftp", fake_lftp)
+        res = ps4_mod.fetch_remote_json("/data/GoldHEN/AFR/CUSA12878/redirects.json")
+        assert res.ok is True, "550 (file absent) is the clean-slate state, not an error"
+        assert res.data is None
+        assert res.error == ""
+
+    def test_connection_refused_still_an_error(self, monkeypatch):
+        from adapters import ps4 as ps4_mod
+        def fake_lftp(host, user_part, port, commands, timeout=30):
+            return 1, "get: Connection refused"
+        monkeypatch.setattr(ps4_mod, "_run_lftp", fake_lftp)
+        res = ps4_mod.fetch_remote_json("/data/GoldHEN/AFR/CUSA12878/redirects.json")
+        assert res.ok is False, "a dead host is still an error"
+        assert res.error
+
+    def test_list_afr_absent_dir_is_clean_slate(self, monkeypatch):
+        from adapters import ps4 as ps4_mod
+        def fake_lftp(host, user_part, port, commands, timeout=30):
+            return 1, "ls: Access failed: 550 Requested action not taken. " \
+                      "File unavailable. (/data/GoldHEN/AFR/CUSA12878)"
+        monkeypatch.setattr(ps4_mod, "_run_lftp", fake_lftp)
+        res = ps4_mod.list_afr_dir()
+        assert res.ok is True, "an absent AFR dir is the clean-slate state"
+        assert res.data["count"] == 0 and res.data.get("absent") is True
+
+
+class TestAbsentFlagSurvivesDataTransformation:
+    """Exp 280e: the state endpoint's clean_slate never fired for
+    redirects/features because the READERS transform data=None into empty
+    counts/defaults before the endpoint saw it. The absent flag must ride
+    ON the ReadResult (surviving transformation), not be inferred from data."""
+
+    def test_redirects_summary_carries_absent(self, monkeypatch):
+        from adapters import ps4 as ps4_mod
+        def fake_lftp(host, user_part, port, commands, timeout=30):
+            return 1, ("get: Access failed: 550 Requested action not taken. "
+                       "File unavailable. (redirects.json)")
+        monkeypatch.setattr(ps4_mod, "_run_lftp", fake_lftp)
+        res = ps4_mod.read_redirects_summary()
+        assert res.ok is True
+        assert res.absent is True, "the absent flag must survive the data transformation"
+        assert res.data["total"] == 0  # the summary shape still renders
+
+    def test_features_read_carries_absent(self, monkeypatch):
+        from adapters import ps4 as ps4_mod
+        def fake_lftp(host, user_part, port, commands, timeout=30):
+            return 1, ("get: 550 File unavailable. (features.json)")
+        monkeypatch.setattr(ps4_mod, "_run_lftp", fake_lftp)
+        res = ps4_mod.read_features()
+        assert res.ok is True and res.absent is True
+
+    def test_present_file_absent_false(self, monkeypatch, tmp_path):
+        from adapters import ps4 as ps4_mod
+        local = tmp_path / "f.json"
+        local.write_text('{"redirects": {"BeatmapLevelsData/x": "x_v3.bundle"}}')
+        def fake_lftp(host, user_part, port, commands, timeout=30):
+            # simulate the get writing our local temp — copy from a fixed file
+            import shutil
+            for cmd in commands:
+                if cmd.startswith("get ") and "-o " in cmd:
+                    dst = cmd.split("-o ")[1].strip().strip('"')
+                    shutil.copy(local, dst)
+            return 0, ""
+        monkeypatch.setattr(ps4_mod, "_run_lftp", fake_lftp)
+        res = ps4_mod.read_redirects_summary()
+        assert res.ok is True and res.absent is False
+        assert res.data["song_count"] == 1

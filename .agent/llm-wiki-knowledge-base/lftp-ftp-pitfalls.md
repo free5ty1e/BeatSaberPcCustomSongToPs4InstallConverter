@@ -132,3 +132,17 @@ pack scan.
 - Defense in depth: post-deploy validation pulls every deployed pack bundle
   and checks its actual catalog-scheme CRC against the catalog entry — the
   check that catches any recurrence BEFORE boot, naming the crash signature.
+
+## 10. A decisive 550 (file absent) is the CLEAN-SLATE state, not an error (Exp 280d)
+
+After Clear PS4 (or before first use), `get` of redirects.json/features.json/
+song_metadata.json answers "Access failed: 550 Requested action not taken.
+File unavailable." — which naive readers surface as a read ERROR, painting the
+console's correct empty state as a wall of warnings (the user's live report:
+the Full Loadout and PS4 State tabs both showed ⚠ errors right after Clear).
+
+Classification rule: **550 / "no such file" / "file unavailable" = the file
+legitimately does not exist → `ok=True, data=None`** (never retried, never an
+error). Only genuine failures (connection refused, timeouts, parse errors)
+are `ok=False`. UI corollary: a state reader should render all-absent as an
+explicit "✅ clean slate" verdict — the absence IS the information.

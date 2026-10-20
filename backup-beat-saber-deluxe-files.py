@@ -711,6 +711,14 @@ def clean_ps4():
             (".", "*_v3.bundle"),
             (".", "*_custom_v3.bundle"),
             (".", "*_pack_modes_assets_all_*.bundle"),
+            # M10's PREVIEW-VARIANT pack bundles (Exp 280e: the M10-era deploys
+            # on the user's console were ..._pack_modes_previews_assets_all_…
+            # and SURVIVED a clean — the modes-only pattern didn't match them).
+            (".", "*_pack_modes_previews_assets_all_*.bundle"),
+            # M12 extractor files (requests/status) + its output dir contents.
+            (".", "game_data_requests.txt"),
+            (".", "game_data_status.txt"),
+            ("game_data", "*"),
             (".", "catalog_pack_modes.json"),
             (".", "redirects.json"),
             (".", "song_metadata.json"),

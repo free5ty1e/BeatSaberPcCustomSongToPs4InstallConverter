@@ -69,3 +69,7 @@
 
 **User:** Deploy Plugin smoke test → "❌ Not Found".
 **RCA:** the running server was an Exp-280-era process serving 0.6.14 code, but the ping read the VERSION file at REQUEST time → reported 0.6.15 → looked current → (and would have defeated the launcher's staleness check the same way). **Fix:** import-time capture of all three versions (`_capture_code_versions()`); ping reports the RUNNING code's versions — a stale process now honestly reports its own version → the launcher flags STALE → stop-and-restart. 3 regression tests; stale process killed + fresh verified (route present); the simulation rebuilt + verified. Suite 938/938; ruff clean. KB round-3 lesson recorded with the symptom signature.
+
+## Cycle 5 — Exp 280d/280e: the user's Round-1 findings all fixed
+
+**User:** bundled plugin needs a version number; post-clear errors instead of clean-slate reporting. **Fixed:** 550→absent classification (fetch_remote_json + ReadResult.absent riding through the readers' transformations — the plumbing bug I found while verifying), the explicit "✅ Clean slate" banner, the PRX-banner version extraction (v0.8054 verified live), the backup script's clean pattern gap (5 stale previews-variant bundles survived — + the M12 extractor files added). Two of my own orphaned server instances caught (the 280c capture exposed one honestly). Suite 854+93 gated; ruff clean. The simulation rebuilt + running on 8799; clean_slate=True verified against the real console.

@@ -1369,17 +1369,26 @@ async function refreshPs4() {
     const j = await api("/api/ps4/state");
     const rows = [];
     const red = j.redirects, feat = j.features, meta = j.song_metadata;
-    rows.push(["PS4 redirects", red.ok
-      ? `${red.song_count} song redirects · ${red.pack_count} pack redirects · catalog redirect ${red.catalog_redirect_present ? "present" : "absent"}`
-      : `couldn't read (${red.error})`]);
-    rows.push(["Feature flags", feat.ok
-      ? Object.entries(feat).filter(([k]) => k.startsWith("enable_"))
-          .map(([k, v]) => `${k}=${v ? "ON" : "OFF"}`).join(" · ")
-      : `couldn't read (${feat.error})`]);
-    rows.push(["Song metadata", meta.ok
-      ? `${meta.custom_song_count} custom song names deployed`
-      : `couldn't read (${meta.error})`]);
-    el.innerHTML = "<table>" + rows.map(([k, v]) =>
+    const absentNote = "not present — clean slate (fresh install / after Clear PS4)";
+    rows.push(["PS4 redirects", !red.ok
+      ? `couldn't read (${red.error})`
+      : red.absent ? absentNote
+      : `${red.song_count} song redirects · ${red.pack_count} pack redirects · catalog redirect ${red.catalog_redirect_present ? "present" : "absent"}`]);
+    rows.push(["Feature flags", !feat.ok
+      ? `couldn't read (${feat.error})`
+      : feat.absent ? absentNote
+      : Object.entries(feat).filter(([k]) => k.startsWith("enable_"))
+          .map(([k, v]) => `${k}=${v ? "ON" : "OFF"}`).join(" · ")]);
+    rows.push(["Song metadata", !meta.ok
+      ? `couldn't read (${meta.error})`
+      : meta.absent ? absentNote
+      : `${meta.custom_song_count} custom song names deployed`]);
+    const banner = j.clean_slate
+      ? `<div class="result good" style="margin-bottom:8px">✅ <b>Clean slate</b> — no BSD state on the console.
+           This is the correct state for a fresh install or right after Clear PS4;
+           state files appear here as you deploy.</div>`
+      : "";
+    el.innerHTML = banner + "<table>" + rows.map(([k, v]) =>
       `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("") + "</table>";
   } catch (e) {
     el.innerHTML = `<span class='result bad'>Couldn't read PS4 state: ${esc(e.message)}</span>`;

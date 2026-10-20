@@ -85,8 +85,11 @@ def _pipeline_version() -> str:
 
 
 def _plugin_version() -> str:
-    """Parse #define PLUGIN_VERSION from the plugin source (or 'deployed' in
-    a release zip, where src/ is absent — the bundled .prx is the artifact)."""
+    """Parse #define PLUGIN_VERSION from the plugin source; in a release
+    extraction (no src/), read the version out of the BUNDLED PRX instead —
+    the binary carries its boot-banner string ('=== BS Deluxe v0.8054
+    started ==='), so release users still see a real version number (user
+    request, Exp 280d — 'bundled' told them nothing)."""
     src = paths.PROJECT_DIR / "src" / "main.cpp"
     try:
         for line in src.read_text(encoding="utf-8").splitlines():
@@ -94,7 +97,16 @@ def _plugin_version() -> str:
                 return line.split('"')[1]
     except OSError:
         pass
-    return "bundled"
+    prx = paths.PROJECT_DIR / "plugins" / "beat_saber_deluxe.prx"
+    try:
+        import re
+        m = re.search(rb"BS Deluxe v(\d+\.\d+) started",
+                      prx.read_bytes())
+        if m:
+            return "v" + m.group(1).decode()
+    except OSError:
+        pass
+    return "bundled (no version found)"
 
 
 # Capture at import (Exp 280c): after the last version-reader definition.
@@ -220,26 +232,42 @@ def ps4_test():
 
 @app.get("/api/ps4/state")
 def ps4_state():
-    """Dashboard payload: redirects summary, features, metadata counts."""
+    """Dashboard payload: redirects summary, features, metadata counts.
+    Exp 280d: absent files (decisive 550) are the CLEAN-SLATE state — the
+    payload marks each section absent and sets clean_slate=True when all
+    three are, so the UI can say 'clean slate' instead of erroring."""
     payload: dict = {}
     red = ps4.read_redirects_summary()
     payload["redirects"] = {"ok": red.ok, "error": red.error,
+                            "absent": bool(getattr(red, "absent", False)),
                             **(red.data or {})}
     feat = ps4.read_features()
+    feat_absent = bool(getattr(feat, "absent", False))
     payload["features"] = {"ok": feat.ok, "error": feat.error,
-                           **(feat.data or {})}
+                          "absent": feat_absent,
+                          **({} if feat_absent else (feat.data or {}))}
     meta = ps4.read_song_metadata()
     if meta.ok and meta.data:
         names = (meta.data.get("song_names") or {})
         payload["song_metadata"] = {
-            "ok": True,
+            "ok": True, "absent": False,
             "custom_song_count": sum(
                 1 for v in names.values()
                 if isinstance(v, str) and v and " / " in v),
             "entries": names,
         }
+    elif meta.ok:
+        payload["song_metadata"] = {"ok": True, "absent": True,
+                                    "custom_song_count": 0, "entries": {}}
     else:
-        payload["song_metadata"] = {"ok": False, "error": meta.error}
+        payload["song_metadata"] = {"ok": False, "absent": False,
+                                    "error": meta.error}
+    payload["clean_slate"] = all([
+        payload["redirects"].get("absent", False),
+        payload["features"].get("absent", False),
+        payload["song_metadata"].get("absent", False),
+    ]) and payload["redirects"]["ok"] and payload["features"]["ok"] \
+        and payload["song_metadata"]["ok"]
     return payload
 
 

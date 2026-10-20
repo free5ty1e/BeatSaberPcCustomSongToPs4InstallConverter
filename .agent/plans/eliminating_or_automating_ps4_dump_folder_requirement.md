@@ -354,3 +354,57 @@ version report and stops+restarts them by default.
 
 **PHASE 1 STATUS: awaiting the user's run.** (Console on; v0.8054 was
 harmlessly deployed during endpoint verification — Phase 0's Clear resets it.)
+
+## 2026-10-19 · M12.4 PRE-FLIGHT (before the guided run)
+
+Console state before Phase 0 (FTP-verified): PS4 on/reachable · AFR 70 entries
+(the full 47-song / 5-pack loadout + catalog + configs) · plugin v0.8054
+(105,568 B, the endpoint-verification deploy) present + plugins.ini entry ·
+dev webapp on 8765 killed (only the simulated-release app should be in play).
+Backup target: this entire loadout.
+
+### RUN LOG — Phase 0 + Phase 1 steps 1-4 (the guided round)
+
+### RUN LOG — Round 1 results + findings (Exps 280d/280e)
+
+**Phase 0 outcome:** Backup ✓ (`ps4_backups/bsd_backup_20261019_200413.zip`)
++ clean ✓ — plugin removed, plugins.ini entry removed, state files removed.
+The user then hit the wall of 550 "errors" on the state surfaces.
+
+**FINDING 1 (user report):** absent files rendered as errors — the clean
+console is the CORRECT state. **Fixed (280d):** decisive 550s classify as
+`ok=True, data=None` (`_looks_absent`); the PS4 State tab shows an explicit
+"✅ Clean slate" banner + per-row "not present" notes; the Loadout warnings
+vanish on a clean console. **Plumbing bug found while verifying (280e):** the
+readers transform `data=None` → empty counts, so the endpoint's data-is-None
+absent check never fired for redirects/features — the absent flag now rides
+ON the `ReadResult`. Verified live: `clean_slate: True` with all three
+`absent=True` against the user's real console.
+
+**FINDING 2 (user request):** the bundled plugin reported "bundled" — no
+version. **Fixed (280d):** `_plugin_version()` extracts the version from the
+bundled PRX's boot banner — the ping + badge now read **v0.8054** (verified
+live from the release-test extraction).
+
+**FINDING 3 (console forensics after the clean):** 5 stale
+`*_pack_modes_previews_assets_all_*` bundles (dated Oct 17) SURVIVED the
+clean — the backup script's pattern list only knew the modes variant.
+**Fixed (280e):** the clean list gains the previews-variant pattern + M12's
+extractor files (`game_data_requests.txt`, `game_data_status.txt`,
+`game_data/*`). **The console still holds those 5 stale bundles — a re-clean
+with the fixed script (Backup tab, Clean PS4 checked) removes them.**
+
+**FINDING 4 (my own process hygiene, twice):** rebuilding the simulation
+folder under a running webapp instance orphans the process (serves old code
+from a deleted CWD). The 280c import-time version capture now exposes these
+honestly (the stale instance reported 0.6.15 while the code was 0.6.16 —
+the fix working as designed). Also: never combine pkill with a launch in
+one compound command (self-match).
+
+**Suite:** 854 passed + 93 hardware-gated skips (the local pack_modes_bundles/
+fixtures were wiped by the Exp-227 local-clean — by design; they regenerate
+on the next build). ruff clean. webapp 0.6.16.
+
+**NEXT (user):** re-run Backup + Clean PS4 (now truly removes the stale
+bundles) → the PS4 State tab should show "✅ Clean slate" → resume Phase 1
+steps 1-4 from the rebuilt /workspace/release-test app (running now on 8799).
