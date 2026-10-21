@@ -481,3 +481,70 @@ Deploy plugin — now ships v0.8055) → boot once (the extractor is ON by
 default; expect the "BSD: game data ready" notification + the auto-polling
 status flipping to "all extracted") → Pull → Use the extracted cache →
 deploy a song.
+
+### RUN LOG — Round 4 (M12.4 MILESTONE): 🎉 THE NO-DUMP FLOW WORKS END-TO-END ON REAL HARDWARE
+
+**User run (all steps from the simulated release, console previously cleared):**
+re-deployed the plugin (v0.8055) → requested lizzo → **booted once** → saw
+the extraction-success indication → **Pull** (98MB, 11 files landed in
+release-test/game_data/) → **Use the extracted cache** (config switched).
+"Tested, and it worked just as you said it would."
+
+**Console-log verification (archived
+`v0.8055_extractor_first_success_boot.txt`, cleared from the console):**
+- `=== BS Deluxe v0.8055 started ===` + **all flags ON** (the Exp-281 defaults — including the toast's 6/6)
+- `[EXTRACT] game-data extractor ARMED` → **all 11 files extracted on the
+  first v0.8055 boot: 101,705,535 bytes (~102MB), 0 errors, all served from
+  /app0** — every `[EXTRACT] ✓` line itemized (9 lizzo templates + the lizzo
+  pack bundle + catalog.json)
+- `[EXTRACT] run complete: 11 new (… bytes), 0 already done, 0 errors —
+  game_data/ is ready for the web app to pull` (the completion notification
+  the user saw/heard)
+- The M11 GOT hijacks also installed on the same boot (hotkey + extractor coexist)
+
+**Filesystem verification:** the local cache holds the full mirror-layout
+(11 files, 98MB); `game_dump_dir` → the cache; the console's AFR root holds
+exactly requests.txt + status.txt + game_data/ (and the 5 stale
+preview-variant bundles from the earlier clean-pattern bug are gone — the
+fixed clean worked).
+
+**Also answered this round:** the version-file question — the 281b fixes
+folded into the unreleased 0.5365/v0.8055/0.6.17 (pre-commit fold policy),
+and the VERSION file's trailing newline was lost in my bump-revert dance
+(restored).
+
+**REMAINING for Phase 1:** step 8 — **the cache-only song deploy** (a
+BeatSaver song → a lizzo slot; the build must use ONLY the cache: template
+from game_data, pack bundle from game_data, catalog from game_data) → step
+9 (play + `--verify-ps4`). Then Phase 2: the identical flow from a real
+tagged release build.
+
+### RUN LOG — Round 5 (Exp 281c): the cache-only song deploy hit two fresh-console bugs (both fixed)
+
+**User run:** deployed "Weezer – Buddy Holly" (BeatSaver 4373a) → target
+2BeLoved (a lizzo slot) from the simulated release. The BUILD worked perfectly
+cache-only (template loaded from game_data, PCM16 audio, 15 mode beatmaps
+generated, blob built) — the DEPLOY then failed twice:
+
+1. **"⚠️ Bundle deploy UNVERIFIED — not found in listing"** — a FALSE
+   NEGATIVE: console forensics confirmed the 28MB bundle IS on the console at
+   the exact built size. GoldHEN's FTPD ends ls lines with the FULL PATH, not
+   the basename — the verify's basename equality never matched. Fixed: match
+   the basename within the last field.
+2. **"❌ Could not read the PS4's redirects.json while scoping — Refusing to
+   continue"** — the Exp-246 pull-before-push guard treating ABSENT as
+   FAILED. A decisive 550 is the clean-slate state: a fresh console has NO
+   customs to preserve, so the first-song scope is exactly the target + its
+   pack. Fixed: the shared `_ps4_output_looks_absent` classifier — absent →
+   empty state → PROCEED (the refusal now fires only on genuine failures).
+   Same fix applied to the flags reader (the Apply on a clean console).
+
+**Suite:** 861 passed + 93 gated; ruff clean; 4 new tests (the classifier,
+the scoping order pin, the flags-550→None path, the verify-parser pin).
+Simulation rebuilt with the fixes.
+
+**NEXT (user):** re-run the exact same deploy (the app on 8799 is current) —
+it should now complete end-to-end: bundle → plugin → scope (clean console →
+target+pack) → pack patching from the CACHE → catalog from the CACHE →
+fresh redirects.json → features (defaults) → validation PASSED. Then play +
+verify.

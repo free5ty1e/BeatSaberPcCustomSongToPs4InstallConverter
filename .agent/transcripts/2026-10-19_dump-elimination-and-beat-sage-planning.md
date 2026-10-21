@@ -81,3 +81,11 @@
 ## Cycle 7 — Exp 281b: request-succeeded-but-looked-failed
 
 **User:** request flow errored "PS4 unreachable"; wants Select-all + PS4/web-app feedback. **RCA (live):** the request SUCCEEDED (the 11-file manifest is on the console); the status reader misclassified absent-as-unreachable (pre-280d code path) + the invalid net:connect-timeout variable noise. The dir-missing theory disproven (malformed ls -la probe) — the mkdir bootstrap stays as a safety net. **Added:** absent-classification in the game-data readers (verified live: pending: 11), Select all/none + size estimates, the 5s auto-poll with the "⏳ boot the game" state, the plugin's "BSD: game data ready" notification. Suite 857+93; ruff clean; simulation rebuilt + live-verified.
+
+## Cycle 8 — Exp 282: 🎉 the no-dump flow hardware-validated end-to-end
+
+The user ran steps 1-7 from the simulation and it all worked: v0.8055 deployed → request → boot (the extractor: 11 files / 101.7MB / 0 errors, all from /app0; the notification fired; the web app auto-flipped to "all extracted") → Pull (98MB into release-test/game_data) → Use (game_dump_dir switched). Console log archived + cleared; the stale bundles confirmed gone. The VERSION-file question: pre-commit fold policy + the trailing-newline artifact (restored). Remaining: the cache-only song deploy (the proof build) + Phase 2 from a real release build.
+
+## Cycle 9 — Exp 281c: the cache-only song deploy's two fresh-console bugs fixed
+
+The user's Buddy Holly → 2BeLoved deploy built perfectly cache-only but failed twice on deploy: (1) the upload verify's basename equality never matched GoldHEN's full-path ls lines (FALSE "UNVERIFIED" — the 28MB bundle was verifiably on the console); (2) the Exp-246 scoping guard treated ABSENT redirects.json as a failed read and refused — a decisive 550 is the clean-slate state (no customs to preserve → proceed with target+pack scope). Fixed both + the flags reader's same class (550 → defaults); shared `_ps4_output_looks_absent`; 4 tests; suite 861+93; ruff clean; simulation rebuilt.

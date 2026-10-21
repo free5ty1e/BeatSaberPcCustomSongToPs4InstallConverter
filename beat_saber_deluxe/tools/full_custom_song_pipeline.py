@@ -1309,10 +1309,15 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
                             [f"ls {_ftp_quote(remote_path)}"], timeout=30)
     listed_size = None
     if rc == 0 and out:
-        # lftp ls line: "perms ... <size> <date> <name>" — size is field 4
+        # lftp ls line: "perms ... <size> <date> <name>" — size is field 4.
+        # Exp 281c: GoldHEN's FTPD ends the line with the FULL PATH, not the
+        # basename — the old basename equality never matched and every upload
+        # reported UNVERIFIED (false negative; the user's 28MB bundle was
+        # verifiably on the console). Match the basename within the last field.
+        remote_name = remote_path.split('/')[-1]
         for line in out.splitlines():
             parts = line.split()
-            if len(parts) >= 9 and parts[-1] == remote_path.split('/')[-1]:
+            if len(parts) >= 9 and remote_name in parts[-1]:
                 try:
                     listed_size = int(parts[4])
                 except ValueError:
@@ -2408,6 +2413,18 @@ def build_plugin(project_root: str, debug: bool = False) -> str:
 
     log.info(f"  ✅ Plugin built: {prx_path} ({os.path.getsize(prx_path)} bytes)")
     return prx_path
+
+
+def _ps4_output_looks_absent(output: str) -> bool:
+    """A decisive 'file does not exist' answer from the FTP server — the
+    CLEAN-SLATE state (Exp 281c): after Clear PS4 (or before first use) the
+    state files legitimately do not exist. NEVER treat this as a read failure
+    (the deploy-scoping refusal on a fresh console — the user's live report:
+    a clean console could not deploy its first song). Signatures: 550,
+    'no such file', 'file unavailable'."""
+    low = (output or "").lower()
+    return ("550" in (output or "") or "no such file" in low
+            or "file unavailable" in low)
 
 
 def _ftp_quote(path: str) -> str:
@@ -4418,6 +4435,12 @@ def _download_features_from_ps4(config: dict) -> dict | None:
         if result.returncode == 0:
             # reachable, but the file is absent — clean slate, not an error
             return None
+        if _ps4_output_looks_absent(
+                (getattr(result, "stdout", "") or "")
+                + (getattr(result, "stderr", "") or "")):
+            # Exp 281c: a decisive 550 (absent) is the clean-slate state —
+            # apply defaults, never abort (the flags Apply on a fresh console)
+            return None
         raise RuntimeError(
             f"could not read features.json from the PS4 (lftp rc={result.returncode})")
 
@@ -6070,6 +6093,10 @@ Examples:
             # (READ-FAILED rendered as empty-truth — the Exp 237/239/240
             # lesson, violated in the pipeline itself). The 10:34 deploy wiped
             # 46 of 47 song redirects this way.
+            # Exp 281c: ABSENT is not FAILED. A decisive 550 (the file does
+            # not exist) is the clean-slate state: a fresh console has NO
+            # customs to preserve, so the scope is exactly the target song +
+            # its pack. Only a genuine read failure aborts.
             ps4_redirects = None
             if result.returncode == 0 and os.path.exists(local_redirect_path):
                 try:
@@ -6081,6 +6108,13 @@ Examples:
                     ps4_redirects = json.loads(raw[start:end + 1]).get('redirects', {})
                 except Exception:
                     ps4_redirects = None
+            elif _ps4_output_looks_absent(
+                     (getattr(result, "stdout", "") or "")
+                     + (getattr(result, "stderr", "") or "")):
+                ps4_redirects = {}
+                log.info("  ℹ️  No redirects.json on the PS4 (clean console) — "
+                         "scoping to the target song + its pack (nothing else "
+                         "exists to preserve)")
             if ps4_redirects is None:
                 log.error("❌ Could not read the PS4's redirects.json while scoping "
                           "this single-song deploy. Refusing to continue: without "

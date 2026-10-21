@@ -1,6 +1,11 @@
 # Pipeline Changelog
 
 ## v0.5365 (2026-10-19)
+### Fixed — Exp 281c (the user's cache-only song deploy failed on a clean console — two real fresh-console bugs)
+- **Absent redirects.json is the clean-slate state, not a read failure:** the single-song deploy scoping (the Exp-246 pull-before-push guard) refused to continue when redirects.json was absent — but a decisive 550 means "no customs exist to preserve," so a fresh console's FIRST song deploy must proceed (scope = target song + its pack). The refusal now fires only on genuine read failures. Same fix for the flags reader (`_download_features_from_ps4`: 550 → None → defaults instead of RuntimeError — the flags Apply on a clean console). Shared classifier `_ps4_output_looks_absent`. 4 tests.
+- **The bundle-deploy verification false negative:** GoldHEN's FTPD ends `ls` lines with the FULL PATH, not the basename — the verify's basename equality never matched, so every upload reported "⚠️ UNVERIFIED" while the file sat on the console (the user's 28MB bundle was verifiably present). The parser now matches the basename within the last field.
+
+## v0.5365 (2026-10-19)
 ### Changed — Fresh-install defaults (Exp 281, user directive)
 - **Fresh-console write robustness (Exp 281b):** `_ensure_afr_title_dir()` — `mkdir -p -f` on the AFR title dir before any AFR write (request puts, features.json deploys, bundle uploads). The clean normally leaves the dir, but the bootstrap makes every AFR write robust against its absence. 2 regression tests (the mkdir command + its ordering before the put).
 - **`DEFAULT_FEATURES` is now ALL-ON** (previews, the M11 toggle, and the M12 extractor flip to True). A fresh install works out of the box; every flag surface (the plugin's absent-file defaults, this dict, the webapp's DEFAULTS_TRUE/KNOWN_FLAGS, the CI-generated features.json template) now carries the same truth.

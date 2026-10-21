@@ -286,3 +286,67 @@ class TestExtractorCompletionNotification:
         assert "BSD: game data ready" in code
         assert "if (new_count > 0)" in code, \
             "the notification must fire only when files were actually extracted"
+
+
+class TestCleanConsoleDeployScoping:
+    """Exp 281c (the user's cache-only song deploy failed on a clean console):
+    absent redirects.json is the clean-slate state, NOT a read failure — a
+    fresh console's FIRST song deploy must scope to the target + its pack and
+    PROCEED (the Exp-246 refusal fires only on genuine read failures)."""
+
+    def test_absent_output_classifier(self):
+        fp = _pipeline()
+        assert fp._ps4_output_looks_absent(
+            "get: Access failed: 550 Requested action not taken. "
+            "File unavailable. (/data/GoldHEN/AFR/CUSA12878/redirects.json)")
+        assert not fp._ps4_output_looks_absent("get: Connection refused")
+        assert not fp._ps4_output_looks_absent("")
+
+    def test_scoping_proceeds_on_absent(self, monkeypatch, caplog):
+        """The single-song scoping read: 550 → empty redirects → proceeds."""
+        import subprocess
+
+        class R:
+            def __init__(self):
+                self.returncode = 1  # lftp non-zero on 550
+                self.stdout = ("get: Access failed: 550 Requested action not taken. "
+                               "File unavailable. (redirects.json)")
+                self.stderr = ""
+        monkeypatch.setattr(subprocess, "run", lambda *a, **k: R())
+        # call the scoping block indirectly: deploy_slots is heavy; assert the
+        # classifier + the log message wiring at the source level instead.
+        src = open(os.path.join(PROJECT_ROOT, "tools", "full_custom_song_pipeline.py"),
+                   encoding="utf-8").read()
+        assert "_ps4_output_looks_absent(" in src and "clean console" in src
+        assert "No redirects.json on the PS4 (clean console)" in src
+        # and the refusal path must come AFTER the absent check (the note text
+        # lives INSIDE the absent branch; the refusal follows it in the flow)
+        note_pos = src.find("No redirects.json on the PS4 (clean console)")
+        refuse_pos = src.find("Could not read the PS4's redirects.json while scoping")
+        assert 0 < note_pos < refuse_pos
+
+    def test_features_reader_550_returns_none(self, monkeypatch):
+        """The flags Apply on a clean console: 550 → None → defaults."""
+        fp = _pipeline()
+        import subprocess
+
+        class R:
+            def __init__(self):
+                self.returncode = 1
+                self.stdout = "550 File unavailable. (features.json)"
+                self.stderr = ""
+        monkeypatch.setattr(subprocess, "run", lambda *a, **k: R())
+        cfg = _config()
+        result = fp._download_features_from_ps4(cfg)
+        assert result is None  # absent → defaults, no raise
+
+    def test_verify_parser_matches_full_path_listings(self):
+        """GoldHEN FTPD ends ls lines with the FULL PATH — the verify's
+        basename match must handle it (the user's successful 28MB upload
+        reported UNVERIFIED)."""
+        src = open(os.path.join(PROJECT_ROOT, "tools", "full_custom_song_pipeline.py"),
+                   encoding="utf-8").read()
+        assert "remote_name in parts[-1]" in src, \
+            "the verify must match the basename WITHIN the last field"
+        # and the old exact-equality form must be gone
+        assert "parts[-1] == remote_path.split('/')[-1]" not in src
