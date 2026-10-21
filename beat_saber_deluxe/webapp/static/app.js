@@ -1657,6 +1657,22 @@ async function gamedataRefresh() {
       html += `Local cache: empty — pull after the boot step.`;
     }
     el.innerHTML = html;
+    // Step highlighting (the big numbered guide): 1=request, 2=boot watch,
+    // 3=pull, 4=use, 5=deploy. The first unmet step is ACTIVE; met ones DONE.
+    const mark = (id, state) => {
+      const stepEl = $("gamedata-step-" + id);
+      if (stepEl) { stepEl.classList.toggle("active", state === "active");
+                    stepEl.classList.toggle("done", state === "done"); }
+    };
+    const markDone = (id) => mark(id, "done");
+    const markActive = (id) => mark(id, "active");
+    [1,2,3,4,5].forEach(i => mark(i, ""));
+    const cacheActive = c.cache_is_active && c.files > 0;
+    if (cacheActive) { [1,2,3,4].forEach(markDone); markActive(5); }
+    else if (c.files > 0 && st.requests.length && nDone >= nReq) { [1,2,3].forEach(markDone); markActive(4); }
+    else if (nDone > 0) { [1,2].forEach(markDone); markActive(3); }
+    else if (st.requests.length > 0) { markDone(1); markActive(2); }
+    else markActive(1);
     // Auto-poll while an extraction is pending (requests on the console,
     // nothing extracted yet) — the web app is "listening": the boot's
     // extraction shows up here within seconds of the game finishing it.
@@ -1730,8 +1746,44 @@ async function gamedataRequest() {
 
 async function gamedataPull() {
   const res = await fetch("/api/jobs/game-data-pull", {method: "POST"});
-  await gamedataWatchJob(res);
-  setTimeout(gamedataRefresh, 2000);
+  const start = await res.json();
+  if (!start.ok) {
+    $("gamedata-status").innerHTML = "❌ " + esc(start.detail || "could not start");
+    return;
+  }
+  // Progress bar: local cache files vs the console's extracted count.
+  const wrap = $("gamedata-pull-progress-wrap"),
+        fill = $("gamedata-pull-progress-fill"),
+        label = $("gamedata-pull-progress-label");
+  if (wrap) { wrap.hidden = false; }
+  let idx = 0;
+  for (;;) {
+    await new Promise(r => setTimeout(r, 900));
+    try {
+      const [j, stNow] = await Promise.all([
+        fetch(`/api/jobs/lines?after=${idx}`).then(r => r.json()),
+        fetch("/api/game-data/state").then(r => r.json()),
+      ]);
+      if (j.lines && j.lines.length) {
+        $("gamedata-status").innerHTML = `<pre style="white-space:pre-wrap">` +
+          esc(j.lines.slice(-4).join("\n")) + `</pre>`;
+      }
+      idx = j.index || idx;
+      const total = (stNow.extracted || []).length;
+      const have = (stNow.cache || {}).files || 0;
+      const pct = total > 0 ? Math.min(100, Math.round(have / total * 100)) : 0;
+      if (fill) fill.style.width = pct + "%";
+      if (label) label.textContent = have + " / " + total + " files (" + pct + "%)";
+      if (!j.running && j.job) {
+        if (label) label.textContent = j.job.exit_code === 0
+          ? "✅ complete (" + have + " files)"
+          : "❌ failed (exit " + j.job.exit_code + ")";
+        if (j.job.exit_code === 0 && fill) fill.style.width = "100%";
+        break;
+      }
+    } catch (e) { /* transient */ }
+  }
+  setTimeout(gamedataRefresh, 1500);
 }
 
 // Watch a game-data job: poll the shared job lines, show tail + verdict.

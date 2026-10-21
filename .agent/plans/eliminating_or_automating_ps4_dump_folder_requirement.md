@@ -548,3 +548,40 @@ it should now complete end-to-end: bundle → plugin → scope (clean console �
 target+pack) → pack patching from the CACHE → catalog from the CACHE →
 fresh redirects.json → features (defaults) → validation PASSED. Then play +
 verify.
+
+### RUN LOG — Round 6 (Exp 281d): pack-modes never followed the cache + the redirects refusal blocked clean consoles + the big numbered walkthrough
+
+**User reports:** (1) the dump procedure needs BIG obvious steps (1 request, 2
+launch+watch for notification, 3 pull with a **progress bar**, 4 save the cache,
+5 deploy); (2) the fresh-from-clean deploy failed again at two deeper layers.
+
+**The two pipeline bugs (both real, both fixed in the 0.5365 fold):**
+1. **`pack_modes.dump_dir` never followed `game_dump_dir`** — the "Use the
+   extracted cache" switch repointed only game_dump_dir; the pack-modes
+   builder kept hunting `ps4_dump/CUSA12878-patch` → "⚠️ Dump dir missing —
+   cannot build pack mode bundles" → the pack patch (mode buttons + previews)
+   silently skipped. Fix: unpinned pack_modes.dump_dir now follows
+   game_dump_dir at config load (a pinned value is never rewritten).
+2. **The redirect-config deploy refused absent consoles with a local file** —
+   absent (550) and failed reads were conflated into one `None`. Fix:
+   `_download_redirect_from_ps4` returns None ONLY for decisive absent, RAISES
+   RuntimeError on genuine failures; the caller deploys the freshly-built
+   local set on a clean console and refuses only on unknown state. The
+   Exp-246 anti-wipe gate is preserved and now stronger (the failure is explicit).
+
+**The walkthrough (webapp 0.6.18):** Option A is now five numbered step cards
+with the active step highlighted — STEP 1 Request (packs + Select all/none +
+size estimate), STEP 2 Launch Beat Saber (watch for the "BSD: game data ready"
+notification; the page auto-updates), STEP 3 Pull with a **live progress bar**
+(local/extracted file count, updating every second of the mirror), STEP 4 Save
+the cache, STEP 5 Deploy songs 🎉. 5 pipeline/web tests; suite 867+93 gated;
+ruff clean.
+
+**Console state:** the user's fresh run extracted **23 files** (23/23 done on
+the console). The simulation rebuild for these fixes cleared the LOCAL cache
+(my rm -rf — transparently noted) — the console still holds everything, so the
+next Pull re-fetches in ~a minute and the progress bar gets its first live
+run immediately.
+
+**NEXT (user):** Pull (STEP 3) → Use (STEP 4) → re-run the deploy (it now
+builds the pack patch from the cache AND passes the redirects step).

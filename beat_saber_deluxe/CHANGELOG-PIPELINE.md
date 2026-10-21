@@ -1,6 +1,11 @@
 # Pipeline Changelog
 
 ## v0.5365 (2026-10-19)
+### Fixed — Exp 281d (the user's cache-only deploy: pack-modes never followed the cache + the redirects refusal blocked clean consoles)
+- **`pack_modes.dump_dir` follows `paths.game_dump_dir`** unless the user pinned it explicitly — the pack-modes builder reads the same game-data root as the per-song templates (pack bundles + origin catalog), so the game_data cache is a drop-in for both. Previously the "Use the extracted cache" switch repointed only game_dump_dir and deploys logged "Dump dir missing … cannot build pack mode bundles" — the pack patch (mode buttons + previews) silently skipped. 2 tests (follows unpinned; a pinned dir is never rewritten).
+- **Absent redirects.json + a local file = the new state for a clean console.** `_download_redirect_from_ps4` now distinguishes ABSENT (decisive 550 → returns None) from FAILED (raises RuntimeError); the redirect-config deploy treats absent+local as deployable (the local set was just built by this deploy's scoping) and refuses only on genuine failures. The Exp-246 anti-wipe gate is preserved and stronger. 3 tests (absent→None, failure→raise, clean-console+local deploys).
+
+2026-10-19)
 ### Fixed — Exp 281c (the user's cache-only song deploy failed on a clean console — two real fresh-console bugs)
 - **Absent redirects.json is the clean-slate state, not a read failure:** the single-song deploy scoping (the Exp-246 pull-before-push guard) refused to continue when redirects.json was absent — but a decisive 550 means "no customs exist to preserve," so a fresh console's FIRST song deploy must proceed (scope = target song + its pack). The refusal now fires only on genuine read failures. Same fix for the flags reader (`_download_features_from_ps4`: 550 → None → defaults instead of RuntimeError — the flags Apply on a clean console). Shared classifier `_ps4_output_looks_absent`. 4 tests.
 - **The bundle-deploy verification false negative:** GoldHEN's FTPD ends `ls` lines with the FULL PATH, not the basename — the verify's basename equality never matched, so every upload reported "⚠️ UNVERIFIED" while the file sat on the console (the user's 28MB bundle was verifiably present). The parser now matches the basename within the last field.

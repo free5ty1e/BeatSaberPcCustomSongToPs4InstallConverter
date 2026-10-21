@@ -350,3 +350,76 @@ class TestCleanConsoleDeployScoping:
             "the verify must match the basename WITHIN the last field"
         # and the old exact-equality form must be gone
         assert "parts[-1] == remote_path.split('/')[-1]" not in src
+
+
+class TestCacheConfigFollows:
+    """Exp 281d: switching game_dump_dir to the game_data cache must carry
+    pack_modes.dump_dir with it (the pack-modes builder reads the same
+    game-data root: pack bundles + origin catalog). The user's cache-only
+    deploy skipped the pack patch ("Dump dir missing") because pack-modes
+    stayed at the old dump path."""
+
+    def test_pack_modes_dump_dir_follows_game_dump_dir(self, tmp_path):
+        import json as _json
+        cfg_file = tmp_path / "ps4_config.json"
+        cfg_file.write_text(_json.dumps({
+            "ps4": {"ip": "1.2.3.4"},
+            "paths": {"game_dump_dir": str(tmp_path / "game_data")},
+            "pack_modes": {"build_dir": "./pack_modes_bundles"},
+        }))
+        fp = _pipeline()
+        cfg = fp.load_config(str(cfg_file))
+        assert cfg["pack_modes"]["dump_dir"] == cfg["paths"]["game_dump_dir"], \
+            "unpinned pack_modes.dump_dir MUST follow game_dump_dir"
+
+    def test_pinned_pack_modes_dump_dir_stays(self, tmp_path):
+        import json as _json
+        pinned = str(tmp_path / "my-own-dump")
+        cfg_file = tmp_path / "ps4_config.json"
+        cfg_file.write_text(_json.dumps({
+            "ps4": {"ip": "1.2.3.4"},
+            "paths": {"game_dump_dir": str(tmp_path / "game_data")},
+            "pack_modes": {"dump_dir": pinned},
+        }))
+        fp = _pipeline()
+        cfg = fp.load_config(str(cfg_file))
+        assert cfg["pack_modes"]["dump_dir"] == pinned, \
+            "an explicitly pinned dump_dir must never be rewritten"
+
+
+class TestCleanConsoleRedirectDeploy:
+    """Exp 281d: absent redirects.json + a freshly-built local file = the
+    local file IS the new state for an empty console (deploy it); a genuine
+    read failure still refuses (Exp 246)."""
+
+    def test_reader_absent_returns_none(self, monkeypatch):
+        import subprocess
+        class R:
+            def __init__(self):
+                self.returncode = 1
+                self.stdout = "get: 550 File unavailable. (redirects.json)"
+                self.stderr = ""
+        monkeypatch.setattr(subprocess, "run", lambda *a, **k: R())
+        fp = _pipeline()
+        assert fp._download_redirect_from_ps4(_config()) is None
+
+    def test_reader_genuine_failure_raises(self, monkeypatch):
+        import subprocess
+        class R:
+            def __init__(self):
+                self.returncode = 1
+                self.stdout = "get: Connection refused"
+                self.stderr = ""
+        monkeypatch.setattr(subprocess, "run", lambda *a, **k: R())
+        fp = _pipeline()
+        import pytest as _pytest
+        with _pytest.raises(RuntimeError):
+            fp._download_redirect_from_ps4(_config())
+
+    def test_clean_console_plus_local_deploys_the_local(self):
+        src = open(os.path.join(PROJECT_ROOT, "tools", "full_custom_song_pipeline.py"),
+                   encoding="utf-8").read()
+        assert "deploying the newly-built local set" in src, \
+            "absent + local file must be treated as the new state, not refused"
+        assert "refusing to deploy it over unknown live state" in src, \
+            "the genuine-failure refusal must remain (Exp 246)"

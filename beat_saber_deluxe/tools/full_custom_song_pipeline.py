@@ -168,6 +168,16 @@ def load_config(config_path: str) -> dict:
                 return node
             localize_paths(user_config, PROJECT_ROOT)
             merged = deep_merge(default_config, user_config)
+            # Exp 281d: pack_modes.dump_dir follows paths.game_dump_dir unless
+            # the user PINNED it — the pack-modes builder reads the same
+            # game-data root as the per-song templates (pack bundles + origin
+            # catalog), so the game_data cache is a drop-in for both. Without
+            # this, switching game_dump_dir to the cache left pack-modes at the
+            # old dump path and deploys skipped the pack patch ("Dump dir
+            # missing" — the user's live report).
+            user_pm = user_config.get('pack_modes') or {}
+            if 'dump_dir' not in user_pm:
+                merged['pack_modes']['dump_dir'] = merged['paths']['game_dump_dir']
             log.info(f"Loaded config from {config_path}")
             return merged
         except Exception as e:
@@ -2840,13 +2850,24 @@ def _download_redirect_from_ps4(config: dict) -> dict | None:
         cmd = ["lftp", "-u", user_part, "-p", str(port), host,
                "-e", f"get {_ftp_quote(remote_path)} -o {_ftp_quote(local_tmp)}; quit"]
         result = sp.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode != 0 or not os.path.exists(local_tmp):
+        if result.returncode == 0 and os.path.exists(local_tmp):
+            try:
+                with open(local_tmp, 'r') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        # Exp 281d: distinguish ABSENT from FAILED. A decisive 550 (the file
+        # does not exist) is the clean-slate state → return None (the caller
+        # knows the live state is empty). A genuine read failure (dead host,
+        # timeout, garbage) must RAISE — callers enforce pull-before-push and
+        # must not mistake "couldn't read" for "nothing there" (Exp 246).
+        if _ps4_output_looks_absent(
+                (getattr(result, "stdout", "") or "")
+                + (getattr(result, "stderr", "") or "")):
             return None
-        try:
-            with open(local_tmp, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return None
+        raise RuntimeError(
+            f"could not read redirects.json from the PS4 "
+            f"(lftp rc={result.returncode}) — the live state is unknown")
 
 def _deploy_redirect_to_ps4(config: dict):
     """Upload the local redirects.json to PS4 via FTP."""
@@ -4197,7 +4218,23 @@ def manage_redirect_config(
         # the "edit my local file" flow, and touching the network there
         # would break offline builds.
         if should_deploy:
-            ps4_data = _download_redirect_from_ps4(config)
+            # Exp 281d: absent (clean console) raises nothing and returns
+            # None; a GENUINE read failure raises. The distinction matters:
+            # absent + a local file = the local file is the truth for an empty
+            # console (this deploy just built it) — deploy it. Failed read +
+            # a local file = unknown live state — refuse (Exp 246, unchanged).
+            try:
+                ps4_data = _download_redirect_from_ps4(config)
+            except RuntimeError as e:
+                log.error(f"❌ {e}")
+                if os.path.exists(local_path):
+                    log.error("   A local redirects.json exists that may be stale — "
+                             "refusing to deploy it over unknown live state "
+                             "(this exact path wiped 46 of 47 song redirects "
+                             "once — Exp 246). Check the PS4 connection "
+                             "(GoldHEN FTP) and re-run, or use --enforce-config "
+                             "to deliberately push the local file.")
+                sys.exit(1)
             if ps4_data is not None:
                 redirect_data = ps4_data
                 n_live = len(ps4_data.get('redirects', {}))
@@ -4212,13 +4249,13 @@ def manage_redirect_config(
                     json.dump(redirect_data, f, indent=2)
                     f.write('\n')
             elif os.path.exists(local_path):
-                log.error("❌ Could not read the PS4's redirects.json, and a local "
-                          "copy exists that may be stale. Refusing to deploy it "
-                          "over the live state (this exact path wiped 46 of 47 "
-                          "song redirects once — Exp 246). Check the PS4 "
-                          "connection (GoldHEN FTP) and re-run, or use "
-                          "--enforce-config to deliberately push the local file.")
-                sys.exit(1)
+                # Exp 281d: clean console (absent live file) + a local file
+                # (this deploy's scoping just built it) — the local file IS
+                # the new state; deploy it.
+                redirect_data = _load_local_redirects(local_path)
+                log.info(f"  ℹ️  No redirects.json on the PS4 (clean console) — "
+                         f"deploying the newly-built local set "
+                         f"({len(redirect_data.get('redirects', {}))} entries)")
             else:
                 # No local file at all and no PS4 state: genuinely fresh start
                 # (clean slate / first deploy) — safe to begin empty.
