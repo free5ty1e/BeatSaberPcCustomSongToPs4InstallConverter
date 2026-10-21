@@ -585,3 +585,39 @@ run immediately.
 
 **NEXT (user):** Pull (STEP 3) → Use (STEP 4) → re-run the deploy (it now
 builds the pack patch from the cache AND passes the redirects step).
+
+### RUN LOG — Round 7 (Exp 281e): the clean-slate audit — the backup script's game_data gap found + fixed + a TRUE clean console
+
+**User:** "I'd prefer my next run be full end to end with a clean slate PS4
+again. Will the --clear-ps4 flag in the backup script handle this properly
+or does it need attention?"
+
+**The audit answer: it NEEDED attention.** The clean's `("game_data", "*")`
+flat pattern could only ever hit the `Media` directory entry (a DELE on a
+directory fails on FTP) — **every extracted file would have survived the
+clean** (the tree is nested: game_data/Media/StreamingAssets/
+BeatmapLevelsData/…). Fixed: `_ftp_recursive_delete()` — depth-first
+(files, then the emptied subdirs via RMD, then game_data/ itself) with the
+protected-file safeguards carried through.
+
+**Verified for real:** ran `backup --clean-ps4` against the live console
+(backup first: `bsd_backup_20261020_233647.zip`, 73 entries — the state
+files; everything else on the console is regenerable by design). Post-clean
+verification: **AFR/CUSA12878 empty · game_data/ ABSENT (550) · plugin prx
+ABSENT · plugins.ini [CUSA12878] entry GONE.** A second clean run found
+nothing left to clean ("No custom content found") — idempotence proven.
+
+**Backup-scope note:** the backup zip captures the small state files, not
+the game_data tree or the big bundles — fine (all regenerable: game_data
+re-extracts from the game with one boot; bundles rebuild from the
+pipeline). The real known-good loadout backup from 20261019_200413 remains.
+
+**Fresh environment staged:** the release-test simulation rebuilt (empty
+cache; game_dump_dir back to the deliberately-absent ./ps4_dump_local; the
+fixed backup script bundled) + the web app restarted (0.6.18 / v0.8055,
+state verified: clean_slate=True, 0 requests/0 extracted/0 cache files).
+
+**NEXT (user): the full end-to-end fresh-slate run** — STEP 1 Request →
+STEP 2 Boot (watch for the notification) → STEP 3 Pull (progress bar) →
+STEP 4 Use the cache → STEP 5 Deploy Buddy Holly (4373a) → 2BeLoved →
+play → verify.

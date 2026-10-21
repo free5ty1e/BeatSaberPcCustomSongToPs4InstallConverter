@@ -93,3 +93,9 @@ the FTP prerequisite honestly in the README. Plans:
 - **The walkthrough (webapp 0.6.18):** five numbered step cards with active/done highlighting + the STEP 3 live progress bar (local files vs the console's extracted count, per-second updates during the mirror).
 - **Verification:** suite 867+93 gated; ruff clean; the simulation rebuilt (0.6.18/v0.8055/0.5365) — the user's console holds 23/23 extracted files (their fresh run); the local cache was cleared by the rebuild (transparent note) — the next Pull re-fetches everything the console still has.
 - **Status:** the user's next run should complete the full flow: Pull (progress bar!) → Use → Deploy (pack patch from the cache + the redirects step passing).
+
+### Experiment 281e: the clean-slate audit — the backup script's game_data recursion gap found + fixed + a TRUE clean console verified (2026-10-20)
+- **User:** asked whether the clean would properly prepare a full end-to-end fresh-slate run.
+- **The audit:** it NEEDED attention — the ("game_data", "*") flat pattern could only hit the Media DIRECTORY entry (DELE on a directory fails) → every extracted file would have survived. Fixed: `_ftp_recursive_delete()` (depth-first: files → RMD subdirs → game_data/ itself, protected lists carried through).
+- **Verified live:** backup --clean-ps4 ran against the console (backup: bsd_backup_20261020_233647.zip, 73 entries — state files; game_data/bundles regenerable by design) → post-clean: AFR empty, game_data ABSENT, plugin ABSENT, plugins.ini entry GONE; a second clean run found nothing (idempotent). The simulation rebuilt + the app restarted: clean_slate=True, 0/0/0 — the complete fresh-slate environment (console AND local) staged for the user's full run.
+- **Status:** everything is ready for the definitive end-to-end: the 5-step walkthrough → Buddy Holly → 2BeLoved → play → verify.

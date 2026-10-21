@@ -673,6 +673,50 @@ def count_local_files(directory):
 # Clean operations
 # =============================================================================
 
+def _ftp_recursive_delete(ftp, remote_dir, protected=None):
+    """Depth-first recursive delete of everything under remote_dir (files,
+    then the emptied subdirectories, then the dir itself).
+
+    Exp 281e: the game_data/ tree is nested (Media/StreamingAssets/
+    BeatmapLevelsData/<slot> …) — a flat DELE pass only hits 'Media' (a
+    directory) and fails, silently leaving every extracted file in place on
+    the user's console. Returns the number of items removed."""
+    protected = protected or set()
+    entries = []
+    try:
+        ftp.cwd(remote_dir)
+        ftp.retrlines("LIST", entries.append)
+    except Exception as e:
+        print(f"       ✗ Could not list {remote_dir}: {e}")
+        return 0
+    removed = 0
+    for line in entries:
+        parts = line.split()
+        if len(parts) < 9:
+            continue
+        perms = parts[0]
+        fname = parts[-1]
+        if fname in (".", "..") or fname in protected:
+            continue
+        full = f"{remote_dir}/{fname}"
+        if perms.startswith("d"):
+            removed += _ftp_recursive_delete(ftp, full, protected)
+            try:
+                ftp.rmd(full)
+                print(f"       ✓ Removed dir: {fname}/")
+                removed += 1
+            except ftplib.error_perm as e:
+                print(f"       ✗ Could not remove dir {fname}: {e}")
+        else:
+            try:
+                ftp.delete(full)
+                print(f"       ✓ Removed: {fname}")
+                removed += 1
+            except ftplib.error_perm as e:
+                print(f"       ✗ Failed to remove {fname}: {e}")
+    return removed
+
+
 def clean_ps4():
     """Remove all Beat Saber Deluxe related files from PS4."""
     print(f"🧹 Cleaning Beat Saber Deluxe files from PS4 ({PS4_IP})...")
@@ -718,7 +762,6 @@ def clean_ps4():
             # M12 extractor files (requests/status) + its output dir contents.
             (".", "game_data_requests.txt"),
             (".", "game_data_status.txt"),
-            ("game_data", "*"),
             (".", "catalog_pack_modes.json"),
             (".", "redirects.json"),
             (".", "song_metadata.json"),
@@ -759,6 +802,30 @@ def clean_ps4():
                     print(f"       ✗ Error accessing {target_path}: {e}")
                 finally:
                     close_ftp(ftp)
+
+        # M12 game_data tree (Exp 281e): nested dirs need depth-first
+        # recursive deletion — the flat pattern pass above could only ever
+        # hit the 'Media' directory entry (a DELE on a directory fails).
+        game_data_dir = f"{PS4_AFR_CUSA12878}/game_data"
+        if ps4_path_exists(game_data_dir):
+            ftp = get_ftp()
+            try:
+                n_gd = _ftp_recursive_delete(
+                    ftp, game_data_dir,
+                    PROTECTED_BASE_GAME_FILES | PROTECTED_SYSTEM_MOUNTPOINTS)
+                try:
+                    ftp.rmd(game_data_dir)
+                    n_gd += 1
+                except ftplib.error_perm as e:
+                    print(f"       ✗ Could not remove game_data/ itself: {e}")
+                if n_gd > 0:
+                    print(f"     ✓ Removed game_data/ recursively ({n_gd} items)")
+                    afr_removed_count += n_gd
+                    cleaned.append(f"game_data/ tree ({n_gd} items)")
+            except Exception as e:
+                print(f"       ✗ game_data cleanup error: {e}")
+            finally:
+                close_ftp(ftp)
 
         if afr_removed_count > 0:
             cleaned.append(f"AFR/CUSA12878 custom content ({afr_removed_count} files)")
