@@ -27,6 +27,37 @@ and slot visually, then copy the generated pipeline command if you prefer the
 CLI. See [**Web App (deploy without the CLI)**](#31b-web-app--deploy-without-the-cli-m9)
 below for the local app's full feature tour.
 
+## Prerequisites
+
+| Requirement | Why it is needed |
+|---|---|
+| **A jailbroken PS4** (firmware 9.00) with **GoldHEN** | The plugin + file redirection only run under GoldHEN |
+| **⚠️ FTP access to your PS4 (GoldHEN's FTP server, port 2121)** — i.e. your PC and the PS4 on the same network | **This is REQUIRED for the repository to be useful to you.** Every deploy, plugin update, feature-flag change, backup, validation, and log pull happens over this FTP connection |
+| Beat Saber (CUSA12878) **patch 2.04** installed | The plugin's hook offsets + the pipeline's slot catalog target exactly this version |
+| **A decrypted dump is NO LONGER REQUIRED (hardware-proven, v0.8054+):** the game now features its own **mini-dumper** — the plugin's game-data extractor retrieves **only the files needed** for the packs you intend to work with, during a normal boot. No 4.9GB dump, no dumper homebrew, no USB stick. Web app → Dump Guide → the 5-step walkthrough ([feature doc](beat_saber_deluxe/docs/features/game-data-extractor.md)). A dump is only needed for development/repair | The pipeline builds custom content by patching stock game assets (per-slot templates ~13MB each, pack bundles, the catalog). The extractor copies exactly those into a small local `game_data/` cache (a 5-pack loadout ≈ 658MB vs a 4.9GB dump) — **legally clean: per-user extraction from your own console; nothing game-derived is ever in this repository**. Definitively proven: a full song deploy completed with the developer's dump physically hidden — validation PASSED (Exp 281f) |
+| Python 3.10+ on your PC | The pipeline + web app |
+
+### Limitations without FTP access to the PS4
+
+Without that FTP connection you can still *build* custom-song bundles locally
+(the pipeline's `--local` build paths work offline), but **nothing can reach
+your console**:
+
+- ❌ No installing or updating custom songs, packs, previews, or mode buttons
+- ❌ No plugin deployment or updates (v0.8049+)
+- ❌ No feature-flag changes from the web app or CLI (including arming the in-game toggle)
+- ❌ No backups / restores / clean-slate operations
+- ❌ No post-deploy validation, no PS4-state dashboard, no log pulls
+
+**The one thing that keeps working without a PC entirely:** once your setup is
+deployed, the **in-game hotkey** (hold the Move button + trigger together for
+2 seconds — [feature doc](beat_saber_deluxe/docs/features/in-game-plugin-toggle.md))
+toggles the whole plugin on/off on the console itself. But arming that hotkey,
+or changing anything else, required FTP the last time it was configured.
+
+There is no alternative transport on GoldHEN — FTP is its file-transfer
+surface, and every tool in this repository builds on it.
+
 ## Web UI Screenshots
 
 <img width="942" height="831" alt="image" src="https://github.com/user-attachments/assets/f77ada23-b167-4c38-ab06-a819e1faa2d9" />
@@ -224,12 +255,12 @@ The Beat Saber Deluxe plugin uses `features.json` to control experimental featur
 
 | Flag                                | Default             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enable_plugin`                     | **`true`** (unique) | **Global kill switch** — when explicitly `false`, the ENTIRE plugin is inert on next boot (no redirects, no metadata swaps; 100% official songs). The only flag defaulting true when absent, so a missing features.json keeps a deployed setup working.                                                                                                                                                                                                                                                          |
+| `enable_plugin`                     | **`true`** | **Global kill switch** — when explicitly `false`, the ENTIRE plugin is inert on next boot (no redirects, no metadata swaps; 100% official songs). Fresh-install defaults (Exp 281): ALL flags default ON when absent — a fresh install works out of the box; the kill switch stays as the master off.                                                                                                                                                                                                                                                          |
 | `enable_custom_song_replacements`   | `false`             | Gates all song redirects — when OFF, no bundle redirects fire and the game plays original songs                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `enable_song_metadata_modification` | `false`             | Gates song metadata modification — when ON, hooks MoveNext() to replace song names/artists in the UI                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `enable_beatmap_mode_mapping`       | `false`             | Gates the extra game modes (OneSaber, NoArrows, 90Degree) — when OFF, pack bundles and the catalog redirect are skipped so every song shows only Standard (custom audio still plays); when ON, patched packs show all 4 mode sets                                                                                                                                                                                                                                                                                |
 | `enable_song_previews`              | `false`             | Gates **song previews** — highlighting a custom song in the menu plays a ~10s cut of ITS OWN audio (the mapper's chosen moment when known, else the busiest-bar heuristic) instead of the stock song's clip. Previews ride inside the patched pack bundles; either this or mode-mapping keeps the patched pair live. Re-deploy after flipping to ship the matching bundle variant.                                                                                                                               |
-| `enable_in_game_plugin_toggle`      | `false`             | **M11 (hardware-confirmed): arms the MOVE hotkey.** Hold **the Move button + trigger together for 2 full seconds** on a Move controller — a combination used nowhere else in the game — to flip the global plugin state. A notification shows the new state, and **restarting Beat Saber applies it** (the current session never changes mid-game). The hotkey deliberately keeps working even while the plugin is toggled OFF, so you can always flip it back without a PC. Only this flag disables the hotkey. |
+| `enable_in_game_plugin_toggle`      | **`true`**          | **M11 (hardware-confirmed): arms the MOVE hotkey.** Hold **the Move button + trigger together for 2 full seconds** on a Move controller — a combination used nowhere else in the game — to flip the global plugin state. A notification shows the new state, and **restarting Beat Saber applies it** (the current session never changes mid-game). The hotkey deliberately keeps working even while the plugin is toggled OFF, so you can always flip it back without a PC. Only this flag disables the hotkey. |
 
 ### In-Game Global Plugin Toggle (M11, plugin v0.8049+; hardware-confirmed on v0.8052)
 

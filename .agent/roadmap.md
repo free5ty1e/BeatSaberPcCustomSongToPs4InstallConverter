@@ -407,7 +407,7 @@ Full plan: [`.agent/plans/song-previews.md`](.agent/plans/song-previews.md)
       validation procedure step 5.1b, webapp toast N/4
 - [ ] Phase 4 — (optional) Vorbis preview encoder if a safe path appears
 
-## M11 — In-Game Global Plugin Enable/Disable Toggle (Move Button+Trigger Hotkey)
+## M11 — In-Game Global Plugin Enable/Disable Toggle (Move Button+Trigger Hotkey) — ✅ SHIPPED in v0.8053-pipeline-0.5363-webapp-0.6.13 (2026-10-19)
 **Goal:** Toggle the entire plugin ON/OFF from the couch with only a PS4 controller —
 no PC required. Hold **L3+R3 for 2 seconds** on a DualShock 4 → notification shows the
 new state → restart Beat Saber to apply. Switches between all-custom (47 songs,
@@ -504,3 +504,47 @@ The only leftover design note: the debug build's raw-word change-logging budget 
 on accelerometer/gyro churn (it compares whole words 2-7) — future button diagnostics
 should compare only the button words (+0x18/+0x1A). No action needed: the feature is
 confirmed and release logging is one-time events only.
+
+## M12 — Game-Data Cache + In-Game Extractor (Eliminate the Dump Requirement) (Planned)
+**Goal:** a new user checks out the repository and can add custom songs immediately —
+no 4.9GB dump, no dumper homebrew, no USB stick. The plugin extracts exactly the files
+the pipeline needs (~13MB per song slot, ~140MB per pack, 658MB for the full live
+loadout — measured) from the game's own decrypted mounts during a normal boot; the
+web app pulls them over FTP into a local `game_data/` cache that mirrors the dump
+layout (zero pipeline changes — `game_dump_dir` points at the cache). Legally clean:
+per-user extraction from their own console; nothing committable is game content.
+Full plan: [`.agent/plans/eliminating_or_automating_ps4_dump_folder_requirement.md`](.agent/plans/eliminating_or_automating_ps4_dump_folder_requirement.md)
+(the log-proven foundation: the game reads its assets from `/archive/mount/point/Media/...`
+and `/app0/Media/...` — both openable in-process by the plugin; 1,067 + 1,073 opens in
+the archived boot logs).
+
+- [x] **M12.1** — Plugin v0.8054: `enable_game_data_extractor` flag + manifest reader + copy loop (both mounts, idempotent, ERR-retry, kill-switch-independent)
+- [x] **M12.2** — Pipeline v0.5364 modes (--request-game-data / --pull-game-data) + webapp 0.6.14 (endpoints + Dump Guide Option A + use-cache switch); Path B import deferred (manual recipe stays for devs)
+- [x] **M12.3** — tests/test_game_data.py (19) + all N/5→N/6 pin updates; suite 930/930; ruff clean
+- [ ] **M12.4** — Hardware: fresh-cache → full 5-pack deploy from `game_data/` alone, verify PASSED
+- [x] **M12.5** — Feature doc (ships in the zip) + README prerequisite row + CI_RELEASE (6th flag, N/6) + example config + KB
+
+## M13 — Beat Sage + Local Song Folder Support (Web App Pick-a-Song Tab) (Planned)
+**Goal:** below the BeatSaver search: a **Beat Sage** section (generate a map from any
+song via beatsage.com — automation ladder: full backend-driven generation → guided flow
+with automated zip intake → manual fallback; the user is guided through the steps that
+genuinely must be manual: providing rights-cleared audio, accepting beatsage.com's
+terms, the minutes-long wait) and a **local song folder** section (path entry + live
+validation + zip drag-drop → staged song → existing Deploy flow unchanged; the
+pipeline already accepts local folders — zero pipeline changes).
+Full plan: [`.agent/plans/beat_sage_and_local_song_folder_support.md`](.agent/plans/beat_sage_and_local_song_folder_support.md)
+
+- [ ] **M13.1** — Local song folder section (path validation + zip intake + staging + recent list)
+- [ ] **M13.2** — Beat Sage Tier 2 (guided card + shared zip intake) — the guaranteed UX
+- [ ] **M13.3** — Beat Sage Tier 1 research (live endpoint capture) + implementation behind a mocked client (network tests gated like hardware tests)
+- [ ] **M13.4** — Docs: webapp tab docs, README section, ToS/rights notes
+
+## M14 — Custom Album From Scratch (Exploration; the long-term ideal)
+The user's idea: an entirely NEW music album for custom songs, arbitrary song count —
+zero stock bytes anywhere (our own per-song + pack bundles, a new catalog entry instead
+of stock edits) → the whole structure becomes legally committable and the 47-slot
+ceiling disappears. Heavy unknowns (research-first, per the plan §5): U1 pack
+enumeration (catalog-driven vs PSN-entitlement-gated — the first de-risking task),
+U2 creating NEW catalog entries (today we only update existing ones), U3 from-scratch
+bundle builders (the formats are deeply known; the builders are new), U4 UI
+touchpoints. Start with U1 (dump.cs + catalog reading) when scheduled.

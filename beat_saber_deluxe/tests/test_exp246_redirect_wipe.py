@@ -71,16 +71,34 @@ class TestGenerateDeployRebasesOnLiveState:
         assert len(json.loads(tmp_redirect_file.read_text())["redirects"]) == 48
 
     def test_unreachable_ps4_aborts_deploy(self, tmp_redirect_file, monkeypatch):
-        """PS4 unreachable + local file exists → ABORT (SystemExit), never a
-        silent stale-file push. This is the anti-wipe gate."""
+        """PS4 unreachable (read FAILED — raises, per Exp 281d's absent/failed
+        split) + local file exists → ABORT (SystemExit), never a silent
+        stale-file push. This is the anti-wipe gate — preserved and now
+        STRONGER: a genuine read failure raises RuntimeError, and the caller
+        refuses on unknown live state."""
         tmp_redirect_file.write_text(json.dumps(LIVE_47))
         monkeypatch.setattr(pipeline, "_download_redirect_from_ps4",
-                            lambda config: None)  # read FAILED (not 'absent')
+                            lambda config: (_ for _ in ()).throw(
+                                RuntimeError("could not read redirects.json")))
         monkeypatch.setattr(pipeline, "_deploy_redirect_to_ps4", lambda config: None)
 
         with pytest.raises(SystemExit):
             pipeline.manage_redirect_config(
                 CONFIG, target_name="NewSong", generate=True, deploy=True)
+
+    def test_clean_console_plus_local_deploys_the_local(self, tmp_redirect_file, monkeypatch):
+        """Exp 281d: ABSENT redirects.json (decisive 550 → None) + a local
+        file (this deploy just built it) → the local file IS the new state for
+        an empty console — deploy it, don't refuse (the refusal was blocking
+        every first-song deploy on a clean console)."""
+        tmp_redirect_file.write_text(json.dumps(LIVE_47))
+        monkeypatch.setattr(pipeline, "_download_redirect_from_ps4",
+                            lambda config: None)  # ABSENT (clean console)
+        monkeypatch.setattr(pipeline, "_deploy_redirect_to_ps4", lambda config: None)
+
+        # Must NOT raise: the local set deploys over an empty console.
+        pipeline.manage_redirect_config(
+            CONFIG, target_name="NewSong", generate=True, deploy=True)
 
     def test_no_local_no_live_is_clean_slate(self, tmp_redirect_file, monkeypatch):
         """Genuinely fresh start (no local file, no PS4 state): empty base is

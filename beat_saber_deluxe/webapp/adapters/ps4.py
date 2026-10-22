@@ -28,25 +28,34 @@ PS4_FEATURES = f"{AFR_TITLE_DIR}/features.json"
 PS4_REDIRECTS = f"{AFR_TITLE_DIR}/redirects.json"
 PS4_SONG_METADATA = f"{AFR_TITLE_DIR}/song_metadata.json"
 
-# enable_plugin defaults TRUE when absent — the ONLY flag that does
-# (plan §9.4 invariant 5). Unknown/absent renders as ON for that key.
+# enable_plugin and ALL feature flags default TRUE when absent (Exp 281,
+# user directive: fresh installs work out of the box — the flag list IS the
+# product's feature set; a clean console boots with everything ON until the
+# user turns things off). The plugin's absent-file defaults and the
+# pipeline's DEFAULT_FEATURES must stay in sync with this.
 # NOTE the plural key: the pipeline's canonical flag is
 # enable_custom_song_replacements (DEFAULT_FEATURES in the pipeline) — the
 # wire format on the PS4 features.json uses the plural form.
-DEFAULTS_TRUE = {"enable_plugin"}
 KNOWN_FLAGS = ("enable_plugin", "enable_beatmap_mode_mapping",
                "enable_song_metadata_modification", "enable_custom_song_replacements",
-               "enable_song_previews", "enable_in_game_plugin_toggle")
+               "enable_song_previews", "enable_in_game_plugin_toggle",
+               "enable_game_data_extractor")
+DEFAULTS_TRUE = frozenset(KNOWN_FLAGS)
 
 
 @dataclass
 class ReadResult:
-    """A read that can fail loudly — never collapse failure into emptiness."""
+    """A read that can fail loudly — never collapse failure into emptiness.
+    `absent` (Exp 280e): the file legitimately does not exist — the clean-
+    slate state (decisive 550), ok=True. Readers may transform `data`; the
+    absent flag must survive the transformation so state consumers can tell
+    'empty because clean' from 'empty counts from an empty file'."""
 
     ok: bool = False
     data: dict | None = None
     error: str = ""
     raw_bytes: int = 0
+    absent: bool = False
 
 
 def _ps4_endpoint() -> tuple[str, str, int]:
@@ -73,7 +82,10 @@ def _run_lftp(host: str, user_part: str, port: int, commands: list[str],
     letting the UI surface unreachable state immediately. The subprocess
     timeout stays as the belt-and-suspenders bound.
     """
-    joined = ("set net:timeout 5; set net:max-retries 1; set net:connect-timeout 5; "
+    # NOTE (Exp 281b): net:connect-timeout does not exist in this lftp build
+    # ("no such variable" polluted every error message) — net:timeout +
+    # net:max-retries carry the fast-fail behavior alone.
+    joined = ("set net:timeout 5; set net:max-retries 1; "
               + "; ".join(commands) + "; quit")
     try:
         r = subprocess.run(
@@ -109,9 +121,26 @@ def _extract_json_object(text: str) -> dict | None:
     return None
 
 
+def _looks_absent(text: str) -> bool:
+    """A decisive 'file does not exist' answer from the FTP server — the
+    CLEAN-SLATE case (after Clear PS4, or before first use). NOT a failure.
+    Exp 280d: the user's post-clear console showed every state read as an
+    error ("Access failed: 550 … File unavailable") when it was actually the
+    correct, healthy, empty state. Signatures: the 550 status, 'no such
+    file', 'file unavailable'."""
+    low = text.lower()
+    return ("550" in text or "no such file" in low
+            or "file unavailable" in low)
+
+
 def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
     """
     Banner-free JSON read from the PS4 (the one transport, everywhere).
+
+    Absent files are a VALID state: after Clear PS4 (or before first use)
+    redirects/features/metadata legitimately do not exist — a decisive 550
+    returns ok=True with data=None (the clean-slate truth), NOT an error
+    (Exp 280d). Only genuine failures (connectivity, parse) return ok=False.
 
     Retry policy (Exp 263 finding): retries exist for genuine connection
     FLAKES (transfer drops mid-file) — a fast, decisive "No route to host"
@@ -137,6 +166,11 @@ def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
                                       raw_bytes=len(text))
                 last_err = f"parse failed (attempt {attempt})"
             else:
+                # Decisive file-absent (550): the clean-slate state — a valid
+                # answer, never retried, never an error (Exp 280d/280e).
+                if _looks_absent(out):
+                    return ReadResult(ok=True, data=None, error="",
+                                      absent=True)
                 last_err = out.strip().splitlines()[-1] if out.strip() else f"lftp rc={rc}"
                 # Connectivity refusal (host down/unreachable): dead host,
                 # not a flake — further attempts cannot succeed and each one
@@ -149,9 +183,14 @@ def fetch_remote_json(remote_path: str, retries: int = 3) -> ReadResult:
 
 
 def list_afr_dir() -> ReadResult:
-    """List the AFR title dir with sizes — the Test-Connection payload."""
+    """List the AFR title dir with sizes — the Test-Connection payload.
+    An absent dir (post-Clear-PS4) is the clean-slate state, not an error
+    (Exp 280d): ok=True with an empty listing."""
     host, user_part, port = _ps4_endpoint()
     rc, out = _run_lftp(host, user_part, port, [f"ls {AFR_TITLE_DIR}"])
+    if _looks_absent(out):
+        return ReadResult(ok=True, data={"files": {}, "count": 0,
+                                        "absent": True})
     if rc != 0 or not out.strip():
         return ReadResult(ok=False, error=out.strip() or "empty listing")
     files: dict[str, int] = {}
@@ -164,7 +203,8 @@ def list_afr_dir() -> ReadResult:
             except ValueError:
                 continue
     if not files:
-        return ReadResult(ok=False, error="no parsable entries")
+        return ReadResult(ok=True, data={"files": {}, "count": 0,
+                                        "absent": True})
     return ReadResult(ok=True, data={"files": files, "count": len(files)})
 
 
@@ -275,3 +315,66 @@ def test_connection() -> ReadResult:
     else:
         res.data = {"status": "unreachable", "error": res.error}
     return res
+
+
+# --------------------------------------------------------------------------
+# Game-data extraction reads (M12, Exp 280) — the web-app side of the
+# in-console extractor. OWNERSHIP: requests.txt is WEB-APP/PIPELINE owned
+# (read here only to VERIFY what the web app last wrote); status.txt is
+# PLUGIN owned (read here to report progress). Neither is written here.
+# --------------------------------------------------------------------------
+
+def read_game_data_requests() -> ReadResult:
+    """The current extraction manifest on the PS4 (one path per line)."""
+    cfg = load_config()
+    cfg_paths = cfg.get("paths", {})
+    afr = cfg_paths.get("afr_base", "/data/GoldHEN/AFR")
+    title = cfg.get("title", {}).get("id", "CUSA12878")
+    remote = f"{afr}/{title}/game_data_requests.txt"
+    host, user_part, port = _ps4_endpoint()
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        local_tmp = os.path.join(td, "req.txt")
+        rc, out = _run_lftp(host, user_part, port,
+                            [f"get {remote} -o {local_tmp}"], timeout=15)
+        if rc == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            lines = [ln.strip() for ln in
+                     open(local_tmp, encoding="utf-8", errors="replace").read().splitlines()
+                     if ln.strip() and not ln.startswith("#")]
+            return ReadResult(ok=True, data=lines, raw_bytes=os.path.getsize(local_tmp))
+        if rc == 0 or _looks_absent(out):
+            # absent (fresh console / nothing requested) = the clean state,
+            # never an error (Exp 280d/281b)
+            return ReadResult(ok=True, data=[], error="", absent=True)
+        return ReadResult(ok=False, error=out.strip()[-200:] or "unreachable")
+
+
+def read_game_data_status() -> ReadResult:
+    """The plugin-owned extraction status (paths done; 'ERR …' lines = failures)."""
+    cfg = load_config()
+    cfg_paths = cfg.get("paths", {})
+    afr = cfg_paths.get("afr_base", "/data/GoldHEN/AFR")
+    title = cfg.get("title", {}).get("id", "CUSA12878")
+    remote = f"{afr}/{title}/game_data_status.txt"
+    host, user_part, port = _ps4_endpoint()
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        local_tmp = os.path.join(td, "status.txt")
+        rc, out = _run_lftp(host, user_part, port,
+                            [f"get {remote} -o {local_tmp}"], timeout=15)
+        if rc == 0 and os.path.exists(local_tmp) and os.path.getsize(local_tmp) > 0:
+            lines = [ln.strip() for ln in
+                     open(local_tmp, encoding="utf-8", errors="replace").read().splitlines()
+                     if ln.strip()]
+            done = [ln for ln in lines if not ln.startswith("ERR ")]
+            errors = [ln for ln in lines if ln.startswith("ERR ")]
+            return ReadResult(ok=True, data={"done": done, "errors": errors},
+                              raw_bytes=os.path.getsize(local_tmp))
+        if rc == 0 or _looks_absent(out):
+            # absent (fresh console / no boot yet) = the pending state,
+            # never an error (Exp 281b — the user's console booted nothing yet)
+            return ReadResult(ok=True, data={"done": [], "errors": []},
+                              absent=True)
+        return ReadResult(ok=False, error=out.strip()[-200:] or "unreachable")

@@ -1,5 +1,27 @@
 # Pipeline Changelog
 
+## v0.5365 (2026-10-19)
+### Fixed — Exp 281d (the user's cache-only deploy: pack-modes never followed the cache + the redirects refusal blocked clean consoles)
+- **`pack_modes.dump_dir` follows `paths.game_dump_dir`** unless the user pinned it explicitly — the pack-modes builder reads the same game-data root as the per-song templates (pack bundles + origin catalog), so the game_data cache is a drop-in for both. Previously the "Use the extracted cache" switch repointed only game_dump_dir and deploys logged "Dump dir missing … cannot build pack mode bundles" — the pack patch (mode buttons + previews) silently skipped. 2 tests (follows unpinned; a pinned dir is never rewritten).
+- **Absent redirects.json + a local file = the new state for a clean console.** `_download_redirect_from_ps4` now distinguishes ABSENT (decisive 550 → returns None) from FAILED (raises RuntimeError); the redirect-config deploy treats absent+local as deployable (the local set was just built by this deploy's scoping) and refuses only on genuine failures. The Exp-246 anti-wipe gate is preserved and stronger. 3 tests (absent→None, failure→raise, clean-console+local deploys).
+
+2026-10-19)
+### Fixed — Exp 281c (the user's cache-only song deploy failed on a clean console — two real fresh-console bugs)
+- **Absent redirects.json is the clean-slate state, not a read failure:** the single-song deploy scoping (the Exp-246 pull-before-push guard) refused to continue when redirects.json was absent — but a decisive 550 means "no customs exist to preserve," so a fresh console's FIRST song deploy must proceed (scope = target song + its pack). The refusal now fires only on genuine read failures. Same fix for the flags reader (`_download_features_from_ps4`: 550 → None → defaults instead of RuntimeError — the flags Apply on a clean console). Shared classifier `_ps4_output_looks_absent`. 4 tests.
+- **The bundle-deploy verification false negative:** GoldHEN's FTPD ends `ls` lines with the FULL PATH, not the basename — the verify's basename equality never matched, so every upload reported "⚠️ UNVERIFIED" while the file sat on the console (the user's 28MB bundle was verifiably present). The parser now matches the basename within the last field.
+
+## v0.5365 (2026-10-19)
+### Changed — Fresh-install defaults (Exp 281, user directive)
+- **Fresh-console write robustness (Exp 281b):** `_ensure_afr_title_dir()` — `mkdir -p -f` on the AFR title dir before any AFR write (request puts, features.json deploys, bundle uploads). The clean normally leaves the dir, but the bootstrap makes every AFR write robust against its absence. 2 regression tests (the mkdir command + its ordering before the put).
+- **`DEFAULT_FEATURES` is now ALL-ON** (previews, the M11 toggle, and the M12 extractor flip to True). A fresh install works out of the box; every flag surface (the plugin's absent-file defaults, this dict, the webapp's DEFAULTS_TRUE/KNOWN_FLAGS, the CI-generated features.json template) now carries the same truth.
+
+## v0.5364 (2026-10-19)
+### Added — M12: game-data extraction management (the "no dump required" flow)
+- **`--request-game-data [--game-data-packs p1,p2] [--game-data-slots s1,s2]`:** computes the extraction manifest from `beat_saber_song_ids.json` (per-slot templates + per-pack bundles + catalog — a slot request automatically includes its pack's bundle) and writes `game_data_requests.txt` to the PS4. NO dump needed to compute it. Upload verified via remote listing; the "no targets" error carries a fix suggestion (Exp-278h policy).
+- **`--pull-game-data`:** mirrors the console's `game_data/` into the local cache (`paths.game_data_dir`, new default `./game_data`, PROJECT_ROOT-relative) via resumable lftp mirror; reads the plugin-owned `game_data_status.txt` first; missing files post-pull are reported; every failure path carries a "To fix:" suggestion. The cache mirrors the dump layout exactly — pointing `paths.game_dump_dir` at it is the ONLY change a user makes (the web app's "Use the extracted cache" button does it).
+- **OWNERSHIP (pull-before-push doctrine):** requests.txt is pipeline/web-app-owned (the plugin only reads it); status.txt is plugin-owned (the pipeline only reads it). No file is written by both sides.
+- `DEFAULT_FEATURES` gains `enable_game_data_extractor: False` — deliberately the only flag-plumbing change.
+
 ## v0.5363 (2026-10-14)
 ### Added
 - **M11 flag plumbing (Exp 278): `enable_in_game_plugin_toggle` (default False) added to `DEFAULT_FEATURES`.** The new plugin hotkey (L3+R3 2s on a DS4 → flip `enable_plugin` inside features.json, restart to apply) needs nothing else from the pipeline: `apply_feature_flags`' Exp-248 pull-before-push already bases every flag deploy on the LIVE features.json, so in-game flips are picked up, preserved, and surfaced by the webapp/ps4_state automatically. New reusable development script: `development/scripts/ps4_elf_imports.py` (PS4 ELF dynsym dumper — DT_SCE_* tags are offsets relative to the PT_SCE_DYNLIBDATA segment; game imports are NID-obfuscated, decode against a NID DB such as shadPS4's aerolib.inl).

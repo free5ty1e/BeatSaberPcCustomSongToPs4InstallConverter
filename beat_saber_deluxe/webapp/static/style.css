@@ -369,3 +369,13 @@ table.loadout tr:hover td { background: var(--card2); }
 .os-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
 .os-tab { padding: 0.35rem 0.9rem; }
 .os-tab.active { border-color: var(--accent); color: var(--accent2); font-weight: 600; }
+
+/* M12 game-data flow: big numbered steps + the pull progress bar */
+.gamedata-step { padding: 12px 14px; margin: 10px 0; border: 1px solid var(--border,#ddd); border-radius: 8px; }
+.gamedata-step h4 { margin: 0 0 6px 0; }
+.gamedata-step.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.gamedata-step.done { opacity: .65; border-color: var(--good,#2c7); }
+.progress-wrap { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.progress-wrap[hidden] { display: none; }
+.progress-bar { flex: 1; height: 14px; border-radius: 7px; background: var(--border,#ddd); overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background: var(--accent,#2c7); transition: width .4s; }

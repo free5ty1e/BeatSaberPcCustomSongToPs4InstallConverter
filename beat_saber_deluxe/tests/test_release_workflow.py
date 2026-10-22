@@ -52,13 +52,16 @@ class TestFeaturesJsonSingleSource:
     def test_default_features_matches_expected_flags(self):
         """The template the workflow will now generate — the full current set."""
         import full_custom_song_pipeline as fp
+        # Exp 281 (user directive): ALL flags default ON — fresh installs
+        # work out of the box; plugin absent-file defaults mirror this dict.
         expected = {
             "enable_plugin": True,
             "enable_custom_song_replacements": True,
             "enable_song_metadata_modification": True,
             "enable_beatmap_mode_mapping": True,
-            "enable_song_previews": False,
-            "enable_in_game_plugin_toggle": False,
+            "enable_song_previews": True,
+            "enable_in_game_plugin_toggle": True,
+            "enable_game_data_extractor": True,
         }
         assert fp.DEFAULT_FEATURES == expected
 

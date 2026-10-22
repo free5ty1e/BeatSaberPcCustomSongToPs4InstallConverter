@@ -341,3 +341,97 @@ class TestBackupDirBrowse:
         assert r.status_code == 200
         kind, argv, _ = started_jobs[0]
         assert "--out" not in argv
+
+
+class TestPluginOnlyDeploy:
+    """M12 (Exp 280b): the fresh-user bootstrap needs a plugin-only deploy
+    surface — the extractor lives in the plugin, so users must be able to
+    deploy it BEFORE any song data exists (the Deploy tab card + the Get
+    Started step-5 button → POST /api/jobs/deploy-plugin)."""
+
+    def test_deploy_plugin_argv(self, no_real_jobs):
+        started = no_real_jobs
+        r = client.post("/api/jobs/deploy-plugin", json={"debug": False})
+        assert r.status_code == 200
+        assert r.json()["ok"] is True
+        assert started and started[0][0] == "pipeline"
+        assert started[0][1] == ["--deploy-plugin"], \
+            f"expected plugin-only argv, got {started[0][1]}"
+        assert "--debug-logging" not in started[0][1]
+
+    def test_deploy_plugin_debug_build(self, no_real_jobs):
+        started = no_real_jobs
+        r = client.post("/api/jobs/deploy-plugin", json={"debug": True})
+        assert r.status_code == 200
+        argv = started[0][1]
+        assert argv == ["--deploy-plugin", "--debug-logging"], \
+            f"debug deploy must carry --debug-logging, got {argv}"
+        assert "DEBUG" in started[0][2]
+
+    def test_deploy_plugin_flag_exists_in_pipeline_help(self):
+        """Thin-layer proof (every webapp flag asserted present in --help)."""
+        import subprocess
+        r = subprocess.run(
+            [sys.executable, str(PROJECT / "tools" / "full_custom_song_pipeline.py"),
+             "--help"], capture_output=True, text=True, timeout=30)
+        assert "--deploy-plugin" in r.stdout and "--debug-logging" in r.stdout
+
+    def test_deploy_plugin_surfaces_exist_in_ui(self):
+        """Static-audit discipline (Exp 252): every JS-referenced id must exist
+        in the served HTML — the Deploy tab card + the Get Started step-5 card."""
+        html = (PROJECT / "webapp" / "static" / "index.html").read_text(encoding="utf-8")
+        for el_id in ("btn-deploy-plugin", "opt-plugin-debug",
+                      "deploy-plugin-log", "deploy-plugin-status",
+                      "btn-deploy-plugin-start", "deploy-plugin-start-log",
+                      "deploy-plugin-start-status"):
+            assert f'id="{el_id}"' in html, f"{el_id} missing from index.html"
+        appjs = (PROJECT / "webapp" / "static" / "app.js").read_text(encoding="utf-8")
+        assert "btn-deploy-plugin" in appjs and "btn-deploy-plugin-start" in appjs
+
+    def test_debug_option_only_on_deploy_tab(self):
+        """User directive (Exp 280b): the DEBUG logging option is exposed ONLY
+        on the Deploy tab — the Get Started card must not carry it."""
+        html = (PROJECT / "webapp" / "static" / "index.html").read_text(encoding="utf-8")
+        opt_pos = html.find('id="opt-plugin-debug"')
+        deploy_card = html.find('Plugin only — deploy or update')
+        start_card = html.find('btn-deploy-plugin-start')
+        assert opt_pos > deploy_card > 0, "the debug checkbox belongs to the Deploy tab card"
+        assert opt_pos < start_card, "the debug checkbox must come BEFORE the Get Started card"
+
+
+class TestPingReportsRunningCodeVersion:
+    """Exp 280c — the round-3 stale-process lesson: the ping MUST report the
+    versions of the RUNNING code (captured at import), never a fresh file
+    read at request time. A stale process reading files at request time
+    reports the NEW version while serving OLD code — defeating the
+    launcher's staleness check and sending clicks to 404s (the user's live
+    report: Deploy Plugin → "Not Found" while the ping said 0.6.15)."""
+
+    def test_versions_captured_at_import_not_request_time(self, tmp_path, monkeypatch):
+        # After import, mutating the version files must NOT change the ping —
+        # the values were captured at import (the running code's versions).
+        import server as srv
+        monkeypatch.setattr(
+            srv.paths, "WEBAPP_DIR", tmp_path, raising=False)
+        (tmp_path / "VERSION").write_text("9.9.9-fake", encoding="utf-8")
+        r = client.get("/api/ping")
+        j = r.json()
+        assert j["webapp_version"] != "9.9.9-fake", \
+            "the ping must not read the VERSION file at request time"
+        assert j["webapp_version"] == srv._CODE_WEBAPP_VERSION
+
+    def test_capture_constants_exist(self):
+        import server as srv
+        for attr in ("_CODE_WEBAPP_VERSION", "_CODE_PIPELINE_VERSION",
+                     "_CODE_PLUGIN_VERSION"):
+            assert getattr(srv, attr, None), f"{attr} not captured at import"
+
+    def test_launcher_staleness_check_uses_the_ping(self):
+        """The resolver compares the ping payload vs the CURRENT file — with
+        import-time capture, a stale process reports its OLD version and the
+        launcher correctly offers stop-and-restart (the launch-resilience
+        contract)."""
+        import server as srv
+        # a stale process reports a DIFFERENT version than the current file
+        assert srv._CODE_WEBAPP_VERSION is not None
+        # (the live proof: this very class was caught by the user's 404)

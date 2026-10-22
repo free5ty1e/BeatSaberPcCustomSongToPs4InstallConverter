@@ -246,3 +246,39 @@ class TestDemosLink:
         assert ".demos-link" in css
         assert "left: 0.6rem" in css          # lower-LEFT (badge is right)
         assert "print" in css                 # hidden when printing
+
+
+class TestPluginVersionFromBundledPRX:
+    """Exp 280d (user request): 'I still would want to see a version number
+    for that bundled plugin'. In a release extraction there is no src/, but
+    the bundled PRX carries its boot banner ('=== BS Deluxe v0.8054
+    started ===') — extract the real version from it."""
+
+    def test_bundled_prx_version_extracted(self, monkeypatch, tmp_path):
+        import server as srv
+        # a fake "release extraction": no src/, but a plugins/ PRX with the banner
+        monkeypatch.setattr(srv.paths, "PROJECT_DIR", tmp_path, raising=False)
+        (tmp_path / "plugins").mkdir()
+        (tmp_path / "plugins" / "beat_saber_deluxe.prx").write_bytes(
+            b"garbage\x00=== BS Deluxe v0.8054 started ===\x00more")
+        assert srv._plugin_version() == "v0.8054"
+
+    def test_version_falls_back_gracefully_with_neither(self, monkeypatch, tmp_path):
+        import server as srv
+        monkeypatch.setattr(srv.paths, "PROJECT_DIR", tmp_path, raising=False)
+        assert "bundled" in srv._plugin_version()
+
+    def test_ping_reports_the_bundled_prx_version(self, monkeypatch, tmp_path):
+        import server as srv
+        monkeypatch.setattr(srv.paths, "PROJECT_DIR", tmp_path, raising=False)
+        (tmp_path / "plugins").mkdir()
+        (tmp_path / "plugins" / "beat_saber_deluxe.prx").write_bytes(
+            b"=== BS Deluxe v0.9999 started ===")
+        srv._capture_code_versions()
+        try:
+            r = client.get("/api/ping")
+            assert r.json()["plugin_version"] == "v0.9999"
+        finally:
+            # restore the real capture for other tests
+            monkeypatch.undo()
+            srv._capture_code_versions()

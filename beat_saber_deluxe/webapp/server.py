@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -35,12 +36,35 @@ STATIC_DIR = paths.WEBAPP_DIR / "static"
 # --------------------------------------------------------------------------
 # Mode detection + static UI
 # --------------------------------------------------------------------------
+# Code-version capture (Exp 280c — the round-3 stale-process lesson):
+# the ping MUST report the versions of the RUNNING CODE, captured at import,
+# NOT a fresh file read at request time. A stale server process (started before
+# a pull) reading the files at request time reports the NEW version while
+# serving OLD code — defeating the launcher's staleness check ("current" →
+# reuse) and sending the user's clicks to 404s (the user's live report:
+# Deploy Plugin → "❌ Not Found" while the ping proudly said 0.6.15).
+_CODE_WEBAPP_VERSION = None
+_CODE_PIPELINE_VERSION = None
+_CODE_PLUGIN_VERSION = None
+
+
+def _capture_code_versions():
+    """Capture once at import: these are the versions THIS process runs."""
+    global _CODE_WEBAPP_VERSION, _CODE_PIPELINE_VERSION, _CODE_PLUGIN_VERSION
+    _CODE_WEBAPP_VERSION = _webapp_version()
+    _CODE_PIPELINE_VERSION = _pipeline_version()
+    _CODE_PLUGIN_VERSION = _plugin_version()
+
+
 @app.get("/api/ping")
 def ping():
-    """Backend heartbeat — the UI's local-backend/Pages mode switch."""
-    return {"mode": "local-backend", "webapp_version": _webapp_version(),
-            "pipeline_version": _pipeline_version(),
-            "plugin_version": _plugin_version(),
+    """Backend heartbeat — the UI's local-backend/Pages mode switch.
+    Reports the import-time-captured versions of the RUNNING code (see the
+    capture comment above — request-time file reads lie about staleness)."""
+    return {"mode": "local-backend",
+            "webapp_version": _CODE_WEBAPP_VERSION or _webapp_version(),
+            "pipeline_version": _CODE_PIPELINE_VERSION or _pipeline_version(),
+            "plugin_version": _CODE_PLUGIN_VERSION or _plugin_version(),
             "pipeline_present": paths.PIPELINE.exists()}
 
 
@@ -61,8 +85,11 @@ def _pipeline_version() -> str:
 
 
 def _plugin_version() -> str:
-    """Parse #define PLUGIN_VERSION from the plugin source (or 'deployed' in
-    a release zip, where src/ is absent — the bundled .prx is the artifact)."""
+    """Parse #define PLUGIN_VERSION from the plugin source; in a release
+    extraction (no src/), read the version out of the BUNDLED PRX instead —
+    the binary carries its boot-banner string ('=== BS Deluxe v0.8054
+    started ==='), so release users still see a real version number (user
+    request, Exp 280d — 'bundled' told them nothing)."""
     src = paths.PROJECT_DIR / "src" / "main.cpp"
     try:
         for line in src.read_text(encoding="utf-8").splitlines():
@@ -70,7 +97,20 @@ def _plugin_version() -> str:
                 return line.split('"')[1]
     except OSError:
         pass
-    return "bundled"
+    prx = paths.PROJECT_DIR / "plugins" / "beat_saber_deluxe.prx"
+    try:
+        import re
+        m = re.search(rb"BS Deluxe v(\d+\.\d+) started",
+                      prx.read_bytes())
+        if m:
+            return "v" + m.group(1).decode()
+    except OSError:
+        pass
+    return "bundled (no version found)"
+
+
+# Capture at import (Exp 280c): after the last version-reader definition.
+_capture_code_versions()
 
 
 @app.get("/")
@@ -116,8 +156,12 @@ def dump_default_location():
 def config_save(body: dict):
     """Wizard step 4: write the fully-localized ps4_config.json."""
     try:
+        # Exp 281f: dump_root is OPTIONAL — the no-dump flow (game-data
+        # extractor) is the default posture. When omitted, both dump paths
+        # point at the local game_data cache; users who HAVE a dump can still
+        # pass its root explicitly (developers/repair).
         cfg = config.build_wizard_config(
-            dump_root=body["dump_root"],
+            dump_root=body.get("dump_root", str(paths.PROJECT_DIR / "game_data")),
             ps4_ip=body.get("ps4_ip", "192.168.100.117"),
             ftp_port=body.get("ftp_port", 2121),
             ftp_user=body.get("ftp_user", "anonymous"),
@@ -192,26 +236,42 @@ def ps4_test():
 
 @app.get("/api/ps4/state")
 def ps4_state():
-    """Dashboard payload: redirects summary, features, metadata counts."""
+    """Dashboard payload: redirects summary, features, metadata counts.
+    Exp 280d: absent files (decisive 550) are the CLEAN-SLATE state — the
+    payload marks each section absent and sets clean_slate=True when all
+    three are, so the UI can say 'clean slate' instead of erroring."""
     payload: dict = {}
     red = ps4.read_redirects_summary()
     payload["redirects"] = {"ok": red.ok, "error": red.error,
+                            "absent": bool(getattr(red, "absent", False)),
                             **(red.data or {})}
     feat = ps4.read_features()
+    feat_absent = bool(getattr(feat, "absent", False))
     payload["features"] = {"ok": feat.ok, "error": feat.error,
-                           **(feat.data or {})}
+                          "absent": feat_absent,
+                          **({} if feat_absent else (feat.data or {}))}
     meta = ps4.read_song_metadata()
     if meta.ok and meta.data:
         names = (meta.data.get("song_names") or {})
         payload["song_metadata"] = {
-            "ok": True,
+            "ok": True, "absent": False,
             "custom_song_count": sum(
                 1 for v in names.values()
                 if isinstance(v, str) and v and " / " in v),
             "entries": names,
         }
+    elif meta.ok:
+        payload["song_metadata"] = {"ok": True, "absent": True,
+                                    "custom_song_count": 0, "entries": {}}
     else:
-        payload["song_metadata"] = {"ok": False, "error": meta.error}
+        payload["song_metadata"] = {"ok": False, "absent": False,
+                                    "error": meta.error}
+    payload["clean_slate"] = all([
+        payload["redirects"].get("absent", False),
+        payload["features"].get("absent", False),
+        payload["song_metadata"].get("absent", False),
+    ]) and payload["redirects"]["ok"] and payload["features"]["ok"] \
+        and payload["song_metadata"]["ok"]
     return payload
 
 
@@ -219,12 +279,13 @@ def ps4_state():
 # Feature flags (read live; apply via --features-only job)
 # --------------------------------------------------------------------------
 FLAG_DESCRIPTIONS = {
-    "enable_plugin": "Global kill switch. OFF = the plugin is fully inert and the game plays 100% official songs on the next boot — no uninstall needed. The only flag that defaults ON when absent.",
+    "enable_plugin": "Global kill switch. OFF = the plugin is fully inert and the game plays 100% official songs on the next boot — no uninstall needed. All flags default ON when features.json is absent (fresh installs work out of the box); this one stays as the master switch.",
     "enable_custom_song_replacements": "Gates all custom-song bundle redirects. OFF = every song loads its original stock audio and beatmaps (metadata labels stay).",
     "enable_song_metadata_modification": "Gates the in-game song-list name/artist swaps. OFF = songs show their official titles even when customs are deployed.",
     "enable_beatmap_mode_mapping": "Gates the extra game-mode buttons (OneSaber / NoArrows / 90Degree). OFF = the stock pack bundles + catalog are served (Standard only) — the safe posture while a pack is only partially deployed.",
     "enable_song_previews": "Gates the custom SONG PREVIEWS in the song menu (M10): highlighting a custom song plays its own ~10s audio instead of the stock song's clip. Previews ride inside the patched pack bundles — ON deploys the modes+previews bundle variant; OFF serves stock previews (the pack/mode redirects are shared with mode mapping: either flag ON keeps the patched pair live).",
     "enable_in_game_plugin_toggle": "In-game plugin toggle (M11, hardware-confirmed): arms the Move-controller hotkey — hold the Move button + trigger together for 2 full seconds (a combination used nowhere else in the game) to flip the global plugin state. You'll hear the PS4 notification sound (in VR the popup may not be visible); restart Beat Saber to apply the new state — the current session never changes mid-game. The hotkey keeps working even while the plugin itself is toggled OFF, so you can always flip it back on without a PC. Deliberately NOT affected by the kill switch — only this flag disables the hotkey. Full guide: docs/features/in-game-plugin-toggle.md.",
+    "enable_game_data_extractor": "M12: arms the in-console game-data extractor — the plugin copies the files the pipeline needs (per-slot templates ~13MB each, pack bundles, the catalog) out of the game's own data during a normal boot, so you never need to make or hold a decrypted dump on your PC. Use the Dump Guide tab's 'let the game extract it' flow: request the packs/songs you want, boot the game once, then pull the files into the local game_data cache. Idempotent (failures retry on the next boot); console-maintenance tooling like the M11 hotkey — deliberately NOT gated by the kill switch.",
 }
 
 
@@ -874,6 +935,136 @@ def _resolve_launch_port(host: str, preferred: int, open_browser: bool = True) -
               "To fix: check what still holds it (ps aux | grep '[s]erver.py', "
               "kill the PID manually) — falling back to the next free port automatically.")
     return _next_free_port(host, preferred)
+
+
+# --------------------------------------------------------------------------
+# Game-data extraction (M12, Exp 280) — the "no dump required" flow.
+# The pipeline owns both operations (--request-game-data / --pull-game-data
+# as job subprocesses — thin layer); these endpoints read state + start jobs.
+# --------------------------------------------------------------------------
+
+def _local_game_data_summary() -> dict:
+    """Local cache summary (paths.game_data_dir)."""
+    cfg = config.load_config()
+    gd = cfg.get("paths", {}).get("game_data_dir", "game_data")
+    gd_path = paths.PROJECT_DIR / gd if not str(gd).startswith("/") else Path(gd)
+    files = 0
+    total = 0
+    if gd_path.is_dir():
+        for dp, _, fs in os.walk(gd_path):
+            for f in fs:
+                files += 1
+                try:
+                    total += os.path.getsize(os.path.join(dp, f))
+                except OSError:
+                    pass
+    current_dump_dir = cfg.get("paths", {}).get("game_dump_dir", "")
+    return {
+        "dir": str(gd_path),
+        "exists": gd_path.is_dir(),
+        "files": files,
+        "bytes": total,
+        "game_dump_dir_current": current_dump_dir,
+        "cache_is_active": str(current_dump_dir).endswith("game_data"),
+    }
+
+
+@app.get("/api/game-data/state")
+def game_data_state():
+    """Live extraction state: requested (requests.txt), extracted/failed
+    (status.txt), and the local cache summary."""
+    requests_res = ps4.read_game_data_requests()
+    status_res = ps4.read_game_data_status()
+    out = {
+        "ok": requests_res.ok and status_res.ok,
+        "error": requests_res.error if not requests_res.ok else status_res.error,
+        "requests": requests_res.data or [],
+        "extracted": (status_res.data or {}).get("done", []) if status_res.ok else [],
+        "errors": (status_res.data or {}).get("errors", []) if status_res.ok else [],
+        "cache": _local_game_data_summary(),
+    }
+    if out["ok"]:
+        req = set(out["requests"])
+        done = set(out["extracted"])
+        out["pending"] = sorted(req - done)
+        out["missing_from_requests"] = sorted(done - req)
+    return out
+
+
+@app.post("/api/jobs/game-data-request")
+def jobs_game_data_request(body: dict):
+    """Write the extraction manifest to the PS4 (one pipeline subprocess)."""
+    _require_config()
+    packs = body.get("packs") or None
+    slots = body.get("slots") or None
+    if not packs and not slots:
+        raise HTTPException(400, "packs or slots required (comma-separated)")
+    if isinstance(packs, list):
+        packs = [str(p).strip() for p in packs if str(p).strip()]
+    if isinstance(slots, list):
+        slots = [str(s).strip() for s in slots if str(s).strip()]
+    argv = deploy.game_data_request_command(packs, slots)
+    label = "request game data " + (f"packs={','.join(packs)}" if packs else
+                                    f"slots={','.join(slots)}")
+    try:
+        job = RUNNER.start(argv, label=label)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
+
+
+@app.post("/api/jobs/game-data-pull")
+def jobs_game_data_pull():
+    """Mirror the console's game_data/ into the local cache (resumable)."""
+    _require_config()
+    argv = deploy.game_data_pull_command()
+    try:
+        job = RUNNER.start(argv, label="pull game data")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
+
+
+@app.post("/api/jobs/deploy-plugin")
+def jobs_deploy_plugin(body: dict):
+    """Plugin-only deploy (M12, Exp 280b — the fresh-user bootstrap): builds
+    (or falls back to the bundled binary) + deploys beat_saber_deluxe.prx and
+    ensures the plugins.ini entry. body.debug deploys the DEBUG build."""
+    _require_config()
+    debug = bool((body or {}).get("debug", False))
+    argv = deploy.plugin_deploy_command(debug=debug)
+    try:
+        job = RUNNER.start(argv, label=f"deploy plugin{' (DEBUG)' if debug else ''}")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id, "command": deploy.pipeline_command(argv)}
+
+
+@app.post("/api/game-data/use-cache")
+def game_data_use_cache():
+    """Point paths.game_dump_dir at the local game_data cache (after a pull)."""
+    cfg = config.load_config()
+    summary = _local_game_data_summary()
+    if not summary["exists"] or summary["files"] == 0:
+        raise HTTPException(400, "the local cache is empty — run the pull first "
+                                  "(Boot the game once with the extractor armed, then "
+                                  "Pull extracted files. To fix: nothing is broken — "
+                                  "the cache just has no files yet.)")
+    cfg.setdefault("paths", {})["game_dump_dir"] = summary["dir"]
+    # Exp 281f: repoint EVERY dump consumer — pack_modes.dump_dir too. The
+    # user's proof run exposed the hybrid: the Setup Wizard pins
+    # pack_modes.dump_dir at the wizard's dump_root (their REAL dump), the
+    # song template build followed the cache while the pack-patch step
+    # silently read the real dump's pack bundle + catalog. The button now
+    # switches the whole pipeline: remove any pin so the pipeline's
+    # follow-game_dump_dir rule resolves the cache (and set it explicitly
+    # for tooling that reads the raw file).
+    pm = cfg.setdefault("pack_modes", {})
+    pm["dump_dir"] = summary["dir"]
+    written = config.save_config(cfg)
+    return {"ok": True, "config_path": str(written),
+            "game_dump_dir": summary["dir"],
+            "pack_modes_dump_dir": summary["dir"]}
 
 
 if __name__ == "__main__":

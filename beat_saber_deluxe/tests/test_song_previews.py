@@ -219,8 +219,9 @@ class TestPipelineVariantThreading:
 
     def test_default_features_has_previews_flag(self):
         fp = self._pipeline()
+        # Exp 281: ALL flags default ON (fresh installs work out of the box).
         assert 'enable_song_previews' in fp.DEFAULT_FEATURES
-        assert fp.DEFAULT_FEATURES['enable_song_previews'] is False
+        assert fp.DEFAULT_FEATURES['enable_song_previews'] is True
 
     def test_previews_enabled_reads_local_features(self, tmp_path, monkeypatch):
         fp = self._pipeline()

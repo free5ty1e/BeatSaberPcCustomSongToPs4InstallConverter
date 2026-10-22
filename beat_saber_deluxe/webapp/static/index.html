@@ -153,6 +153,22 @@
         <button id="btn-verify" class="hidden">Verify PS4</button>
       </div>
     </div>
+
+    <div class="card">
+      <h3>Plugin only — deploy or update the BSD plugin (v0.8054+)</h3>
+      <p class="muted">Deploys <code>beat_saber_deluxe.prx</code> (builds it from
+      source when available; falls back to the bundled <code>plugins/</code>
+      binary in a release extraction) and ensures the <code>plugins.ini</code>
+      entry. No songs are touched. Restart Beat Saber to run the new plugin.</p>
+      <div class="row">
+        <button id="btn-deploy-plugin" class="primary">Deploy plugin</button>
+        <label class="chk"><input type="checkbox" id="opt-plugin-debug">
+          Debug logging (deploys the <b>DEBUG</b> build — verbose log lines + the
+          boot toast reports a <code>DEBUG</code> version suffix)</label>
+      </div>
+      <pre id="deploy-plugin-log" class="log hidden"></pre>
+      <div id="deploy-plugin-status" class="result"></div>
+    </div>
   </section>
 
   <!-- ================= PS4 ================= -->
@@ -275,7 +291,7 @@
         <div class="ps4-toast" id="toast-sim">
           <b id="toast-title">BS Deluxe v0.8047 (ON)</b><br>
           <span class="toast-author">By Chris Primeish</span><br>
-          <span id="toast-count">(5/5 features ON)</span>
+          <span id="toast-count">(6/6 features ON)</span>
         </div>
       </div>
       <p class="muted" id="toast-note">Reference format: the boot toast shows the
@@ -514,9 +530,10 @@
             <span class="muted">(check: <code>python3 --version</code>)</span></li>
           <li><input type="checkbox"> <b>A jailbroken PS4</b> with GoldHEN, FTP enabled (port 2121)</li>
           <li><input type="checkbox"> <b>Beat Saber v2.04</b> (CUSA12878) with patch 2.04 installed</li>
-          <li><input type="checkbox"> <b>Your decrypted game dump</b> in a <code>ps4_dump/</code> folder —
-            don't have one? The <a href="#" data-nav="guide">Dump Guide</a> walks you through it
-            (with our ready-made <code>dumper.cfg</code>)</li>
+          <li><input type="checkbox"> <b>No game dump needed!</b> The plugin's built-in
+            game-data extractor retrieves the files for your chosen packs during a normal
+            boot — see the <a href="#" data-nav="guide">Dump Guide</a>'s 5-step walkthrough.
+            (A decrypted <code>ps4_dump/</code> is only needed for development/repair.)</li>
           <li><input type="checkbox"> Both machines on the <b>same network</b></li>
         </ul>
       </div>
@@ -582,12 +599,22 @@ python3 webapp/server.py</pre>
       </div>
 
       <div class="card start-step">
-        <h3>5 · Run the Setup Wizard (once)</h3>
+        <h3>5 · Set up (once) — plugin, connection, song data</h3>
         <ol>
-          <li>Point it at your <code>ps4_dump/</code> folder — it validates the
-          dump live (patch version, eboot, catalog, found-DLC list)</li>
-          <li>Enter your PS4's IP → <b>Test Connection</b></li>
-          <li><b>Save configuration</b></li>
+          <li><b>Deploy the BSD plugin</b> to your PS4 — one click:
+            <div class="row" style="margin-top:6px">
+              <button id="btn-deploy-plugin-start" class="primary">Deploy plugin to PS4</button>
+              <span class="muted" id="deploy-plugin-start-status">(restart Beat Saber
+                afterwards to run the new plugin)</span>
+            </div>
+            <pre id="deploy-plugin-start-log" class="log hidden"></pre>
+          </li>
+          <li>Run the <b>Setup Wizard</b>: enter your PS4's IP →
+              <b>Test Connection</b> → <b>Save configuration</b></li>
+          <li><b>New users — no dump needed:</b> the <a href="#" data-nav="guide">Dump
+              Guide</a>'s <b>Option A</b> builds your song data straight from your
+              console (the plugin extracts it during a normal boot). A
+              <code>ps4_dump/</code> folder is only needed for development.</li>
           <li>Pick a song and deploy 🎉</li>
         </ol>
       </div>
@@ -605,8 +632,79 @@ python3 webapp/server.py</pre>
   <section id="page-guide" class="page hidden">
     <h2>Game Dump Guide</h2>
     <p class="muted">Beat Saber Deluxe replaces songs in your own copy of the game —
-    it never distributes game content. You need a decrypted dump of
-    <b>Beat Saber CUSA12878 patch 2.04</b>.</p>
+    it never distributes game content.</p>
+
+    <div class="card" id="gamedata-auto-card" style="border-left:4px solid var(--accent)">
+      <h3>✨ Option A — Let the game extract it (recommended; no dump needed)</h3>
+      <p>The plugin copies the exact files the pipeline needs (per-slot
+      templates, pack bundles, the catalog) out of the game's own data during a
+      normal boot — you never make or hold a decrypted dump on this PC.
+      <b>Legally clean:</b> everything is extracted from your own console.</p>
+
+      <div class="gamedata-step" id="gamedata-step-1">
+        <h4>STEP 1 · Request the data</h4>
+        <p class="muted">Pick the packs you want extracted (or Select all), then
+        press the button. The plugin extracts on by default — nothing to arm.</p>
+        <div class="row" style="margin-bottom:4px">
+          <button id="gamedata-select-all-btn" class="muted">Select all packs</button>
+          <button id="gamedata-select-none-btn" class="muted">Select none</button>
+          <span class="muted" id="gamedata-size-hint"></span>
+        </div>
+        <div id="gamedata-pack-list" class="row wrap"></div>
+        <button class="primary big" id="gamedata-request-btn">STEP 1 · Request extraction</button>
+      </div>
+
+      <div class="gamedata-step" id="gamedata-step-2">
+        <h4>STEP 2 · Launch Beat Saber on your PS4</h4>
+        <p class="muted">A normal boot is all it takes — the plugin extracts
+        during startup and shows a <b>PS4 notification ("BSD: game data
+        ready")</b> when finished. This page is watching and updates
+        automatically. (Failures retry on the next boot.)</p>
+      </div>
+
+      <div class="gamedata-step" id="gamedata-step-3">
+        <h4>STEP 3 · Pull the extracted files here</h4>
+        <p class="muted">After the notification, come back and press the button.
+        Watch the progress bar fill as the files copy to this PC.</p>
+        <div class="progress-wrap hidden" id="gamedata-pull-progress-wrap" hidden>
+          <div class="progress-bar"><div class="progress-fill" id="gamedata-pull-progress-fill"></div></div>
+          <span class="muted" id="gamedata-pull-progress-label">0%</span>
+        </div>
+        <button class="primary big" id="gamedata-pull-btn">STEP 3 · Pull extracted files</button>
+      </div>
+
+      <div class="gamedata-step" id="gamedata-step-4">
+        <h4>STEP 4 · Save the cache for the web app</h4>
+        <p class="muted">One press points the pipeline at the extracted
+        cache — from here on, every song build uses it. No dump anywhere.</p>
+        <button class="primary big" id="gamedata-use-btn">STEP 4 · Use the extracted cache</button>
+      </div>
+
+      <div class="gamedata-step" id="gamedata-step-5">
+        <h4>STEP 5 · Deploy songs 🎉</h4>
+        <p class="muted">Go to <a href="#" data-nav="deployPage">Find a Song & Deploy</a>
+        — pick any BeatSaver song, target any slot in your extracted packs,
+        and deploy. Everything builds from the cache.</p>
+      </div>
+      <div class="row" style="margin-bottom:4px">
+        <button id="gamedata-select-all-btn" class="muted">Select all packs</button>
+        <button id="gamedata-select-none-btn" class="muted">Select none</button>
+        <span class="muted" id="gamedata-size-hint"></span>
+      </div>
+      <div id="gamedata-pack-list" class="row wrap"></div>
+      <div class="row">
+        <button class="primary" id="gamedata-request-btn">Request extraction</button>
+        <button id="gamedata-pull-btn">Pull extracted files</button>
+        <button id="gamedata-use-btn">Use the extracted cache</button>
+      </div>
+      <div id="gamedata-status" class="muted" style="margin-top:8px">Loading extraction state…</div>
+    </div>
+
+    <div class="card">
+      <h3>Option B — I already have a decrypted dump (the classic recipe)</h3>
+      <p class="muted">You need a decrypted dump of <b>Beat Saber CUSA12878
+      patch 2.04</b> on this machine. Only needed for development/repair —
+      Option A covers everything else.</p>
 
     <div class="card">
       <h3>What you need</h3>
