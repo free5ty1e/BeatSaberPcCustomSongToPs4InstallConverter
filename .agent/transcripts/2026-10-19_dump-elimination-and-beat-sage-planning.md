@@ -101,3 +101,7 @@ The user asked whether --clean-ps4 was ready for a full fresh-slate run. Answer:
 ## Cycle 12 — Exp 281f: the certainty audit + THE definitive proof
 
 The user's full run succeeded (played the custom song!) and they asked the certainty question. The audit found a HYBRID: the wizard had pinned pack_modes.dump_dir at the real dump — the pack step read the lizzo bundle + catalog from /workspace/ps4_dump. Fixed (0.6.19: the Use button repoints everything; the wizard's dump_root optional → the cache default). THE PROOF: with the real dump physically HIDDEN, the full deploy completed cache-only — validation PASSED. Dump restored. alpha01 watched + validated (CI 960→837+123; all artifacts; the webapp delta = the 281f fixes → alpha02). The full docs audit done: README/Get Started/introduction/CI_RELEASE/feature doc/KB all carry the no-dump-required message. M12 COMPLETE pending alpha02.
+
+## Cycle 13 — PR #9 updated (Exp 281g)
+
+Title → "M12: No Dump Required — The Game's Own Mini-Dumper (game-data extractor) + Beat Sage & local-folder support groundwork". Description → the complete release story (the headline, the engineering, the 8-round validation table, the definitive proof, also-in-PR, M13 groundwork, versions, release readiness, by-the-numbers). Pushed via --raw-field (9,091 chars).
