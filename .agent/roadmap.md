@@ -505,7 +505,7 @@ on accelerometer/gyro churn (it compares whole words 2-7) — future button diag
 should compare only the button words (+0x18/+0x1A). No action needed: the feature is
 confirmed and release logging is one-time events only.
 
-## M12 — Game-Data Cache + In-Game Extractor (Eliminate the Dump Requirement) (Planned)
+## M12 — Game-Data Cache + In-Game Extractor — SHIPPED in v0.8055-pipeline-0.5365-webapp-0.6.19 (2026-10-22, hardware-proven)
 **Goal:** a new user checks out the repository and can add custom songs immediately —
 no 4.9GB dump, no dumper homebrew, no USB stick. The plugin extracts exactly the files
 the pipeline needs (~13MB per song slot, ~140MB per pack, 658MB for the full live
