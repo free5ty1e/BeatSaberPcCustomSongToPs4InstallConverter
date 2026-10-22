@@ -97,3 +97,7 @@ The user's fresh deploy failed at two deeper layers: pack_modes.dump_dir never f
 ## Cycle 11 — Exp 281e: the clean-slate audit
 
 The user asked whether --clean-ps4 was ready for a full fresh-slate run. Answer: NEEDED attention — the game_data flat pattern could only hit the Media directory (DELE on a dir fails) → every extracted file would have survived. Fixed with _ftp_recursive_delete (depth-first). Verified LIVE: backup → clean → post-clean probes (AFR empty, game_data ABSENT, plugin ABSENT, plugins.ini entry gone) → a second clean found nothing (idempotent). The simulation rebuilt + app restarted with the complete fresh state (clean_slate=True, 0/0/0, config at the absent ./ps4_dump_local). Ready for the definitive end-to-end run.
+
+## Cycle 12 — Exp 281f: the certainty audit + THE definitive proof
+
+The user's full run succeeded (played the custom song!) and they asked the certainty question. The audit found a HYBRID: the wizard had pinned pack_modes.dump_dir at the real dump — the pack step read the lizzo bundle + catalog from /workspace/ps4_dump. Fixed (0.6.19: the Use button repoints everything; the wizard's dump_root optional → the cache default). THE PROOF: with the real dump physically HIDDEN, the full deploy completed cache-only — validation PASSED. Dump restored. alpha01 watched + validated (CI 960→837+123; all artifacts; the webapp delta = the 281f fixes → alpha02). The full docs audit done: README/Get Started/introduction/CI_RELEASE/feature doc/KB all carry the no-dump-required message. M12 COMPLETE pending alpha02.

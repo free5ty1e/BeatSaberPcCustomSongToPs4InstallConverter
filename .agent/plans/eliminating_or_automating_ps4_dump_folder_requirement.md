@@ -621,3 +621,42 @@ state verified: clean_slate=True, 0 requests/0 extracted/0 cache files).
 STEP 2 Boot (watch for the notification) → STEP 3 Pull (progress bar) →
 STEP 4 Use the cache → STEP 5 Deploy Buddy Holly (4373a) → 2BeLoved →
 play → verify.
+
+### RUN LOG — Round 8 (Exp 281f): 🎉 THE DEFINITIVE PROOF — the user's full run succeeded; the certainty audit; the no-dump claim is now PROVEN
+
+**User:** "Wow, excellent job! It worked perfectly this time. Played the
+custom song. And this is all from a folder that did NOT have knowledge of my
+ps4_dump folder, we're absolutely certain of this?" + the full docs-audit
+directive + the alpha01 tag.
+
+**THE CERTAINTY AUDIT (the honest answer: NOT QUITE — a hybrid found):**
+the user's successful run was a HYBRID. The Setup Wizard (Get Started step 5)
+had pinned `pack_modes.dump_dir` at `/workspace/ps4_dump` (the real dump) —
+so the song template built from the cache ✓ while the pack-patch step
+silently read the lizzo pack bundle + catalog from the real dump. The
+"Use the extracted cache" button only repointed `game_dump_dir`.
+
+**Fixed (webapp 0.6.19):** the Use button repoints EVERY dump consumer
+(pack_modes.dump_dir + game_dump_dir); the wizard's dump_root is OPTIONAL —
+omitted defaults both paths to the game_data cache (the no-dump flow is the
+default posture).
+
+**THE DEFINITIVE PROOF:** with `/workspace/ps4_dump` physically HIDDEN
+(renamed), the full deploy from the simulation completed cache-only:
+- Song template: `/workspace/release-test/game_data/Media/...` ✓ (the cache)
+- Pack patch: lizzo from the cache + RS downloaded incrementally from the console ✓
+- Catalog: regenerated from the cache's extracted catalog.json ✓
+- Deploy: bundle (28.3MB verified) + plugin + catalog ✓
+- **Post-deploy validation: 🎉 PASSED** (CRCs match catalog, 0 bad dataIndexes, md5 match)
+The dump was restored afterward. **The no-dump flow is PROVEN end-to-end —
+the game effectively features its own mini-dumper retrieving only what the
+user's chosen packs need.**
+
+**alpha01 validated:** CI green (960 → 837+123); FSELF PRXs v0.8055; 6 feature
+docs; the 7-flag ALL-TRUE template; pipeline byte-parity ✓; the webapp delta
+= the 281f fixes (0.6.19) → **alpha02 must carry them**.
+
+**The docs audit done:** README (the definitive prerequisites statement), the
+hosted Get Started checklist, introduction.md, CI_RELEASE, the feature doc
+(HARDWARE-PROVEN), the KB (the hybrid lesson + the physical-hiding-test
+principle). M12 IS COMPLETE pending the alpha02 tag.

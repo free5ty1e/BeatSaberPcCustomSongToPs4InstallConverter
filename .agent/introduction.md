@@ -22,7 +22,7 @@ Three components, versioned independently:
 | **Pipeline** (`v0.53XX`) | Python: downloads from BeatSaver, converts audio (FSB5 PCM16) + beatmaps (V2/V3/V4→PS4 V3), builds AssetBundles, surgically patches music-pack bundles + the Addressables catalog, deploys over FTP, self-validates | `beat_saber_deluxe/tools/full_custom_song_pipeline.py` (the ONE entry point) |
 | **Web app** (`0.6.X`) | FastAPI local UI + GitHub Pages static build — a thin layer over the pipeline CLI (every button = one pipeline subprocess) | `beat_saber_deluxe/webapp/` |
 
-**Current state (Oct 2026):** Milestones M0–M11 complete. 47 custom songs
+**Current state (Oct 2026):** Milestones M0–M12 complete (M12: the no-dump flow — the game's own mini-dumper — hardware-proven). 47 custom songs
 across 5 music packs live on the user's PS4 (Britney Spears, Rolling Stones,
 Lizzo, Billie Eilish, Camellia), each showing 4 gameplay modes
 (Standard/OneSaber/NoArrows/90Degree), with in-game song previews that play

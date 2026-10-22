@@ -58,6 +58,25 @@ its pack's bundle (pack-mode patching needs it) + the catalog.
   casing), but the local PC cache is not — the manifest uses the ids-file
   casing so `--template` resolves the cached file verbatim.
 
+## The hybrid-dump certainty audit (Exp 281f — the proof and the lesson)
+
+**The user's certainty question ("are we absolutely sure the run used only the
+extracted files?") exposed a hybrid:** the Setup Wizard had pinned
+`pack_modes.dump_dir` at the developer's real `/workspace/ps4_dump`, so the
+successful run built the song template from the cache while the pack-patch
+step silently read the lizzo pack bundle + catalog from the real dump.
+**Fixes:** (1) the "Use the extracted cache" button repoints EVERY dump
+consumer (pack_modes.dump_dir alongside game_dump_dir); (2) the wizard's
+dump_root is optional — omitted defaults both paths to the game_data cache
+(the no-dump flow is the default posture).
+**The definitive proof:** with the real dump physically hidden (renamed), a
+full Buddy Holly → 2BeLoved deploy from the simulation completed cache-only
+(song template + pack patch + catalog all from game_data or the console
+itself) and post-deploy validation PASSED. **The no-dump claim is proven, not
+assumed.** Lesson: a multi-path config surface means "switch the pipeline to
+the cache" must repoint EVERY consumer — and claims about source-purity
+deserve a physical-hiding test, not a config-read assertion.
+
 ## The fresh-user bootstrap order (the chicken-and-egg)
 
 **The extractor lives in the plugin, but a fresh user has no song data to

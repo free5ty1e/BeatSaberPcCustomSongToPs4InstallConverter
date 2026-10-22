@@ -1,6 +1,6 @@
 # Game-Data Extractor
 
-**Status:** ✅ Working (plugin v0.8055+, pipeline v0.5365+) · **Feature flag:** `enable_game_data_extractor` (**ON by default** — fresh installs work out of the box)
+**Status:** ✅ **HARDWARE-PROVEN (2026-10-20, Exp 281f): a full song deploy completed with the developer's decrypted dump physically hidden — validation PASSED.** Users need NO game dump. (plugin v0.8055+, pipeline v0.5365+) · **Feature flag:** `enable_game_data_extractor` (**ON by default**)
 
 ## What it does
 

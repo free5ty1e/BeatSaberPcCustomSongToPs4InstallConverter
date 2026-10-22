@@ -156,8 +156,12 @@ def dump_default_location():
 def config_save(body: dict):
     """Wizard step 4: write the fully-localized ps4_config.json."""
     try:
+        # Exp 281f: dump_root is OPTIONAL — the no-dump flow (game-data
+        # extractor) is the default posture. When omitted, both dump paths
+        # point at the local game_data cache; users who HAVE a dump can still
+        # pass its root explicitly (developers/repair).
         cfg = config.build_wizard_config(
-            dump_root=body["dump_root"],
+            dump_root=body.get("dump_root", str(paths.PROJECT_DIR / "game_data")),
             ps4_ip=body.get("ps4_ip", "192.168.100.117"),
             ftp_port=body.get("ftp_port", 2121),
             ftp_user=body.get("ftp_user", "anonymous"),
@@ -1047,9 +1051,20 @@ def game_data_use_cache():
                                   "Pull extracted files. To fix: nothing is broken — "
                                   "the cache just has no files yet.)")
     cfg.setdefault("paths", {})["game_dump_dir"] = summary["dir"]
+    # Exp 281f: repoint EVERY dump consumer — pack_modes.dump_dir too. The
+    # user's proof run exposed the hybrid: the Setup Wizard pins
+    # pack_modes.dump_dir at the wizard's dump_root (their REAL dump), the
+    # song template build followed the cache while the pack-patch step
+    # silently read the real dump's pack bundle + catalog. The button now
+    # switches the whole pipeline: remove any pin so the pipeline's
+    # follow-game_dump_dir rule resolves the cache (and set it explicitly
+    # for tooling that reads the raw file).
+    pm = cfg.setdefault("pack_modes", {})
+    pm["dump_dir"] = summary["dir"]
     written = config.save_config(cfg)
     return {"ok": True, "config_path": str(written),
-            "game_dump_dir": summary["dir"]}
+            "game_dump_dir": summary["dir"],
+            "pack_modes_dump_dir": summary["dir"]}
 
 
 if __name__ == "__main__":
