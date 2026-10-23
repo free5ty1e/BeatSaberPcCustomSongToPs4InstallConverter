@@ -52,9 +52,9 @@ hosted on GitHub Pages.
 1. **`/workspace/CLAUDE.md`** — all operating rules (guardrails, docs duties).
 2. **`.agent/project_summary.md`** — one-screen current status; the Status
    line is the project's heartbeat.
-3. **`.agent/roadmap.md`** — milestones M0–M12 (done) + what's planned next
-   (M13 Beat Sage, M14-exploration custom album, M3 note colors). **Pick new work
-   here.**
+3. **`.agent/roadmap.md`** — milestones M0–M13 (done) + what's planned next
+   (M14 environment control — the user's request, M15-exploration custom
+   album, M3 note colors). **Pick new work here.**
 4. **`.agent/context.yml`** — compact quick-reference: versions, commands,
    architecture, paths.
 5. **`.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`** — the
@@ -168,11 +168,12 @@ designing anything** — this project has already made most mistakes once.
   the developer's dump physically hidden. Also: M11 in-game plugin toggle
   (hold the Move button + trigger for 2 seconds to flip the whole plugin
   on/off from the couch); PRX debug builds self-identify with a DEBUG suffix).
-- M12 (no dump required) is SHIPPED (merged PR #9, release live, Pages
-  audited). NEXT: M13 (Beat Sage + local-folder support — plan
-  implementation-ready at .agent/plans/beat_sage_and_local_song_folder_support.md),
-  then M14-exploration (custom album) or M3 (note colors — the standing
-  roadmap candidate).
+- M13 (Beat Sage + local songs) is IMPLEMENTED (web app 0.6.20, Exp 283;
+  Tier 1 verified against the live service; an AI-generated song deployed to
+  the PS4 — validation PASSED). NEXT: **M14 — Custom Song Environment Control**
+  (the user's 2026-10-23 request: default / force-target-slot / force-blank /
+  force one of the 16 envs; research-first — see the roadmap entry), then
+  M15-exploration (custom album) or M3 (note colors).
 - Open PR during release flow: check `gh pr list` — update its description
   per `/workspace/.claude/prompts/update-pr-description.prompt` (surgical
   edits, `--raw-field` only, user approval before pushing).

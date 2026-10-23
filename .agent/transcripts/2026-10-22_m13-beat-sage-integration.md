@@ -25,3 +25,9 @@ Experiment numbers continue from the M12 log (last used: 282/281h) → first M13
 - Final: 926 passed + 94 gated (the 94th = the BEATSAGE_LIVE contract test, skipped in CI by design); ruff clean; the release-doc invariant now glob-ships docs/features (the release test updated to pin the glob).
 - The app is LIVE at http://127.0.0.1:8765 (0.6.20) with "BSD Deluxe Theme (An Original)" sitting in the Staged list — the user can browse the two new sections right now.
 - The one remaining hardware validation: PS4 back on → one Deploy click (TruthHurts) → play.
+
+## Cycle 3 — Exp 283b: the Lights trap + the hardware validation + the M14 roadmap request
+
+- User's failed generation root-caused by live probes: the Lights event is a broken checkbox on beatsage.com's own site (400 in both v1+v2). Fixed (removed + validated + pinned); the user's Eve 6 song re-generated through the app in 57s and staged.
+- The pending M13 hardware validation completed: BSD Deluxe Theme → TruthHurts deployed + validation PASSED. M13 feature-complete.
+- Roadmap: M14 — Custom Song Environment Control written (the 4 modes + hypotheses E1-E4 + the blob-injection connection); album exploration renumbered M15.

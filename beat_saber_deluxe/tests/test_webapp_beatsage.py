@@ -64,6 +64,23 @@ def test_captured_constants():
     assert beatsage.HEARTBEAT_MAX_FAILURES == 3
 
 
+def test_events_are_the_probed_valid_set():
+    """Exp 283b live probes: Bombs/DotBlocks/Obstacles all ACCEPTED (any
+    combination); 'Lights' REJECTED with HTTP 400 in BOTH v1 and v2 — a
+    broken checkbox on their own site. We never offer a can-never-succeed
+    option; passing it fails client-side with the story."""
+    assert beatsage.EVENTS == ["Bombs", "DotBlocks", "Obstacles"]
+    errs = beatsage.validate_options({
+        "difficulties": ["Normal"], "modes": ["Standard"],
+        "events": ["Lights"], "environment": "DefaultEnvironment"})
+    assert any("Lights" in e and "400" in e for e in errs)
+    # their default combo + Bombs all validate clean
+    assert beatsage.validate_options({
+        "difficulties": ["Normal"], "modes": ["Standard"],
+        "events": ["Bombs", "DotBlocks", "Obstacles"],
+        "environment": "PanicEnvironment"}) == []
+
+
 def test_recommended_options_are_our_ps4_defaults():
     """Standard only (the pipeline generates extra modes itself) + every
     difficulty Beat Sage offers + their own event defaults."""

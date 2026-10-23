@@ -336,7 +336,7 @@ release_readiness:
 # Current Branch / Feature: M11 in-game plugin toggle (L3+R3 hotkey)
 current_feature:
   branch: "feature/next (M10 release merged to main; M11 work continues here)"
-  milestone: "M13 implemented (web app 0.6.20, Exp 283, Oct 22): Beat Sage Tier 1 verified against the live service + local-folder/zip staging; the PS4 play-test deploy pends the console coming back on (one click from the staged list); then M13 release"
+  milestone: "M13 COMPLETE (web app 0.6.20, Exps 283/283b): Beat Sage Tier 1 live-verified (incl. the Eve 6 fix — the Lights event is a trap on their site, live-probed) + local-folder staging; an AI-generated song deployed to TruthHurts, validation PASSED. NEXT: M14 Custom Song Environment Control (user request: default/force-target/force-blank/force-16-envs — research-first) + the M13 release tag"
   plan: ".agent/plans/in-game-global-plugin-enable-toggle-plan.md (COMPLETE — feature doc ships in the zip: docs/features/in-game-plugin-toggle.md)"
   transcript: ".agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md (this feature's session transcript)"
   feature_flag: "enable_in_game_plugin_toggle (defaults false; webapp Feature Flags tab or --features-only --set-feature enable_in_game_plugin_toggle=true)"

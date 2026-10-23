@@ -35,6 +35,13 @@ names are all readable from its own client bundle. The capture process
   (`progressFailsMax: 3`) — we mirror their cadence + budget exactly
 - v2 offers NO Easy difficulty (Normal/Hard/Expert/ExpertPlus only) — our
   pipeline's Easy auto-fill covers the gap
+- **"Lights" is a trap (Exp 283b, live-probed): their UI offers a Lights
+  event checkbox, but their API rejects the value with HTTP 400 'Invalid
+  events specified' in BOTH v1 and v2.** Bombs/DotBlocks/Obstacles are all
+  accepted in any combination. Never offer a can-never-succeed option — a
+  real user hit exactly this on their first generation (Eve 6 song, all
+  events checked → 400). We validate against the probed set, not the UI's
+  checkbox list
 - Option surface: modes Standard/NoArrows/OneSaber/90Degree/360Degree;
   events Bombs/DotBlocks/Obstacles/Lights; 16 environments; system v1|v2
 

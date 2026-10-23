@@ -51,7 +51,12 @@ TOAST_UA = "BeatSaberDeluxe-WebApp (one job at a time; thanks Beat Sage!)"
 
 DIFFICULTIES = ["Normal", "Hard", "Expert", "ExpertPlus"]  # v2 offers no Easy
 MODES = ["Standard", "NoArrows", "OneSaber", "90Degree", "360Degree"]
-EVENTS = ["Bombs", "DotBlocks", "Obstacles", "Lights"]
+# Their site's event checkboxes (the UI truth) — BUT their backend REJECTS
+# "Lights" with HTTP 400 'Invalid events specified' in BOTH v1 and v2
+# (live-probed 2026-10-22, Exp 283b: a broken/placeholder checkbox on their
+# own site). We don't offer it — a checkbox that can never succeed is a trap.
+EVENTS = ["Bombs", "DotBlocks", "Obstacles"]
+_EVENT_UI_TRAP = "Lights"  # documented, never offered
 ENVIRONMENTS = ["DefaultEnvironment", "Origins", "TriangleEnvironment",
                 "NiceEnvironment", "BigMirrorEnvironment", "DragonsEnvironment",
                 "KDAEnvironment", "MonstercatEnvironment", "CrabRaveEnvironment",
@@ -90,7 +95,15 @@ def validate_options(options: dict) -> list[str]:
         vals = opts.get(key) or []
         bad = [v for v in vals if v not in allowed]
         if bad:
-            errors.append(f"Unknown {key}: {', '.join(bad)} (allowed: {', '.join(allowed)}). To fix: pick from the offered checkboxes.")
+            # their own site's broken checkbox gets a specific message
+            if key == "events" and _EVENT_UI_TRAP in bad:
+                errors.append(
+                    "Beat Sage's 'Lights' event looks selectable on their site but "
+                    "their API rejects it with HTTP 400 in both v1 and v2 (live-probed) — "
+                    "leave it off. To fix: generate without Lights.")
+                bad = [b for b in bad if b != _EVENT_UI_TRAP]
+            if bad:
+                errors.append(f"Unknown {key}: {', '.join(bad)} (allowed: {', '.join(allowed)}). To fix: pick from the offered checkboxes.")
         if not vals:
             errors.append(f"Pick at least one {key[:-1]}.")
     env = opts.get("environment", RECOMMENDED_ENVIRONMENT)
