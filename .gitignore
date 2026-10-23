@@ -46,3 +46,8 @@ song_metadata.json
 ps4_backups/
 beat_saber_deluxe/webapp/webapp_state.json
 beat_saber_deluxe/webapp/batches/
+
+# M13: staged local songs (extracted map zips + the staging manifest) and
+# transient Beat Sage audio uploads — user content, never committed
+beat_saber_deluxe/webapp/staged_songs/
+beat_saber_deluxe/webapp/beatsage_uploads/

@@ -336,7 +336,7 @@ release_readiness:
 # Current Branch / Feature: M11 in-game plugin toggle (L3+R3 hotkey)
 current_feature:
   branch: "feature/next (M10 release merged to main; M11 work continues here)"
-  milestone: "M12 SHIPPED (v0.8055-pipeline-0.5365-webapp-0.6.19, Oct 22) — the no-dump flow proven from the shipped artifact (dump hidden, deploy, PASSED); Pages audited; next: M13 (Beat Sage + local folders)"
+  milestone: "M13 implemented (web app 0.6.20, Exp 283, Oct 22): Beat Sage Tier 1 verified against the live service + local-folder/zip staging; the PS4 play-test deploy pends the console coming back on (one click from the staged list); then M13 release"
   plan: ".agent/plans/in-game-global-plugin-enable-toggle-plan.md (COMPLETE — feature doc ships in the zip: docs/features/in-game-plugin-toggle.md)"
   transcript: ".agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md (this feature's session transcript)"
   feature_flag: "enable_in_game_plugin_toggle (defaults false; webapp Feature Flags tab or --features-only --set-feature enable_in_game_plugin_toggle=true)"

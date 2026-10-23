@@ -379,3 +379,22 @@ table.loadout tr:hover td { background: var(--card2); }
 .progress-wrap[hidden] { display: none; }
 .progress-bar { flex: 1; height: 14px; border-radius: 7px; background: var(--border,#ddd); overflow: hidden; }
 .progress-fill { height: 100%; width: 0%; background: var(--accent,#2c7); transition: width .4s; }
+
+/* ---------------- M13: Beat Sage + local songs ---------------- */
+.optcheckrow { flex-wrap: wrap; gap: 0.6rem; margin: 0.5rem 0; align-items: baseline; }
+.optcheckrow .chk { margin: 0; }
+.dropzone {
+  margin-top: 0.8rem; padding: 1.2rem; text-align: center;
+  border: 2px dashed var(--border, #445); border-radius: 10px;
+  cursor: pointer; color: var(--muted, #99a);
+}
+.dropzone.dragover { border-color: var(--accent); color: var(--accent2); background: rgba(46, 255, 187, 0.06); }
+.dropzone label { color: var(--accent2); text-decoration: underline; cursor: pointer; }
+.staged-row .meta span.muted { display: block; font-size: 0.88em; }
+#bsage-guide ul.guide-opts, #bsage-guide ol.guide-steps { margin: 0.4rem 0 0.8rem 1.4rem; }
+#bsage-guide .btnish {
+  display: inline-block; background: var(--accent); color: #fff; border-radius: 8px;
+  padding: 0.5rem 1.1rem; font-weight: 600; text-decoration: none;
+}
+#bsage-guide details summary { cursor: pointer; }
+#bsage-guide .muted { font-size: 0.92em; }

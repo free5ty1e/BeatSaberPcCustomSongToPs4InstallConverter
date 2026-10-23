@@ -23,8 +23,8 @@ import threading
 import time
 from pathlib import Path
 
-from adapters import batch, beatsaver, config, deploy, loadout, paths, ps4, runner
-from fastapi import FastAPI, HTTPException
+from adapters import batch, beatsage, beatsaver, config, deploy, loadout, paths, ps4, runner, songs
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -223,6 +223,116 @@ def beatsaver_map(map_id: str):
             raise HTTPException(404, f"Map {map_id} not found — it may have "
                                      "been deleted from BeatSaver.")
         raise HTTPException(502, str(e))
+
+
+# --------------------------------------------------------------------------
+# Songs: local-folder validation + zip intake + staging (M13, plan §5)
+# Both new Pick-a-Song sections end here: a validated folder that flows into
+# the Deploy tab unchanged (--song-dir). The adapter mirrors the pipeline's
+# own contract (adapters/songs.py docstring) — the web app never converts.
+# --------------------------------------------------------------------------
+@app.get("/api/beatsage/guide")
+def beatsage_guide():
+    """The Beat Sage section's payload: the Tier-2 guided card (always)
+    + the recommended options (pre-checks the Tier-1 form; also what the
+    guided card tells the user to pick on beatsage.com)."""
+    payload = beatsage.guidance_payload()
+    payload["tier1_available"] = True  # the captured contract drives the form
+    return payload
+
+
+@app.post("/api/songs/validate-dir")
+def songs_validate_dir(body: dict):
+    """Validate a local song folder (live, per plan §4) + stage it on success.
+    Auto-staging is the point: a valid folder is instantly deployable and
+    lands in the staged list (stable id per path — re-validating refreshes)."""
+    path = str(body.get("path", "")).strip()
+    if not path:
+        raise HTTPException(400, "path required")
+    v = songs.validate_dir(path)
+    if not v.ok:
+        return {"ok": False, "errors": v.errors, "warnings": v.warnings}
+    entry = songs.stage_dir(path)
+    return {"ok": True, "validation": {
+                "name": v.name, "artist": v.artist, "bpm": v.bpm,
+                "schema": v.schema, "difficulties": v.difficulties,
+                "modes": v.modes, "beatmap_count": v.beatmap_count,
+                "audio_files": v.audio_files, "warnings": v.warnings},
+            "staged": entry}
+
+
+@app.post("/api/songs/stage-zip")
+def songs_stage_zip(zip_file: UploadFile = File(...)):
+    """Intake a map zip (drag-drop): extract → validate → stage. Shared by
+    the local-folder section AND the Beat Sage guided flow (plan §3 Tier 2's
+    return path) — any BeatSaver-format zip works."""
+    if not (zip_file.filename or "").lower().endswith(".zip"):
+        raise HTTPException(400, "Expected a .zip map archive. To fix: drop the "
+                                 "map zip itself (the file you downloaded).")
+    data = zip_file.file.read()
+    if not data:
+        raise HTTPException(400, "The uploaded zip is empty. To fix: re-download "
+                                 "the map and drop it again.")
+    try:
+        entry = songs.stage_zip_bytes(data, source="zip")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "staged": entry}
+
+
+@app.get("/api/songs/staged")
+def songs_staged():
+    """The recent-songs list (survives restarts — plan §4). Entries whose
+    folder vanished are pruned so the list never shows dead songs."""
+    return {"songs": songs.list_staged()}
+
+
+@app.delete("/api/songs/staged/{sid}")
+def songs_staged_remove(sid: str):
+    if not songs.remove_staged(sid):
+        raise HTTPException(404, f"no such staged song: {sid}")
+    return {"ok": True}
+
+
+@app.post("/api/jobs/beatsage")
+def jobs_beatsage(audio: UploadFile = File(...),
+                  title: str = Form(""), artist: str = Form(""),
+                  difficulties: str = Form(""), modes: str = Form(""),
+                  events: str = Form(""), environment: str = Form(""),
+                  system_tag: str = Form("")):
+    """Tier 1: the web app drives beatsage.com for the user (plan §3).
+    The audio lands in a temp file; the job script (webapp/beatsage_client.py)
+    does the upload → poll → download → stage as THE single job (its lines
+    stream through the shared live console; cancel kills the process group).
+    The UI's rights/ToS checkboxes are enforced client-side AND the job
+    script re-validates options — but the rights assertion is the user's."""
+    upload_dir = paths.WEBAPP_DIR / "beatsage_uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    safe = "".join(c for c in (audio.filename or "audio") if c.isalnum() or c in ".-_")[:80]
+    tmp = upload_dir / f"{int(time.time())}_{safe or 'audio'}"
+    with open(tmp, "wb") as f:
+        f.write(audio.file.read())
+    spec = {
+        "audio_path": str(tmp),
+        "title": title, "artist": artist,
+        "difficulties": [d for d in difficulties.split(",") if d],
+        "modes": [m for m in modes.split(",") if m],
+        "events": [e for e in events.split(",") if e],
+        "environment": environment,
+        "system_tag": system_tag,
+    }
+    client = paths.WEBAPP_DIR / "beatsage_client.py"
+    if not client.exists():
+        raise HTTPException(500, f"Beat Sage client missing: {client}")
+    try:
+        job = RUNNER.start_script(
+            str(client), ["--job", json.dumps(spec)],
+            label=f"Beat Sage: {title or safe}")
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return {"ok": True, "job_id": job.id,
+            "command": f"Beat Sage generation for “{title or safe}” "
+                       "(powered by beatsage.com)"}
 
 
 # --------------------------------------------------------------------------
@@ -625,6 +735,9 @@ def jobs_deploy(body: dict):
     opts = deploy.DeployOptions(
         map_id=str(body.get("map_id", "")).strip(),
         target=str(body.get("target", "")).strip(),
+        # M13: a staged local folder rides along (the pipeline's own
+        # precedence: song_dir overrides the BeatSaver download)
+        song_dir=str(body.get("song_dir", "")).strip(),
         audio=body.get("audio", "pcm16"),
         pad_fsb5=bool(body.get("pad_fsb5", False)),
         convert_to_v3=bool(body.get("convert_to_v3", True)),
@@ -735,12 +848,14 @@ def stream():
 @app.get("/api/command-preview")
 def command_preview(map_id: str, target: str, audio: str = "pcm16",
                      pad_fsb5: bool = False, convert_to_v3: bool = True,
-                     deploy_full: bool = True, skip_plugin: bool = False):
-    """The exact command the Deploy button would run (no config required)."""
+                     deploy_full: bool = True, skip_plugin: bool = False,
+                     song_dir: str = ""):
+    """The exact command the Deploy button would run (no config required).
+    song_dir: the local-folder variant (M13) — matches adapters/deploy.py."""
     opts = deploy.DeployOptions(
         map_id=map_id, target=target, audio=audio, pad_fsb5=pad_fsb5,
         convert_to_v3=convert_to_v3, deploy_full=deploy_full,
-        skip_plugin=skip_plugin)
+        skip_plugin=skip_plugin, song_dir=song_dir)
     try:
         argv = opts.build_argv()
     except ValueError as e:

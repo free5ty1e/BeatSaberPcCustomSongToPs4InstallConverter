@@ -282,3 +282,142 @@ class TestPluginVersionFromBundledPRX:
             # restore the real capture for other tests
             monkeypatch.undo()
             srv._capture_code_versions()
+
+
+# ===================================================================== M13
+class TestM13SongEndpoints:
+    """Local-folder validation, zip intake, staging, Beat Sage guide —
+    staging redirected to tmp; no PS4, no network."""
+
+    def _make_map(self, root: Path) -> Path:
+        import json as _json
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "Info.dat").write_text(_json.dumps({
+            "_version": "3.3.0", "_songName": "Srv", "_songAuthorName": "Test",
+            "_beatsPerMinute": 100,
+            "_difficultyBeatmapSets": [{"_beatmapCharacteristicName": "Standard",
+                                        "_difficultyBeatmaps": [
+                                            {"_difficulty": "Hard",
+                                             "_beatmapFilename": "Hard.dat"}]}]}))
+        (root / "Hard.dat").write_text("{}")
+        (root / "song.ogg").write_bytes(b"ogg")
+        return root
+
+    def _staging(self, tmp_path, monkeypatch):
+        from adapters import songs as songs_adapter
+        st = tmp_path / "staged_songs"
+        monkeypatch.setattr(songs_adapter, "STAGING_DIR", st)
+        monkeypatch.setattr(songs_adapter, "MANIFEST_PATH", st / "manifest.json")
+        return st
+
+    def test_validate_dir_ok_stages(self, tmp_path, monkeypatch):
+        self._staging(tmp_path, monkeypatch)
+        d = self._make_map(tmp_path / "amap")
+        r = client.post("/api/songs/validate-dir", json={"path": str(d)})
+        assert r.status_code == 200
+        j = r.json()
+        assert j["ok"] is True
+        assert j["staged"]["name"] == "Srv"
+        # and it lands in the staged list
+        r2 = client.get("/api/songs/staged")
+        assert any(s["name"] == "Srv" for s in r2.json()["songs"])
+
+    def test_validate_dir_problems_not_staged(self, tmp_path, monkeypatch):
+        self._staging(tmp_path, monkeypatch)
+        r = client.post("/api/songs/validate-dir",
+                        json={"path": str(tmp_path / "missing")})
+        assert r.status_code == 200
+        j = r.json()
+        assert j["ok"] is False
+        assert j["errors"] and "To fix" in j["errors"][0]
+
+    def test_validate_dir_requires_path(self):
+        r = client.post("/api/songs/validate-dir", json={"path": "  "})
+        assert r.status_code == 400
+
+    def test_stage_zip_roundtrip(self, tmp_path, monkeypatch):
+        import io
+        import json as _json
+        import zipfile
+        self._staging(tmp_path, monkeypatch)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            info = {"_version": "3.3.0", "_songName": "Zipped",
+                    "_songAuthorName": "Zip", "_beatsPerMinute": 90,
+                    "_difficultyBeatmapSets": [
+                        {"_beatmapCharacteristicName": "Standard",
+                         "_difficultyBeatmaps": [{"_difficulty": "Expert",
+                                                  "_beatmapFilename": "Expert.dat"}]}]}
+            zf.writestr("Info.dat", _json.dumps(info))
+            zf.writestr("Expert.dat", "{}")
+            zf.writestr("song.wav", b"wav")
+        r = client.post("/api/songs/stage-zip",
+                        files={"zip_file": ("map.zip", buf.getvalue(), "application/zip")})
+        assert r.status_code == 200
+        j = r.json()
+        assert j["ok"] is True and j["staged"]["name"] == "Zipped"
+
+    def test_stage_zip_rejects_non_zip_name(self, tmp_path, monkeypatch):
+        self._staging(tmp_path, monkeypatch)
+        r = client.post("/api/songs/stage-zip",
+                        files={"zip_file": ("map.exe", b"PK\x03\x04xx", "application/octet-stream")})
+        assert r.status_code == 400
+        assert ".zip" in r.json()["detail"]
+
+    def test_stage_zip_rejects_empty_upload(self, tmp_path, monkeypatch):
+        self._staging(tmp_path, monkeypatch)
+        r = client.post("/api/songs/stage-zip",
+                        files={"zip_file": ("map.zip", b"", "application/zip")})
+        assert r.status_code == 400
+
+    def test_staged_remove(self, tmp_path, monkeypatch):
+        self._staging(tmp_path, monkeypatch)
+        d = self._make_map(tmp_path / "rmme")
+        j = client.post("/api/songs/validate-dir", json={"path": str(d)}).json()
+        sid = j["staged"]["id"]
+        r = client.delete(f"/api/songs/staged/{sid}")
+        assert r.status_code == 200
+        assert client.get("/api/songs/staged").json()["songs"] == []
+        r404 = client.delete(f"/api/songs/staged/{sid}")
+        assert r404.status_code == 404
+
+    def test_beatsage_guide_payload(self):
+        r = client.get("/api/beatsage/guide")
+        assert r.status_code == 200
+        j = r.json()
+        assert j["tier"] == 2
+        assert j["tier1_available"] is True
+        assert j["recommended"]["modes"] == ["Standard"]
+        assert j["site_url"].startswith("https://beatsage.com")
+
+    def test_command_preview_song_dir(self, tmp_path):
+        d = tmp_path / "m"
+        d.mkdir()
+        r = client.get("/api/command-preview",
+                      params={"map_id": "", "target": "BadGuy",
+                              "song_dir": str(d)})
+        assert r.status_code == 200
+        cmd = r.json()["command"]
+        assert "--song-dir" in cmd
+        assert "--download-beat-saver-song" not in cmd
+
+    def test_deploy_endpoint_accepts_song_dir(self, tmp_path, monkeypatch):
+        """The deploy POST with a song_dir builds the local argv (the job is
+        never started: the runner is monkeypatched to refuse)."""
+        d = tmp_path / "m"
+        d.mkdir()
+        class _FakeJob:
+            id = 42
+        def _no_start(argv, label=""):
+            _no_start.called = True
+            return _FakeJob()
+        _no_start.called = False
+        monkeypatch.setattr(server.RUNNER, "start", _no_start)
+        # config gate: point CONFIG_PATH at a tmp file
+        monkeypatch.setattr(server.paths, "CONFIG_PATH", tmp_path / "ps4_config.json")
+        (tmp_path / "ps4_config.json").write_text("{}")
+        r = client.post("/api/jobs/deploy",
+                        json={"map_id": "", "song_dir": str(d), "target": "BadGuy"})
+        assert r.status_code == 200, r.text
+        assert _no_start.called is True
+        assert "--song-dir" in r.json()["command"]

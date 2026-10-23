@@ -90,6 +90,84 @@
       <div id="bs-mapid-result" class="result"></div>
     </div>
 
+    <!-- ============ 2 · Beat Sage (M13) ============ -->
+    <div class="card">
+      <h3>2 · Generate a map with Beat Sage <span class="muted">— any song, AI-mapped (powered by beatsage.com)</span></h3>
+      <p class="muted">Beat Sage is a free third-party AI service that generates Beat Saber maps from any
+        audio file — the way to play songs no mapper has mapped. Your audio is uploaded
+        <b>to beatsage.com</b> and processed by them; using it means accepting their terms
+        (<a href="https://beatsage.com" target="_blank" rel="noopener">beatsage.com</a>).
+        The generated map arrives as a normal zip and stages below like any other map.</p>
+      <label class="chk"><input type="checkbox" id="bsage-rights"> I have the rights to process this audio
+        <span class="muted">(my own music, or music I'm licensed to use — never redistribute the map)</span></label>
+      <div class="grid2">
+        <label>Audio file
+          <input type="file" id="bsage-audio" accept=".wav,.ogg,.flac,.mp3,.aiff,.egg,audio/*">
+        </label>
+        <label>Song title
+          <input id="bsage-title" type="text" placeholder="(defaults to the file name)">
+        </label>
+        <label>Artist
+          <input id="bsage-artist" type="text" placeholder="(unknown)">
+        </label>
+        <label>Environment
+          <select id="bsage-env"></select>
+        </label>
+      </div>
+      <div class="row optcheckrow">
+        <span class="muted">Difficulties (Beat Sage can't make Easy):</span>
+        <label class="chk"><input type="checkbox" class="bsage-diff" value="Normal" checked> Normal</label>
+        <label class="chk"><input type="checkbox" class="bsage-diff" value="Hard" checked> Hard</label>
+        <label class="chk"><input type="checkbox" class="bsage-diff" value="Expert" checked> Expert</label>
+        <label class="chk"><input type="checkbox" class="bsage-diff" value="ExpertPlus" checked> Expert+</label>
+      </div>
+      <div class="row optcheckrow">
+        <span class="muted">Modes:</span>
+        <label class="chk"><input type="checkbox" class="bsage-mode" value="Standard" checked> Standard</label>
+        <label class="chk"><input type="checkbox" class="bsage-mode" value="NoArrows"> NoArrows</label>
+        <label class="chk"><input type="checkbox" class="bsage-mode" value="OneSaber"> OneSaber</label>
+        <label class="chk"><input type="checkbox" class="bsage-mode" value="90Degree"> 90°</label>
+        <label class="chk"><input type="checkbox" class="bsage-mode" value="360Degree"> 360°</label>
+        <span class="muted">(the pipeline auto-generates extra modes from Standard — Standard only is recommended)</span>
+      </div>
+      <div class="row optcheckrow">
+        <span class="muted">Events:</span>
+        <label class="chk"><input type="checkbox" class="bsage-event" value="Bombs"> Bombs</label>
+        <label class="chk"><input type="checkbox" class="bsage-event" value="DotBlocks" checked> DotBlocks</label>
+        <label class="chk"><input type="checkbox" class="bsage-event" value="Obstacles" checked> Obstacles</label>
+        <label class="chk"><input type="checkbox" class="bsage-event" value="Lights"> Lights</label>
+      </div>
+      <button id="btn-bsage-generate" class="primary local-only">Generate map with Beat Sage</button>
+      <span class="muted local-only">— takes a few minutes; the button turns into a live console</span>
+      <div id="bsage-result" class="result"></div>
+      <pre id="bsage-log" class="log hidden"></pre>
+      <details id="bsage-guide-details">
+        <summary>Or: drive beatsage.com yourself (the always-works manual flow)</summary>
+        <div id="bsage-guide"></div>
+      </details>
+    </div>
+
+    <!-- ============ 3 · Local song folder (M13) ============ -->
+    <div class="card">
+      <h3>3 · Use a map you already have <span class="muted">— a local folder or a map zip</span></h3>
+      <p class="muted">Any BeatSaver-format map works: Info.dat + difficulty .dat files + audio
+        (V2/V3/V4 all fine — the pipeline converts). Point at the folder that contains Info.dat.</p>
+      <div class="row">
+        <input id="local-song-path" type="text" placeholder="/path/to/folder containing Info.dat" style="flex:1">
+        <button id="btn-local-validate" class="local-only">Validate & stage</button>
+      </div>
+      <div id="local-validate-result" class="result"></div>
+      <div id="zip-drop" class="dropzone local-only">Drag a map .zip here (a Beat Sage download, a BeatSaver zip…)
+        or <label class="link">browse<input type="file" id="zip-file-input" accept=".zip" hidden></label></div>
+      <div id="zip-result" class="result"></div>
+    </div>
+
+    <!-- ============ Staged songs (M13) ============ -->
+    <div class="card" id="staged-card">
+      <h3>Staged songs <span class="muted">— validated and ready to deploy (persists across restarts)</span></h3>
+      <div id="staged-list" class="muted">None yet — stage one above (Beat Sage, a zip, or a folder).</div>
+    </div>
+
     <div id="picked-song" class="card hidden">
       <h3>Selected song</h3>
       <div id="picked-song-body"></div>
@@ -138,6 +216,7 @@
 
     <div class="card">
       <h3>3. Deploy</h3>
+      <div id="deploy-picked-info" class="muted"></div>
       <p id="deploy-warning" class="muted">Replacing <b id="deploy-slot-label">…</b> —
       the other songs in its pack and every other pack stay untouched.</p>
       <div class="row hidden" id="deploy-progress" hidden>
