@@ -235,10 +235,48 @@ def beatsaver_map(map_id: str):
 def beatsage_guide():
     """The Beat Sage section's payload: the Tier-2 guided card (always)
     + the recommended options (pre-checks the Tier-1 form; also what the
-    guided card tells the user to pick on beatsage.com)."""
+    guided card tells the user to pick on beatsage.com) + the v1/v2 model
+    descriptions + the density expectation note (KB: beatsage-charting-
+    behavior — v2's Easy/Normal/Hard are ONE mellow band; density lives in
+    Expert/Expert+; their AI offers no density slider)."""
     payload = beatsage.guidance_payload()
     payload["tier1_available"] = True  # the captured contract drives the form
+    payload["systems"] = {
+        "v2": {"label": "v2 — current model (recommended)",
+                "description": "Beat Sage's current AI. Supports OneSaber/NoArrows/90° "
+                               "modes. Charts a mellow Easy/Normal/Hard band — expect "
+                               "the real density in Expert/Expert+ (measured: H ≈ 0.6, "
+                               "E ≈ 2.1, E+ ≈ 3.3 notes/sec on a real song)."},
+        "v1": {"label": "v1 — the original model",
+                "description": "Marginally denser charts than v2 (measured on the same "
+                               "audio: H 1.30 vs 1.19, E 2.40 vs 2.19 notes/sec) — NOT a "
+                               "fix for the sparse Hard band. No OneSaber/90° support. "
+                               "For completeness/comparison."},
+    }
+    payload["density_note"] = (
+        "What to expect: Beat Sage's Easy/Normal/Hard are one flat mellow band — "
+        "Hard will feel sparse next to a community map (that's their AI's design, "
+        "not a conversion bug). The density lives in Expert/Expert+. There is no "
+        "density slider on their service — the levers are difficulty choice and "
+        "v1/v2. Per-difficulty note counts + notes/sec are shown on every staged song.")
     return payload
+
+
+@app.get("/api/songs/test-song")
+def songs_test_song(seconds: float = 48.0):
+    """The original rights-clean test song, synthesized on demand (M13).
+    100% math (adapters/testsong.py) — deterministic, so the 48s default is
+    byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
+    Use it to try Beat Sage without hunting for audio, or as a validation
+    asset (the gated live-contract test uses the 8s variant)."""
+    seconds = max(5.0, min(seconds, 120.0))
+    from adapters import testsong
+    data = testsong.generate_wav(seconds=seconds)
+    from fastapi.responses import Response
+    return Response(
+        content=data, media_type="audio/wav",
+        headers={"Content-Disposition":
+                 f'attachment; filename="bsd_deluxe_theme_{int(seconds)}s.wav"'})
 
 
 @app.post("/api/songs/validate-dir")
@@ -257,7 +295,10 @@ def songs_validate_dir(body: dict):
                 "name": v.name, "artist": v.artist, "bpm": v.bpm,
                 "schema": v.schema, "difficulties": v.difficulties,
                 "modes": v.modes, "beatmap_count": v.beatmap_count,
-                "audio_files": v.audio_files, "warnings": v.warnings},
+                "audio_files": v.audio_files, "warnings": v.warnings,
+                "charts": v.charts, "environment": v.environment,
+                "duration_s": v.duration_s, "cover_art": v.cover_art,
+                "mode_notes": v.mode_notes},
             "staged": entry}
 
 

@@ -244,7 +244,7 @@ async function lookupMapId() {
 async function loadBeatsageGuide() {
   try {
     const g = await api("/api/beatsage/guide");
-    renderBeatsageGuide(g.recommended || {}, g.steps || []);
+    renderBeatsageGuide(g.recommended || {}, g.steps || [], g);
   } catch (e) {
     // Pages/command-builder mode (no backend): the guide is static constants
     // — the same steps + our recommended options, rendered locally.
@@ -258,7 +258,9 @@ async function loadBeatsageGuide() {
          "Pick the recommended options shown on this card.",
          "Click Generate and wait a few minutes.",
          "Download the generated zip when it completes.",
-         "Extract the zip — its folder is what --song-dir takes (command-builder mode)."]);
+         "Extract the zip — its folder is what --song-dir takes (command-builder mode)."],
+        { density_note: "What to expect: Beat Sage's Easy/Normal/Hard are one mellow band — "
+            + "the density lives in Expert/Expert+. No density slider exists on their service." });
     } else {
       $("bsage-guide").innerHTML =
         `<p class="result bad">Guide unavailable (${esc(e.message)}). To fix: open
@@ -267,7 +269,13 @@ async function loadBeatsageGuide() {
   }
 }
 
-function renderBeatsageGuide(rec, steps) {
+function renderBeatsageGuide(rec, steps, g) {
+  if (g && g.density_note) $("bsage-density-note").textContent = g.density_note;
+  if (g && g.systems) {
+    const sysSel = $("bsage-system");
+    sysSel.innerHTML = Object.entries(g.systems).map(([k, v]) =>
+      `<option value="${k}" title="${esc(v.description)}">${esc(v.label)}</option>`).join("");
+  }
   const envSel = $("bsage-env");
   const envs = ["DefaultEnvironment", "Origins", "TriangleEnvironment", "NiceEnvironment",
     "BigMirrorEnvironment", "DragonsEnvironment", "KDAEnvironment", "MonstercatEnvironment",
@@ -332,7 +340,7 @@ async function generateWithBeatsage() {
   fd.append("modes", bsageCheckedValues("bsage-mode").join(",") || "Standard");
   fd.append("events", bsageCheckedValues("bsage-event").join(","));
   fd.append("environment", $("bsage-env").value);
-  fd.append("system_tag", "v2");
+  fd.append("system_tag", $("bsage-system").value || "v2");
   try {
     await api("/api/jobs/beatsage", { method: "POST", body: fd });
     pollBeatsageJob(0);
@@ -393,9 +401,13 @@ async function validateLocalDir() {
     });
     if (j.ok) {
       const v = j.validation;
+      const nps = Object.entries(v.charts || {})
+        .map(([d, c]) => `${d} ${c.nps}/s`).join(" · ") || "?";
       setResult("local-validate-result",
         `✅ Valid ${v.schema || "map"}: "${v.name || "?"}" by ${v.artist || "?"} — ` +
-        `${(v.difficulties || []).join("/") || "?"} · BPM ${v.bpm ?? "?"} · staged ✓`, "ok");
+        `BPM ${v.bpm ?? "?"}${v.duration_s ? ` · ~${v.duration_s}s` : ""}` +
+        `${v.environment ? ` · env ${v.environment}` : ""} — staged ✓\n` +
+        `notes/sec: ${nps}`, "ok");
       if (v.warnings && v.warnings.length)
         $("local-validate-result").textContent += "\n⚠ " + v.warnings.join("\n⚠ ");
       loadStaged();
@@ -404,6 +416,33 @@ async function validateLocalDir() {
     }
   } catch (e) {
     setResult("local-validate-result", "❌ " + e.message, "bad");
+  }
+}
+
+async function useTestSong() {
+  // Fetch the rights-clean synth theme on demand and attach it to the form —
+  // one click and the Generate flow is ready (no audio hunting). The song is
+  // 100% mathematical synthesis: deterministic, and the 48s default is
+  // byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
+  setResult("bsage-result", "Synthesizing the original test song (pure math, " +
+    "deterministic)…", "");
+  try {
+    const r = await fetch("/api/songs/test-song?seconds=48");
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const blob = await r.blob();
+    const file = new File([blob], "bsd_deluxe_theme_48s.wav", { type: "audio/wav" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    $("bsage-audio").files = dt.files;   // attach programmatically
+    if (!$("bsage-title").value) $("bsage-title").value = "BSD Deluxe Theme (An Original)";
+    if (!$("bsage-artist").value) $("bsage-artist").value = "Beat Saber Deluxe Synth";
+    setResult("bsage-result", "✅ Test song attached (48s, rights-clean — synthesized " +
+      "from scratch, the same song every time). Press Generate to send it to Beat Sage.", "ok");
+  } catch (e) {
+    // DataTransfer/file-input restrictions or fetch failure → plain download
+    setResult("bsage-result", "Starting a plain download instead — pick the " +
+      `downloaded .wav as the audio file. (${esc(e.message)})`, "warn");
+    window.location = "/api/songs/test-song?seconds=48";
   }
 }
 
@@ -455,6 +494,33 @@ async function loadStaged() {
   } catch { /* staged list is optional sugar */ }
 }
 
+function npsBadge(diff, c) {
+  if (!c) return "";
+  const cls = c.nps < 0.3 ? "miss" : c.nps < 0.75 ? "warn" : "ok";
+  const sparse = c.nps < 0.75 ? " ⚠" : "";
+  return `<span class="badge ${cls}" title="${diff}: ${c.notes} notes over ${c.span_s}s (peak ${c.peak_nps}/s in any 10s window)${c.bombs ? ` · ${c.bombs} bombs` : ""}${c.obstacles ? ` · ${c.obstacles} obstacles` : ""}">${diff} ${c.nps}/s${sparse}</span>`;
+}
+
+function stagedStatsHtml(s) {
+  const charts = s.charts || {};
+  const rows = Object.entries(charts).map(([d, c]) =>
+    `<tr><td><b>${esc(d)}</b></td><td>${c.notes} notes</td><td>${c.nps}/s avg</td>
+     <td>${c.peak_nps}/s peak</td><td>${c.bombs} bombs · ${c.obstacles} walls</td>
+     <td>${c.events} light events</td><td>${c.span_s}s</td></tr>`).join("");
+  const gen = s.generation && s.system_tag ? s.generation : (s.generation || {});
+  const genBits = Object.keys(gen).length ?
+    ` · generated with system ${esc(gen.system_tag || "?")}, env ${esc(gen.environment || "?")}` +
+    (gen.events && gen.events.length ? `, events ${esc(gen.events.join(","))}` : "") : "";
+  const modeBits = Object.entries(s.mode_notes || {}).map(([m, n]) =>
+    `${esc(m)}: ${n} notes`).join(" · ");
+  return `<details class="staged-stats"><summary>chart statistics</summary>
+    ${rows ? `<table class="stats">${rows}</table>` : `<span class="muted">no chart stats parsed</span>`}
+    <div class="muted">duration ≈ ${s.duration_s || "?"}s · environment “${esc(s.environment || "(none)")}”${s.cover_art ? ` · cover art ${esc(s.cover_art)}` : ""}${genBits}</div>
+    ${modeBits ? `<div class="muted">mode variants — ${modeBits}</div>` : ""}
+    ${(s.warnings || []).map(w => `<div class="result warn">⚠ ${esc(w)}</div>`).join("")}
+  </details>`;
+}
+
 function renderStagedList() {
   const el = $("staged-list");
   const songs = state.staged || [];
@@ -468,12 +534,11 @@ function renderStagedList() {
     `<div class="song staged-row">
        <div class="meta">
          <b>${esc(s.name || "(unnamed)")}</b>
-         <span class="muted">by ${esc(s.artist || "?")} · ${esc(s.schema || "map")} ·
-         ${(s.difficulties || []).join("/") || "?"} · BPM ${s.bpm ?? "?"}
+         <span class="muted">by ${esc(s.artist || "?")} · ${esc(s.schema || "map")} · BPM ${s.bpm ?? "?"}
          ${s.source === "beatsage" ? " · <b>Beat Sage</b>" : s.source === "zip" ? " · zip" : ""}</span>
-         ${s.warnings && s.warnings.length ?
-           `<span class="muted">⚠ ${esc(s.warnings[0])}</span>` : ""}
+         <div class="badges">${Object.entries(s.charts || {}).map(([d, c]) => npsBadge(d, c)).join("")}</div>
        </div>
+       ${stagedStatsHtml(s)}
        <div class="badges">
          <button class="pick" data-stage="${esc(s.id)}">Deploy →</button>
          <button class="clear-slot" data-unstage="${esc(s.id)}" title="Remove from the staged list">✕</button>
@@ -1735,6 +1800,7 @@ document.addEventListener("DOMContentLoaded", () => {
   $("bs-filter-enh").addEventListener("change", searchBeatSaver);
   $("btn-bs-lookup").addEventListener("click", lookupMapId);
   $("btn-bsage-generate").addEventListener("click", generateWithBeatsage);
+  $("btn-bsage-testsong").addEventListener("click", useTestSong);
   $("btn-local-validate").addEventListener("click", validateLocalDir);
   $("local-song-path").addEventListener("keydown", e => { if (e.key === "Enter") validateLocalDir(); });
   wireZipDrop();

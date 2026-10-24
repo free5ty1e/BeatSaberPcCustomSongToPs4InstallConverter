@@ -31,3 +31,11 @@ Experiment numbers continue from the M12 log (last used: 282/281h) → first M13
 - User's failed generation root-caused by live probes: the Lights event is a broken checkbox on beatsage.com's own site (400 in both v1+v2). Fixed (removed + validated + pinned); the user's Eve 6 song re-generated through the app in 57s and staged.
 - The pending M13 hardware validation completed: BSD Deluxe Theme → TruthHurts deployed + validation PASSED. M13 feature-complete.
 - Roadmap: M14 — Custom Song Environment Control written (the 4 modes + hypotheses E1-E4 + the blob-injection connection); album exploration renumbered M15.
+
+## Cycle 4-5 — Exps 283c/283d: density research + stats/test-song surfaces; THE PREVIEW BUG
+
+- User: sparse Hard report + "expose any controls"; loves stats; wants the theme song on demand; confirms they only ever used the web UI (the two file-naming styles in one Beat Sage zip are their quirk).
+- Live v1-vs-v2 density test: v1 only marginally denser; v2's E/N/H = ONE mellow band (real-song Hard 0.61 NPS). No density slider exists. KB: beatsage-charting-behavior.
+- Shipped: v1/v2 selector + density note; per-difficulty notes/NPS/peak/bombs/walls/events + map facts + generation record on staged songs; sparse warnings; lazy stats upgrade of old entries; testsong.py (byte-identical to the deployed theme) + GET /api/songs/test-song + the 🧪 one-click button.
+- THE PREVIEW BUG (user's field report): root-caused via the manifest's previews list — the pack/preview pass ran BEFORE the deploy's own song_metadata registration (Step 11, end of deploy) → build_preview_map skipped the new slot → every deploy baked the previous deploy's preview, never its own. Fixed (0.5366): early LOCAL registration before the pack pass; Step 11 keeps the upload. Live-validated: the re-deploy cut ✂️ MessItUp (preserved) AND StartMeUp (new) — validation PASSED, console repaired.
+- Two 47-loadout-era test pins made state-dynamic (patched==9/start==0.0/4-sets broke with the clean-slate state). Suite: 948 + 87 gated.

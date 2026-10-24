@@ -63,6 +63,15 @@ class SongValidation:
     modes: list[str] = field(default_factory=list)
     beatmap_count: int = 0
     audio_files: list[str] = field(default_factory=list)
+    # Chart statistics (M13, user request "the more the better"):
+    # per-Standard-difficulty density + content, map-level facts. Populated by
+    # _chart_stats(); the UI surfaces them at STAGING time so a sparse chart
+    # (e.g. Beat Sage's mellow Hard band) is visible BEFORE deploying/playing.
+    charts: dict[str, dict] = field(default_factory=dict)
+    environment: str = ""
+    duration_s: float = 0.0
+    cover_art: str = ""
+    mode_notes: dict[str, int] = field(default_factory=dict)
 
     def summary_line(self) -> str:
         diffs = "/".join(self.difficulties) if self.difficulties else "?"
@@ -72,6 +81,109 @@ class SongValidation:
 def _sort_diffs(diffs: list[str]) -> list[str]:
     order = {d: i for i, d in enumerate(DIFFICULTY_ORDER)}
     return sorted(set(diffs), key=lambda d: order.get(d, 99))
+
+
+# Sparse-chart thresholds (NPS): Beat Sage's v2 Hard measures ~0.6 NPS on a
+# real rock song — its Easy/Normal/Hard are one flat mellow band (KB:
+# beatsage-charting-behavior). Below SPARSE the chart reads as empty-ish;
+# below VERY_SPARSE something is likely wrong with the map itself.
+NPS_SPARSE = 0.75
+NPS_VERY_SPARSE = 0.30
+PEAK_WINDOW_S = 10.0
+
+
+def _note_time(note: dict) -> float | None:
+    """Beat position of one note, format-aware (V2 `_time`, V3/V4 `b`)."""
+    for key in ("_time", "b", "time"):
+        val = note.get(key)
+        if isinstance(val, (int, float)):
+            return float(val)
+    return None
+
+
+def _peak_nps(times: list[float], bpm: float, window_s: float = PEAK_WINDOW_S) -> float:
+    """Max note density in any `window_s`-second window (sorted beat times).
+    The peak matters as much as the average: a 3.3-NPS Expert+ can hide an
+    8-NPS burst — the user's 'how intense does it GET' question."""
+    if not times or not bpm:
+        return 0.0
+    window_beats = window_s * bpm / 60.0
+    best = 0
+    left = 0
+    for right in range(len(times)):
+        while times[right] - times[left] > window_beats:
+            left += 1
+        best = max(best, right - left + 1)
+    return best / window_s
+
+
+def _chart_stats_for_file(path: Path, bpm: float | None) -> dict | None:
+    """Parse ONE beatmap file → its stats dict (notes/bombs/obstacles/events,
+    span, NPS, peak). Format-aware: V2 `_notes`/`_obstacles`/`_events`,
+    V3/V4 `colorNotes`/`bombNotes`/`obstacles`/`basicEvents`."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            bm = json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+        return None
+    if not isinstance(bm, dict):
+        return None
+    notes = bm.get("_notes") if isinstance(bm.get("_notes"), list) else \
+        bm.get("colorNotes") if isinstance(bm.get("colorNotes"), list) else []
+    if isinstance(bm.get("bombNotes"), list):
+        bombs = len(bm["bombNotes"])
+    else:  # V2: bombs are _notes entries with _type == 3
+        bombs = sum(1 for n in notes if n.get("_type") == 3)
+    obstacles = len(bm.get("_obstacles") or bm.get("obstacles") or [])
+    events = len(bm.get("_events") or bm.get("basicEvents") or [])
+    times = sorted(t for t in (_note_time(n) for n in notes) if t is not None)
+    span_s = 0.0
+    nps = 0.0
+    peak = 0.0
+    if times:
+        span_s = (times[-1] - times[0]) * 60.0 / bpm if bpm else 0.0
+        if span_s > 0:
+            nps = len(times) / span_s
+            peak = _peak_nps(times, bpm)
+    return {"notes": len(notes), "bombs": bombs, "obstacles": obstacles,
+            "events": events, "span_s": round(span_s, 1),
+            "nps": round(nps, 2), "peak_nps": round(peak, 2)}
+
+
+def _chart_stats(song_dir: Path, info: dict, standard_diffs: list[str],
+                 bpm: float | None) -> tuple[dict, dict]:
+    """(per-Standard-difficulty stats, per-mode note totals) for the map.
+    Standard files are the bare ones (<Diff>.dat / .json / .beatmap.dat);
+    mode-variant files sum their notes per mode so the user sees which modes
+    carry real content (Beat Sage ships 0-note 90° files — see the KB)."""
+    charts: dict[str, dict] = {}
+    for diff in standard_diffs:
+        for cand in (f"{diff}.dat", f"{diff}.json", f"{diff}.beatmap.dat"):
+            p = song_dir / cand
+            if p.is_file():
+                stats = _chart_stats_for_file(p, bpm)
+                if stats:
+                    charts[diff] = stats
+                break
+    mode_notes: dict[str, int] = {}
+    known_modes = {"NoArrows", "OneSaber", "90Degree", "360Degree", "Legacy",
+                   "Lightshow", "Lawless"}
+    for p in sorted(song_dir.iterdir()):
+        if not p.is_file() or p.suffix.lower() not in (".dat", ".json"):
+            continue
+        stem = p.stem
+        if stem.lower().endswith(".beatmap"):
+            stem = stem[:-len(".beatmap")]
+        lower = stem.lower()
+        if lower in ("info", "bpminfo") or "lightshow" in lower or "audiodata" in lower:
+            continue
+        for mode in known_modes:
+            if mode.lower() in lower and not any(d.lower() == lower for d in standard_diffs):
+                stats = _chart_stats_for_file(p, bpm)
+                if stats:
+                    mode_notes[mode] = mode_notes.get(mode, 0) + stats["notes"]
+                break
+    return charts, mode_notes
 
 
 def _read_info(path: Path) -> tuple[dict | None, str]:
@@ -199,6 +311,34 @@ def validate_dir(path_str: str) -> SongValidation:
     if declared and not result.difficulties:
         result.difficulties = declared
 
+    # Chart statistics (M13): per-difficulty density + content + map facts —
+    # computed at STAGING time so a sparse chart is visible before playing
+    result.charts, result.mode_notes = _chart_stats(
+        path, info, result.difficulties, result.bpm)
+    spans = [c["span_s"] for c in result.charts.values()]
+    result.duration_s = round(max(spans), 1) if spans else 0.0
+    result.environment = str(info.get("_environmentName")
+                             or info.get("environmentName") or "")
+    for cover in ("cover.jpg", "cover.png", "cover.jpeg", "Cover.jpg", "Cover.png"):
+        if (path / cover).is_file():
+            result.cover_art = cover
+            break
+    if result.charts:
+        hard = result.charts.get("Hard") or result.charts.get("Expert")
+        if hard and hard["span_s"] > 30:
+            if hard["nps"] < NPS_VERY_SPARSE:
+                result.warnings.append(
+                    f"Very sparse charts (Hard ≈ {hard['nps']} notes/sec) — the map has "
+                    "almost no notes. Beat Sage's AI charts this sparsely on quiet or "
+                    "low-onset audio; nothing is broken, but expect near-empty charts. "
+                    "To fix: try Expert/Expert+, or generate from audio with stronger beats.")
+            elif hard["nps"] < NPS_SPARSE:
+                result.warnings.append(
+                    f"Sparse charts (Hard ≈ {hard['nps']} notes/sec). Beat Sage's Easy/Normal/"
+                    "Hard are ONE mellow band (its density lives in Expert/Expert+ — "
+                    "measured: E ≈ 2.1, E+ ≈ 3.3 NPS on a real song). To fix: play Expert or "
+                    "Expert+, or use our pipeline's generated mode variants.")
+
     # Warnings (the Deploy flow handles all of these — informational)
     if "Easy" not in result.difficulties:
         result.warnings.append(
@@ -310,7 +450,29 @@ def _entry_from_validation(v: SongValidation, kind: str, source: str,
         "audio_files": v.audio_files,
         "warnings": v.warnings,
         "staged_at": time.time(),
+        # Chart statistics (M13): per-Standard-difficulty density + content,
+        # map facts, mode content — displayed in the staged list so the user
+        # knows what to expect BEFORE deploying (a sparse Hard is visible here).
+        "charts": v.charts,
+        "environment": v.environment,
+        "duration_s": v.duration_s,
+        "cover_art": v.cover_art,
+        "mode_notes": v.mode_notes,
+        "generation": {},       # Beat Sage options (annotated by the client)
     }
+
+
+def annotate_staged(sid: str, extra: dict) -> dict | None:
+    """Attach extra metadata to a staged entry (e.g. the Beat Sage generation
+    options). Returns the updated entry, or None if the id isn't staged."""
+    manifest = _load_manifest()
+    entry = manifest.get(sid)
+    if not entry:
+        return None
+    for key, value in extra.items():
+        entry[key] = value
+    _save_manifest(manifest)
+    return entry
 
 
 def stage_dir(path_str: str, source: str = "local-folder") -> dict:
@@ -400,15 +562,29 @@ def stage_zip_bytes(data: bytes, source: str = "zip",
 
 
 def list_staged() -> list[dict]:
-    """Recent staged songs, newest first; prunes entries whose folder vanished."""
+    """Recent staged songs, newest first; prunes entries whose folder vanished.
+    Entries staged before the chart-statistics era (Exp 283c) get their
+    stats lazily re-validated on first list — one cheap local read per
+    entry, persisted back to the manifest (old staged songs become
+    informative without re-staging)."""
     manifest = _load_manifest()
     live: dict = {}
     changed = False
     for sid, entry in manifest.items():
-        if Path(entry.get("dir", "")).is_dir():
-            live[sid] = entry
-        else:
+        if not Path(entry.get("dir", "")).is_dir():
             changed = True
+            continue
+        if not entry.get("charts"):
+            v = validate_dir(entry["dir"])
+            if v.ok:
+                entry["charts"] = v.charts
+                entry["environment"] = v.environment
+                entry["duration_s"] = v.duration_s
+                entry["cover_art"] = v.cover_art
+                entry["mode_notes"] = v.mode_notes
+                entry.setdefault("generation", {})
+                changed = True
+        live[sid] = entry
     if changed:
         _save_manifest(live)
     return sorted(live.values(), key=lambda e: e.get("staged_at", 0), reverse=True)

@@ -311,3 +311,160 @@ def test_manifest_survives_restart(staging):
     # a "restart" = a fresh _load_manifest from the same file
     manifest = songs._load_manifest()
     assert manifest and manifest[list(manifest)[0]]["name"] == "Zipped"
+
+
+# ------------------------------------------------------------ chart stats (Exp 283c)
+class TestChartStats:
+    """Per-difficulty notes/NPS/peak/bombs/obstacles + map facts — the
+    'what to expect before you play' data (Beat Sage's flat E/N/H band
+    is visible at staging time, not mid-song)."""
+
+    def _map_with_charts(self, root: Path, notes_per_diff: dict, bombs=0,
+                         obstacles=0, events=5) -> Path:
+        root.mkdir(parents=True, exist_ok=True)
+        info = {"_version": "3.3.0", "_songName": "Stats", "_songAuthorName": "T",
+                "_beatsPerMinute": 120, "_environmentName": "TriangleEnvironment",
+                "_difficultyBeatmapSets": [{"_beatmapCharacteristicName": "Standard",
+                                            "_difficultyBeatmaps": [
+                                                {"_difficulty": d, "_beatmapFilename": f"{d}.dat"}
+                                                for d in notes_per_diff]}]}
+        (root / "Info.dat").write_text(json.dumps(info))
+        (root / "cover.jpg").write_bytes(b"jpg")
+        for diff, times in notes_per_diff.items():
+            notes = []
+            for i, t in enumerate(times):
+                notes.append({"_time": t, "_lineIndex": 0, "cutDirection": 1})
+            for b in range(bombs):
+                notes.append({"_time": 1.0, "_type": 3})
+            obstacle_rows = [{"_time": 2.0, "_lineIndex": 2, "_duration": 4}] * obstacles
+            event_rows = [{"_time": float(i), "_type": 0, "_value": 1} for i in range(events)]
+            (root / f"{diff}.dat").write_text(json.dumps(
+                {"_notes": notes, "_obstacles": obstacle_rows, "_events": event_rows}))
+        (root / "song.ogg").write_bytes(b"x")
+        return root
+
+    def test_stats_parsed_per_difficulty(self, tmp_path):
+        # Hard: 60 notes spread over 60 beats (30s @120bpm) = 2 NPS
+        d = self._map_with_charts(tmp_path / "m", {
+            "Easy": [i * 4.0 for i in range(20)],        # 5s span, 20 notes → 4/s
+            "Hard": [i * 1.0 for i in range(60)],        # 30s span, 60 notes → 2/s
+        })
+        v = songs.validate_dir(str(d))
+        assert v.ok
+        assert v.charts["Hard"]["notes"] == 60
+        # Hard: 60 notes over beats 0..59 = 29.5s @120bpm → 60/29.5 = 2.03/s
+        assert v.charts["Hard"]["nps"] == 2.03
+        # Easy: 20 notes over beats 0..76 = 38s → 0.53/s
+        assert v.charts["Easy"]["nps"] == 0.53
+        assert v.charts["Hard"]["span_s"] == 29.5  # 59 beats × 0.5s
+        # map-level facts (duration = the LONGEST chart span → Easy's 38s)
+        assert v.environment == "TriangleEnvironment"
+        assert v.cover_art == "cover.jpg"
+        assert v.duration_s == 38.0
+
+    def test_bombs_obstacles_events_counted(self, tmp_path):
+        d = self._map_with_charts(tmp_path / "m", {"Hard": [1.0, 2.0]},
+                                  bombs=3, obstacles=2, events=7)
+        v = songs.validate_dir(str(d))
+        c = v.charts["Hard"]
+        assert c["bombs"] == 3          # V2: _type == 3 entries
+        assert c["obstacles"] == 2
+        assert c["events"] == 7
+
+    def test_v3_color_notes_parsed(self, tmp_path):
+        d = self._map_with_charts(tmp_path / "m", {})
+        (d / "Hard.dat").write_text(json.dumps({
+            "colorNotes": [{"b": i * 2.0} for i in range(30)],
+            "bombNotes": [{"b": 1.0}] * 2,
+            "obstacles": [{"b": 1.0}] * 4,
+            "basicEvents": [{"b": 1.0}] * 9,
+        }))
+        v = songs.validate_dir(str(d))
+        c = v.charts["Hard"]
+        assert c["notes"] == 30
+        assert c["bombs"] == 2
+        assert c["obstacles"] == 4
+        assert c["events"] == 9
+
+    def test_peak_nps_math(self):
+        # 95 notes packed into ~1 second of beat time at 120bpm → 95 notes
+        # inside the 10s (20-beat) window → 9.5 NPS peak
+        times = [1.0 + (i % 20) * 0.05 for i in range(95)]
+        assert songs._peak_nps(times, bpm=120) >= 9.4
+        # spread out: 1 note per 10 beats → 3 land in the 20-beat window → 0.3/s
+        assert abs(songs._peak_nps([i * 10.0 for i in range(10)], bpm=120) - 0.3) < 0.01
+
+    def test_sparse_warning_fires_for_mellow_hard(self, tmp_path):
+        # Beat Sage's real-world shape: Hard at ~0.6 NPS over 170s+
+        d = self._map_with_charts(tmp_path / "m", {
+            "Hard": [i * 2.8 for i in range(108)],      # ~25s span... make it long:
+        })
+        # widen the span beyond the 30s threshold
+        (d / "Hard.dat").write_text(json.dumps(
+            {"_notes": [{"_time": i * 4.0} for i in range(108)],
+             "_obstacles": [], "_events": []}))
+        v = songs.validate_dir(str(d))
+        assert v.ok
+        assert any("Sparse charts" in w for w in v.warnings)
+        assert any("Expert" in w for w in v.warnings)  # the guidance points there
+
+    def test_no_sparse_warning_for_dense_charts(self, tmp_path):
+        d = self._map_with_charts(tmp_path / "m", {
+            "Hard": [i * 0.5 for i in range(120)],     # 2/s → no warning
+        })
+        v = songs.validate_dir(str(d))
+        assert not any("Sparse" in w for w in v.warnings)
+
+    def test_mode_variant_notes_totalled(self, tmp_path):
+        d = self._map_with_charts(tmp_path / "m", {"Hard": [1.0, 2.0]})
+        (d / "HardOneSaber.dat").write_text(json.dumps({"_notes": [{"_time": 1.0}] * 12}))
+        (d / "Hard90Degree.dat").write_text(json.dumps({"_notes": []}))  # Beat Sage's 0-note 90s
+        v = songs.validate_dir(str(d))
+        assert v.mode_notes.get("OneSaber") == 12
+        assert v.mode_notes.get("90Degree") == 0
+
+    def test_generation_annotation(self, tmp_path, monkeypatch):
+        st = tmp_path / "staged_songs"
+        monkeypatch.setattr(songs, "STAGING_DIR", st)
+        monkeypatch.setattr(songs, "MANIFEST_PATH", st / "manifest.json")
+        d = self._map_with_charts(tmp_path / "m", {"Hard": [1.0, 2.0]})
+        entry = songs.stage_dir(str(d))
+        updated = songs.annotate_staged(entry["id"], {"generation": {
+            "system_tag": "v1", "difficulties": ["Hard"]}})
+        assert updated["generation"]["system_tag"] == "v1"
+        assert songs._load_manifest()[entry["id"]]["generation"]["system_tag"] == "v1"
+        assert songs.annotate_staged("nope", {}) is None
+
+    def test_stats_in_validate_response(self, tmp_path, monkeypatch):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        from adapters import songs as songs_adapter
+        st = tmp_path / "staged_songs"
+        monkeypatch.setattr(songs_adapter, "STAGING_DIR", st)
+        monkeypatch.setattr(songs_adapter, "MANIFEST_PATH", st / "manifest.json")
+        d = self._map_with_charts(tmp_path / "m", {"Hard": [i * 0.5 for i in range(40)]})
+        r = client.post("/api/songs/validate-dir", json={"path": str(d)})
+        j = r.json()
+        assert j["ok"] is True
+        assert j["validation"]["charts"]["Hard"]["notes"] == 40
+        assert j["validation"]["environment"] == "TriangleEnvironment"
+        assert j["validation"]["cover_art"] == "cover.jpg"
+        # 40 notes over beats 0..19.5 = 9.75s → 4.1/s
+        assert j["staged"]["charts"]["Hard"]["nps"] == 4.1
+
+    def test_test_song_endpoint_deterministic(self):
+        import hashlib
+
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song", params={"seconds": 8})
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("audio/wav")
+        assert r.content[:4] == b"RIFF"
+        r2 = client.get("/api/songs/test-song", params={"seconds": 8})
+        assert hashlib.md5(r.content).hexdigest() == hashlib.md5(r2.content).hexdigest()
+        # the 48s default reproduces the deployed theme song byte-for-byte
+        r48 = client.get("/api/songs/test-song", params={"seconds": 48})
+        assert hashlib.md5(r48.content).hexdigest() == "26d59c5d196b2be39c4aec6f5774b286"

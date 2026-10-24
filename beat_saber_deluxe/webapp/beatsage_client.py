@@ -128,6 +128,17 @@ def main() -> int:
     except ValueError as e:
         print(f"❌ Beat Sage's zip didn't validate:\n{e}")
         return 1
+    # Record the generation options on the staged entry (the user asked for
+    # the full Beat Sage context on every staged song — what was requested,
+    # with which model, is part of the map's story)
+    songs.annotate_staged(entry["id"], {"generation": {
+        "system_tag": options["system_tag"],
+        "difficulties": options["difficulties"],
+        "modes": options["modes"],
+        "events": options["events"],
+        "environment": options["environment"],
+        "title": title, "artist": artist,
+    }})
     print(f" ✅ STAGED {entry['id']} — “{entry['name']}” by {entry['artist']} "
           f"({entry['schema']}, {'/'.join(entry['difficulties'])})")
     print("   Pick it in the staged list below, then Deploy as usual.")
