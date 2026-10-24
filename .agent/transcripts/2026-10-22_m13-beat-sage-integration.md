@@ -45,3 +45,10 @@ Experiment numbers continue from the M12 log (last used: 282/281h) → first M13
 - The user's two button reports addressed: label fixed (no console claim); the click now visibly does something (button disables + relabels through the flow); the stale-page class killed at the server (index.html → Cache-Control: no-store).
 - The NEW boot-wiring test: executes the DOMContentLoaded wiring under a quickjs DOM shim — the only gate for "page renders, clicks dead". Debugging it exposed the repr-string-literal trap (the first version executed nothing) + a shim gap; both fixed. 3 tests green.
 - Console to true clean slate per the user's authorization: session log archived (2,385 lines), backup saved (bsd_backup_20261023_220344.zip), clean-ps4 + local wipe verified (AFR empty, plugins.ini absent, app reads clean_slate=True). The user's fresh run covers the whole path incl. the preview-order fix.
+
+## Cycle 7 — Exp 284: the release audit + M15 roadmapped + alpha01
+
+- The user validated the full fresh flow themselves on the clean console; Expert+ = "decently dense"; requested the lower-difficulty engine on the roadmap.
+- M15 — Lower-Difficulty Generation Engine written (official-difficulty-grammar research-first; the dump's catalog as the measurement corpus; the album → M16).
+- alpha01: CI green (1038→914+124); the zip audit: FSELF pair, 7 docs, 7-flag template, byte parity (all 5 core files), the M13 files ship, the zip's app boots 0.6.20/0.5366/v0.8055.
+- THE AUDIT FINDING: the changelogs — 4+ silent string-replace no-ops across the milestone left the webapp changelog disordered with 0.6.20 missing + the pipeline changelog missing 0.5366. Both fixed properly (full reorganization; entries written from session records). CI_RELEASE + the feature doc + the KB index brought current. Lesson: changelog inserts must assert their anchors.

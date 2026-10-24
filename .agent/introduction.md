@@ -173,7 +173,7 @@ designing anything** — this project has already made most mistakes once.
   the PS4 — validation PASSED). NEXT: **M14 — Custom Song Environment Control**
   (the user's 2026-10-23 request: default / force-target-slot / force-blank /
   force one of the 16 envs; research-first — see the roadmap entry), then
-  M15-exploration (custom album) or M3 (note colors).
+  M16-exploration (custom album) or M3 (note colors).
 - Open PR during release flow: check `gh pr list` — update its description
   per `/workspace/.claude/prompts/update-pr-description.prompt` (surgical
   edits, `--raw-field` only, user approval before pushing).

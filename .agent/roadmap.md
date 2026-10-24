@@ -577,7 +577,66 @@ implementation for free).
 - Beat Sage synergy: our generate form already bakes an env into the AI map
   (their API takes it); the deploy-time override applies to ANY map regardless.
 
-## M15 — Custom Album From Scratch (Exploration; the long-term ideal)
+## M15 — Lower-Difficulty Generation Engine (user request, 2026-10-24; the quality gap-filler)
+**Goal:** a generation engine that turns the huge library of Expert/Expert+
+community maps (and Beat Sage output) into **genuinely good Easy/Normal/Hard
+charts** — the gap the user named: Beat Sage's lower difficulties are one
+near-empty band (live-measured 0.49–0.61 NPS; its Hard "felt sparse — barely
+any boxes"), and most dense community maps ship no playable low difficulties.
+
+**The bar (the user's words): intelligently follow the general Beat Saber
+charting rules that comprise the official song sets and their difficulty
+densities.** Official Easy/Normal/Hard are FUN at low density because they
+follow real rules: emphasis on strong beats, rhythm-following motif
+repetition, generous rest cadence, flow-correct direction patterns, measured
+double/jump usage. Density alone is not the game — RULES + density bands are.
+
+**Why this is very tractable here (the existing machinery):**
+- The pipeline already OWNS chart transformation: the M5 mode generators
+  (OneSaber/NoArrows/90Degree) prove beatmap-analysis → note-selection →
+  rewrite → re-inject end-to-end; the Easy auto-fill exists (currently just
+  a clone-from-Normal — the weakest link this engine replaces).
+- **The complete official catalog is the ground truth, locally**: the dump
+  (or the game_data cache) holds EVERY official song's Easy/Normal/Hard —
+  the exact corpus to MEASURE the official rules from (per-difficulty NPS
+  bands, note-gap distributions, double frequencies, flow-direction
+  patterns, rest cadence, bomb/wall usage per difficulty).
+- The chart-statistics engine (M13, web app 0.6.20) already parses
+  notes/NPS/peaks/bombs/walls from any map — the measurement half is built.
+
+**Research-first plan:**
+- R1 — **Measure the official difficulty grammar**: script an analysis over
+  the official catalog (dump/cache) → per-difficulty density bands (min/typ/
+  max NPS), inter-note gap distributions, downbeat-vs-offbeat emphasis,
+  double/jump rates, direction-change frequency, rest-period cadence.
+  Output: a documented "official difficulty profile" (KB page) the engine
+  targets.
+- R2 — Characterize the SUBSET-selection problem: which notes of an E/E+
+  chart make a good Easy? (onset strength / structural role / flow) —
+  validate by comparing against official pairs where the SAME song exists
+  in multiple difficulties (the official catalog has natural pairs).
+- R3 — Flow-correctness: the subset must satisfy the official patterning
+  rules (no unreadable back-to-back inversions at Easy density; direction
+  follows position on the grid).
+
+**Implementation sketch (post-research):**
+- `tools/difficulty_engine.py` — analyze(source_chart, music_grid) →
+  select+repattern per target difficulty profile → output .dat (V2/V3/V4).
+- Pipeline: `--generate-difficulties easy,normal,hard` (auto-fill when
+  missing, replacing the clone-from-Normal Easy fill; never overwrite a
+  mapper's own charts).
+- Web app: per-deploy option (a "generate lower difficulties" checkbox
+  with the density expectations shown), plus the staged-song stats make the
+  before/after quality visible.
+- Beat Sage synergy: our engine fills exactly the band their AI charts
+  worst — generate with Beat Sage (their E/E+ is decent) then descend with
+  our engine for the full difficulty set.
+
+**Validation:** round-trip against official pairs (our generated Easy for
+official song X ≈ official Easy's density band + pattern grammar);
+play-testing across the generated bands.
+
+## M16 — Custom Album From Scratch (Exploration; the long-term ideal)
 
 ## M14 — Custom Album From Scratch (Exploration; the long-term ideal)
 The user's idea: an entirely NEW music album for custom songs, arbitrary song count —
