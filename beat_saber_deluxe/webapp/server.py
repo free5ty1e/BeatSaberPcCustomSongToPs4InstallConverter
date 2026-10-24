@@ -115,7 +115,13 @@ _capture_code_versions()
 
 @app.get("/")
 def index():
-    return FileResponse(STATIC_DIR / "index.html")
+    # no-store on the SHELL (Exp 283e — the stale-page class): an open tab can
+    # hold an old index.html referencing an old app.js after a server update —
+    # the user sees a NEW button whose click does nothing (their tab's JS
+    # predates it). HTML is tiny; forcing revalidation keeps HTML+JS from the
+    # same code version. Static ASSETS keep normal ETag caching.
+    return FileResponse(STATIC_DIR / "index.html",
+                        headers={"Cache-Control": "no-store"})
 
 
 # --------------------------------------------------------------------------

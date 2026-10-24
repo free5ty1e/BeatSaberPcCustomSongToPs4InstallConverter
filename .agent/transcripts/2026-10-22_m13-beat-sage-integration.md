@@ -39,3 +39,9 @@ Experiment numbers continue from the M12 log (last used: 282/281h) → first M13
 - Shipped: v1/v2 selector + density note; per-difficulty notes/NPS/peak/bombs/walls/events + map facts + generation record on staged songs; sparse warnings; lazy stats upgrade of old entries; testsong.py (byte-identical to the deployed theme) + GET /api/songs/test-song + the 🧪 one-click button.
 - THE PREVIEW BUG (user's field report): root-caused via the manifest's previews list — the pack/preview pass ran BEFORE the deploy's own song_metadata registration (Step 11, end of deploy) → build_preview_map skipped the new slot → every deploy baked the previous deploy's preview, never its own. Fixed (0.5366): early LOCAL registration before the pack pass; Step 11 keeps the upload. Live-validated: the re-deploy cut ✂️ MessItUp (preserved) AND StartMeUp (new) — validation PASSED, console repaired.
 - Two 47-loadout-era test pins made state-dynamic (patched==9/start==0.0/4-sets broke with the clean-slate state). Suite: 948 + 87 gated.
+
+## Cycle 6 — Exp 283e: the button UX + the boot-wiring gate + the clean slate
+
+- The user's two button reports addressed: label fixed (no console claim); the click now visibly does something (button disables + relabels through the flow); the stale-page class killed at the server (index.html → Cache-Control: no-store).
+- The NEW boot-wiring test: executes the DOMContentLoaded wiring under a quickjs DOM shim — the only gate for "page renders, clicks dead". Debugging it exposed the repr-string-literal trap (the first version executed nothing) + a shim gap; both fixed. 3 tests green.
+- Console to true clean slate per the user's authorization: session log archived (2,385 lines), backup saved (bsd_backup_20261023_220344.zip), clean-ps4 + local wipe verified (AFR empty, plugins.ini absent, app reads clean_slate=True). The user's fresh run covers the whole path incl. the preview-order fix.

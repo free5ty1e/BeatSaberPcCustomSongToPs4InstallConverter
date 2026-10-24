@@ -424,6 +424,13 @@ async function useTestSong() {
   // one click and the Generate flow is ready (no audio hunting). The song is
   // 100% mathematical synthesis: deterministic, and the 48s default is
   // byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
+  // The button itself tells the story (disable + relabel) — the click must be
+  // OBVIOUSLY doing something (the Exp 283e user report: "does nothing that
+  // I can notice").
+  const btn = $("btn-bsage-testsong");
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⏳ Synthesizing the test song…";
   setResult("bsage-result", "Synthesizing the original test song (pure math, " +
     "deterministic)…", "");
   try {
@@ -436,14 +443,19 @@ async function useTestSong() {
     $("bsage-audio").files = dt.files;   // attach programmatically
     if (!$("bsage-title").value) $("bsage-title").value = "BSD Deluxe Theme (An Original)";
     if (!$("bsage-artist").value) $("bsage-artist").value = "Beat Saber Deluxe Synth";
-    setResult("bsage-result", "✅ Test song attached (48s, rights-clean — synthesized " +
-      "from scratch, the same song every time). Press Generate to send it to Beat Sage.", "ok");
+    btn.textContent = "✓ Test song attached — now press Generate";
+    setResult("bsage-result", "✅ Test song attached to the form (48s, rights-clean — " +
+      "synthesized from scratch, the same song every time). Press Generate to " +
+      "send it to Beat Sage.", "ok");
   } catch (e) {
     // DataTransfer/file-input restrictions or fetch failure → plain download
+    btn.textContent = original;
     setResult("bsage-result", "Starting a plain download instead — pick the " +
       `downloaded .wav as the audio file. (${esc(e.message)})`, "warn");
     window.location = "/api/songs/test-song?seconds=48";
+    return;
   }
+  setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 10000);
 }
 
 async function stageZipFile(file) {
