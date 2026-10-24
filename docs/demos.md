@@ -16,6 +16,7 @@
 
 ## Web UI Screenshots
 
+<img width="928" height="914" alt="image" src="https://github.com/user-attachments/assets/95d319e7-8eca-49a6-b434-a3743937a388" />
 <img width="942" height="831" alt="image" src="https://github.com/user-attachments/assets/f77ada23-b167-4c38-ab06-a819e1faa2d9" />
 <img width="949" height="400" alt="image" src="https://github.com/user-attachments/assets/7cfd03f9-b7dd-4499-853c-21c5361c560a" />
 <img width="940" height="902" alt="image" src="https://github.com/user-attachments/assets/fe5693f7-561e-4aa8-bc49-60a2d5458ce6" />
