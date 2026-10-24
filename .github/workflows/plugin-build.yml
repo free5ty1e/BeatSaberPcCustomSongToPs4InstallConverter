@@ -206,13 +206,10 @@ jobs:
           # repo-only until now)
           cp backup-beat-saber-deluxe-files.py release-zip/
 
-          # Feature docs
-          cp beat_saber_deluxe/docs/features/custom-song-replacement.md release-zip/docs/features/
-          cp beat_saber_deluxe/docs/features/song-metadata-modification.md release-zip/docs/features/
-          cp beat_saber_deluxe/docs/features/beatmap-mode-mapping.md release-zip/docs/features/
-          cp beat_saber_deluxe/docs/features/song-previews.md release-zip/docs/features/
-          cp beat_saber_deluxe/docs/features/in-game-plugin-toggle.md release-zip/docs/features/
-          cp beat_saber_deluxe/docs/features/game-data-extractor.md release-zip/docs/features/
+          # Feature docs — the whole directory (single source: new docs ship
+          # automatically; the release test fails if any on-disk doc is
+          # missing from this copy — the M12/M13 invariant)
+          cp beat_saber_deluxe/docs/features/*.md release-zip/docs/features/
 
           # Example / how-to docs
           cp beat_saber_deluxe/docs/camellia-pack-example.md release-zip/docs/examples/

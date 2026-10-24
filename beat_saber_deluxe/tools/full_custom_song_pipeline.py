@@ -6203,6 +6203,25 @@ Examples:
             deploy_enable_modes = [m for m in mode_map_enabled_modes if m != "Standard"]
             log.info(f"  Pack bundle will enable extra modes for custom songs: {deploy_enable_modes}")
 
+        # Exp 283d: register the target's song metadata LOCALLY BEFORE the
+        # pack/preview pass. build_preview_map gates slots on the local
+        # song_metadata.json, and Step 11 (the metadata step) runs at the
+        # END of the deploy — so the preview pass treated the JUST-DEPLOYED
+        # slot as "not custom" and baked NO preview for it. Every deploy
+        # baked the PREVIOUS deploys' previews, never its own (the user's
+        # field report: Open Road's preview appeared only after the NEXT
+        # deploy ran; the theme song on StartMeUp kept the stock preview).
+        # The local write is idempotent — Step 11 still performs the upload
+        # (and its own idempotent local write).
+        if (args.song_name or args.artist or args.deploy) and should_deploy:
+            manage_song_metadata(
+                config,
+                song_name=args.song_name or custom_name,
+                artist=args.artist or custom_artist,
+                target_name=args.target,
+                deploy=False,
+            )
+
     if should_deploy:
         deploy_pack_bundle(deploy_cfg, packs=deploy_packs, enable_modes=deploy_enable_modes, target_slots=deploy_slots, skip_previews=args.skip_song_preview_management)
 

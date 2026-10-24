@@ -77,13 +77,21 @@ class TestReleaseZipInvariants:
 
     def test_all_feature_docs_bundle(self):
         """Every shipped feature doc must be copied into release-zip/docs/features/
-        — a new doc without a cp line silently vanishes from the zip (exactly
+        — a new doc without a copy line silently vanishes from the zip (exactly
         how the 5th doc would have shipped missing had the audit not caught
-        the cp list)."""
+        the cp list). M13 hardened this: the workflow now copies the WHOLE
+        directory (docs/features/*.md), so new docs ship automatically —
+        this test still pins that (a) the glob (or an explicit cp list)
+        exists and (b) an explicit-list regression would re-fail here."""
         wf = _workflow()
+        glob_copy = "cp beat_saber_deluxe/docs/features/*.md release-zip/docs/features/" in wf
         bundled = set(re.findall(r"cp beat_saber_deluxe/docs/features/([\w.-]+\.md)", wf))
         on_disk = {p.name for p in FEATURES_DOCS.glob("*.md")}
         assert on_disk, "no feature docs found on disk?"
+        if glob_copy:
+            # the whole directory ships — nothing can be missing by construction
+            assert "release-zip/docs/features/" in wf
+            return
         missing = on_disk - bundled
         assert not missing, \
             f"feature docs exist but are NOT bundled into the release zip: {sorted(missing)}"

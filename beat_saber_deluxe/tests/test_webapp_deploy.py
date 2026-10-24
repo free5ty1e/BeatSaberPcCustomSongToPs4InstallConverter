@@ -141,3 +141,49 @@ class TestSingleJobRunner:
         while job.exit_code is None and time.time() < deadline:
             time.sleep(0.05)
         assert r.cancel() is False
+
+
+class TestLocalSongDirM13:
+    """--song-dir deploys: the Beat Sage + local-folder sections hand the
+    pipeline a validated folder; the argv must mirror the pipeline's own
+    precedence (song_dir overrides the BeatSaver download)."""
+
+    def test_song_dir_builds_local_argv(self, tmp_path):
+        d = tmp_path / "mymap"
+        d.mkdir()
+        opts = deploy.DeployOptions(song_dir=str(d), target="BadGuy")
+        argv = opts.build_argv()
+        assert argv[:4] == ["--song-dir", str(d), "--target", "BadGuy"]
+        assert "--download-beat-saver-song" not in argv
+        assert argv == ["--song-dir", str(d), "--target", "BadGuy",
+                        "--pcm16", "--no-pad", "--convert-to-v3", "--deploy-full"]
+
+    def test_song_dir_overrides_map_id(self, tmp_path):
+        d = tmp_path / "mymap"
+        d.mkdir()
+        opts = deploy.DeployOptions(map_id="1d6c7c2", song_dir=str(d),
+                                    target="BadGuy")
+        argv = opts.build_argv()
+        assert "--download-beat-saver-song" not in argv
+        assert "--song-dir" in argv
+
+    def test_no_source_raises_with_hint(self):
+        opts = deploy.DeployOptions(target="BadGuy")
+        with pytest.raises(ValueError, match="nothing was picked"):
+            opts.build_argv()
+
+    def test_missing_song_dir_raises_with_fix(self):
+        opts = deploy.DeployOptions(song_dir="/no/such/folder", target="BadGuy")
+        with pytest.raises(ValueError, match="To fix"):
+            opts.build_argv()
+
+    def test_describe_shows_local_folder(self, tmp_path):
+        d = tmp_path / "mymap"
+        d.mkdir()
+        opts = deploy.DeployOptions(song_dir=str(d), target="BadGuy")
+        assert "local folder" in opts.describe()
+        assert "map 1d6c7c2" not in opts.describe()
+
+    def test_describe_still_shows_map_id(self):
+        opts = deploy.DeployOptions(map_id="1d6c7c2", target="BadGuy")
+        assert "map 1d6c7c2" in opts.describe()

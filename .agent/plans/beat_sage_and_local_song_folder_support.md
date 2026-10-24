@@ -1,6 +1,6 @@
 # Beat Sage + Local Song Folder Support (Web App "Pick a Song" Tab)
 
-**Status:** 🟡 Plan (Exp 279, 2026-10-19)
+**Status:** 🟢 Implemented (Exp 283, 2026-10-22) — web app 0.6.20; Tier 1 verified against the live service; the PS4 deploy validated end-to-end (bundle built + deployed) pending the console's return for the final play-test
 **Goal:** the web app's Pick-a-song tab gains two new sections below the existing
 BeatSaver search: **(2) Beat Sage** — generate a Beat Saber map from any song, with
 the web app automating everything that can be automated and guiding the user through
@@ -168,14 +168,19 @@ Every deploy remains `deploy.pipeline_command(argv)` — the sections only produ
 
 ## 7. Milestone phases (M13)
 
-- [ ] **M13.1** — Local song folder section (path validation + zip intake + staging
-      + recent list) — the independently-valuable core, no third-party dependency
-- [ ] **M13.2** — Beat Sage Tier 2 (guided card + the shared zip intake) — ships
-      the guaranteed UX
-- [ ] **M13.3** — Beat Sage Tier 1 research (live endpoint capture + contract notes)
-      then implementation behind the mocked client; enable per-verification results
-- [ ] **M13.4** — Docs: webapp tab documentation, README section, ToS/rights notes,
-      feature-request template mention
+- [x] **M13.1** — Local song folder section: adapters/songs.py (validator
+      mirroring the pipeline's contract + zip-slip-guarded intake + persistent
+      staging with auto-prune) — 24 tests
+- [x] **M13.2** — Beat Sage Tier 2 (guided card, served by /api/beatsage/guide,
+      with a static pages-mode fallback) + the shared zip intake
+- [x] **M13.3** — Tier 1: the API live-captured from their Nuxt bundle (KB:
+      beatsage-api-capture), the client (webapp/beatsage_client.py) runs as THE
+      single job (upload → poll at their cadence → download → validate →
+      stage), verified against the LIVE service twice (the gated contract
+      test with a synthesized tone; the full user flow with a synthesized
+      48s original song — staged in 12s, all four difficulties)
+- [x] **M13.4** — Docs: feature doc (beat-sage-and-local-songs.md), README row,
+      CI_RELEASE rows, KB page, the rights/ToS notes in the UI + feature doc
 
 ## 8. Open questions
 
@@ -186,3 +191,28 @@ Every deploy remains `deploy.pipeline_command(argv)` — the sections only produ
   defaults in v1; the card shows what we chose.
 - **Q3** — Staging retention: keep staged songs across web-app restarts (yes —
   `webapp_state` pattern) and expose a cleanup control.
+
+
+## RUN LOG
+
+### Exp 283 (2026-10-22) — implementation + validation
+- Everything above landed in web app 0.6.20 (no pipeline/plugin changes — the
+  flow ends at the pipeline's existing `--song-dir`, exactly as planned).
+- 57 new tests (songs/beatsage/deploy-argv/server-endpoints/JS-syntax-gate);
+  suite 924 passed + 93 hardware-gated; ruff clean; app.js quickjs-parsed.
+- **Live Tier-1 proof:** a synthesized 48s original song (rights-clean,
+  `development/scripts/make_rights_clean_test_song.py`) went through the app's
+  own `/api/jobs/beatsage` → Beat Sage accepted (job a3dfabb5…) → DONE in 12s
+  → 338,890-byte zip → validated (V2, N/H/E/E+) → **staged**; the staged entry
+  **survived a web-app restart** (the persistence design).
+- **Deploy validation:** the staged folder deployed via `/api/jobs/deploy`
+  (song_dir → TruthHurts): the V2 map auto-converted to V3, Easy auto-filled
+  from Normal (Beat Sage can't make Easy), 15 mode beatmaps generated, the
+  bundle built + verified locally… and the FTP push hit `No route to host` —
+  **the PS4 had gone to rest/off mid-flow**; the job failed cleanly (lftp
+  600s timeout, exit 1; nothing corrupted — a re-deploy overwrites the
+  possibly-partial bundle). The one-click re-run from the staged list is the
+  remaining hardware validation.
+- Quickjs found two real JS bugs the Python suite couldn't (a template-literal
+  missing paren + a lexical redefinition) → added the permanent
+  test_webapp_js_syntax.py gate + quickjs to the test requirements.

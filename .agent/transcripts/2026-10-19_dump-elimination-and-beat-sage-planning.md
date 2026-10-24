@@ -105,3 +105,7 @@ The user's full run succeeded (played the custom song!) and they asked the certa
 ## Cycle 13 — PR #9 updated (Exp 281g)
 
 Title → "M12: No Dump Required — The Game's Own Mini-Dumper (game-data extractor) + Beat Sage & local-folder support groundwork". Description → the complete release story (the headline, the engineering, the 8-round validation table, the definitive proof, also-in-PR, M13 groundwork, versions, release readiness, by-the-numbers). Pushed via --raw-field (9,091 chars).
+
+## Cycle 14 — Exp 281h: 🎉 THE RELEASE — fully validated + the Pages audit
+
+The final tag built green (960 → 837+123). Clean extraction: 6 docs, FSELF pair, the 7-flag all-TRUE template, the numbered UI, FULL byte parity (all three core files md5-identical — the certainty fixes ship). **The shipped-artifact proof:** the zip's webapp boots (0.6.19/v0.8055 ping) + reads the live console green + — with the real dump PHYSICALLY HIDDEN — a full deploy from the SHIPPED pipeline completed cache-only → validation 🎉 PASSED. Pages: rebuilt on merge; badge current (all 3 versions); "No game dump needed!" live on the hosted checklist; the 5-step walkthrough renders; the landing guard + assets + demos link + dumper.cfg all resolve (the first 404 was my URL — the build flattens /static/). **M12 SHIPPED.**

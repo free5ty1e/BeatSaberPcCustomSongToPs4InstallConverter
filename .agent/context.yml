@@ -336,7 +336,7 @@ release_readiness:
 # Current Branch / Feature: M11 in-game plugin toggle (L3+R3 hotkey)
 current_feature:
   branch: "feature/next (M10 release merged to main; M11 work continues here)"
-  milestone: "M12.4 validation in progress (Exps 280-280b): simulated release ready at /workspace/release-test (v0.8054/0.5364/0.6.15, game_dump_dir deliberately absent); plan doc = execution log with the Phase 0-2 procedure; then M13"
+  milestone: "M13 release alpha01 tagged (v0.8055-pipeline-0.5366-webapp-0.6.20 — tag: v0.8055-pipeline-0.5366-webapp-0.6.20-alpha01) — CI watched + zip audited; the console is at TRUE clean slate (user's fresh-user run pending, which live-validates the Exp 283d preview fix); NEXT after release: M14 environment control → M15 lower-difficulty generation engine (user request: official-rules Easy/Normal/Hard from E/E+ maps — Beat Sage's weak band + the dense community-map library)"
   plan: ".agent/plans/in-game-global-plugin-enable-toggle-plan.md (COMPLETE — feature doc ships in the zip: docs/features/in-game-plugin-toggle.md)"
   transcript: ".agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md (this feature's session transcript)"
   feature_flag: "enable_in_game_plugin_toggle (defaults false; webapp Feature Flags tab or --features-only --set-feature enable_in_game_plugin_toggle=true)"

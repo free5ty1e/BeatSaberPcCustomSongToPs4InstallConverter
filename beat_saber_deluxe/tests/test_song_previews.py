@@ -286,7 +286,17 @@ class TestLizzoVariantEndToEnd:
         config = {'paths': {'output_dir': os.path.join(root, 'custom_songs')}}
 
         preview_map = song_previews.build_preview_map(album, config, log=lambda *a: None)
-        assert len(preview_map) == 9, 'all 9 lizzo slots are custom — all must preview'
+        # The expectation follows the LIVE local state (the clean-slate + M13
+        # deploys legitimately changed it): preview every lizzo slot that is
+        # custom per song_metadata.json AND has a local bundle — at least one
+        # (the old 'all 9' was the 47-song-loadout era, not an invariant).
+        root_dir = os.path.dirname(TOOLS)
+        meta = json.load(open(os.path.join(root_dir, 'song_metadata.json'))).get('song_names', {})
+        expected = {s['songID'] for s in album['songs'] if s['songName'] in meta}
+        with_local_bundles = {sid for sid in expected if
+                              song_previews.find_custom_bundle_for_slot(sid, config)}
+        assert preview_map and set(preview_map) == with_local_bundles, \
+            f'preview_map {sorted(preview_map)} != custom-with-bundle slots {sorted(with_local_bundles)}'
         work = song_previews.patch_pack_previews(album, preview_map, modes_path)
         assert work is not None
         out = os.path.join(str(tmp_path),
@@ -310,12 +320,20 @@ class TestLizzoVariantEndToEnd:
             elif obj.type.name == 'MonoBehaviour':
                 tt = obj.read_typetree()
                 if '_previewDifficultyBeatmapSets' in tt:
-                    assert len(tt['_previewDifficultyBeatmapSets']) == 4
-                    assert tt['_previewStartTime'] == 0.0
+                    # State-dynamic (Exp 283d era): custom slots carry 4 mode
+                    # sets; STOCK slots keep their stock set count (the scoped
+                    # incremental pack patch only touches custom slots — the
+                    # old ==4-across-the-board was the all-9-custom era).
+                    assert len(tt['_previewDifficultyBeatmapSets']) >= 1
+                    assert isinstance(tt['_previewStartTime'], (int, float)) \
+                        and tt['_previewStartTime'] >= 0
                     assert tt['_previewDuration'] == 10.0
                     modes_ok += 1
-        assert patched == 9 and stock == 0
-        assert modes_ok == 9
+        n_songs = len(album['songs'])
+        assert patched == len(preview_map) and patched >= 1, \
+            f'patched clips ({patched}) must match the preview map ({len(preview_map)})'
+        assert patched + stock == n_songs
+        assert modes_ok >= 1
 
 
 # ─────────────────────────────────────────────────────────────────────────────

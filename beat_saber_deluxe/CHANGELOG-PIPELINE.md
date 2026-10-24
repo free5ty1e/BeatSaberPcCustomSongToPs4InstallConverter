@@ -1,5 +1,16 @@
 # Pipeline Changelog
 
+## v0.5366 (2026-10-23)
+### Fixed (Exp 283d — the user's field report: a fresh deploy's song kept its STOCK menu preview)
+- **Deploy-order bug: the pack/preview pass ran before the deploy's own song
+  registered in song_metadata.json** (Step 11 wrote it at the END), so
+  `build_preview_map` treated the just-deployed slot as "not custom" and
+  baked no preview for it — every deploy baked the PREVIOUS deploy's
+  preview, never its own. The target's metadata now registers LOCALLY
+  (deploy=False, idempotent) before the pack pass; Step 11 still owns the
+  upload. Regression-pinned by test_exp283d_preview_metadata_order.py.
+
+
 ## v0.5365 (2026-10-19)
 ### Fixed — Exp 281d (the user's cache-only deploy: pack-modes never followed the cache + the redirects refusal blocked clean consoles)
 - **`pack_modes.dump_dir` follows `paths.game_dump_dir`** unless the user pinned it explicitly — the pack-modes builder reads the same game-data root as the per-song templates (pack bundles + origin catalog), so the game_data cache is a drop-in for both. Previously the "Use the extracted cache" switch repointed only game_dump_dir and deploys logged "Dump dir missing … cannot build pack mode bundles" — the pack patch (mode buttons + previews) silently skipped. 2 tests (follows unpinned; a pinned dir is never rewritten).

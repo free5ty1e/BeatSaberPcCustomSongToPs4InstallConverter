@@ -17,6 +17,13 @@ numpy>=1.24
 fastapi>=0.110
 uvicorn>=0.29
 httpx>=0.27
+# Multipart form parsing — the Pick-a-Song tab's zip/audio uploads
+# (FastAPI's UploadFile needs it at runtime; also required by the release zip)
+python-multipart>=0.0.9
+# Full-modern-syntax JS parser — app.js syntax gate (Exp 283: a template
+# literal typo shipped past every test; the browser runs NOTHING on a parse
+# error, so this is the webapp's only front-end breakage gate)
+quickjs>=1.19
 # FSB5 container parser — the song-previews tests roundtrip-verify our preview FSB5s
 # against an independent decoder
 fsb5>=1.0

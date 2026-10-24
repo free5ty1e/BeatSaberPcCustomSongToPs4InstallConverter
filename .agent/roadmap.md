@@ -505,7 +505,7 @@ on accelerometer/gyro churn (it compares whole words 2-7) — future button diag
 should compare only the button words (+0x18/+0x1A). No action needed: the feature is
 confirmed and release logging is one-time events only.
 
-## M12 — Game-Data Cache + In-Game Extractor (Eliminate the Dump Requirement) (Planned)
+## M12 — Game-Data Cache + In-Game Extractor — SHIPPED in v0.8055-pipeline-0.5365-webapp-0.6.19 (2026-10-22, hardware-proven)
 **Goal:** a new user checks out the repository and can add custom songs immediately —
 no 4.9GB dump, no dumper homebrew, no USB stick. The plugin extracts exactly the files
 the pipeline needs (~13MB per song slot, ~140MB per pack, 658MB for the full live
@@ -524,20 +524,119 @@ the archived boot logs).
 - [ ] **M12.4** — Hardware: fresh-cache → full 5-pack deploy from `game_data/` alone, verify PASSED
 - [x] **M12.5** — Feature doc (ships in the zip) + README prerequisite row + CI_RELEASE (6th flag, N/6) + example config + KB
 
-## M13 — Beat Sage + Local Song Folder Support (Web App Pick-a-Song Tab) (Planned)
-**Goal:** below the BeatSaver search: a **Beat Sage** section (generate a map from any
-song via beatsage.com — automation ladder: full backend-driven generation → guided flow
-with automated zip intake → manual fallback; the user is guided through the steps that
-genuinely must be manual: providing rights-cleared audio, accepting beatsage.com's
-terms, the minutes-long wait) and a **local song folder** section (path entry + live
-validation + zip drag-drop → staged song → existing Deploy flow unchanged; the
-pipeline already accepts local folders — zero pipeline changes).
-Full plan: [`.agent/plans/beat_sage_and_local_song_folder_support.md`](.agent/plans/beat_sage_and_local_song_folder_support.md)
+## M13 — Beat Sage + Local Song Folder Support — ✅ IMPLEMENTED in web app 0.6.20 (2026-10-22, Exp 283; Tier 1 live-verified; hardware-deployed)
+**Shipped:** below the BeatSaver search: **2 · Beat Sage** (Tier 1 — the web app drives their live-captured API: upload → poll at their own cadence → download → validate → stage; verified against the live service with a synthesized 48s original song, generated in 12s; ANY failure auto-opens the always-works guided card) and **3 · Local songs** (live folder validation V2/V3/V4 with per-problem To-fix messages, zip drag-drop with zip-slip guarding) + the persistent **staged songs** list. Both deploy via the pipeline's existing `--song-dir` — **zero pipeline/plugin changes** (exactly as planned). **Hardware-proven:** an AI-generated map deployed to the PS4 and post-deploy validation PASSED (Exp 283b). 57 new tests incl. the quickjs JS-syntax gate; the Beat Sage 'Lights' event checkbox is a trap on their own site (live-probed: HTTP 400 in both v1+v2) — never offered, pinned by tests. Full plan + run log: [`.agent/plans/beat_sage_and_local_song_folder_support.md`](.agent/plans/beat_sage_and_local_song_folder_support.md)
 
-- [ ] **M13.1** — Local song folder section (path validation + zip intake + staging + recent list)
-- [ ] **M13.2** — Beat Sage Tier 2 (guided card + shared zip intake) — the guaranteed UX
-- [ ] **M13.3** — Beat Sage Tier 1 research (live endpoint capture) + implementation behind a mocked client (network tests gated like hardware tests)
-- [ ] **M13.4** — Docs: webapp tab docs, README section, ToS/rights notes
+## M14 — Custom Song Environment Control (user request, 2026-10-23; the next feature)
+**Goal (the user's wish list):** deployed custom songs get a controllable in-game
+ENVIRONMENT (the 3D background/scene), with four modes:
+1. **Default** — today's behavior (whatever the game resolves per song)
+2. **Force target-slot environment** — inherit the replaced stock song's environment
+   (some customs already get this today — "and that's awesome")
+3. **Force blank environment** — the minimal/empty background ("also cool and
+   should be an option!")
+4. **Force one of the 16 standard environments** — the same list the Beat Sage
+   section offers (Default, Origins, Triangle, Nice, BigMirror, Dragons, KDA,
+   Monstercat, CrabRave, Panic, Rocket, GreenDay, GreenDayGrenade, Timbaland,
+   FitBeat, LinkinPark — all PS4-build-renderable, which is exactly why Beat
+   Sage's list is these 16).
+
+**Observed behavior to explain (research FIRST):** some customs DO show the target
+slot's environment; MOST show a blank background. The pipeline has ZERO environment
+handling today, and the map's Info.dat `_environmentName` never reaches the console
+(only beatmap .beatmap.gz TextAssets + audio ship). So the runtime resolves the env
+somewhere we don't touch — and it differs per song somehow. Hypotheses to test:
+- (a) the slot's own BeatmapLevelSO (unmodified in the bundle) — contradicted by
+  "most are blank" unless something else overrides it;
+- (b) the PACK-BUNDLE PATCH path (mode/preview injection into
+  `<pack>_pack_modes_assets_*`) drops/overrides the env binding for custom slots —
+  compare a blank-env custom vs a working-env custom (same song, both paths?);
+- (c) the env is read from injected beatmap data fields (V2/V3 beatmap dats carry
+  `_environmentName` on PC — does the PS4 build read it from the TextAsset?);
+- (d) the distinction correlates with mode-variant play (OneSaber/90° vs Standard).
+**Concrete experiments:** E1 — the same map deployed to two slots in two packs,
+compare envs; E2 — play a custom's Standard vs mode-variant, compare envs;
+E3 — hexdump the stock BeatmapLevelSO's serialized fields AFTER the preview-array
+region (the blob analysis stops at the preview arrays — the SO's remaining fields
+are very likely `_environmentName` + `_allDirectionsEnvironmentName` + color
+schemes; the blob builder can then carry a forced env); E4 — what do today's
+BLANK customs actually resolve to (a null/unset binding may BE the "force blank"
+implementation for free).
+
+**Implementation sketch (post-research):**
+- Pipeline: `--environment <default|target|blank|EnvName>` — rewrite the env
+  reference at the correct layer (the BeatmapLevelSO blob — see the standing
+  injection item below — and/or the pack-patch path).
+- **The forcing function for the standing blob-injection item:** every deploy
+  logs "Blob not yet injected into CAB (needs UnityPy type support)" — the
+  BeatmapLevelSO is exactly where environment names live, so M14 is the natural
+  milestone to finish that injection (UnityPy typetree support for the SO).
+- Web app: the Deploy tab gains the same Environment dropdown the Beat Sage
+  section has, plus Default / Target-slot / Blank — one more DeployOptions field
+  → argv (the thin-layer pattern).
+- Beat Sage synergy: our generate form already bakes an env into the AI map
+  (their API takes it); the deploy-time override applies to ANY map regardless.
+
+## M15 — Lower-Difficulty Generation Engine (user request, 2026-10-24; the quality gap-filler)
+**Goal:** a generation engine that turns the huge library of Expert/Expert+
+community maps (and Beat Sage output) into **genuinely good Easy/Normal/Hard
+charts** — the gap the user named: Beat Sage's lower difficulties are one
+near-empty band (live-measured 0.49–0.61 NPS; its Hard "felt sparse — barely
+any boxes"), and most dense community maps ship no playable low difficulties.
+
+**The bar (the user's words): intelligently follow the general Beat Saber
+charting rules that comprise the official song sets and their difficulty
+densities.** Official Easy/Normal/Hard are FUN at low density because they
+follow real rules: emphasis on strong beats, rhythm-following motif
+repetition, generous rest cadence, flow-correct direction patterns, measured
+double/jump usage. Density alone is not the game — RULES + density bands are.
+
+**Why this is very tractable here (the existing machinery):**
+- The pipeline already OWNS chart transformation: the M5 mode generators
+  (OneSaber/NoArrows/90Degree) prove beatmap-analysis → note-selection →
+  rewrite → re-inject end-to-end; the Easy auto-fill exists (currently just
+  a clone-from-Normal — the weakest link this engine replaces).
+- **The complete official catalog is the ground truth, locally**: the dump
+  (or the game_data cache) holds EVERY official song's Easy/Normal/Hard —
+  the exact corpus to MEASURE the official rules from (per-difficulty NPS
+  bands, note-gap distributions, double frequencies, flow-direction
+  patterns, rest cadence, bomb/wall usage per difficulty).
+- The chart-statistics engine (M13, web app 0.6.20) already parses
+  notes/NPS/peaks/bombs/walls from any map — the measurement half is built.
+
+**Research-first plan:**
+- R1 — **Measure the official difficulty grammar**: script an analysis over
+  the official catalog (dump/cache) → per-difficulty density bands (min/typ/
+  max NPS), inter-note gap distributions, downbeat-vs-offbeat emphasis,
+  double/jump rates, direction-change frequency, rest-period cadence.
+  Output: a documented "official difficulty profile" (KB page) the engine
+  targets.
+- R2 — Characterize the SUBSET-selection problem: which notes of an E/E+
+  chart make a good Easy? (onset strength / structural role / flow) —
+  validate by comparing against official pairs where the SAME song exists
+  in multiple difficulties (the official catalog has natural pairs).
+- R3 — Flow-correctness: the subset must satisfy the official patterning
+  rules (no unreadable back-to-back inversions at Easy density; direction
+  follows position on the grid).
+
+**Implementation sketch (post-research):**
+- `tools/difficulty_engine.py` — analyze(source_chart, music_grid) →
+  select+repattern per target difficulty profile → output .dat (V2/V3/V4).
+- Pipeline: `--generate-difficulties easy,normal,hard` (auto-fill when
+  missing, replacing the clone-from-Normal Easy fill; never overwrite a
+  mapper's own charts).
+- Web app: per-deploy option (a "generate lower difficulties" checkbox
+  with the density expectations shown), plus the staged-song stats make the
+  before/after quality visible.
+- Beat Sage synergy: our engine fills exactly the band their AI charts
+  worst — generate with Beat Sage (their E/E+ is decent) then descend with
+  our engine for the full difficulty set.
+
+**Validation:** round-trip against official pairs (our generated Easy for
+official song X ≈ official Easy's density band + pattern grammar);
+play-testing across the generated bands.
+
+## M16 — Custom Album From Scratch (Exploration; the long-term ideal)
 
 ## M14 — Custom Album From Scratch (Exploration; the long-term ideal)
 The user's idea: an entirely NEW music album for custom songs, arbitrary song count —

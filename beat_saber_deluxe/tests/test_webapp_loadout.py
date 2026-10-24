@@ -149,13 +149,22 @@ class TestRealCatalog:
         md = json.loads(md_path.read_text())
         out = loadout.merge_loadout(loadout.load_catalog(), redirects,
                                     md["song_names"], md["song_artists"])
-        # the dev repo's known-good state: 47 metadata entries, ≥1 redirected slot
+        # the dev repo's known-good state: every metadata entry joins, ≥1 redirected slot
         assert out["customNameCount"] == len(md["song_names"])
         assert out["redirectedSlotCount"] >= 1
-        # the trailing-space crown song MUST match (the quirk this tests for)
-        crown = [r for p in out["packs"] for r in p["songs"]
-                 if r["songID"] == "YouShouldSeeMeInACrown"][0]
-        assert crown["customName"], "trailing-space catalog name failed to join"
+        # the trailing-space crown song quirk — exercised when the local state
+        # has it (the 47-song loadout did; the clean-slate + M13-era state has
+        # its own customs instead). The invariant that holds in EVERY state:
+        # whatever entries exist, they all join into their slots.
+        crown_meta_key = "You Should See Me in a Crown"
+        if any(k.strip() == crown_meta_key for k in md["song_names"]):
+            crown = [r for p in out["packs"] for r in p["songs"]
+                     if r["songID"] == "YouShouldSeeMeInACrown"][0]
+            assert crown["customName"], "trailing-space catalog name failed to join"
+        else:
+            joined = [r for p in out["packs"] for r in p["songs"] if r["customName"]]
+            assert len(joined) == len(md["song_names"]), \
+                "every song_metadata entry must join into its catalog slot"
 
 
 class TestLiveDeployedTruthModel:

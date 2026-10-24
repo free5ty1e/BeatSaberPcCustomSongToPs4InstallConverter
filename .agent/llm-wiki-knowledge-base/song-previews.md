@@ -91,3 +91,35 @@ swap redirect VALUES without mutating the modes-only bundle.
 
 Related: [[ps4-fsb5-pcm16-format]], [[pack-bundle-patching]],
 [[surrogateescape-encoding]] (beatmap TextAsset decode), [[feature-flags]]
+
+
+## The deploy-order preview bug (Exp 283d, 2026-10-23 — the user's field report)
+
+**Symptom:** a freshly deployed song kept its STOCK menu preview while the
+previously deployed song's preview worked. Order-dependent: each deploy
+baked the PREVIOUS deploy's preview, never its own (Open Road's preview
+appeared only after the NEXT deploy ran; the theme song on StartMeUp played
+the stock clip until a fixed deploy re-ran).
+
+**Root cause:** the pack/preview pass
+(`deploy_pack_bundle → _ensure_previews_variants →
+song_previews.build_preview_map`) gates every slot on the LOCAL
+song_metadata.json — and the deploy wrote the new song's entry at the very
+END (Step 11). At preview-build time the just-deployed slot read as "not a
+custom" → no preview baked → the variant on the console carried everyone
+else's preview but never the new song's.
+
+**Fix (pipeline 0.5366):** register the target's metadata LOCALLY
+(`manage_song_metadata(..., deploy=False)`, idempotent) BEFORE the pack
+pass; Step 11 still owns the upload. Pinned by
+tests/test_exp283d_preview_metadata_order.py (source-order assertions —
+the same pattern as the release-workflow CI-step pin).
+
+**Lesson (the recurring class):** when a BUILD pass reads a STATE file that
+a later step writes, verify WHERE in the flow the write happens — "the
+deploy updates song_metadata" was true but insufficient; the ORDER was the
+bug. Diagnose with the pack_modes_bundles/manifest.json `previews` list
+(it records exactly which slots a variant contains — the RS row showed
+`previews=['MessItUp']` while StartMeUp was the new deploy, which named the
+bug instantly). Also: console file mtimes lie (PS4 clock skew) — trust the
+manifest's previewsAt unix timestamps and the pipeline log's local times.

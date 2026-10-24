@@ -11,9 +11,11 @@ const state = {
   mode: "detecting",           // local-backend | pages
   dumpOk: false,
   connOk: false,
-  pickedSong: null,            // slim BeatSaver doc
+  pickedSong: null,            // slim BeatSaver doc — or {source:"local", dir, …} (M13)
   catalog: [],                  // albums from /api/catalog
+  staged: [],                   // staged local songs (M13)
   pollTimer: null,
+  bsageTimer: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -85,6 +87,17 @@ function renderPickedSong() {
   if (!state.pickedSong) { box.classList.add("hidden"); return; }
   const s = state.pickedSong;
   box.classList.remove("hidden");
+  if (s.source === "local") {
+    // M13: a staged local folder (Beat Sage / zip / user folder)
+    const diffs = (s.difficulties || []).join("/") || "?";
+    $("picked-song-body").innerHTML =
+      `<div class="song"><div class="meta"><b>${esc(s.name)}</b>
+       <span class="muted">by ${esc(s.artist || "?")} · ${esc(s.schema || "map")} ·
+       ${diffs} · BPM ${s.bpm ?? "?"}</span></div>
+       <div class="badges"><span class="badge ok">local folder</span></div></div>
+       <div class="muted" style="margin-top:.4rem"><code>${esc(s.dir)}</code></div>`;
+    return;
+  }
   $("picked-song-body").innerHTML =
     `<div class="song"><div class="meta"><b>${esc(s.name)}</b>
      <span class="muted">${esc(s.songAuthorName || "?")} — mapped by ${esc(s.levelAuthorName || "?")} ·
@@ -227,6 +240,347 @@ async function lookupMapId() {
   } catch (e) { setResult("bs-mapid-result", "❌ " + e.message, "bad"); }
 }
 
+// ---------------------------------------------------------------- M13: Beat Sage + local songs
+async function loadBeatsageGuide() {
+  try {
+    const g = await api("/api/beatsage/guide");
+    renderBeatsageGuide(g.recommended || {}, g.steps || [], g);
+  } catch (e) {
+    // Pages/command-builder mode (no backend): the guide is static constants
+    // — the same steps + our recommended options, rendered locally.
+    if (state.mode === "pages") {
+      renderBeatsageGuide(
+        { difficulties: ["Normal", "Hard", "Expert", "ExpertPlus"],
+          modes: ["Standard"], events: ["DotBlocks", "Obstacles"],
+          environment: "DefaultEnvironment" },
+        ["Open beatsage.com (the button below).",
+         "Upload your audio file (you must have the rights to it).",
+         "Pick the recommended options shown on this card.",
+         "Click Generate and wait a few minutes.",
+         "Download the generated zip when it completes.",
+         "Extract the zip — its folder is what --song-dir takes (command-builder mode)."],
+        { density_note: "What to expect: Beat Sage's Easy/Normal/Hard are one mellow band — "
+            + "the density lives in Expert/Expert+. No density slider exists on their service." });
+    } else {
+      $("bsage-guide").innerHTML =
+        `<p class="result bad">Guide unavailable (${esc(e.message)}). To fix: open
+         <a href="https://beatsage.com" target="_blank" rel="noopener">beatsage.com</a> directly.</p>`;
+    }
+  }
+}
+
+function renderBeatsageGuide(rec, steps, g) {
+  if (g && g.density_note) $("bsage-density-note").textContent = g.density_note;
+  if (g && g.systems) {
+    const sysSel = $("bsage-system");
+    sysSel.innerHTML = Object.entries(g.systems).map(([k, v]) =>
+      `<option value="${k}" title="${esc(v.description)}">${esc(v.label)}</option>`).join("");
+  }
+  const envSel = $("bsage-env");
+  const envs = ["DefaultEnvironment", "Origins", "TriangleEnvironment", "NiceEnvironment",
+    "BigMirrorEnvironment", "DragonsEnvironment", "KDAEnvironment", "MonstercatEnvironment",
+    "CrabRaveEnvironment", "PanicEnvironment", "RocketEnvironment", "GreenDayEnvironment",
+    "GreenDayGrenadeEnvironment", "TimbalandEnvironment", "FitBeatEnvironment", "LinkinParkEnvironment"];
+  envSel.innerHTML = envs.map(e =>
+    `<option value="${e}" ${e === (rec.environment || "DefaultEnvironment") ? "selected" : ""}>${e}</option>`).join("");
+  const stepsHtml = (steps || []).map(s => `<li>${esc(s)}</li>`).join("");
+  const pagesNote = state.mode === "pages"
+    ? `<p class="muted">(command-builder mode: the zip drop needs the local web app —
+       extract the zip and pass its folder with <code>--song-dir</code> instead.)</p>` : "";
+  $("bsage-guide").innerHTML =
+    `<p class="muted">Their UI's options, pre-filled with OUR recommendations for PS4 deploys:</p>
+    <ul class="guide-opts">
+      <li>Difficulties: <b>${(rec.difficulties || []).join(", ") || "Normal, Hard, Expert, Expert+"}</b></li>
+      <li>Modes: <b>${(rec.modes || []).join(", ") || "Standard"}</b> (the pipeline builds the extra modes itself)</li>
+      <li>Events: <b>${(rec.events || []).join(", ") || "DotBlocks, Obstacles"}</b></li>
+      <li>Environment: <b>${esc(rec.environment || "DefaultEnvironment")}</b></li>
+    </ul>
+    <ol class="guide-steps">${stepsHtml}</ol>
+    ${pagesNote}
+    <a class="btnish" href="https://beatsage.com" target="_blank" rel="noopener">Open beatsage.com ↗</a>`;
+}
+
+function bsageCheckedValues(cls) {
+  return Array.from(document.querySelectorAll(`input.${cls}:checked`)).map(c => c.value);
+}
+
+async function generateWithBeatsage() {
+  const result = $("bsage-result");
+  const log = $("bsage-log");
+  if (!$("bsage-rights").checked) {
+    setResult("bsage-result", "⛔ Tick the rights box first — you must have the rights to " +
+      "process this audio (it gets uploaded to beatsage.com).", "bad");
+    return;
+  }
+  const file = $("bsage-audio").files[0];
+  if (!file) {
+    setResult("bsage-result", "Pick an audio file first (.wav/.ogg/.flac/.mp3/.aiff/.egg).", "bad");
+    return;
+  }
+  const diffs = bsageCheckedValues("bsage-diff");
+  if (!diffs.length) {
+    setResult("bsage-result", "Pick at least one difficulty.", "bad");
+    return;
+  }
+  if (state.mode !== "local-backend") {
+    setResult("bsage-result", "Command-builder mode can't upload — use the guided flow below.", "bad");
+    return;
+  }
+  setResult("bsage-result", "", "");
+  const btn = $("btn-bsage-generate");
+  btn.disabled = true;
+  btn.textContent = "Generating… (beatsage.com)";
+  log.classList.remove("hidden");
+  log.textContent = "";
+  const fd = new FormData();
+  fd.append("audio", file);
+  fd.append("title", $("bsage-title").value.trim() || file.name.replace(/\.[^.]+$/, ""));
+  fd.append("artist", $("bsage-artist").value.trim() || "Unknown Artist");
+  fd.append("difficulties", diffs.join(","));
+  fd.append("modes", bsageCheckedValues("bsage-mode").join(",") || "Standard");
+  fd.append("events", bsageCheckedValues("bsage-event").join(","));
+  fd.append("environment", $("bsage-env").value);
+  fd.append("system_tag", $("bsage-system").value || "v2");
+  try {
+    await api("/api/jobs/beatsage", { method: "POST", body: fd });
+    pollBeatsageJob(0);
+  } catch (e) {
+    setResult("bsage-result", "❌ " + e.message + " — the guided flow below always works.", "bad");
+    $("bsage-guide-details").open = true;
+    btn.disabled = false;
+    btn.textContent = "Generate map with Beat Sage";
+  }
+}
+
+function pollBeatsageJob(after) {
+  api(`/api/jobs/lines?after=${after}`)
+    .then(j => {
+      const log = $("bsage-log");
+      if (j.lines && j.lines.length) {
+        log.textContent += j.lines.join("\n") + "\n";
+        log.scrollTop = log.scrollHeight;
+      }
+      if (j.running) {
+        state.bsageTimer = setTimeout(() => pollBeatsageJob(j.index || after), 1200);
+      } else {
+        const btn = $("btn-bsage-generate");
+        btn.disabled = false;
+        btn.textContent = "Generate map with Beat Sage";
+        if (j.job && j.job.exit_code === 0) {
+          setResult("bsage-result", "✅ Beat Sage done — the map is staged below. Pick it in " +
+            "the staged list, then Deploy as usual.", "ok");
+        } else {
+          setResult("bsage-result", `❌ Generation failed (exit ${j.job ? j.job.exit_code : "?"}). ` +
+            "The guided flow below always works — generate on beatsage.com yourself " +
+            "and drop the zip in section 3.", "bad");
+          $("bsage-guide-details").open = true;
+        }
+        loadStaged();
+      }
+    })
+    .catch(() => { state.bsageTimer = setTimeout(() => pollBeatsageJob(after), 2000); });
+}
+
+async function validateLocalDir() {
+  const path = $("local-song-path").value.trim();
+  if (!path) {
+    setResult("local-validate-result", "Type or paste the folder path that contains Info.dat.", "bad");
+    return;
+  }
+  if (state.mode !== "local-backend") {
+    setResult("local-validate-result", "Command-builder mode: pass the folder to the pipeline " +
+      "with --song-dir <folder>.", "bad");
+    return;
+  }
+  setResult("local-validate-result", "Validating…", "");
+  try {
+    const j = await api("/api/songs/validate-dir", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+    if (j.ok) {
+      const v = j.validation;
+      const nps = Object.entries(v.charts || {})
+        .map(([d, c]) => `${d} ${c.nps}/s`).join(" · ") || "?";
+      setResult("local-validate-result",
+        `✅ Valid ${v.schema || "map"}: "${v.name || "?"}" by ${v.artist || "?"} — ` +
+        `BPM ${v.bpm ?? "?"}${v.duration_s ? ` · ~${v.duration_s}s` : ""}` +
+        `${v.environment ? ` · env ${v.environment}` : ""} — staged ✓\n` +
+        `notes/sec: ${nps}`, "ok");
+      if (v.warnings && v.warnings.length)
+        $("local-validate-result").textContent += "\n⚠ " + v.warnings.join("\n⚠ ");
+      loadStaged();
+    } else {
+      setResult("local-validate-result", "❌ Problems found:\n• " + j.errors.join("\n• "), "bad");
+    }
+  } catch (e) {
+    setResult("local-validate-result", "❌ " + e.message, "bad");
+  }
+}
+
+async function useTestSong() {
+  // Fetch the rights-clean synth theme on demand and attach it to the form —
+  // one click and the Generate flow is ready (no audio hunting). The song is
+  // 100% mathematical synthesis: deterministic, and the 48s default is
+  // byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
+  // The button itself tells the story (disable + relabel) — the click must be
+  // OBVIOUSLY doing something (the Exp 283e user report: "does nothing that
+  // I can notice").
+  const btn = $("btn-bsage-testsong");
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "⏳ Synthesizing the test song…";
+  setResult("bsage-result", "Synthesizing the original test song (pure math, " +
+    "deterministic)…", "");
+  try {
+    const r = await fetch("/api/songs/test-song?seconds=48");
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    const blob = await r.blob();
+    const file = new File([blob], "bsd_deluxe_theme_48s.wav", { type: "audio/wav" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    $("bsage-audio").files = dt.files;   // attach programmatically
+    if (!$("bsage-title").value) $("bsage-title").value = "BSD Deluxe Theme (An Original)";
+    if (!$("bsage-artist").value) $("bsage-artist").value = "Beat Saber Deluxe Synth";
+    btn.textContent = "✓ Test song attached — now press Generate";
+    setResult("bsage-result", "✅ Test song attached to the form (48s, rights-clean — " +
+      "synthesized from scratch, the same song every time). Press Generate to " +
+      "send it to Beat Sage.", "ok");
+  } catch (e) {
+    // DataTransfer/file-input restrictions or fetch failure → plain download
+    btn.textContent = original;
+    setResult("bsage-result", "Starting a plain download instead — pick the " +
+      `downloaded .wav as the audio file. (${esc(e.message)})`, "warn");
+    window.location = "/api/songs/test-song?seconds=48";
+    return;
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 10000);
+}
+
+async function stageZipFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".zip")) {
+    setResult("zip-result", "That's not a .zip — drop the map zip itself (the downloaded file).", "bad");
+    return;
+  }
+  if (state.mode !== "local-backend") {
+    setResult("zip-result", "Command-builder mode: extract the zip and pass its folder " +
+      "with --song-dir <folder>.", "bad");
+    return;
+  }
+  setResult("zip-result", `Extracting + validating ${file.name}…`, "");
+  const fd = new FormData();
+  fd.append("zip_file", file);
+  try {
+    const j = await api("/api/songs/stage-zip", { method: "POST", body: fd });
+    const s = j.staged;
+    setResult("zip-result", `✅ Staged "${s.name || file.name}" by ${s.artist || "?"} ` +
+      `(${s.schema || "map"}, ${(s.difficulties || []).join("/") || "?"}) — pick it below.`, "ok");
+    loadStaged();
+  } catch (e) {
+    setResult("zip-result", "❌ " + e.message, "bad");
+  }
+}
+
+function wireZipDrop() {
+  const zone = $("zip-drop");
+  ["dragenter", "dragover"].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add("dragover"); }));
+  ["dragleave", "drop"].forEach(ev =>
+    zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove("dragover"); }));
+  zone.addEventListener("drop", e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    stageZipFile(file);
+  });
+  $("zip-file-input").addEventListener("change", e => stageZipFile(e.target.files[0]));
+  zone.querySelector("label").addEventListener("click", () => $("zip-file-input").click());
+}
+
+async function loadStaged() {
+  if (state.mode !== "local-backend") return;
+  try {
+    const j = await api("/api/songs/staged");
+    state.staged = j.songs || [];
+    renderStagedList();
+  } catch { /* staged list is optional sugar */ }
+}
+
+function npsBadge(diff, c) {
+  if (!c) return "";
+  const cls = c.nps < 0.3 ? "miss" : c.nps < 0.75 ? "warn" : "ok";
+  const sparse = c.nps < 0.75 ? " ⚠" : "";
+  return `<span class="badge ${cls}" title="${diff}: ${c.notes} notes over ${c.span_s}s (peak ${c.peak_nps}/s in any 10s window)${c.bombs ? ` · ${c.bombs} bombs` : ""}${c.obstacles ? ` · ${c.obstacles} obstacles` : ""}">${diff} ${c.nps}/s${sparse}</span>`;
+}
+
+function stagedStatsHtml(s) {
+  const charts = s.charts || {};
+  const rows = Object.entries(charts).map(([d, c]) =>
+    `<tr><td><b>${esc(d)}</b></td><td>${c.notes} notes</td><td>${c.nps}/s avg</td>
+     <td>${c.peak_nps}/s peak</td><td>${c.bombs} bombs · ${c.obstacles} walls</td>
+     <td>${c.events} light events</td><td>${c.span_s}s</td></tr>`).join("");
+  const gen = s.generation && s.system_tag ? s.generation : (s.generation || {});
+  const genBits = Object.keys(gen).length ?
+    ` · generated with system ${esc(gen.system_tag || "?")}, env ${esc(gen.environment || "?")}` +
+    (gen.events && gen.events.length ? `, events ${esc(gen.events.join(","))}` : "") : "";
+  const modeBits = Object.entries(s.mode_notes || {}).map(([m, n]) =>
+    `${esc(m)}: ${n} notes`).join(" · ");
+  return `<details class="staged-stats"><summary>chart statistics</summary>
+    ${rows ? `<table class="stats">${rows}</table>` : `<span class="muted">no chart stats parsed</span>`}
+    <div class="muted">duration ≈ ${s.duration_s || "?"}s · environment “${esc(s.environment || "(none)")}”${s.cover_art ? ` · cover art ${esc(s.cover_art)}` : ""}${genBits}</div>
+    ${modeBits ? `<div class="muted">mode variants — ${modeBits}</div>` : ""}
+    ${(s.warnings || []).map(w => `<div class="result warn">⚠ ${esc(w)}</div>`).join("")}
+  </details>`;
+}
+
+function renderStagedList() {
+  const el = $("staged-list");
+  const songs = state.staged || [];
+  if (!songs.length) {
+    el.className = "muted";
+    el.textContent = "None yet — stage one above (Beat Sage, a zip, or a folder).";
+    return;
+  }
+  el.className = "";
+  el.innerHTML = songs.map(s =>
+    `<div class="song staged-row">
+       <div class="meta">
+         <b>${esc(s.name || "(unnamed)")}</b>
+         <span class="muted">by ${esc(s.artist || "?")} · ${esc(s.schema || "map")} · BPM ${s.bpm ?? "?"}
+         ${s.source === "beatsage" ? " · <b>Beat Sage</b>" : s.source === "zip" ? " · zip" : ""}</span>
+         <div class="badges">${Object.entries(s.charts || {}).map(([d, c]) => npsBadge(d, c)).join("")}</div>
+       </div>
+       ${stagedStatsHtml(s)}
+       <div class="badges">
+         <button class="pick" data-stage="${esc(s.id)}">Deploy →</button>
+         <button class="clear-slot" data-unstage="${esc(s.id)}" title="Remove from the staged list">✕</button>
+       </div>
+     </div>`).join("");
+  el.querySelectorAll("button[data-stage]").forEach(b =>
+    b.addEventListener("click", () => {
+      const s = state.staged.find(x => x.id === b.dataset.stage);
+      if (s) pickStagedSong(s);
+    }));
+  el.querySelectorAll("button[data-unstage]").forEach(b =>
+    b.addEventListener("click", async () => {
+      try {
+        await api(`/api/songs/staged/${encodeURIComponent(b.dataset.unstage)}`, { method: "DELETE" });
+        loadStaged();
+      } catch (e) { alert("Couldn't remove: " + e.message); }
+    }));
+}
+
+function pickStagedSong(s) {
+  state.pickedSong = {
+    source: "local", dir: s.dir, id: s.id,
+    name: s.name || "(unnamed)", artist: s.artist,
+    bpm: s.bpm, schema: s.schema, difficulties: s.difficulties || [],
+  };
+  renderPickedSong();
+  updateDeployPreview();
+  showPage("deployPage");
+}
+
 // ---------------------------------------------------------------- deploy
 function loadCatalogIntoPicker() {
   const packSel = $("deploy-pack");
@@ -256,7 +610,8 @@ function loadCatalogIntoPicker() {
 
 function currentOpts() {
   return {
-    map_id: state.pickedSong ? state.pickedSong.id : "",
+    map_id: state.pickedSong && state.pickedSong.source !== "local" ? state.pickedSong.id : "",
+    song_dir: state.pickedSong && state.pickedSong.source === "local" ? state.pickedSong.dir : "",
     target: $("deploy-slot").value,
     audio: $("opt-audio").value,
     pad_fsb5: $("opt-pad").checked,
@@ -279,18 +634,36 @@ async function updateDeployPreview() {
   $("deploy-slot-label").textContent = song
     ? `"${song.songName}" (${song.songID})` : "…";
   const o = currentOpts();
-  if (!o.map_id || !o.target) {
+  // The picked-song info line (M13): shows WHAT is being deployed — a
+  // BeatSaver map or a staged local folder — right above the Deploy button.
+  const pickedInfo = $("deploy-picked-info");
+  if (state.pickedSong && state.pickedSong.source === "local") {
+    pickedInfo.innerHTML = `Deploying staged folder: <b>${esc(state.pickedSong.name)}</b>` +
+      ` <span class="muted">(${esc(state.pickedSong.schema || "map")}, ` +
+      `${(state.pickedSong.difficulties || []).join("/") || "?"})</span>`;
+  } else if (state.pickedSong) {
+    pickedInfo.innerHTML = `Deploying BeatSaver map: <b>${esc(state.pickedSong.name)}</b>` +
+      ` <span class="muted">(map ID <code>${esc(state.pickedSong.id)}</code>)</span>`;
+  } else {
+    pickedInfo.textContent = "";
+  }
+  if (!o.map_id && !o.song_dir) {
     $("deploy-command").textContent = state.pickedSong
       ? "→ pick a target slot to preview the command"
-      : "→ pick a song first (Pick a Song tab)";
+      : "→ pick a song first (Pick a Song tab — search, Beat Sage, or a local folder)";
+    return;
+  }
+  if (!o.target) {
+    $("deploy-command").textContent = "→ pick a target slot to preview the command";
     return;
   }
   if (state.mode === "pages") {
     // Command-builder mode: build the exact pipeline argv LOCALLY (no
     // backend exists). Mirrors adapters/deploy.py's build_argv order 1:1 —
     // the local command path is validated by tests; keep both in sync.
-    const argv = ["--download-beat-saver-song", o.map_id,
-                  "--target", o.target];
+    const argv = o.song_dir
+      ? ["--song-dir", o.song_dir, "--target", o.target]
+      : ["--download-beat-saver-song", o.map_id, "--target", o.target];
     argv.push(o.audio === "vorbis" ? "--vorbis"
               : o.audio === "hevag" ? "--hevag" : "--pcm16");
     argv.push(o.pad_fsb5 ? "--pad-fsb5" : "--no-pad");
@@ -308,7 +681,8 @@ async function updateDeployPreview() {
     const j = await api(`/api/command-preview?map_id=${encodeURIComponent(o.map_id)}` +
       `&target=${encodeURIComponent(o.target)}&audio=${o.audio}` +
       `&pad_fsb5=${o.pad_fsb5}&convert_to_v3=${o.convert_to_v3}` +
-      `&skip_plugin=${o.skip_plugin}`);
+      `&skip_plugin=${o.skip_plugin}` +
+      `&song_dir=${encodeURIComponent(o.song_dir)}`);
     $("deploy-command").textContent = "→ " + j.command;
   } catch (e) { $("deploy-command").textContent = "→ " + e.message; }
 }
@@ -343,7 +717,7 @@ function fallbackCopy(text, done) {
 
 async function deploy() {
   const o = currentOpts();
-  if (!o.map_id || !o.target) {
+  if ((!o.map_id && !o.song_dir) || !o.target) {
     setResult("deploy-status", "Pick a song and a target slot first.", "bad");
     return;
   }
@@ -354,9 +728,12 @@ async function deploy() {
     return;
   }
   const label = $("deploy-slot-label").textContent;
+  const what = state.pickedSong.source === "local"
+    ? `your local folder "${state.pickedSong.name}"`
+    : `"${state.pickedSong.name}" (downloaded from BeatSaver)`;
   if (!confirm(
-    `Deploy "${state.pickedSong.name}" over ${label}?\n\n` +
-    `This downloads the map, builds the bundle (all modes), deploys it to the PS4 ` +
+    `Deploy ${what} over ${label}?\n\n` +
+    `This builds the bundle (all modes), deploys it to the PS4 ` +
     `with the plugin + features + pack bundle, regenerates redirects, and runs ` +
     `post-deploy validation. The other songs in the pack and every other pack ` +
     `stay untouched.`)) return;
@@ -1400,6 +1777,8 @@ async function boot() {
   await detectMode();
   if (state.mode === "local-backend") {
     loadDumpDefault();
+    loadBeatsageGuide();   // M13: the guided card + recommended options
+    loadStaged();          // M13: the recent-songs list (persists restarts)
     try {
       const cfg = await api("/api/config");
       if (cfg.ps4 && cfg.ps4.ip) $("ps4-ip").value = cfg.ps4.ip;
@@ -1432,6 +1811,11 @@ document.addEventListener("DOMContentLoaded", () => {
   $("bs-query").addEventListener("keydown", e => { if (e.key === "Enter") searchBeatSaver(); });
   $("bs-filter-enh").addEventListener("change", searchBeatSaver);
   $("btn-bs-lookup").addEventListener("click", lookupMapId);
+  $("btn-bsage-generate").addEventListener("click", generateWithBeatsage);
+  $("btn-bsage-testsong").addEventListener("click", useTestSong);
+  $("btn-local-validate").addEventListener("click", validateLocalDir);
+  $("local-song-path").addEventListener("keydown", e => { if (e.key === "Enter") validateLocalDir(); });
+  wireZipDrop();
   $("deploy-pack").addEventListener("change", () => {});
   ["opt-audio", "opt-v3", "opt-skip-plugin", "opt-pad", "opt-songname", "opt-artist"]
     .forEach(id => $(id).addEventListener("change", updateDeployPreview));

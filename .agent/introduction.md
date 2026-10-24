@@ -22,7 +22,7 @@ Three components, versioned independently:
 | **Pipeline** (`v0.53XX`) | Python: downloads from BeatSaver, converts audio (FSB5 PCM16) + beatmaps (V2/V3/V4→PS4 V3), builds AssetBundles, surgically patches music-pack bundles + the Addressables catalog, deploys over FTP, self-validates | `beat_saber_deluxe/tools/full_custom_song_pipeline.py` (the ONE entry point) |
 | **Web app** (`0.6.X`) | FastAPI local UI + GitHub Pages static build — a thin layer over the pipeline CLI (every button = one pipeline subprocess) | `beat_saber_deluxe/webapp/` |
 
-**Current state (Oct 2026):** Milestones M0–M12 complete (M12: the no-dump flow — the game's own mini-dumper — hardware-proven). 47 custom songs
+**Current state (Oct 2026):** Milestones M0–M12 complete. **M12 SHIPPED (v0.8055-pipeline-0.5365-webapp-0.6.19): the decrypted game dump is no longer a hard requirement** — the game's own mini-dumper (the plugin's in-console game-data extractor) retrieves only the files needed for the packs you choose, proven from the shipped artifact with the developer's dump physically hidden. 47 custom songs
 across 5 music packs live on the user's PS4 (Britney Spears, Rolling Stones,
 Lizzo, Billie Eilish, Camellia), each showing 4 gameplay modes
 (Standard/OneSaber/NoArrows/90Degree), with in-game song previews that play
@@ -52,9 +52,9 @@ hosted on GitHub Pages.
 1. **`/workspace/CLAUDE.md`** — all operating rules (guardrails, docs duties).
 2. **`.agent/project_summary.md`** — one-screen current status; the Status
    line is the project's heartbeat.
-3. **`.agent/roadmap.md`** — milestones M0–M10 (done) + what's planned next
-   (M3 note colors, and any new feature the user picks). **Pick new work
-   here.**
+3. **`.agent/roadmap.md`** — milestones M0–M13 (done) + what's planned next
+   (M14 environment control — the user's request, M15-exploration custom
+   album, M3 note colors). **Pick new work here.**
 4. **`.agent/context.yml`** — compact quick-reference: versions, commands,
    architecture, paths.
 5. **`.ai_memory/beat-saber-ps4-custom-songs/experiment_log.md`** — the
@@ -158,17 +158,22 @@ designing anything** — this project has already made most mistakes once.
 └── docs/example-scripts/         ← 69 ready-to-run per-pack examples
 ```
 
-## 7. Current versions & next steps (as of 2026-10-19)
+## 7. Current versions & next steps (as of 2026-10-22)
 
 - Plugin **v0.8053** · Pipeline **v0.5363** · Web app **0.6.13**
-- Latest release: **`v0.8053-pipeline-0.5363-webapp-0.6.13`** (LIVE, fully validated;
-  M11 in-game plugin toggle shipped — hold the Move button + trigger together for
-  2 seconds to flip the whole plugin on/off from the couch, hardware-confirmed
-  both directions; PRX debug builds self-identify with a DEBUG version suffix).
-- M11 (in-game plugin toggle) is SHIPPED (merged PR #8, release live). The next
-  feature is whatever the user picks from the roadmap (M3 note-color
-  customization is the standing candidate; the user may also choose fresh
-  ideas).
+- Latest release: **`v0.8055-pipeline-0.5365-webapp-0.6.19`** (LIVE, fully validated;
+  M12: the no-dump flow shipped — the decrypted game dump is no longer a hard
+  requirement; the plugin's in-console game-data extractor retrieves only the
+  files needed for the packs you choose, proven from the shipped artifact with
+  the developer's dump physically hidden. Also: M11 in-game plugin toggle
+  (hold the Move button + trigger for 2 seconds to flip the whole plugin
+  on/off from the couch); PRX debug builds self-identify with a DEBUG suffix).
+- M13 (Beat Sage + local songs) is IMPLEMENTED (web app 0.6.20, Exp 283;
+  Tier 1 verified against the live service; an AI-generated song deployed to
+  the PS4 — validation PASSED). NEXT: **M14 — Custom Song Environment Control**
+  (the user's 2026-10-23 request: default / force-target-slot / force-blank /
+  force one of the 16 envs; research-first — see the roadmap entry), then
+  M16-exploration (custom album) or M3 (note colors).
 - Open PR during release flow: check `gh pr list` — update its description
   per `/workspace/.claude/prompts/update-pr-description.prompt` (surgical
   edits, `--raw-field` only, user approval before pushing).

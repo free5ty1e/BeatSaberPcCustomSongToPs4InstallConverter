@@ -36,6 +36,12 @@ class DeployOptions:
 
     map_id: str = ""            # BeatSaver map key (e.g. '1d6c7c2')
     target: str = ""            # slot name from beat_saber_song_ids.json
+    # M13: local song-folder deploys (--song-dir) — the Beat Sage + local-
+    # folder sections stage a validated folder and hand it to the pipeline
+    # unchanged. Mirrors the pipeline's own precedence: a song_dir overrides
+    # the download flow ("Using local song directory: … (ignoring
+    # --download-beat-saver-song)").
+    song_dir: str = ""
     # Audio codec: --pcm16 is the default/recommended; --vorbis/--hevag opt out.
     audio: str = "pcm16"        # pcm16 | vorbis | hevag
     pad_fsb5: bool = False      # DANGER: truncates songs longer than the slot
@@ -49,20 +55,30 @@ class DeployOptions:
     disable_mode_mapping: bool = False
 
     def validate(self) -> None:
-        if not self.map_id:
-            raise ValueError("Deploy needs a BeatSaver map ID (Phase 1) — "
-                             "local-folder deploys arrive in Phase 3.")
+        if not self.map_id and not self.song_dir:
+            raise ValueError("Deploy needs a BeatSaver map ID or a local song "
+                             "folder (Pick a Song tab) — nothing was picked.")
         if not self.target:
             raise ValueError("Pick a target slot first (the stock song the "
                             "custom replaces).")
+        if self.song_dir and not Path(self.song_dir).is_dir():
+            raise ValueError(f"The staged song folder is missing: {self.song_dir}. "
+                             "To fix: re-stage it in the Pick a Song tab "
+                             "(folders can move or get deleted between "
+                             "staging and deploy).")
         if self.audio not in ("pcm16", "vorbis", "hevag"):
             raise ValueError(f"Unknown audio codec: {self.audio!r}")
 
     def build_argv(self) -> list[str]:
         """Assemble the pipeline argv. Raises if required options are missing."""
         self.validate()
-        argv = ["--download-beat-saver-song", self.map_id,
-                "--target", self.target]
+        # M13: local folder wins over the BeatSaver download (the pipeline's
+        # own precedence — see the class docstring)
+        if self.song_dir:
+            argv = ["--song-dir", self.song_dir, "--target", self.target]
+        else:
+            argv = ["--download-beat-saver-song", self.map_id,
+                    "--target", self.target]
         # Audio codec: pcm16 is the pipeline default; only pass the opt-outs.
         if self.audio == "vorbis":
             argv.append("--vorbis")
@@ -94,7 +110,9 @@ class DeployOptions:
 
     def describe(self) -> str:
         """One-line human summary for confirm dialogs (PS4-is-production)."""
-        bits = [f"map {self.map_id} → slot '{self.target}'",
+        src = (f"local folder “{Path(self.song_dir).name}”"
+               if self.song_dir else f"map {self.map_id}")
+        bits = [f"{src} → slot '{self.target}'",
                 f"audio {self.audio}",
                 "pad" if self.pad_fsb5 else "no-pad"]
         if self.convert_to_v3:
