@@ -78,6 +78,102 @@ PROFILES: dict[str, dict] = {
     },
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# GRID INFERENCE (Exp 286's Beat Sage discovery): real-world sources often
+# carry a beat grid that does NOT match their claimed BPM — Beat Sage maps
+# place notes correctly in TIME but label _time with their (wrong) BPM
+# estimate, so the times drift off any fixed snap grid and the snap ladder
+# finds nothing. The engine therefore FITS the source's true grid (a scale
+# around 1.0 + an origin shift) by maximizing the fraction of notes landing
+# on the quarter-beat grid, then classifies snaps on the INFERRED grid.
+# The notes' own times are never modified (selection-only doctrine).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _modal_sixteenth(times: list[float]) -> float:
+    """The fundamental 16th-note period in source units, from the inter-note
+    gap histogram (the smallest frequently-occurring gap). Beat Sage maps
+    measured: 16ths ≈ 0.35 b-units when their BPM claim is off."""
+    from collections import Counter
+    gaps = [round(b - a, 3) for a, b in zip(times, times[1:]) if b - a > 0.01]
+    if not gaps:
+        return 0.25
+    counts = Counter(g for g in gaps if g > 0)
+    # the smallest gap with >= 3% of all gaps (tolerate jitter at ±0.01)
+    threshold = max(3, int(0.03 * len(gaps)))
+    common = [g for g, n in counts.most_common(12) if n >= threshold]
+    return min(common) if common else counts.most_common(1)[0][0]
+
+
+def _direct_grid_fit(times: list[float]) -> float:
+    """Fraction of notes landing on the raw 0.25 grid (official charts and
+    correctly-gridded community maps fit ~100%)."""
+    frac_buckets = [snap_bucket(t) for t in times]
+    return sum(1 for b in frac_buckets if b in (0, 25, 50)) / max(len(times), 1)
+
+
+def _track_grid(times: list[float], quarter_hint: float) -> list[int]:
+    """PLL grid tracker (Exp 286): walk the notes in time order, locking to
+    near-grid notes and drift-correcting the reference as the song's tempo
+    breathes (a real recording's grid drifts — no fixed scale fits the whole
+    song; the measured Beat Sage map: 18% global fit vs drifting tempo).
+    Returns a snap-bucket code per note: 0 on-beat · 50 offbeat-eighth ·
+    25 sixteenth · -1 off-grid."""
+    if not times:
+        return []
+    out: list[int] = []
+    ref_t, ref_k = times[0], 0
+    for t in times:
+        k_f = (t - ref_t) / quarter_hint + ref_k
+        k = round(k_f)
+        err = abs(k_f - k)
+        if err <= 0.30:            # ±30% of a 16th: the measured sweet spot
+                                   # (±22% left 37% of a drifting song unclassified;
+                                   #    ±38% over-locks into wrong grid positions)
+            ref_t, ref_k = t, k    # drift-correct: re-anchor at this note
+            m = k % 4
+            out.append(0 if m == 0 else 50 if m == 2 else 25)
+        else:
+            out.append(-1)
+    # resolve the downbeat ambiguity: relabel so the mode of {0, 50} with the
+    # most notes is on-beat (rhythm emphasis: strong beats carry more notes)
+    n_on = sum(1 for b in out if b == 0)
+    n_off = sum(1 for b in out if b == 50)
+    if n_off > n_on:
+        out = [{0: 50, 50: 0, 25: 25, -1: -1}[b] for b in out]
+    return out
+
+
+def infer_grid(times: list[float]) -> tuple[list[int], float]:
+    """The grid-aware snap classification for a source chart. Perfectly
+    gridded sources (official, most community maps) classify directly on
+    the raw beat grid (beat period 1.0); drifting sources (Beat Sage's
+    mis-BPM'd output, live recordings) get the PLL tracker, whose inferred
+    16th period yields the TRUE beat period in source units (e.g. the
+    measured Beat Sage map: claimed 120 BPM, true ~86 — 16ths at 0.35
+    claimed-beats → beat period 1.40). The engine then works in TRUE beats
+    (the official bands are defined there) while emitting the notes'
+    ORIGINAL times untouched. Returns (snap codes per note, beat period
+    in source units)."""
+    if not times:
+        return [], 1.0
+    if _direct_grid_fit(times) >= 0.60:
+        return [snap_bucket(t) for t in times], 1.0
+    hint = _modal_sixteenth(times)
+    return _track_grid(times, hint), max(4 * hint, 0.05)
+
+
+def snap_bucket(beat: float) -> int:  # noqa: F811 — grid-aware wrapper below
+    """0 = on-beat · 25 = sixteenth · 50 = offbeat-eighth · -1 = other."""
+    frac = round((beat % 1.0) * 100)
+    if frac in (0, 100):
+        return 0
+    if frac in (25, 75):
+        return 25
+    if frac == 50:
+        return 50
+    return -1
+
+
 # snap categories: the fractional part of the beat position, in 1/100 beats
 def snap_bucket(beat: float) -> int:
     """0 = on-beat · 25 = sixteenth · 50 = offbeat-eighth · -1 = other."""
@@ -147,15 +243,31 @@ def descend(source_notes: list[dict], bpm: float, difficulty: str,
     # carries one color, emit it as an alternating single — preferring a nearby
     # opposite-color candidate in the same tier when the beat's own color
     # would repeat the last color.
+    # ── 0. GRID AWARENESS: work in TRUE beats, emit ORIGINAL times ──────────
+    # Mis-BPM'd sources (Beat Sage, live recordings) put the true beat grid
+    # at beat_period source-units per real beat; the official bands + the
+    # engine's gap floors are defined in TRUE beats, so the analysis works
+    # on scaled copies (b_true = b / beat_period) while every emitted note
+    # keeps its original b (the pipeline's grid machinery handles the rest).
+    snap_codes, beat_period = infer_grid([n["b"] for n in source_notes])
+    if beat_period == 1.0:
+        work = [dict(n) for n in source_notes]
+        for w, o in zip(work, source_notes):
+            w["b_orig"] = o["b"]
+    else:
+        work = [{**n, "b": n["b"] / beat_period, "b_orig": n["b"]}
+                for n in source_notes]
+    sec_per_beat = beat_period * 60.0 / max(bpm, 1.0)
+
     ranked: dict[int, dict[float, list[dict]]] = {}
-    for n in source_notes:
-        snap = snap_bucket(n["b"])
+    for n, snap in zip(work, snap_codes):
         if profile["snap_rank"].get(snap, 0.0) <= 0:
             continue                       # this difficulty doesn't use that snap
         ranked.setdefault(snap, {}).setdefault(round(n["b"], 4), []).append(n)
 
-    # The target count from the measured density (median of the band)
-    span_beats = source_notes[-1]["b"] - source_notes[0]["b"]
+    # The target count from the measured density (median of the band) — in
+    # TRUE beats (work notes), so mis-BPM'd sources land in the official band
+    span_beats = work[-1]["b"] - work[0]["b"]
     target = max(1, int(round(profile["notes_per_beat"] * max(span_beats, 1.0))))
 
     # An index of ALL candidates by beat position (across the profile's
@@ -290,10 +402,13 @@ def descend(source_notes: list[dict], bpm: float, difficulty: str,
                 run = 0
 
     # ── 3. FLOW REPAIR (direction rewriting) ────────────────────────────────
+    # Emission restores the ORIGINAL times (selection-only doctrine): the
+    # analysis ran in true beats, the output keeps the source's own clock.
     out: list[dict] = []
     last_by_color: dict[int, dict] = {}
     for n in selected:
-        note = {"b": n["b"], "x": n["x"], "y": n["y"], "c": n["c"],
+        b_out = n.get("b_orig", n["b"])
+        note = {"b": b_out, "x": n["x"], "y": n["y"], "c": n["c"],
                 "d": _map_direction(n.get("d", 8), allowed), "a": n.get("a", 0)}
         prev = last_by_color.get(note["c"])
         if prev is not None:

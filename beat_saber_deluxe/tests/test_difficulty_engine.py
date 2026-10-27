@@ -191,3 +191,111 @@ class TestOfficialRoundTrip:
                 if diff == "Easy":
                     assert set(s["direction_set"]) <= PROFILES["Easy"]["allowed_directions"]
         assert results, "no official charts found for the round trip"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The pipeline integration (Exp 286): fill_missing_standard_difficulties
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestFillIntegration:
+    """The descent replaces the clone for missing Easy/Normal/Hard when a
+    dense source (≥2 tiers up) exists; the clone remains the fallback."""
+
+    def _make_map_dir(self, tmp_path, difficulties: dict[str, list[dict]]):
+        import json as _json
+        d = tmp_path / "map"
+        d.mkdir(parents=True, exist_ok=True)
+        info = {"_version": "3.3.0", "_songName": "T", "_songAuthorName": "A",
+                "_beatsPerMinute": 120,
+                "_difficultyBeatmapSets": [{"_beatmapCharacteristicName": "Standard",
+                                            "_difficultyBeatmaps": [
+                                                {"_difficulty": k, "_beatmapFilename": f"{k}.dat"}
+                                                for k in difficulties]}]}
+        (d / "Info.dat").write_text(_json.dumps(info))
+        for diff, notes in difficulties.items():
+            (d / f"{diff}.dat").write_text(_json.dumps({
+                "version": "3.3.0",
+                "colorNotes": notes, "bombNotes": [], "obstacles": []}))
+        (d / "song.ogg").write_bytes(b"x")
+        return d
+
+    def _notes(self, count, quarter=0.25):
+        """A dense alternating 16th stream on the raw 0.25 grid."""
+        return [{"b": round(i * quarter, 4), "x": 1 + (i % 3), "y": i % 3,
+                 "c": i % 2, "d": 1} for i in range(count)]
+
+    def test_descent_fills_missing_from_dense_source(self, tmp_path):
+        sys.path.insert(0, str(TOOLS))
+        import full_custom_song_pipeline as fp
+        # only ExpertPlus exists → Easy/Normal/Hard get DESCENDED (not cloned)
+        d = self._make_map_dir(tmp_path, {"ExpertPlus": self._notes(600)})
+        written = fp.fill_missing_standard_difficulties(str(d))
+        assert set(written) >= {"Easy.dat", "Normal.dat", "Hard.dat"}
+        out_notes = {}
+        for diff in ("Easy", "Normal", "Hard", "ExpertPlus"):
+            bm = json.loads((d / f"{diff}.dat").read_text())
+            out_notes[diff] = bm["colorNotes"]
+        # the ladder: monotonic density, all inside the official bands
+        import difficulty_engine as de
+        for diff, band in (("Easy", (0.3, 1.0)), ("Normal", (0.5, 1.5)),
+                           ("Hard", (0.7, 2.2))):
+            s = de.chart_summary(out_notes[diff])
+            assert band[0] <= s["notes_per_beat"] <= band[1], f"{diff}: {s}"
+            assert s["vision_blocks_rough"] == 0
+        assert len(out_notes["Easy"]) < len(out_notes["Normal"]) < len(out_notes["Hard"])
+
+    def test_clone_fallback_for_adjacent_only(self, tmp_path):
+        """Only Normal exists → Easy is cloned (no 2-tier-up dense source)."""
+        sys.path.insert(0, str(TOOLS))
+        import full_custom_song_pipeline as fp
+        d = self._make_map_dir(tmp_path, {"Normal": self._notes(200)})
+        written = fp.fill_missing_standard_difficulties(str(d))
+        assert "Easy.dat" in written
+        easy = json.loads((d / "Easy.dat").read_text())["colorNotes"]
+        normal = json.loads((d / "Normal.dat").read_text())["colorNotes"]
+        assert easy == normal  # the clone: identical content
+
+    def test_skip_descent_flag(self, tmp_path):
+        sys.path.insert(0, str(TOOLS))
+        import full_custom_song_pipeline as fp
+        d = self._make_map_dir(tmp_path, {"ExpertPlus": self._notes(600)})
+        written = fp.fill_missing_standard_difficulties(str(d), skip_descent=True)
+        easy = json.loads((d / "Easy.dat").read_text())["colorNotes"]
+        ep = json.loads((d / "ExpertPlus.dat").read_text())["colorNotes"]
+        assert easy == ep  # the clone: E+ copied wholesale
+
+    def test_existing_files_never_overwritten(self, tmp_path):
+        sys.path.insert(0, str(TOOLS))
+        import full_custom_song_pipeline as fp
+        d = self._make_map_dir(tmp_path, {"ExpertPlus": self._notes(600),
+                                          "Easy": self._notes(50)})
+        written = fp.fill_missing_standard_difficulties(str(d))
+        assert "Easy.dat" not in written
+        easy = json.loads((d / "Easy.dat").read_text())["colorNotes"]
+        assert len(easy) == 50
+
+    def test_drifting_source_descends_in_true_beats(self, tmp_path):
+        """The Beat Sage class (Exp 286): notes on a TRUE grid of ~88 BPM
+        labeled with a 120 BPM claim — the modal 16th is 0.35 claimed-beats.
+        The engine infers the grid and lands the official bands in TRUE beats
+        while emitting the notes' original (claimed-grid) times."""
+        sys.path.insert(0, str(TOOLS))
+        import full_custom_song_pipeline as fp
+        import difficulty_engine as de
+        # 16th stream at the true tempo: b_true multiples of 0.25 → in
+        # claimed units = multiples of 0.25 * 1.36
+        scale = 1.36
+        notes = [{"b": round(i * 0.25 * scale, 4), "x": 1 + (i % 3), "y": i % 2,
+                  "c": i % 2, "d": 1} for i in range(600)]
+        d = self._make_map_dir(tmp_path, {"ExpertPlus": notes})
+        fp.fill_missing_standard_difficulties(str(d))
+        codes, period = de.infer_grid([n["b"] for n in notes])
+        assert 1.2 < period < 1.6          # the true beat period inferred
+        easy = json.loads((d / "Easy.dat").read_text())["colorNotes"]
+        # honest density: in TRUE beats the descent must land the Easy band
+        s = de.chart_summary([{"b": n["b"] / period, "x": n["x"], "y": n["y"],
+                               "c": n["c"], "d": n["d"]} for n in easy])
+        assert 0.35 <= s["notes_per_beat"] <= 1.0, s
+        # and the emitted times are the SOURCE's own (never rescaled)
+        src_times = {n["b"] for n in notes}
+        assert all(n["b"] in src_times for n in easy)
