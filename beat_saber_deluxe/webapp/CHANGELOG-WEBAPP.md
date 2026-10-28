@@ -5,6 +5,19 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## 0.6.21 (2026-10-25)
+### Added — M15: the test-song picker + the NES-authentic chiptunes (Exp 287)
+- **The 🧪 test-song button becomes a picker with three rights-clean songs**,
+  all synthesized on demand (100% math, deterministic): the original
+  **BSD Deluxe Theme** (byte-identical to the deployed one), **NES Groove**
+  (drums via the LFSR noise channel + triangle bass + a duty-cycled pulse
+  riff, 120 BPM), and **NES Scale Runner** (running major scales, 140 BPM —
+  the cleanest descent-engine test input). The synthesis mimics the NES
+  hardware: pulse channels at 12.5/25/50/75% duty, the 4-bit triangle, the
+  15-bit LFSR noise with stepped 16-level envelopes.
+- The endpoint dispatches on `?type=` (`GET /api/songs/test-song`); the
+  form auto-fills each song's title/artist.
+
 ## 0.6.20 (2026-10-24)
 ### Added — M13: Beat Sage + local song folder support (Exps 283-283e, plan: .agent/plans/beat_sage_and_local_song_folder_support.md)
 - **The Pick a Song tab gains two sections + a persistent staged-songs list** (zero pipeline/plugin changes — both end at the pipeline's existing `--song-dir`):

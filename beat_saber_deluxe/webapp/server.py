@@ -269,20 +269,21 @@ def beatsage_guide():
 
 
 @app.get("/api/songs/test-song")
-def songs_test_song(seconds: float = 48.0):
-    """The original rights-clean test song, synthesized on demand (M13).
-    100% math (adapters/testsong.py) — deterministic, so the 48s default is
-    byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
-    Use it to try Beat Sage without hunting for audio, or as a validation
-    asset (the gated live-contract test uses the 8s variant)."""
-    seconds = max(5.0, min(seconds, 120.0))
+def songs_test_song(seconds: float | None = None, type: str = "theme"):
+    """The rights-clean test songs, synthesized on demand (M13 + M15's
+    chiptunes). 100% math (adapters/testsong.py) — deterministic, so the
+    theme's 48s default is byte-identical to the deployed 'BSD Deluxe Theme'.
+    type ∈ theme | nes_groove | nes_scale_runner (the NES-authentic
+    chiptunes: pulse/triangle/LFSR-noise channels — see TEST_SONGS)."""
     from adapters import testsong
-    data = testsong.generate_wav(seconds=seconds)
+    song = testsong.TEST_SONGS.get(type, testsong.TEST_SONGS["theme"])
+    seconds = max(5.0, min(seconds or song["seconds"], 120.0))
+    data = song["generate"](seconds)
     from fastapi.responses import Response
     return Response(
         content=data, media_type="audio/wav",
         headers={"Content-Disposition":
-                 f'attachment; filename="bsd_deluxe_theme_{int(seconds)}s.wav"'})
+                 f'attachment; filename="bsd_{type}_{int(seconds)}s.wav"'})
 
 
 @app.post("/api/songs/validate-dir")

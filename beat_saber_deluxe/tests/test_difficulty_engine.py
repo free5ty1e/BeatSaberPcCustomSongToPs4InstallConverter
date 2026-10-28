@@ -259,7 +259,7 @@ class TestFillIntegration:
         sys.path.insert(0, str(TOOLS))
         import full_custom_song_pipeline as fp
         d = self._make_map_dir(tmp_path, {"ExpertPlus": self._notes(600)})
-        written = fp.fill_missing_standard_difficulties(str(d), skip_descent=True)
+        fp.fill_missing_standard_difficulties(str(d), skip_descent=True)
         easy = json.loads((d / "Easy.dat").read_text())["colorNotes"]
         ep = json.loads((d / "ExpertPlus.dat").read_text())["colorNotes"]
         assert easy == ep  # the clone: E+ copied wholesale
@@ -280,8 +280,8 @@ class TestFillIntegration:
         The engine infers the grid and lands the official bands in TRUE beats
         while emitting the notes' original (claimed-grid) times."""
         sys.path.insert(0, str(TOOLS))
-        import full_custom_song_pipeline as fp
         import difficulty_engine as de
+        import full_custom_song_pipeline as fp
         # 16th stream at the true tempo: b_true multiples of 0.25 → in
         # claimed units = multiples of 0.25 * 1.36
         scale = 1.36

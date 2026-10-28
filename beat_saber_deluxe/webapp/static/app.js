@@ -419,40 +419,60 @@ async function validateLocalDir() {
   }
 }
 
+function loadTestSongPicker() {
+  // The rights-clean test-song registry (M15's chiptunes + the theme),
+  // rendered from the same server payload the endpoint dispatches on.
+  const sel = $("bsage-testsong-select");
+  if (!sel) return;
+  const songs = [
+    ["theme", "BSD Deluxe Theme — the original synth (48s, 120 BPM)"],
+    ["nes_groove", "NES Groove — drums + bass + duty-cycled riff (64s, 120 BPM)"],
+    ["nes_scale_runner", "NES Scale Runner — running major scales (60s, 140 BPM)"],
+  ];
+  sel.innerHTML = songs.map(([k, label]) => `<option value="${k}">${esc(label)}</option>`).join("");
+}
+
 async function useTestSong() {
-  // Fetch the rights-clean synth theme on demand and attach it to the form —
-  // one click and the Generate flow is ready (no audio hunting). The song is
-  // 100% mathematical synthesis: deterministic, and the 48s default is
-  // byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
-  // The button itself tells the story (disable + relabel) — the click must be
-  // OBVIOUSLY doing something (the Exp 283e user report: "does nothing that
-  // I can notice").
+  // Fetch the selected rights-clean test song on demand and attach it to the
+  // form — one click and the Generate flow is ready (no audio hunting). All
+  // of them are 100% mathematical synthesis (deterministic; the theme's 48s
+  // default is byte-identical to the deployed 'BSD Deluxe Theme'; the
+  // chiptunes use authentic NES channels — pulse/triangle/LFSR noise).
+  // The button tells the story (disable + relabel) — the click must be
+  // OBVIOUSLY doing something (the Exp 283e user report).
   const btn = $("btn-bsage-testsong");
+  const sel = $("bsage-testsong-select");
+  const type = (sel && sel.value) || "theme";
+  const titles = {
+    theme: ["BSD Deluxe Theme (An Original)", "Beat Saber Deluxe Synth"],
+    nes_groove: ["BSD NES Groove", "BSD Chiptune Synth"],
+    nes_scale_runner: ["BSD NES Scale Runner", "BSD Chiptune Synth"],
+  };
+  const [title, artist] = titles[type] || titles.theme;
   const original = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "⏳ Synthesizing the test song…";
-  setResult("bsage-result", "Synthesizing the original test song (pure math, " +
-    "deterministic)…", "");
+  btn.textContent = "⏳ Synthesizing…";
+  setResult("bsage-result", "Synthesizing the test song (pure math, deterministic)…", "");
   try {
-    const r = await fetch("/api/songs/test-song?seconds=48");
+    const r = await fetch(`/api/songs/test-song?type=${encodeURIComponent(type)}`);
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
     const blob = await r.blob();
-    const file = new File([blob], "bsd_deluxe_theme_48s.wav", { type: "audio/wav" });
+    const file = new File([blob], `bsd_${type}.wav`, { type: "audio/wav" });
     const dt = new DataTransfer();
     dt.items.add(file);
     $("bsage-audio").files = dt.files;   // attach programmatically
-    if (!$("bsage-title").value) $("bsage-title").value = "BSD Deluxe Theme (An Original)";
-    if (!$("bsage-artist").value) $("bsage-artist").value = "Beat Saber Deluxe Synth";
-    btn.textContent = "✓ Test song attached — now press Generate";
-    setResult("bsage-result", "✅ Test song attached to the form (48s, rights-clean — " +
-      "synthesized from scratch, the same song every time). Press Generate to " +
-      "send it to Beat Sage.", "ok");
+    if (!$("bsage-title").value) $("bsage-title").value = title;
+    if (!$("bsage-artist").value) $("bsage-artist").value = artist;
+    btn.textContent = "✓ Attached — now press Generate";
+    setResult("bsage-result", `✅ “${title}” attached (rights-clean — synthesized ` +
+      "from scratch, the same song every time). Press Generate to send it to " +
+      "Beat Sage.", "ok");
   } catch (e) {
     // DataTransfer/file-input restrictions or fetch failure → plain download
     btn.textContent = original;
     setResult("bsage-result", "Starting a plain download instead — pick the " +
       `downloaded .wav as the audio file. (${esc(e.message)})`, "warn");
-    window.location = "/api/songs/test-song?seconds=48";
+    window.location = `/api/songs/test-song?type=${encodeURIComponent(type)}`;
     return;
   }
   setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 10000);
@@ -1778,6 +1798,7 @@ async function boot() {
   if (state.mode === "local-backend") {
     loadDumpDefault();
     loadBeatsageGuide();   // M13: the guided card + recommended options
+    loadTestSongPicker();  // M15: the test-song registry (chiptunes + theme)
     loadStaged();          // M13: the recent-songs list (persists restarts)
     try {
       const cfg = await api("/api/config");

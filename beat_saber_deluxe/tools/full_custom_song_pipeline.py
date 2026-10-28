@@ -1868,7 +1868,6 @@ def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE
     # landed anywhere — including directly under a stream.
     note_times = sorted({round(float(n.get("b", 0.0)), 4)
                          for n in out.get("colorNotes", []) or []})
-    note_set = set(note_times)
 
     def _nearest_rest(target: float) -> float:
         """The beat NEAREST the target (searching outward in ¼-beat steps,

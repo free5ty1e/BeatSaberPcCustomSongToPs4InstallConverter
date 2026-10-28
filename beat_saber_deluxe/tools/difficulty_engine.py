@@ -162,17 +162,6 @@ def infer_grid(times: list[float]) -> tuple[list[int], float]:
     return _track_grid(times, hint), max(4 * hint, 0.05)
 
 
-def snap_bucket(beat: float) -> int:  # noqa: F811 — grid-aware wrapper below
-    """0 = on-beat · 25 = sixteenth · 50 = offbeat-eighth · -1 = other."""
-    frac = round((beat % 1.0) * 100)
-    if frac in (0, 100):
-        return 0
-    if frac in (25, 75):
-        return 25
-    if frac == 50:
-        return 50
-    return -1
-
 
 # snap categories: the fractional part of the beat position, in 1/100 beats
 def snap_bucket(beat: float) -> int:

@@ -23,3 +23,11 @@ Experiment numbers continue from the M13 log (last used 284b) → first M15 expe
 - THE DISCOVERY: Beat Sage's BPM label is wrong (claimed 120, really ~88) — the notes drift off every fixed grid; three fit attempts failed before the gap-histogram + PLL tracker solution (tolerance ±30%); the engine now works in TRUE beats and emits ORIGINAL times. Live proof on the user's map: all three difficulties in the official bands.
 - The mode generators upgraded per the guidelines + the user's report: OneSaber travel-time rules (the proportional distance ladder + the head-level arc), NoArrows same-hand cluster audit, 90° rest-aligned rotations (outward-first search + the graceful degradation ladder). 8 regression tests.
 - Suite 974 + 89 (+13); pipeline 0.5367 + changelog; the official round-trip still 15/15.
+
+## Cycle 3 — Exp 287: the chiptunes + the picker + the docs
+
+- The NES synthesis built: duty-cycled pulses, the 4-bit triangle, the LFSR noise channel (the hardware's period table), stepped envelopes. Two new songs (Groove 120 BPM + Scale Runner 140 BPM) + the theme (byte-identity pinned).
+- The picker UI (select + generate-and-attach), the endpoint type dispatch, the CLI type param. The app boots 0.6.21 with all three songs serving.
+- 7 new tests (determinism, endpoint, authenticity); suite 981+89.
+- M15.5 docs: the feature doc, the changelog (asserted anchors!), README + CI_RELEASE.
+- The live-experiment checklist formed: chiptune → Beat Sage → descend → deploy → play; plus the user's mass re-deploy plan.
