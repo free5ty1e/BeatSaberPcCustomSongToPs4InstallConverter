@@ -5,6 +5,25 @@ It never re-implements conversion, deploy, or validation logic — every deploy 
 subprocess argv call to the pipeline (plan:
 `.agent/plans/web-app-song-conversion-pipeline-interface.md`).
 
+## 0.6.22 (2026-10-25)
+### Added — the Test Songs card: preview, download, MP3 (Exp 288)
+- **A dedicated Test Songs card in the Song Picker tab** (between the map-ID
+  card and Beat Sage): a registry-driven dropdown (theme / NES Groove / NES
+  Scale Runner), an in-browser **preview player**, **WAV + MP3 downloads**,
+  and a one-click "attach to the Beat Sage form" bridge. The registry is
+  served by `GET /api/songs/test-songs` (the UI never hardcodes the list);
+  the download endpoint gains `?format=mp3` (transcoded on the fly via
+  ffmpeg — a clean 503 with a To-fix message when it's absent, and the UI
+  probes once and hides the button gracefully) and `?download=false` for
+  inline preview. Pages mode: the card shows a clear note (preview/download
+  need the local web app).
+- **The score refactor:** the NES generators now BUILD the ground-truth
+  score first (every drum hit, bass note, and melody note with exact times +
+  emphasis flags) and render audio FROM it — the single source of truth for
+  both the song AND the M15 oracle. The theme stays byte-identical to the
+  deployed song (pinned); the chiptunes re-rendered with equivalent musical
+  content (envelope-shape deltas only).
+
 ## 0.6.21 (2026-10-25)
 ### Added — M15: the test-song picker + the NES-authentic chiptunes (Exp 287)
 - **The 🧪 test-song button becomes a picker with three rights-clean songs**,

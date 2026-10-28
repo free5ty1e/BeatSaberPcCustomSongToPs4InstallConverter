@@ -186,138 +186,9 @@ def _place(buf, start_s, length_s, wave, gain=1.0, env=None):
     buf[i0:i1] += seg
 
 
-# ── Song 1: "BSD NES Groove" — the basic drum-beat rhythm song ───────────────
-
-def generate_nes_groove(seconds: float = 64.0) -> bytes:
-    """120 BPM, Am–F–C–G: kick/snare/hat groove (the noise channel),
-    triangle bass on eighths, and a duty-cycled pulse riff — the 'basic
-    rhythm with drum beats' test song. Deterministic."""
-    import numpy as np
-    bpm = 120.0
-    beat = 60.0 / bpm
-    total_n = int(seconds * SR)
-    mix = np.zeros(total_n)
-
-    def n(s):
-        return int(s * SR)
-
-    A, C, D, E, F, G = 110.0, 130.81, 146.83, 164.81, 87.31, 98.0
-    roots = [A, F, C / 2, G / 2]              # Am, F, C, G (bass voicing)
-    riff = [A, C, D, E, G, E, D, C]          # Am pentatonic contour
-
-    t_beat = 0
-    beat_i = 0
-    while (t_beat * beat) < seconds - 0.5:
-        t = t_beat * beat
-        bar = (beat_i // 4) % 4
-        in_bar = beat_i % 4
-
-        # drums: kick 1&3, snare 2&4, hats on every eighth
-        if in_bar in (0, 2):
-            kick = _lfsr_noise(n(0.10), 1789773 / 4068.0)
-            _place(mix, t, 0.10, kick, 0.9, _nes_env(n(0.10), 15, 12))
-        if in_bar in (1, 3):
-            snare = _lfsr_noise(n(0.16), 1789773 / 508.0)
-            _place(mix, t, 0.16, snare, 0.55, _nes_env(n(0.16), 13, 14))
-        hat = _lfsr_noise(n(0.03), 1789773 / 32.0)
-        _place(mix, t, 0.03, hat, 0.28, _nes_env(n(0.03), 9, 5))
-        offbeat = _lfsr_noise(n(0.02), 1789773 / 40.0)
-        _place(mix, t + beat / 2, 0.02, offbeat, 0.18, _nes_env(n(0.02), 7, 4))
-
-        # bass: triangle, root eighths (two pulses per beat)
-        tt = np.arange(n(beat)) / SR
-        _place(mix, t, beat / 2, _nes_triangle(tt, roots[bar] / 2), 0.5)
-        _place(mix, t + beat / 2, beat / 2,
-               _nes_triangle(tt, roots[bar] / 2), 0.5 if in_bar % 2 else 0.35)
-
-        # melody: a 25%-duty pulse riff — one note per beat from the contour,
-        # with a grace 16th into beat 1 of each bar
-        duty = 0.25 if bar % 2 == 0 else 0.125
-        freq = riff[beat_i % len(riff)] * 2
-        _place(mix, t, beat * 0.9, _nes_pulse(tt, freq, duty), 0.30,
-               _nes_env(n(beat), 15, 22))
-        if in_bar == 0:
-            grace = _lfsr_noise(n(0.02), 1789773 / 64.0)
-            _place(mix, t - beat / 4 if t > beat / 4 else t, 0.02, grace,
-                   0.15, _nes_env(n(0.02), 6, 3))
-
-        t_beat += 1
-        beat_i += 1
-
-    return _finish_pcm(mix, seconds)
-
-
-# ── Song 2: "BSD NES Scale Runner" — the scales-as-melody song ──────────────
-
-def generate_nes_scale_runner(seconds: float = 60.0) -> bytes:
-    """140 BPM, C major: running scales (16th-note runs up and down +
-    thirds), a steady kick/hat pulse, and triangle bass — the
-    scales-as-basic-melody test song. The cleanest descent-engine input:
-    strong on-beat emphasis where every run starts. Deterministic."""
-    import numpy as np
-    bpm = 140.0
-    beat = 60.0 / bpm
-    total_n = int(seconds * SR)
-    mix = np.zeros(total_n)
-
-    def n(s):
-        return int(s * SR)
-
-    # C major scale (C4..C6)
-    scale = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25,
-             587.33, 659.26, 698.46, 783.99, 880.0, 987.77, 1046.5]
-    roots = [65.41, 87.31, 98.0, 110.0]       # C2, F2, G2, A2 bass roots
-
-    t_beat = 0
-    beat_i = 0
-    run_pos = 0
-    direction = 1
-    while (t_beat * beat) < seconds - 0.5:
-        t = t_beat * beat
-        bar = (beat_i // 4) % 4
-        in_bar = beat_i % 4
-
-        # drums: kick on the beat, hat on the eighth
-        kick = _lfsr_noise(n(0.09), 1789773 / 2034.0)
-        _place(mix, t, 0.09, kick, 0.8, _nes_env(n(0.09), 15, 12))
-        hat = _lfsr_noise(n(0.03), 1789773 / 32.0)
-        _place(mix, t + beat / 2, 0.03, hat, 0.22, _nes_env(n(0.03), 8, 4))
-
-        # bass: triangle, the bar's root on beats 1 & 3, fifth on 2 & 4
-        tt = np.arange(n(beat)) / SR
-        root = roots[bar] if in_bar in (0, 1) else roots[bar] * 1.5
-        _place(mix, t, beat * 0.95, _nes_triangle(tt, root), 0.5)
-
-        # melody: a 16th-note scale run — four notes per beat, changing
-        # direction at the scale's edges (up 4, down 4 pattern feels
-        # musical; every beat boundary restarts emphasis)
-        for sixteenth in range(4):
-            if run_pos >= len(scale):
-                direction = -1
-            elif run_pos <= 0:
-                direction = 1
-            freq = scale[run_pos]
-            t0 = t + sixteenth * beat / 4
-            _place(mix, t0, beat / 4 * 0.95,
-                   _nes_pulse(tt, freq, 0.5), 0.26,
-                   _nes_env(n(beat / 4), 15, 10))
-            run_pos += direction
-            if direction == 1 and run_pos >= len(scale):
-                run_pos = len(scale) - 1
-                direction = -1
-            elif direction == -1 and run_pos < 0:
-                run_pos = 0
-                direction = 1
-
-        t_beat += 1
-        beat_i += 1
-
-    return _finish_pcm(mix, seconds)
-
-
 def _finish_pcm(mix, seconds: float) -> bytes:
-    """Shared finishing: normalize to a safe peak (the NES mix is quiet by
-    nature — bring it up), fades, WAV encode."""
+    """Shared finishing: normalize to a safe peak, fades, soft clip for the
+    chiptune square edges, WAV encode."""
     import io
 
     import numpy as np
@@ -327,7 +198,6 @@ def _finish_pcm(mix, seconds: float) -> bytes:
     fade = min(int(0.05 * SR), total_n // 4)
     mix[:fade] *= np.linspace(0, 1, fade)
     mix[-fade:] *= np.linspace(1, 0, fade)
-    # one soft clip for the chiptune square edges
     mix = np.tanh(mix * 1.1)
     pcm = (mix * 32767).astype(np.int16).tobytes()
     buf = io.BytesIO()
@@ -337,6 +207,146 @@ def _finish_pcm(mix, seconds: float) -> bytes:
         w.setframerate(SR)
         w.writeframes(pcm)
     return buf.getvalue()
+
+
+def _nes_render(events: list, seconds: float) -> bytes:
+    """Render the NES mix from a SCORE (the event list built by the score
+    functions — the single source of truth for both the audio AND the
+    oracle). Each event: {t (seconds), dur (seconds), ch ('pulse'|'tri'|'noise'),
+    freq, duty?, gain, env (peak, steps), emphasis (bool — on a musical
+    strong beat)."""
+    import numpy as np
+    total_n = int(seconds * SR)
+    mix = np.zeros(total_n)
+    n = lambda s: max(1, int(s * SR))
+    for ev in events:
+        t0 = ev["t"]
+        dur = ev["dur"]
+        if t0 < 0 or t0 + dur >= seconds:
+            continue
+        ch = ev["ch"]
+        seg_n = n(dur)
+        tt = np.arange(seg_n) / SR
+        if ch == "pulse":
+            wave = _nes_pulse(tt, ev["freq"], ev.get("duty", 0.25))
+        elif ch == "tri":
+            wave = _nes_triangle(tt, ev["freq"])
+        else:
+            wave = _lfsr_noise(seg_n, ev["freq"])
+        peak, steps = ev.get("env", (15, 10))
+        _place(mix, t0, dur, wave, ev.get("gain", 1.0), _nes_env(seg_n, peak, steps))
+    return _finish_pcm(mix, seconds)
+
+
+# ── Song 1: "BSD NES Groove" — the basic drum-beat rhythm song ───────────────
+
+def nes_groove_score(seconds: float = 64.0) -> list:
+    """The GROUND-TRUTH score for 'BSD NES Groove' (120 BPM, Am–F–C–G):
+    every drum hit, bass note, and melody note with its exact time, voice,
+    and emphasis flag. The audio renders FROM this (single source of truth);
+    the oracle measures generated charts AGAINST it."""
+    bpm = 120.0
+    beat = 60.0 / bpm
+    events = []
+    A, C, D, E, F, G = 110.0, 130.81, 146.83, 164.81, 87.31, 98.0
+    roots = [A, F, C / 2, G / 2]
+    riff = [A, C, D, E, G, E, D, C]
+    t_beat = 0
+    beat_i = 0
+    while (t_beat * beat) < seconds - 0.5:
+        t = t_beat * beat
+        bar = (beat_i // 4) % 4
+        in_bar = beat_i % 4
+        emph = in_bar == 0
+        if in_bar in (0, 2):
+            events.append({"t": t, "dur": 0.10, "ch": "noise",
+                           "freq": 1789773 / 4068.0, "gain": 0.9,
+                           "env": (15, 12), "kind": "kick", "emphasis": emph})
+        if in_bar in (1, 3):
+            events.append({"t": t, "dur": 0.16, "ch": "noise",
+                           "freq": 1789773 / 508.0, "gain": 0.55,
+                           "env": (13, 14), "kind": "snare", "emphasis": emph})
+        events.append({"t": t, "dur": 0.03, "ch": "noise",
+                       "freq": 1789773 / 32.0, "gain": 0.28,
+                       "env": (9, 5), "kind": "hat", "emphasis": emph})
+        events.append({"t": t + beat / 2, "dur": 0.02, "ch": "noise",
+                       "freq": 1789773 / 40.0, "gain": 0.18,
+                       "env": (7, 4), "kind": "hat", "emphasis": False})
+        events.append({"t": t, "dur": beat / 2, "ch": "tri",
+                       "freq": roots[bar] / 2, "gain": 0.5,
+                       "env": (15, 16), "kind": "bass", "emphasis": emph})
+        events.append({"t": t + beat / 2, "dur": beat / 2, "ch": "tri",
+                       "freq": roots[bar] / 2, "gain": 0.5 if in_bar % 2 else 0.35,
+                       "env": (15, 16), "kind": "bass", "emphasis": False})
+        duty = 0.25 if bar % 2 == 0 else 0.125
+        events.append({"t": t, "dur": beat * 0.9, "ch": "pulse",
+                       "freq": riff[beat_i % len(riff)] * 2, "duty": duty,
+                       "gain": 0.30, "env": (15, 22), "kind": "melody",
+                       "emphasis": emph})
+        t_beat += 1
+        beat_i += 1
+    return events
+
+
+def generate_nes_groove(seconds: float = 64.0) -> bytes:
+    """120 BPM, Am–F–C–G (see nes_groove_score — the score IS the song)."""
+    return _nes_render(nes_groove_score(seconds), seconds)
+
+
+def nes_scale_runner_score(seconds: float = 60.0) -> list:
+    """The GROUND-TRUTH score for 'BSD NES Scale Runner' (140 BPM, C major):
+    every kick, hat, bass root, and 16th-note scale note — the oracle's truth."""
+    bpm = 140.0
+    beat = 60.0 / bpm
+    events = []
+    scale = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25,
+             587.33, 659.26, 698.46, 783.99, 880.0, 987.77, 1046.5]
+    roots = [65.41, 87.31, 98.0, 110.0]
+    t_beat = 0
+    beat_i = 0
+    run_pos = 0
+    direction = 1
+    while (t_beat * beat) < seconds - 0.5:
+        t = t_beat * beat
+        bar = (beat_i // 4) % 4
+        in_bar = beat_i % 4
+        emph = in_bar == 0
+        events.append({"t": t, "dur": 0.09, "ch": "noise",
+                       "freq": 1789773 / 2034.0, "gain": 0.8,
+                       "env": (15, 12), "kind": "kick", "emphasis": emph})
+        events.append({"t": t + beat / 2, "dur": 0.03, "ch": "noise",
+                       "freq": 1789773 / 32.0, "gain": 0.22,
+                       "env": (8, 4), "kind": "hat", "emphasis": False})
+        root = roots[bar] if in_bar in (0, 1) else roots[bar] * 1.5
+        events.append({"t": t, "dur": beat * 0.95, "ch": "tri",
+                       "freq": root, "gain": 0.5, "env": (15, 16),
+                       "kind": "bass", "emphasis": emph})
+        for sixteenth in range(4):
+            if run_pos >= len(scale):
+                direction = -1
+            elif run_pos <= 0:
+                direction = 1
+            freq = scale[run_pos]
+            events.append({"t": t + sixteenth * beat / 4,
+                           "dur": beat / 4 * 0.95, "ch": "pulse",
+                           "freq": freq, "duty": 0.5, "gain": 0.26,
+                           "env": (15, 10), "kind": "melody",
+                           "emphasis": sixteenth == 0})
+            run_pos += direction
+            if direction == 1 and run_pos >= len(scale):
+                run_pos = len(scale) - 1
+                direction = -1
+            elif direction == -1 and run_pos < 0:
+                run_pos = 0
+                direction = 1
+        t_beat += 1
+        beat_i += 1
+    return events
+
+
+def generate_nes_scale_runner(seconds: float = 60.0) -> bytes:
+    """140 BPM, C major (see nes_scale_runner_score — the score IS the song)."""
+    return _nes_render(nes_scale_runner_score(seconds), seconds)
 
 
 # The registry the endpoint + CLI dispatch on

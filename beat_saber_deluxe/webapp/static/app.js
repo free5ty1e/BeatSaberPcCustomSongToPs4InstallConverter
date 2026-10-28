@@ -37,6 +37,7 @@ async function detectMode() {
   badge.className = state.mode === "local-backend" ? "local" : "pages";
   if (state.mode === "pages") {
     document.querySelectorAll(".local-only").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".pages-only").forEach(el => el.style.display = "");
     // Command-builder mode: the Deploy button can't run anything — relabel
     // it so the expectation is correct before the click.
     const deployBtn = document.getElementById("btn-deploy");
@@ -418,6 +419,45 @@ async function validateLocalDir() {
     setResult("local-validate-result", "❌ " + e.message, "bad");
   }
 }
+
+async function loadTestSongsCard() {
+  // The Test Songs card (M15): registry-driven select + preview player +
+  // download links (WAV always; MP3 transcoded on the fly when ffmpeg
+  // exists on the machine running the web app).
+  const sel = $("testsongs-select");
+  if (!sel) return;
+  let songs = [
+    ["theme", "BSD Deluxe Theme — the original synth (48s)"],
+    ["nes_groove", "NES Groove — drums + bass + riff (64s, 120 BPM)"],
+    ["nes_scale_runner", "NES Scale Runner — running major scales (60s, 140 BPM)"],
+  ];
+  try {
+    const j = await api("/api/songs/test-songs");
+    if (j.songs && j.songs.length) {
+      songs = j.songs.map(s => [s.key, `${s.label} (${s.seconds}s)`]);
+    }
+  } catch { /* fall back to the static list (pages mode) */ }
+  sel.innerHTML = songs.map(([k, label]) =>
+    `<option value="${k}">${esc(label)}</option>`).join("");
+  const update = () => {
+    const k = sel.value;
+    const url = `/api/songs/test-song?type=${encodeURIComponent(k)}`;
+    $("testsongs-player").src = url + "&download=false";
+    $("testsongs-wav").href = url;
+    $("testsongs-mp3").href = url + "&format=mp3";
+    // probe MP3 availability once per selection (graceful when no ffmpeg)
+    fetch(url + "&format=mp3", { method: "HEAD" })
+      .then(r => {
+        $("testsongs-mp3-note").textContent =
+          r.ok ? "" : "(MP3 unavailable on this machine — the WAV works everywhere)";
+        $("testsongs-mp3").style.display = r.ok ? "" : "none";
+      })
+      .catch(() => { $("testsongs-mp3").style.display = "none"; });
+  };
+  sel.addEventListener("change", update);
+  update();
+}
+
 
 function loadTestSongPicker() {
   // The rights-clean test-song registry (M15's chiptunes + the theme),
@@ -1799,6 +1839,7 @@ async function boot() {
     loadDumpDefault();
     loadBeatsageGuide();   // M13: the guided card + recommended options
     loadTestSongPicker();  // M15: the test-song registry (chiptunes + theme)
+    loadTestSongsCard();   // M15: the Test Songs card (preview + downloads)
     loadStaged();          // M13: the recent-songs list (persists restarts)
     try {
       const cfg = await api("/api/config");
@@ -1834,6 +1875,15 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btn-bs-lookup").addEventListener("click", lookupMapId);
   $("btn-bsage-generate").addEventListener("click", generateWithBeatsage);
   $("btn-bsage-testsong").addEventListener("click", useTestSong);
+  $("btn-testsongs-attach").addEventListener("click", () => {
+    // bridge: the Test Songs card → the Beat Sage form (select + attach)
+    const k = $("testsongs-select").value;
+    const bsageSel = $("bsage-testsong-select");
+    if (bsageSel) bsageSel.value = k;
+    useTestSong();
+    setResult("testsongs-note", "Attached to the Beat Sage form below — press " +
+      "Generate to send it to beatsage.com.", "ok");
+  });
   $("btn-local-validate").addEventListener("click", validateLocalDir);
   $("local-song-path").addEventListener("keydown", e => { if (e.key === "Enter") validateLocalDir(); });
   wireZipDrop();

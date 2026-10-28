@@ -549,3 +549,58 @@ class TestChiptuneSongs:
         nz2 = testsong._lfsr_noise(2000, 8000.0)
         assert set(np.unique(nz)) <= {1.0, -1.0}
         assert np.array_equal(nz, nz2)
+
+
+# ------------------------------------------------------------ the Test Songs card (Exp 288)
+class TestTestSongsCard:
+    """M15: the registry endpoint + the preview/download surface + MP3."""
+
+    def test_registry_endpoint(self):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-songs")
+        assert r.status_code == 200
+        keys = [s["key"] for s in r.json()["songs"]]
+        assert keys == ["theme", "nes_groove", "nes_scale_runner"]
+
+    def test_preview_mode_serves_inline(self):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song",
+                       params={"type": "nes_groove", "download": "false"})
+        assert r.status_code == 200
+        assert "inline" in r.headers["content-disposition"]
+
+    def test_mp3_conversion(self):
+        import shutil
+        if not shutil.which("ffmpeg"):
+            pytest.skip("ffmpeg not installed (the graceful-degradation path)")
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song",
+                       params={"type": "theme", "seconds": 8, "format": "mp3"})
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("audio/mpeg")
+        assert len(r.content) > 10_000          # a real encode, not the wav
+        assert r.content[:3] == b"ID3" or r.content[:2] == b"\xff\xfb"
+
+    def test_mp3_without_ffmpeg_is_a_clear_503(self, monkeypatch):
+        import shutil
+        monkeypatch.setattr(shutil, "which", lambda name: None)
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song",
+                       params={"type": "theme", "seconds": 8, "format": "mp3"})
+        assert r.status_code == 503
+        assert "To fix" in r.json()["detail"]
+
+    def test_card_elements_exist(self):
+        html = (Path(__file__).resolve().parents[1] / "webapp" / "static" / "index.html").read_text()
+        for el in ('id="testsongs-card"', 'id="testsongs-select"',
+                   'id="testsongs-player"', 'id="testsongs-wav"',
+                   'id="testsongs-mp3"', 'id="btn-testsongs-attach"'):
+            assert el in html, f"missing: {el}"
