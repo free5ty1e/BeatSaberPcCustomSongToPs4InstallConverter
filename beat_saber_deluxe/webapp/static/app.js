@@ -16,6 +16,8 @@ const state = {
   staged: [],                   // staged local songs (M13)
   pollTimer: null,
   bsageTimer: null,
+  lastAutoTitle: null,          // the last test-song auto-fill (the stale-prefill fix)
+  lastAutoArtist: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -504,8 +506,15 @@ async function useTestSong() {
     const dt = new DataTransfer();
     dt.items.add(file);
     $("bsage-audio").files = dt.files;   // attach programmatically
-    if (!$("bsage-title").value) $("bsage-title").value = title;
-    if (!$("bsage-artist").value) $("bsage-artist").value = artist;
+    // The prefill updates when the field is empty OR still holds OUR previous
+    // auto-fill (the Exp 292 report: switching songs kept the stale "BSD
+    // Deluxe Theme" title). A hand-edited title is never clobbered.
+    if (!$("bsage-title").value || $("bsage-title").value === state.lastAutoTitle)
+        $("bsage-title").value = title;
+    if (!$("bsage-artist").value || $("bsage-artist").value === state.lastAutoArtist)
+        $("bsage-artist").value = artist;
+    state.lastAutoTitle = title;
+    state.lastAutoArtist = artist;
     btn.textContent = "✓ Attached — now press Generate";
     setResult("bsage-result", `✅ “${title}” attached (rights-clean — synthesized ` +
       "from scratch, the same song every time). Press Generate to send it to " +
