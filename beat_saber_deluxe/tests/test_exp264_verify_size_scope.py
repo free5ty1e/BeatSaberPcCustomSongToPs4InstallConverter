@@ -164,7 +164,7 @@ class TestVerifySizeScope:
                          "BabyOneMoreTime_custom.bundle": 100},
             remote_sizes={"Oxytocin_v3.bundle": 36_706_075,
                           "BabyOneMoreTime_v3.bundle": 100},
-            ledger={"BabyOneMoreTime_v3.bundle"})
+            ledger={"BabyOneMoreTime_v3.bundle": "md5"})
         assert ok is True, [ln for ln in lines if "Size" in ln or "❌" in ln]
         assert any("informational" in ln for ln in lines), lines
         assert not any("❌ Size mismatches" in ln for ln in lines)
@@ -177,7 +177,7 @@ class TestVerifySizeScope:
             local_sizes={"BabyOneMoreTime_custom.bundle": 100},
             remote_sizes={"Oxytocin_v3.bundle": 36_706_075,
                           "BabyOneMoreTime_v3.bundle": 999},   # truncated upload!
-            ledger={"BabyOneMoreTime_v3.bundle"})
+            ledger={"BabyOneMoreTime_v3.bundle": "md5"})
         assert ok is False
         assert any("❌ Size mismatches" in ln and "BabyOneMoreTime" in ln for ln in lines)
 
@@ -190,6 +190,81 @@ class TestVerifySizeScope:
             local_sizes={"Oxytocin_custom.bundle": 36_706_086},
             remote_sizes={"Oxytocin_v3.bundle": 36_706_075,
                           "BabyOneMoreTime_v3.bundle": 100},
-            ledger=set())
+            ledger={})
         assert ok is False
         assert any("❌ Size mismatches" in ln and "Oxytocin" in ln for ln in lines)
+
+    def test_pack_file_upload_records_md5(self, f, monkeypatch, tmp_path):
+        """Exp 290: the ledger records the BYTES (md5), not just the name —
+        the skip decision is content-verified."""
+        f._SESSION_UPLOADED_BUNDLES.clear()
+        local = tmp_path / "catalog_pack_modes.json"
+        local.write_bytes(b'{"packs": ["v1"]}')
+        monkeypatch.setattr("subprocess.run",
+                            lambda *a, **k: type("R", (), {"returncode": 0, "stderr": "", "stdout": ""})())
+        assert f._deploy_file_to_ps4(CFG, str(local), "catalog_pack_modes.json") is True
+        import hashlib
+        assert f._SESSION_UPLOADED_BUNDLES["catalog_pack_modes.json"] == \
+            hashlib.md5(local.read_bytes()).hexdigest()
+
+
+class TestExp290ContentVerifiedSkip:
+    """The user's batch failure (Oct 25): the catalog rebuilt to the SAME
+    SIZE with DIFFERENT bytes (a new pack's entries replaced old ones) and
+    the size-only skip blocked the corrective upload — the validation caught
+    the md5 mismatch but the batch had already stopped at song 1/47. The
+    ledger now records the md5 of the uploaded bytes; a local rebuild with
+    different bytes ALWAYS re-uploads."""
+
+    def _write_local(self, tmp_path, content: bytes) -> Path:
+        local = tmp_path / "catalog_pack_modes.json"
+        local.write_bytes(content)
+        return local
+
+    def _seed_ledger(self, f, local: Path):
+        import hashlib
+        f._SESSION_UPLOADED_BUNDLES = {
+            "catalog_pack_modes.json": hashlib.md5(local.read_bytes()).hexdigest()}
+
+    def _stub_remote_listing(self, f, monkeypatch, size: int):
+        """_list_remote_dir → {name: size} (the remote already has a file of
+        this size — the size-only skip's poison)."""
+        monkeypatch.setattr(f, "_list_remote_dir",
+                            lambda cfg: {"catalog_pack_modes.json": size})
+
+    def test_same_bytes_same_size_skipped(self, f, monkeypatch, tmp_path):
+        content = b'{"catalog": "v1", "pad": "' + b"x" * 100 + b'"}'
+        local = self._write_local(tmp_path, content)
+        self._seed_ledger(f, local)
+        self._stub_remote_listing(f, monkeypatch, len(content))
+        upload_calls = []
+        monkeypatch.setattr("subprocess.run",
+                            lambda *a, **k: upload_calls.append(1) or
+                            type("R", (), {"returncode": 0, "stderr": "", "stdout": ""})())
+        assert f._deploy_file_to_ps4(CFG, str(local), "catalog_pack_modes.json") is True
+        assert upload_calls == []      # skipped — genuinely the same bytes
+
+    def test_same_size_different_bytes_REUPLOADED(self, f, monkeypatch, tmp_path):
+        """THE regression: same size, different content — must re-upload."""
+        uploaded_bytes = b'{"catalog": "v1", "pad": "' + b"x" * 100 + b'"}'
+        local = self._write_local(tmp_path, uploaded_bytes)
+        self._seed_ledger(f, local)
+        # the local file is REBUILT: the same size, different content
+        rebuilt = b'{"catalog": "v2", "pad": "' + b"y" * 100 + b'"}'
+        assert len(rebuilt) == len(uploaded_bytes)
+        local.write_bytes(rebuilt)
+        self._stub_remote_listing(f, monkeypatch, len(rebuilt))
+        upload_calls = []
+        monkeypatch.setattr("subprocess.run",
+                            lambda *a, **k: upload_calls.append(1) or
+                            type("R", (), {"returncode": 0, "stderr": "", "stdout": ""})())
+        assert f._deploy_file_to_ps4(CFG, str(local), "catalog_pack_modes.json") is True
+        assert len(upload_calls) == 1,             "a same-size different-bytes rebuild MUST re-upload (the user's batch failure)"
+
+    def test_ledger_cleared_by_new_process_semantics(self, f):
+        # a fresh process starts with an empty ledger — the dict API keeps
+        # the `in` checks working (the verify scope logic reads it too)
+        f._SESSION_UPLOADED_BUNDLES.clear()
+        assert "catalog_pack_modes.json" not in f._SESSION_UPLOADED_BUNDLES
+        f._SESSION_UPLOADED_BUNDLES["catalog_pack_modes.json"] = "abc"
+        assert "catalog_pack_modes.json" in f._SESSION_UPLOADED_BUNDLES

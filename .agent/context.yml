@@ -336,7 +336,7 @@ release_readiness:
 # Current Branch / Feature: M11 in-game plugin toggle (L3+R3 hotkey)
 current_feature:
   branch: "feature/next (M10 release merged to main; M11 work continues here)"
-  milestone: "M13 release alpha01 tagged (v0.8055-pipeline-0.5366-webapp-0.6.20 — tag: v0.8055-pipeline-0.5366-webapp-0.6.20-alpha01) — CI watched + zip audited; the console is at TRUE clean slate (user's fresh-user run pending, which live-validates the Exp 283d preview fix); NEXT after release: M14 environment control → M15 lower-difficulty generation engine (user request: official-rules Easy/Normal/Hard from E/E+ maps — Beat Sage's weak band + the dense community-map library)"
+  milestone: "M15 IN PROGRESS (pipeline 0.5368 / webapp 0.6.22): the descent engine + grid inference + the mode-generator upgrades + the closed-loop oracle (PASS: 100% grid lock, 97-98% melody match) + SIX test songs incl. three new NES chiptunes (BeatTour/Scale Expedition/One And a Half Dragons); the batch-upload md5-ledger bug fixed (Exp 290). REMAINING: the PS4 live experiment (the chiptune chain + the user's 5-pack mass re-deploy on 0.5368), the docs/CI final audit, the release"
   plan: ".agent/plans/in-game-global-plugin-enable-toggle-plan.md (COMPLETE — feature doc ships in the zip: docs/features/in-game-plugin-toggle.md)"
   transcript: ".agent/transcripts/2026-10-14_in-game-plugin-toggle-m11.md (this feature's session transcript)"
   feature_flag: "enable_in_game_plugin_toggle (defaults false; webapp Feature Flags tab or --features-only --set-feature enable_in_game_plugin_toggle=true)"

@@ -55,7 +55,7 @@ sys.path.insert(0, TOOLS_DIR)
 # bundle built by a different pipeline version) is reported as an
 # informational note, not a deploy-blocking error — the deployed copy is
 # what the game boots, and the deploy never touched that song.
-_SESSION_UPLOADED_BUNDLES: set[str] = set()
+_SESSION_UPLOADED_BUNDLES: dict[str, str] = {}   # remote name → the md5 of the bytes WE uploaded
 
 
 # ---------------------------------------------------------------------------
@@ -1340,7 +1340,9 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy SIZE MISMATCH — remote {remote_path} is "
                     f"{listed_size} bytes, expected {local_size}")
         return
-    _SESSION_UPLOADED_BUNDLES.add(remote_name)
+    import hashlib
+    with open(bundle_path, 'rb') as fh:
+        _SESSION_UPLOADED_BUNDLES[remote_name] = hashlib.md5(fh.read()).hexdigest()
     log.info(f"  ✅ Bundle deployment successful ({listed_size} bytes verified on PS4)")
 
 
@@ -1671,11 +1673,18 @@ def _is_v3_beatmap(beatmap_data: dict) -> bool:
     return "colorNotes" in beatmap_data
 
 
-def _generate_no_arrows(beatmap_data: dict) -> dict:
+def _generate_no_arrows(beatmap_data: dict,
+                        cluster_gap: float = 0.25) -> dict:
     """Convert every color note into a dot (no cut direction).
 
     Both V2 (``_cutDirection``) and V3 (``d``) beatmaps are supported.
     Bombs are left untouched — only color notes become dots.
+
+    M15 (Exp 286, the KB beatmapping-guidelines rules): with every arrow
+    gone, SPACING + COLOR carry the whole rhythm — same-color dots closer
+    than ``cluster_gap`` beats within 2 grid cells of each other read as one
+    blob (the same hand cannot take both). The later of such a cluster pair
+    is dropped, keeping the two-hand alternation clean.
     """
     notes = _get_color_notes(beatmap_data)
     if notes is None:
@@ -1683,11 +1692,40 @@ def _generate_no_arrows(beatmap_data: dict) -> dict:
     out = copy.deepcopy(beatmap_data)
     out_notes = _get_color_notes(out)
     v3 = _is_v3_beatmap(out)
-    for note in out_notes:
+
+    def _t(n):
+        return float(n.get("b", 0.0) if v3 else n.get("_time", 0.0))
+    def _c(n):
+        return int(n.get("c", 0) if v3 else n.get("_type", 0))
+    def _pos(n):
+        return (int(n.get("x", 0) if v3 else n.get("_lineIndex", 0)),
+                int(n.get("y", 0) if v3 else n.get("_lineLayer", 0)))
+
+    kept = []
+    last_by_color: dict[int, tuple[float, int, int]] = {}
+    for note in sorted(out_notes, key=_t):
+        if _c(note) not in (0, 1):          # bombs pass through untouched
+            kept.append(note)
+            continue
         if v3:
             note["d"] = 8
-        elif int(note.get("_type", 0)) in (0, 1):
+        else:
             note["_cutDirection"] = 8
+        c = _c(note)
+        t = _t(note)
+        x, y = _pos(note)
+        prev = last_by_color.get(c)
+        if prev is not None:
+            dt = t - prev[0]
+            dist = abs(x - prev[1]) + abs(y - prev[2])
+            if dt < cluster_gap and dist <= 2:
+                continue                    # same-hand blob — drop the later note
+        kept.append(note)
+        last_by_color[c] = (t, x, y)
+    if v3:
+        out["colorNotes"] = kept
+    else:
+        out["_notes"] = kept
     return out
 
 
@@ -1703,6 +1741,13 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
       Dots also remove the same-cell arrow-collision constraint entirely.
     - Removes notes that are impossible to hit with one saber:
       simultaneous notes (one saber can only cut one note per instant).
+    - M15 (Exp 286, the user's "almost impossible to play in one-saber mode"
+      report + the KB beatmapping-guidelines rules): ONE SABER must physically
+      TRAVEL between notes — consecutive notes closer than min_gap in time
+      must be ≥ 2 grid cells apart (the swing can't teleport), and a HEAD-LEVEL
+      (y=2) note needs double the spacing after a distant note (the swing arc
+      to head level is the longest travel in the game). Violating notes are
+      dropped (the kept sequence keeps breathing room).
 
     The input dict is not modified (a deep copy is returned).
     """
@@ -1719,6 +1764,12 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
 
     occupied_times = set()                    # beats already claimed by a kept note
 
+    def _grid_pos(n):
+        x = int(n.get("x", 0) if v3 else n.get("_lineIndex", 0))
+        y = int(n.get("y", 0) if v3 else n.get("_lineLayer", 0))
+        return x, y
+
+    last_kept = None                          # (t, x, y) of the last kept note
     kept = []
     for note in sorted(out_notes, key=_time):
         if _is_bomb(note):
@@ -1728,6 +1779,26 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
         # One saber can only hit one note at a given instant.
         if t in occupied_times:
             continue
+        # M15 travel rules (one saber must physically reach the next note):
+        # required time grows WITH the grid distance (a same-cell dot pair is
+        # a natural double-swing — the M5 semantics keep it; a cross-grid
+        # jump needs the full swing; head level extends the arc).
+        if last_kept is not None:
+            dt = t - last_kept[0]
+            gx, gy = _grid_pos(note)
+            dist = abs(gx - last_kept[1]) + abs(gy - last_kept[2])
+            if dist == 0:
+                required = 0.0                # same cell: the saber is already there
+            elif dist == 1:
+                required = min_gap / 2.0      # a one-cell hop
+            elif dist == 2:
+                required = min_gap             # a two-cell reach
+            else:
+                required = min_gap * 2.0       # a cross-grid jump
+            if gy == 2 and dist >= 2:
+                required = max(required, min_gap * 2.0)   # the head-level arc
+            if dt < required - 1e-9:
+                continue                      # physically unreachable in time
         # Recolor to the single saber color and convert to a DOT (Exp 218:
         # arrows in generated OneSaber read as "still Standard" to the user).
         if v3:
@@ -1739,6 +1810,7 @@ def _generate_one_saber(beatmap_data: dict, min_gap: float = _ONE_SABER_MIN_GAP)
             note["_cutDirection"] = 8
         kept.append(note)
         occupied_times.add(t)
+        last_kept = (t, _grid_pos(note)[0], _grid_pos(note)[1])
 
     if v3:
         out["colorNotes"] = kept
@@ -1789,8 +1861,41 @@ def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE
     events = []
     pos = 0.0          # cumulative rotation — starts at the center lane
     direction = 1.0    # sweep direction: +1 = right (CW), -1 = left (CCW)
+
+    # M15 (Exp 286, the KB 90-degree rules): rotations must never fire
+    # mid-pattern — align each cycle's rotation to the NEAREST REST BEAT (a
+    # gap in the note stream ≥ half the cycle) within the cycle window, and
+    # keep ~½ beat of clear space after it so the player can re-orient
+    # before the next note. Blind fixed-cycle rotations (the old behavior)
+    # landed anywhere — including directly under a stream.
+    note_times = sorted({round(float(n.get("b", 0.0)), 4)
+                         for n in out.get("colorNotes", []) or []})
+
+    def _nearest_rest(target: float) -> float:
+        """The beat NEAREST the target (searching outward in ¼-beat steps,
+        capped at ±cycle/2) with ≥ 0.5 beats of clearance to every note —
+        prefer staying on-cycle over maximizing distance."""
+        half = cycle_beats / 2
+        lo = max(first_beat - 1e-9, target - half)
+        hi = target + half
+        if not note_times:
+            return target
+        # graceful degradation: prefer a real rest (≥0.5 clear), then a
+        # mid-16th gap (≥0.25), then any sliver — a wall-to-wall stream
+        # leaves no clear beat at all, and the rotation must still fire
+        for need in (0.5, 0.25, 0.125, 0.0):
+            for offset in [0.0] + [0.25 * k for k in range(-16, 17) if k != 0]:
+                cand = target + offset
+                if cand < lo - 1e-9 or cand > hi + 1e-9:
+                    continue
+                clear = min((abs(nt - cand) for nt in note_times), default=99.0)
+                if clear >= need - 1e-9:
+                    return round(cand, 4)
+        return round(target, 4)  # unreachable in practice; never stall
+
     t = first_beat
     while t < last_beat + cycle_beats:
+        rot_at = _nearest_rest(t)
         next_pos = pos + direction * step_deg
         if next_pos > max_deg:
             direction = -1.0
@@ -1798,9 +1903,9 @@ def _generate_90_degree(beatmap_data: dict, cycle_beats: float = _ROTATION_CYCLE
         elif next_pos < -max_deg:
             direction = 1.0
             next_pos = pos + step_deg
-        events.append({"b": round(t, 4), "e": 1, "r": next_pos - pos})
+        events.append({"b": round(rot_at, 4), "e": 1, "r": next_pos - pos})
         pos = next_pos
-        t += cycle_beats
+        t = max(t, rot_at) + cycle_beats
     out["rotationEvents"] = existing + events
     return out
 
@@ -1812,10 +1917,77 @@ _MODE_GENERATORS = {
 }
 
 
-def fill_missing_standard_difficulties(song_dir: str) -> list[str]:
+def _descend_difficulty(song_dir: str, target_diff: str, source_diff: str,
+                        bpm: float | None, beatmap_files: list) -> str | None:
+    """M15 (Exp 286): generate a missing Easy/Normal/Hard from the map's
+    densest chart via the difficulty engine. Returns the written file name,
+    or None (the caller falls back to the clone). Reads Info.dat for the BPM
+    when the caller doesn't have it; converts V2/V4 sources to V3 first."""
+    import difficulty_engine
+
+    src_file = _select_beatmap_file(source_diff, beatmap_files,
+                                     ignore_non_standard=True)
+    if not src_file:
+        return None
+    src_path = os.path.join(song_dir, src_file)
+    try:
+        with open(src_path, 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+    except Exception as e:
+        log.warning(f"  Descent: could not read {src_path}: {e}")
+        return None
+    if is_v4_beatmap(data):
+        data = convert_v4_to_v3(data)
+    if is_v2_beatmap(data):
+        data = convert_v2_to_v3(data, default_bpm=bpm or 120.0)
+    source_notes = data.get('colorNotes') or []
+    if len(source_notes) < 50:
+        return None          # too thin to descend from meaningfully
+    if bpm is None:
+        bpm = _read_info_bpm(song_dir) or 120.0
+    try:
+        gen = difficulty_engine.descend(
+            source_notes, bpm=bpm, difficulty=target_diff,
+            source_bombs=data.get('bombNotes') or [],
+            source_walls=data.get('obstacles') or [])
+    except Exception as e:
+        log.warning(f"  Descent {target_diff} from {source_diff} failed ({e}) "
+                    "— falling back to the clone")
+        return None
+    if not gen['notes']:
+        return None
+    # A minimal, schema-complete V3 beatmap (the Normalize-V3 step later in
+    # the pipeline adds any arrays we don't know — same as community maps)
+    out = {
+        'version': '3.3.0',
+        'colorNotes': [{'b': n['b'], 'x': n['x'], 'y': n['y'],
+                        'c': n['c'], 'd': n['d'], 'a': n.get('a', 0)}
+                       for n in gen['notes']],
+        'bombNotes': gen.get('bombs', []),
+        'obstacles': gen.get('walls', []),
+        'basicBeatmapEvents': data.get('basicBeatmapEvents')
+                                or data.get('_events') or [],
+    }
+    out_name = f"{target_diff}.dat"
+    out_path = os.path.join(song_dir, out_name)
+    if os.path.exists(out_path):
+        return None
+    with open(out_path, 'w', encoding='utf-8') as fh:
+        json.dump(out, fh)
+    summary = difficulty_engine.chart_summary(gen['notes'])
+    log.info(f"  Filled missing difficulty '{target_diff}' \u2190 DESCENDED from "
+             f"{source_diff} ({summary['n']} notes \u00b7 {summary['notes_per_beat']}"
+             f" notes/beat \u00b7 gap {summary['gap_median']} \u00b7 the official "
+             f"{target_diff} ladder)")
+    return out_name
+
+
+def fill_missing_standard_difficulties(song_dir: str,
+                                        bpm: float | None = None,
+                                        skip_descent: bool = False) -> list[str]:
     """
     Materialize a Standard beatmap file for every difficulty the source map
-    does not provide, cloned from the map's own closest difficulty.
+    does not provide.
 
     Why (Exp 218): every difficulty slot in the target bundle corresponds to a
     TextAsset that the pipeline replaces ONLY when a matching source file
@@ -1824,10 +1996,14 @@ def fill_missing_standard_difficulties(song_dir: str) -> list[str]:
     notes wayyy too late"). This must run BEFORE mode generation (which gates
     on a Standard source per diff) and BEFORE beatmap replacement.
 
-    Donor choice: the closest HARDER difficulty (playing up is safer than
-    down); if none, the closest easier one. Never overwrites an existing file.
+    M15 (Exp 286): missing Easy/Normal/Hard are now DESCENDED from the map's
+    densest chart (ExpertPlus/Expert) by the difficulty engine —
+    official-band density, the snap ladder, flow repair, zero vision blocks —
+    instead of cloned (the clone made Easy a copy of whatever existed, offical
+    DLC it was not). When the only available source is the adjacent tier
+    (thin → thin), the clone remains. --skip-difficulty-descent opts out.
 
-    Returns list of written file names.
+    Never overwrites an existing file. Returns list of written file names.
     """
     beatmap_files = [f for f in sorted(os.listdir(song_dir))
                      if f.endswith(('.dat', '.json'))]
@@ -1856,6 +2032,26 @@ def fill_missing_standard_difficulties(song_dir: str) -> list[str]:
         if donor_diff is None:
             log.warning(f"  No donor difficulty for missing '{diff}' — skipping")
             continue
+
+        # M15 (Exp 286): the descent path — for missing Easy/Normal/Hard with a
+        # dense source >= 2 tiers up, generate official-style content instead
+        # of cloning. The densest available source (E+ > Expert > ...) gives
+        # the engine the real rhythm to descend.
+        if (not skip_descent and diff in ("Easy", "Normal", "Hard")):
+            dense_order = [d for d in reversed(DIFFICULTIES) if d in have]
+            densest = None
+            tier_gap = 0
+            if dense_order:
+                densest = dense_order[0]
+                tier_gap = DIFFICULTIES.index(densest) - DIFFICULTIES.index(diff)
+            if densest and tier_gap >= 2:
+                written_name = _descend_difficulty(
+                    song_dir, diff, densest, bpm, beatmap_files)
+                if written_name:
+                    written.append(written_name)
+                    have.add(diff)
+                    continue
+                # descent failed → fall through to the clone path
 
         donor_file = _select_beatmap_file(donor_diff, beatmap_files,
                                           ignore_non_standard=True)
@@ -3631,16 +3827,29 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     #      pass 1 uploaded variant v1; pass 2 rebuilt v2 (same size, different
     #      bytes), the catalog encoded v2's CRC, and this skip blocked v2's
     #      upload → catalog/file mismatch → CE-34878-0 at the pack scan.
-    # So: same-process + already-uploaded + remote size unchanged → skip.
-    # Anything else uploads.
+    # So: same-process + already-uploaded + THE SAME LOCAL BYTES + remote
+    # size unchanged → skip. Anything else uploads. (Exp 290, the user's
+    # batch failure: the catalog rebuilt to the SAME SIZE with DIFFERENT
+    # bytes — a new pack's entries replaced old ones — and the size-only
+    # skip blocked the corrective upload; the validation's md5 check caught
+    # it but the batch had already stopped. The ledger now records the md5
+    # of the bytes WE uploaded; a local rebuild with different bytes always
+    # re-uploads.)
     if ('pack_modes' in remote_name or remote_name == 'catalog_pack_modes.json') \
             and remote_name in _SESSION_UPLOADED_BUNDLES:
-        remote = _list_remote_dir(config)
-        remote_size = (remote or {}).get(remote_name)
-        if remote_size is not None and remote_size == os.path.getsize(local_path):
-            log.info(f"  ⏭️  {remote_name}: this session's upload is live on PS4 "
-                     f"({remote_size:,} B, unchanged) — re-upload skipped")
-            return True
+        import hashlib
+        with open(local_path, 'rb') as fh:
+            local_md5 = hashlib.md5(fh.read()).hexdigest()
+        if _SESSION_UPLOADED_BUNDLES[remote_name] != local_md5:
+            log.info(f"  🔁 {remote_name}: the local build changed since this "
+                     "session's upload (different bytes) — re-uploading")
+        else:
+            remote = _list_remote_dir(config)
+            remote_size = (remote or {}).get(remote_name)
+            if remote_size is not None and remote_size == os.path.getsize(local_path):
+                log.info(f"  ⏭️  {remote_name}: this session's upload is live on PS4 "
+                         f"({remote_size:,} B, bytes verified) — re-upload skipped")
+                return True
 
     cmd = [
         "lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
@@ -3649,7 +3858,9 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.info(f"  Deploying {remote_name} -> {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode == 0:
-        _SESSION_UPLOADED_BUNDLES.add(remote_name)
+        import hashlib
+        with open(local_path, 'rb') as fh:
+            _SESSION_UPLOADED_BUNDLES[remote_name] = hashlib.md5(fh.read()).hexdigest()
         log.info(f"  ✅ {remote_name} deployed")
         return True
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")
@@ -5434,6 +5645,8 @@ Examples:
                              'characteristic slots (OneSaber, NoArrows, 90Degree). '
                              'This is now the default; flag kept for backward compatibility. '
                              'Use --disable-beatmap-mode-mapping to opt out.')
+    parser.add_argument('--skip-difficulty-descent', action='store_true',
+                        help='Skip the M15 difficulty engine for missing Easy/Normal/Hard (fall back to cloning the closest difficulty). The engine descends from ExpertPlus/Expert using the MEASURED official difficulty grammar (density bands, the snap ladder, flow repair, zero vision blocks).')
     parser.add_argument('--skip-mode-generation', action='store_true',
                         help='Do not generate missing mode-specific beatmaps (only enable the '
                              'mode sets in the bundle; modes keep Standard data). Mode mapping '
@@ -5946,7 +6159,9 @@ Examples:
     # unreplaced bundle slots — stock timing over custom audio = "notes wayyy
     # too late / BPM too slow". Clones the map's closest difficulty so every
     # slot gets content on the custom song's own beat grid.
-    filled = fill_missing_standard_difficulties(args.song_dir)
+    filled = fill_missing_standard_difficulties(
+        args.song_dir, bpm=_read_info_bpm(args.song_dir),
+        skip_descent=args.skip_difficulty_descent)
     if filled:
         log.info(f"  Filled missing Standard difficulties: {filled}")
 

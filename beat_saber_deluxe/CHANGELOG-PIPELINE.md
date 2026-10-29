@@ -1,5 +1,53 @@
 # Pipeline Changelog
 
+## v0.5368 (2026-10-25)
+### Fixed (Exp 290 — the user's batch failure: "Post-deploy validation FAILED" stopped the batch at song 1/47)
+- **The session upload ledger now records BYTES (md5), not just names.** The
+  batch's first song rebuilt `catalog_pack_modes.json` to the SAME SIZE with
+  DIFFERENT bytes (the new billieeilish entries replaced the old ones — the
+  2251 dataIndexes dominate the file size), and the size-only skip blocked
+  the corrective upload; the PS4 kept the old catalog against the new pack
+  bundle (the validation's md5 check caught it — the batch stopped with the
+  console in a CE-34878-0 risk state). The skip is now content-verified:
+  the ledger stores the md5 of the bytes WE uploaded; a local rebuild with
+  different bytes ALWAYS re-uploads. Regression tests pin the exact
+  same-size/different-bytes scenario.
+
+
+## v0.5367 (2026-10-24)
+### Added — M15: the Lower-Difficulty Descent Engine (Exps 285-286)
+- **Missing Easy/Normal/Hard are now DESCENDED from the map's densest chart
+  (ExpertPlus/Expert) instead of cloned** — official-grade charts following
+  the MEASURED official difficulty grammar (304 official songs: density
+  bands 0.65/1.0/1.5 notes/beat, the snap ladder 87%→62% on-beat, gap
+  medians 2/1/½ beats, bombs stripped per the official object policy,
+  zero vision blocks). `tools/difficulty_engine.py`: stride selection +
+  hole-filling + L/R emphasis doubles + cross-tier color alternation +
+  flow repair + per-difficulty direction sets. `--skip-difficulty-descent`
+  opts out (clone fallback). Validated by the official round-trip (15/15)
+  AND live on the user's real Beat Sage map: Easy 0.54 · Normal 1.00 ·
+  Hard 1.51 notes/beat — all in the official bands.
+- **GRID INFERENCE (the Beat Sage discovery):** their maps label _time with
+  a wrong BPM estimate (claimed 120, the song really ~88) so the note times
+  drift off every fixed grid. The engine now fits the source's true beat
+  grid (a PLL tracker walking the song, drift-correcting at each lock) and
+  works in TRUE beats while emitting the notes' ORIGINAL times.
+
+### Changed — the mode generators follow the charting guidelines (the user's
+"almost impossible to play in one-saber mode" report)
+- **OneSaber:** travel-time rules — required time grows with grid distance
+  (same-cell double-swings kept; a one-cell hop needs ½ gap; a two-cell
+  reach needs the full gap; cross-grid jumps need 2×; head-level (y=2)
+  notes get the long-arc time). Physically unreachable notes are dropped.
+- **NoArrows:** the same-hand cluster audit — same-color dots closer than
+  ¼ beat within 2 cells read as one blob (one hand can't take both); the
+  later is dropped, keeping the two-hand alternation clean.
+- **90Degree:** rotations now rest-align — each cycle's rotation lands on
+  the nearest clear beat (≥½ beat of clearance preferred, graceful
+  degradation in dense sections) instead of firing blind on the clock,
+  directly under streams.
+
+
 ## v0.5366 (2026-10-23)
 ### Fixed (Exp 283d — the user's field report: a fresh deploy's song kept its STOCK menu preview)
 - **Deploy-order bug: the pack/preview pass ran before the deploy's own song

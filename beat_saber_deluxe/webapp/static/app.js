@@ -16,6 +16,8 @@ const state = {
   staged: [],                   // staged local songs (M13)
   pollTimer: null,
   bsageTimer: null,
+  lastAutoTitle: null,          // the last test-song auto-fill (the stale-prefill fix)
+  lastAutoArtist: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -37,6 +39,7 @@ async function detectMode() {
   badge.className = state.mode === "local-backend" ? "local" : "pages";
   if (state.mode === "pages") {
     document.querySelectorAll(".local-only").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll(".pages-only").forEach(el => el.style.display = "");
     // Command-builder mode: the Deploy button can't run anything — relabel
     // it so the expectation is correct before the click.
     const deployBtn = document.getElementById("btn-deploy");
@@ -419,40 +422,109 @@ async function validateLocalDir() {
   }
 }
 
+async function loadTestSongsCard() {
+  // The Test Songs card (M15): registry-driven select + preview player +
+  // download links (WAV always; MP3 transcoded on the fly when ffmpeg
+  // exists on the machine running the web app).
+  const sel = $("testsongs-select");
+  if (!sel) return;
+  let songs = [
+    ["theme", "BSD Deluxe Theme — the original synth (48s)"],
+    ["nes_groove", "NES Groove — drums + bass + riff (64s, 120 BPM)"],
+    ["nes_scale_runner", "NES Scale Runner — running major scales (60s, 140 BPM)"],
+  ];
+  try {
+    const j = await api("/api/songs/test-songs");
+    if (j.songs && j.songs.length) {
+      songs = j.songs.map(s => [s.key, `${s.label} (${s.seconds}s)`]);
+    }
+  } catch { /* fall back to the static list (pages mode) */ }
+  sel.innerHTML = songs.map(([k, label]) =>
+    `<option value="${k}">${esc(label)}</option>`).join("");
+  const update = () => {
+    const k = sel.value;
+    const url = `/api/songs/test-song?type=${encodeURIComponent(k)}`;
+    $("testsongs-player").src = url + "&download=false";
+    $("testsongs-wav").href = url;
+    $("testsongs-mp3").href = url + "&format=mp3";
+    // probe MP3 availability once per selection (graceful when no ffmpeg)
+    fetch(url + "&format=mp3", { method: "HEAD" })
+      .then(r => {
+        $("testsongs-mp3-note").textContent =
+          r.ok ? "" : "(MP3 unavailable on this machine — the WAV works everywhere)";
+        $("testsongs-mp3").style.display = r.ok ? "" : "none";
+      })
+      .catch(() => { $("testsongs-mp3").style.display = "none"; });
+  };
+  sel.addEventListener("change", update);
+  update();
+}
+
+
+function loadTestSongPicker() {
+  // The rights-clean test-song registry (M15's chiptunes + the theme),
+  // rendered from the same server payload the endpoint dispatches on.
+  const sel = $("bsage-testsong-select");
+  if (!sel) return;
+  const songs = [
+    ["theme", "BSD Deluxe Theme — the original synth (48s, 120 BPM)"],
+    ["nes_groove", "NES Groove — drums + bass + riff (64s, 120 BPM)"],
+    ["nes_scale_runner", "NES Scale Runner — running major scales (60s, 140 BPM)"],
+    ["nes_beattour", "NES BeatTour 2026 — a tour of drum patterns (96s, 128 BPM)"],
+    ["nes_scale_expedition", "NES Scale Expedition — every scale, thoroughly (120s, 132 BPM)"],
+    ["one_and_half_dragons", "One And a Half Dragons — the action-theme homage (84s, 150 BPM)"],
+  ];
+  sel.innerHTML = songs.map(([k, label]) => `<option value="${k}">${esc(label)}</option>`).join("");
+}
+
 async function useTestSong() {
-  // Fetch the rights-clean synth theme on demand and attach it to the form —
-  // one click and the Generate flow is ready (no audio hunting). The song is
-  // 100% mathematical synthesis: deterministic, and the 48s default is
-  // byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
-  // The button itself tells the story (disable + relabel) — the click must be
-  // OBVIOUSLY doing something (the Exp 283e user report: "does nothing that
-  // I can notice").
+  // Fetch the selected rights-clean test song on demand and attach it to the
+  // form — one click and the Generate flow is ready (no audio hunting). All
+  // of them are 100% mathematical synthesis (deterministic; the theme's 48s
+  // default is byte-identical to the deployed 'BSD Deluxe Theme'; the
+  // chiptunes use authentic NES channels — pulse/triangle/LFSR noise).
+  // The button tells the story (disable + relabel) — the click must be
+  // OBVIOUSLY doing something (the Exp 283e user report).
   const btn = $("btn-bsage-testsong");
+  const sel = $("bsage-testsong-select");
+  const type = (sel && sel.value) || "theme";
+  const titles = {
+    theme: ["BSD Deluxe Theme (An Original)", "Beat Saber Deluxe Synth"],
+    nes_groove: ["BSD NES Groove", "BSD Chiptune Synth"],
+    nes_scale_runner: ["BSD NES Scale Runner", "BSD Chiptune Synth"],
+  };
+  const [title, artist] = titles[type] || titles.theme;
   const original = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "⏳ Synthesizing the test song…";
-  setResult("bsage-result", "Synthesizing the original test song (pure math, " +
-    "deterministic)…", "");
+  btn.textContent = "⏳ Synthesizing…";
+  setResult("bsage-result", "Synthesizing the test song (pure math, deterministic)…", "");
   try {
-    const r = await fetch("/api/songs/test-song?seconds=48");
+    const r = await fetch(`/api/songs/test-song?type=${encodeURIComponent(type)}`);
     if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
     const blob = await r.blob();
-    const file = new File([blob], "bsd_deluxe_theme_48s.wav", { type: "audio/wav" });
+    const file = new File([blob], `bsd_${type}.wav`, { type: "audio/wav" });
     const dt = new DataTransfer();
     dt.items.add(file);
     $("bsage-audio").files = dt.files;   // attach programmatically
-    if (!$("bsage-title").value) $("bsage-title").value = "BSD Deluxe Theme (An Original)";
-    if (!$("bsage-artist").value) $("bsage-artist").value = "Beat Saber Deluxe Synth";
-    btn.textContent = "✓ Test song attached — now press Generate";
-    setResult("bsage-result", "✅ Test song attached to the form (48s, rights-clean — " +
-      "synthesized from scratch, the same song every time). Press Generate to " +
-      "send it to Beat Sage.", "ok");
+    // The prefill updates when the field is empty OR still holds OUR previous
+    // auto-fill (the Exp 292 report: switching songs kept the stale "BSD
+    // Deluxe Theme" title). A hand-edited title is never clobbered.
+    if (!$("bsage-title").value || $("bsage-title").value === state.lastAutoTitle)
+        $("bsage-title").value = title;
+    if (!$("bsage-artist").value || $("bsage-artist").value === state.lastAutoArtist)
+        $("bsage-artist").value = artist;
+    state.lastAutoTitle = title;
+    state.lastAutoArtist = artist;
+    btn.textContent = "✓ Attached — now press Generate";
+    setResult("bsage-result", `✅ “${title}” attached (rights-clean — synthesized ` +
+      "from scratch, the same song every time). Press Generate to send it to " +
+      "Beat Sage.", "ok");
   } catch (e) {
     // DataTransfer/file-input restrictions or fetch failure → plain download
     btn.textContent = original;
     setResult("bsage-result", "Starting a plain download instead — pick the " +
       `downloaded .wav as the audio file. (${esc(e.message)})`, "warn");
-    window.location = "/api/songs/test-song?seconds=48";
+    window.location = `/api/songs/test-song?type=${encodeURIComponent(type)}`;
     return;
   }
   setTimeout(() => { btn.disabled = false; btn.textContent = original; }, 10000);
@@ -1778,6 +1850,8 @@ async function boot() {
   if (state.mode === "local-backend") {
     loadDumpDefault();
     loadBeatsageGuide();   // M13: the guided card + recommended options
+    loadTestSongPicker();  // M15: the test-song registry (chiptunes + theme)
+    loadTestSongsCard();   // M15: the Test Songs card (preview + downloads)
     loadStaged();          // M13: the recent-songs list (persists restarts)
     try {
       const cfg = await api("/api/config");
@@ -1813,6 +1887,15 @@ document.addEventListener("DOMContentLoaded", () => {
   $("btn-bs-lookup").addEventListener("click", lookupMapId);
   $("btn-bsage-generate").addEventListener("click", generateWithBeatsage);
   $("btn-bsage-testsong").addEventListener("click", useTestSong);
+  $("btn-testsongs-attach").addEventListener("click", () => {
+    // bridge: the Test Songs card → the Beat Sage form (select + attach)
+    const k = $("testsongs-select").value;
+    const bsageSel = $("bsage-testsong-select");
+    if (bsageSel) bsageSel.value = k;
+    useTestSong();
+    setResult("testsongs-note", "Attached to the Beat Sage form below — press " +
+      "Generate to send it to beatsage.com.", "ok");
+  });
   $("btn-local-validate").addEventListener("click", validateLocalDir);
   $("local-song-path").addEventListener("keydown", e => { if (e.key === "Enter") validateLocalDir(); });
   wireZipDrop();

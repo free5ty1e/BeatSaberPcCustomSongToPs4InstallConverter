@@ -51,3 +51,7 @@ beat_saber_deluxe/webapp/batches/
 # transient Beat Sage audio uploads — user content, never committed
 beat_saber_deluxe/webapp/staged_songs/
 beat_saber_deluxe/webapp/beatsage_uploads/
+
+# M15: the measured official grammar (regenerable from any dump via
+# development/scripts/measure_official_difficulty_grammar.py — aggregates only)
+beat_saber_deluxe/official_difficulty_grammar.json
