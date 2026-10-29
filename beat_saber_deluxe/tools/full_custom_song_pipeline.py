@@ -55,7 +55,7 @@ sys.path.insert(0, TOOLS_DIR)
 # bundle built by a different pipeline version) is reported as an
 # informational note, not a deploy-blocking error — the deployed copy is
 # what the game boots, and the deploy never touched that song.
-_SESSION_UPLOADED_BUNDLES: set[str] = set()
+_SESSION_UPLOADED_BUNDLES: dict[str, str] = {}   # remote name → the md5 of the bytes WE uploaded
 
 
 # ---------------------------------------------------------------------------
@@ -1340,7 +1340,9 @@ def deploy_to_ps4(bundle_path: str, target_name: str, config: dict):
         log.warning(f"  ⚠️ Bundle deploy SIZE MISMATCH — remote {remote_path} is "
                     f"{listed_size} bytes, expected {local_size}")
         return
-    _SESSION_UPLOADED_BUNDLES.add(remote_name)
+    import hashlib
+    with open(bundle_path, 'rb') as fh:
+        _SESSION_UPLOADED_BUNDLES[remote_name] = hashlib.md5(fh.read()).hexdigest()
     log.info(f"  ✅ Bundle deployment successful ({listed_size} bytes verified on PS4)")
 
 
@@ -3825,16 +3827,29 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     #      pass 1 uploaded variant v1; pass 2 rebuilt v2 (same size, different
     #      bytes), the catalog encoded v2's CRC, and this skip blocked v2's
     #      upload → catalog/file mismatch → CE-34878-0 at the pack scan.
-    # So: same-process + already-uploaded + remote size unchanged → skip.
-    # Anything else uploads.
+    # So: same-process + already-uploaded + THE SAME LOCAL BYTES + remote
+    # size unchanged → skip. Anything else uploads. (Exp 290, the user's
+    # batch failure: the catalog rebuilt to the SAME SIZE with DIFFERENT
+    # bytes — a new pack's entries replaced old ones — and the size-only
+    # skip blocked the corrective upload; the validation's md5 check caught
+    # it but the batch had already stopped. The ledger now records the md5
+    # of the bytes WE uploaded; a local rebuild with different bytes always
+    # re-uploads.)
     if ('pack_modes' in remote_name or remote_name == 'catalog_pack_modes.json') \
             and remote_name in _SESSION_UPLOADED_BUNDLES:
-        remote = _list_remote_dir(config)
-        remote_size = (remote or {}).get(remote_name)
-        if remote_size is not None and remote_size == os.path.getsize(local_path):
-            log.info(f"  ⏭️  {remote_name}: this session's upload is live on PS4 "
-                     f"({remote_size:,} B, unchanged) — re-upload skipped")
-            return True
+        import hashlib
+        with open(local_path, 'rb') as fh:
+            local_md5 = hashlib.md5(fh.read()).hexdigest()
+        if _SESSION_UPLOADED_BUNDLES[remote_name] != local_md5:
+            log.info(f"  🔁 {remote_name}: the local build changed since this "
+                     "session's upload (different bytes) — re-uploading")
+        else:
+            remote = _list_remote_dir(config)
+            remote_size = (remote or {}).get(remote_name)
+            if remote_size is not None and remote_size == os.path.getsize(local_path):
+                log.info(f"  ⏭️  {remote_name}: this session's upload is live on PS4 "
+                         f"({remote_size:,} B, bytes verified) — re-upload skipped")
+                return True
 
     cmd = [
         "lftp", "-u", user_part, "-p", str(ftp_port), ftp_host,
@@ -3843,7 +3858,9 @@ def _deploy_file_to_ps4(config: dict, local_path: str, remote_name: str) -> bool
     log.info(f"  Deploying {remote_name} -> {remote_path}")
     result = sp.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode == 0:
-        _SESSION_UPLOADED_BUNDLES.add(remote_name)
+        import hashlib
+        with open(local_path, 'rb') as fh:
+            _SESSION_UPLOADED_BUNDLES[remote_name] = hashlib.md5(fh.read()).hexdigest()
         log.info(f"  ✅ {remote_name} deployed")
         return True
     log.warning(f"  ⚠️  Deploy failed for {remote_name}: {result.stderr}")

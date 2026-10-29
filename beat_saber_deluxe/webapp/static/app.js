@@ -466,8 +466,11 @@ function loadTestSongPicker() {
   if (!sel) return;
   const songs = [
     ["theme", "BSD Deluxe Theme — the original synth (48s, 120 BPM)"],
-    ["nes_groove", "NES Groove — drums + bass + duty-cycled riff (64s, 120 BPM)"],
+    ["nes_groove", "NES Groove — drums + bass + riff (64s, 120 BPM)"],
     ["nes_scale_runner", "NES Scale Runner — running major scales (60s, 140 BPM)"],
+    ["nes_beattour", "NES BeatTour 2026 — a tour of drum patterns (96s, 128 BPM)"],
+    ["nes_scale_expedition", "NES Scale Expedition — every scale, thoroughly (120s, 132 BPM)"],
+    ["one_and_half_dragons", "One And a Half Dragons — the action-theme homage (84s, 150 BPM)"],
   ];
   sel.innerHTML = songs.map(([k, label]) => `<option value="${k}">${esc(label)}</option>`).join("");
 }

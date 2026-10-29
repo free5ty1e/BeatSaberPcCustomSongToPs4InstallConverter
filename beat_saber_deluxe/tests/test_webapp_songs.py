@@ -477,7 +477,9 @@ class TestChiptuneSongs:
 
     def test_registry_has_three_types(self):
         from adapters import testsong
-        assert set(testsong.TEST_SONGS) == {"theme", "nes_groove", "nes_scale_runner"}
+        assert set(testsong.TEST_SONGS) == {"theme", "nes_groove", "nes_scale_runner",
+                                    "nes_beattour", "nes_scale_expedition",
+                                    "one_and_half_dragons"}
 
     def test_each_song_is_deterministic_and_wav(self):
         import hashlib
@@ -562,7 +564,9 @@ class TestTestSongsCard:
         r = client.get("/api/songs/test-songs")
         assert r.status_code == 200
         keys = [s["key"] for s in r.json()["songs"]]
-        assert keys == ["theme", "nes_groove", "nes_scale_runner"]
+        assert keys == ["theme", "nes_groove", "nes_scale_runner",
+                        "nes_beattour", "nes_scale_expedition",
+                        "one_and_half_dragons"]
 
     def test_preview_mode_serves_inline(self):
         import server as _server

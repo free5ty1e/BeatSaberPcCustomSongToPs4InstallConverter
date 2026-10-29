@@ -31,3 +31,12 @@ Experiment numbers continue from the M13 log (last used 284b) → first M15 expe
 - 7 new tests (determinism, endpoint, authenticity); suite 981+89.
 - M15.5 docs: the feature doc, the changelog (asserted anchors!), README + CI_RELEASE.
 - The live-experiment checklist formed: chiptune → Beat Sage → descend → deploy → play; plus the user's mass re-deploy plan.
+
+## Cycle 4 — Exps 288-289: the Test Songs card + the closed loop
+
+- The Test Songs card (registry endpoint, preview player, WAV/MP3 downloads, the attach bridge, pages-mode handling); ffmpeg installed + persisted.
+- The score refactor (the ground truth as a first-class artifact); the byte-identity check caught the dropped _finish_pcm.
+- THE CLOSED LOOP (the user's design): the oracle built → the chain run → Beat Sage's -14.29% BPM error + 4.6% grid lock measured → correction 1 (the time snap: 0→40%) → correction 2 (the multi-start EM) → correction 3 (the GCD quantization check) → VERDICT PASS (100% grid lock, 97-98% melody match on the descended charts).
+- Exp 290: THE BATCH BUG (the user's field report) — the size-only session-ledger skip blocked a same-size different-bytes catalog upload (the console left in a CE-34878-0 risk state, the batch stopped at 1/47). Fixed: the md5 ledger (content-verified skips). Regression tests pin the exact scenario.
+- Exp 291: THREE NEW CHIPTUNES per the user's designs — NES BeatTour 2026 (8 drum styles × 4 measures + fills + modulations), NES Scale Expedition (8 scales × 8 measures: runs/reversals/thirds/pivots with per-scale drums), One And a Half Dragons (the E-minor action-theme homage: 16th bass, the wide-interval hook, the pulse stabs, the half-time bridge). The registry/picker/CLI/oracle all carry the six songs.
+- PR #11 updated (title + the full M15 description). The AGENTS.md staging discipline restored.

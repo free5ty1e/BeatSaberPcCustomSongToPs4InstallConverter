@@ -90,18 +90,17 @@ PROFILES: dict[str, dict] = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _modal_sixteenth(times: list[float]) -> float:
-    """The fundamental 16th-note period in source units, from the inter-note
-    gap histogram (the smallest frequently-occurring gap). Beat Sage maps
-    measured: 16ths ≈ 0.35 b-units when their BPM claim is off."""
-    from collections import Counter
-    gaps = [round(b - a, 3) for a, b in zip(times, times[1:]) if b - a > 0.01]
+    """The fundamental 16th-note period in source units. Drift-robust (the
+    Exp 289 lesson: Beat Sage's audio drifts against their fixed BPM label,
+    so the gap histogram splits into jitter bands — 0.20/0.22 around the
+    true 0.214 — and an exact-mode pick grabbed a band edge, sending the
+    PLL to a wrong multiple): the MEDIAN of the small gaps sits on the
+    true period regardless of the band split."""
+    gaps = sorted(g for g in (b - a for a, b in zip(times, times[1:]))
+                  if 0.05 < g < 0.5)
     if not gaps:
         return 0.25
-    counts = Counter(g for g in gaps if g > 0)
-    # the smallest gap with >= 3% of all gaps (tolerate jitter at ±0.01)
-    threshold = max(3, int(0.03 * len(gaps)))
-    common = [g for g, n in counts.most_common(12) if n >= threshold]
-    return min(common) if common else counts.most_common(1)[0][0]
+    return gaps[len(gaps) // 2]
 
 
 def _direct_grid_fit(times: list[float]) -> float:
@@ -147,19 +146,94 @@ def infer_grid(times: list[float]) -> tuple[list[int], float]:
     """The grid-aware snap classification for a source chart. Perfectly
     gridded sources (official, most community maps) classify directly on
     the raw beat grid (beat period 1.0); drifting sources (Beat Sage's
-    mis-BPM'd output, live recordings) get the PLL tracker, whose inferred
-    16th period yields the TRUE beat period in source units (e.g. the
-    measured Beat Sage map: claimed 120 BPM, true ~86 — 16ths at 0.35
-    claimed-beats → beat period 1.40). The engine then works in TRUE beats
-    (the official bands are defined there) while emitting the notes'
-    ORIGINAL times untouched. Returns (snap codes per note, beat period
-    in source units)."""
+    mis-BPM'd output, live recordings) get the PLL tracker + a linear-
+    REGRESSION refinement: the first pass locks notes to a coarse grid
+    (the median-gap hint — drift splits the exact modes into jitter
+    bands), then the locked (time, grid-index) pairs regress to the TRUE
+    16th period (the regression absorbs tempo drift exactly — the
+    Scale Runner measured: 120 claimed, 140.2 recovered vs 140 true).
+    The engine then works in TRUE beats (the official bands are defined
+    there) while emitting the notes' ORIGINAL times untouched. Returns
+    (snap codes per note, beat period in source units)."""
     if not times:
         return [], 1.0
     if _direct_grid_fit(times) >= 0.60:
         return [snap_bucket(t) for t in times], 1.0
     hint = _modal_sixteenth(times)
-    return _track_grid(times, hint), max(4 * hint, 0.05)
+    first = _track_grid(times, hint)
+    # the refinement: regress time vs the locked 16th index
+    locked = [(t, k) for t, code, k in
+              zip(times, first, _lock_indices(times, hint, first))
+              if code in (0, 25, 50) and k is not None]
+    if len(locked) >= 20:
+        n = len(locked)
+        sx = sum(k for _, k in locked)
+        sy = sum(t for t, _ in locked)
+        sxx = sum(k * k for _, k in locked)
+        sxy = sum(t * k for t, k in locked)
+        denom = n * sxx - sx * sx
+        if abs(denom) > 1e-9:
+            slope = (n * sxy - sx * sy) / denom      # the TRUE 16th period
+            if 0.3 * hint < slope < 3.0 * hint:
+                hint = slope                          # the refined 16th
+    # ── the EM refinement + MULTI-START (the oracle's demand, Exp 289):
+    # the EM converges to the LOCAL optimum nearest its starting hint —
+    # multiple self-consistent grids exist within ±5% (the Scale Runner:
+    # the 139.4-BPM basin vs the true 140.0), and the wrong one leaves
+    # residual outliers. Multi-start EM: try hints across ±6% (a 1% step),
+    # run the snap+regress iterations from each, and keep the grid with the
+    # SMALLEST mean snapping residual (the true grid explains every note).
+    def em(h: float) -> float:
+        for _ in range(6):
+            pairs = [(t, round(t / h)) for t in times]
+            n = len(pairs)
+            sx = sum(k for _, k in pairs)
+            sy = sum(t for t, _ in pairs)
+            sxx = sum(k * k for _, k in pairs)
+            sxy = sum(t * k for t, k in pairs)
+            den = n * sxx - sx * sx
+            if abs(den) < 1e-9:
+                break
+            slope = (n * sxy - sx * sy) / den
+            if not (0.9 * h < slope < 1.1 * h):
+                break
+            if abs(slope - h) < 1e-7:
+                h = slope
+                break
+            h = slope
+        return h
+
+    def residual(h: float) -> float:
+        total = sum(abs(t - round(t / h) * h) for t in times)
+        return total / max(len(times), 1)
+
+    best_hint, best_res = hint, residual(hint)
+    for k in range(-6, 7):
+        if k == 0:
+            continue
+        trial = em(hint * (1.0 + 0.01 * k))
+        res = residual(trial)
+        if res < best_res - 1e-9:
+            best_hint, best_res = trial, res
+    hint = best_hint
+    refined = _track_grid(times, hint)
+    return refined, max(4 * hint, 0.05)
+
+
+def _lock_indices(times: list[float], hint: float,
+                  codes: list[int]) -> list[int | None]:
+    """The 16th-index each locked note snapped to (for the regression)."""
+    out: list[int | None] = []
+    ref_t, ref_k = times[0], 0
+    for t in times:
+        k_f = (t - ref_t) / hint + ref_k
+        k = round(k_f)
+        if abs(k_f - k) <= 0.30:
+            ref_t, ref_k = t, k
+            out.append(k)
+        else:
+            out.append(None)
+    return out
 
 
 
@@ -390,14 +464,23 @@ def descend(source_notes: list[dict], bpm: float, difficulty: str,
             else:
                 run = 0
 
-    # ── 3. FLOW REPAIR (direction rewriting) ────────────────────────────────
-    # Emission restores the ORIGINAL times (selection-only doctrine): the
-    # analysis ran in true beats, the output keeps the source's own clock.
+    # ── 3. FLOW REPAIR + TIME CORRECTION ────────────────────────────────────
+    # Emission snaps each note onto the INFERRED 16th grid (in source units).
+    # The loop's data (Exp 289, the oracle): mis-BPM'd sources drift against
+    # the music (Beat Sage's Scale Runner: 120 claimed vs 140 true — the
+    # oracle measured 0% grid lock on the raw times), and a chart labeled
+    # with the wrong BPM drifts IN-GAME too. The inferred grid IS the true
+    # musical grid in source units — snapping corrects sync AND musicality.
+    # For correctly-gridded sources (period 1.0, 16ths = 0.25) this is a
+    # no-op: they already sit on the grid.
+    sixteenth_period = beat_period / 4.0
     out: list[dict] = []
     last_by_color: dict[int, dict] = {}
     for n in selected:
-        b_out = n.get("b_orig", n["b"])
-        note = {"b": b_out, "x": n["x"], "y": n["y"], "c": n["c"],
+        b_raw = n.get("b_orig", n["b"])
+        b_out = round(b_raw / sixteenth_period) * sixteenth_period if \
+            sixteenth_period > 0 else b_raw
+        note = {"b": round(b_out, 6), "x": n["x"], "y": n["y"], "c": n["c"],
                 "d": _map_direction(n.get("d", 8), allowed), "a": n.get("a", 0)}
         prev = last_by_color.get(note["c"])
         if prev is not None:

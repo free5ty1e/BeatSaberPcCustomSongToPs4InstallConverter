@@ -1,5 +1,19 @@
 # Pipeline Changelog
 
+## v0.5368 (2026-10-25)
+### Fixed (Exp 290 — the user's batch failure: "Post-deploy validation FAILED" stopped the batch at song 1/47)
+- **The session upload ledger now records BYTES (md5), not just names.** The
+  batch's first song rebuilt `catalog_pack_modes.json` to the SAME SIZE with
+  DIFFERENT bytes (the new billieeilish entries replaced the old ones — the
+  2251 dataIndexes dominate the file size), and the size-only skip blocked
+  the corrective upload; the PS4 kept the old catalog against the new pack
+  bundle (the validation's md5 check caught it — the batch stopped with the
+  console in a CE-34878-0 risk state). The skip is now content-verified:
+  the ledger stores the md5 of the bytes WE uploaded; a local rebuild with
+  different bytes ALWAYS re-uploads. Regression tests pin the exact
+  same-size/different-bytes scenario.
+
+
 ## v0.5367 (2026-10-24)
 ### Added — M15: the Lower-Difficulty Descent Engine (Exps 285-286)
 - **Missing Easy/Normal/Hard are now DESCENDED from the map's densest chart
