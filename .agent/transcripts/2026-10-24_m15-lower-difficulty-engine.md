@@ -47,3 +47,7 @@ Experiment numbers continue from the M13 log (last used 284b) → first M15 expe
 - The console repaired (the catalog re-uploaded, validation PASSED — the md5-ledger skip working "bytes verified").
 - The Scale Runner deployed to Juice (the descended charts + Beat Sage's E+) — validation PASSED. THE FULL CHAIN COMPLETE.
 - Staged: the app.js fix. The mass re-deploy ready for the user's go.
+
+## Cycle 7 — Exp 293: THE EVALUATION PACK
+
+The lizzo pack filled with 9 A/B variants (4 songs × descent/Beat Sage + the theme) — all validated, distinct in-game titles/artists. The automation: build_ab_pack.py (the Beat Sage runs, the variant preps, the deploys — with 3 path bugs fixed along the way). The prefill bug fixed (state.lastAutoTitle/Artist). The user's play-test = the final judgment; the mass re-deploy ready next.
