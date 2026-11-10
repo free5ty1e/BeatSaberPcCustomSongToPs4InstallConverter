@@ -111,3 +111,31 @@ One saber = one hand hits EVERYTHING. Consequences (the user's report:
 Cross-references: [[official-difficulty-grammar]] (the measured targets),
 [[saber-colors-and-one-saber]] (the OneSaber color rule),
 [[beatsage-charting-behavior]] (why the engine exists).
+
+
+## The grid-native selection (the M15 engine, Exp 293 — the user's Dragon report)
+
+The descent's first working version still produced "chaotic" Hard charts —
+the user's play-test: "notes a bit off the beat... the wrong note chosen to
+transcribe down." Two compounding causes, both fixed:
+
+1. **Floating stride windows**: the stride walked beat positions without
+   aligning to the grid, so fast clusters (a 16th-position note next to the
+   on-beat note) elected the WRONG note. Fix: **grid-native windows** —
+   every note quantizes to the inferred 16th grid first; the windows anchor
+   at the downbeat with musical lengths (the ideal gap rounded to a
+   half-beat); each window elects its on-beat position (the snap-ladder
+   rank, the earliest on ties) with the L/R double when opposite colors
+   share the tick in different lanes.
+2. **The phase search was tried and REJECTED**: anchoring the 16th count at
+   the first note can rotate the grid by a pickup; a note-density phase
+   search (max on-beat count over the 4 rotations) is FLAT on
+   rhythmically-uniform sources (the Scale Runner's continuous 16th runs)
+   and a wrong rotation misplaces every note. Decision: **the map's own
+   downbeat (phase 0)** — the standard convention — with the honest residual
+   (the source's tempo drift vs the audio) measured and reported by the
+   oracle rather than hidden by a guessed rotation.
+
+The general lesson: a selection algorithm over a drifting/unsnapped source
+must QUANTIZE FIRST (grid-native positions), then select — never select on
+raw floating positions and snap afterwards.

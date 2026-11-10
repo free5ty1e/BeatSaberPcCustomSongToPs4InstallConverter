@@ -55,3 +55,14 @@ beat_saber_deluxe/webapp/beatsage_uploads/
 # M15: the measured official grammar (regenerable from any dump via
 # development/scripts/measure_official_difficulty_grammar.py — aggregates only)
 beat_saber_deluxe/official_difficulty_grammar.json
+
+# M15 (Exp 293): the deploy-generated state artifacts — regenerable, never
+# committed (the live PS4 state, not repo content)
+beat_saber_deluxe/pack_modes_bundles/
+beat_saber_deluxe/catalog_pack_modes.json
+beat_saber_deluxe/redirects.json
+beat_saber_deluxe/redirects.json.bak
+beat_saber_deluxe/mass_bundles/
+
+# Pi coding-agent state (sessions/auth) — lives in the container, never committed
+.pi_persist/

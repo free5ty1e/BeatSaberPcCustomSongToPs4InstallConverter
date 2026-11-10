@@ -450,7 +450,17 @@ The same pipeline, point-and-click. The web app is a **thin layer**: every
 Deploy button press runs the exact `--deploy-full` command above as a
 subprocess — nothing is re-implemented in the browser.
 
+**From a full repo checkout**, install the Python dependencies first (the
+release zip ships its own `requirements.txt`; the repo splits them by
+purpose):
+
 ```bash
+# web app only:
+pip install -r beat_saber_deluxe/webapp/requirements.txt
+
+# everything (web app + pipeline runtime + the pytest/lint dev suite):
+pip install -r requirements.txt -r beat_saber_deluxe/requirements-test.txt
+
 python3 beat_saber_deluxe/webapp/server.py
 # opens http://127.0.0.1:8765 in your browser (--no-browser to skip)
 ```

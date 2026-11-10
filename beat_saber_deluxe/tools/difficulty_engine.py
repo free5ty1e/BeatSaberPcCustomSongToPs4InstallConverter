@@ -28,6 +28,7 @@ full_custom_song_pipeline.is_v2_beatmap/convert_v2_to_v3).
 from __future__ import annotations
 
 import bisect
+import math
 from collections import Counter
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -120,6 +121,7 @@ def _track_grid(times: list[float], quarter_hint: float) -> list[int]:
     if not times:
         return []
     out: list[int] = []
+    ks: list[int | None] = []
     ref_t, ref_k = times[0], 0
     for t in times:
         k_f = (t - ref_t) / quarter_hint + ref_k
@@ -129,16 +131,25 @@ def _track_grid(times: list[float], quarter_hint: float) -> list[int]:
                                    # (±22% left 37% of a drifting song unclassified;
                                    #    ±38% over-locks into wrong grid positions)
             ref_t, ref_k = t, k    # drift-correct: re-anchor at this note
+            ks.append(k)
+            out.append(k % 4)      # provisional — the phase resolves below
+        else:
+            ks.append(None)
+            out.append(-1)
+    # THE PHASE: the map's own downbeat (phase 0) — the standard convention
+    # (a map's beat 0 = the audio's beat 0). The note-density phase search
+    # was tried and REJECTED (Exp 293): rhythmically-uniform sources (the
+    # Scale Runner's continuous 16th runs) make the count prior flat, and a
+    # wrong rotation is worse than the honest phase-0 alignment. The
+    # residual drift vs the TRUE tempo is Beat Sage's own tracking error —
+    # unavoidable from the map alone, measured and reported by the oracle.
+    out = []
+    for k in ks:
+        if k is None:
+            out.append(-1)
+        else:
             m = k % 4
             out.append(0 if m == 0 else 50 if m == 2 else 25)
-        else:
-            out.append(-1)
-    # resolve the downbeat ambiguity: relabel so the mode of {0, 50} with the
-    # most notes is on-beat (rhythm emphasis: strong beats carry more notes)
-    n_on = sum(1 for b in out if b == 0)
-    n_off = sum(1 for b in out if b == 50)
-    if n_off > n_on:
-        out = [{0: 50, 50: 0, 25: 25, -1: -1}[b] for b in out]
     return out
 
 
@@ -324,6 +335,7 @@ def descend(source_notes: list[dict], bpm: float, difficulty: str,
 
     ranked: dict[int, dict[float, list[dict]]] = {}
     for n, snap in zip(work, snap_codes):
+        n["_snap"] = snap
         if profile["snap_rank"].get(snap, 0.0) <= 0:
             continue                       # this difficulty doesn't use that snap
         ranked.setdefault(snap, {}).setdefault(round(n["b"], 4), []).append(n)
@@ -340,93 +352,83 @@ def descend(source_notes: list[dict], bpm: float, difficulty: str,
         for beat_pos, cands in pool.items():
             by_beat.setdefault(beat_pos, []).extend(cands)
 
-    # STRIDE SELECTION (Exp 285): TWO PHASES.
-    # PRIMARY: the strongest tier walks the WHOLE span at >= ideal_gap
-    # (span/target) spacing — even coverage, never front-loaded (the early
-    # stop at the target died at the bridge).
-    # FILL: weaker tiers add density into the gaps — min distance to ANY
-    # selected note >= gap_floor — until the measured target. (Distance to
-    # the LAST note left Hard at ~1.0 npb; the official band is 1.04–2.04.)
+    # STRIDE SELECTION v3 (Exp 293 — the user's Dragon play-test: "notes a
+    # bit off the beat... the wrong note chosen from fast clusters"): the
+    # windows are now GRID-NATIVE. Every note quantizes to the inferred
+    # 16th grid; the stride windows anchor at the DOWNBEAT with musical
+    # lengths (W = the ideal gap rounded to a half-beat), so every window
+    # CONTAINS its on-beat position and elects it — the official Easy is
+    # 87% on-beat, and the old floating windows picked 16th positions
+    # instead. The fill densifies in snap-priority order to the target.
+    quantum = 0.25                     # the 16th grid (true beats)
+    for n in work:
+        n["q"] = round(n["b"] / quantum) * quantum
+
     ideal_gap = max(profile["gap_floor_beats"], span_beats / max(target, 1))
-    tiers = sorted(ranked, key=lambda s: -profile["snap_rank"][s])
+    W = max(0.5, math.ceil(ideal_gap * 2) / 2)   # a musical half-beat length
+    n_windows = max(1, math.ceil(span_beats / W))
+
+    def snap_rank_of(note: dict) -> int:
+        order = {0: 3, 50: 2, 25: 1, -1: 0}
+        return order.get(note.get("_snap", -1), 0)
+
     selected: list[dict] = []
+    occupied: list[float] = []
 
-    def emit_double(cands: list[dict]) -> bool:
-        """The official L/R emphasis double — both colors at this tick, ONLY
-        when they sit in different lanes (the corpus: 0.0 same-lane y=2
-        pairs per official Easy/Normal chart). Returns True if a pair went
-        out; the caller falls back to the best single otherwise."""
-        by_color: dict[int, dict] = {}
-        for z in cands:
-            by_color.setdefault(z["c"], z)
-        if len(by_color) < 2:
-            return False
-        a, b = by_color[0], by_color[1]
-        if a["x"] == b["x"]:
-            return False
-        selected.append(a)
-        selected.append(b)
-        return True
+    def emit(note: dict) -> None:
+        selected.append(note)
+        bisect.insort(occupied, note["q"])
 
-    def pick_alternating(note: dict, beat_pos: float) -> dict:
-        """When this note repeats the last emitted color, prefer a nearby
-        opposite-color candidate (any allowed snap within ±0.5/±0.25)."""
-        if not selected or note["c"] != selected[-1]["c"]:
-            return note
-        for nearby in (beat_pos + 0.5, beat_pos - 0.5,
-                       beat_pos + 0.25, beat_pos - 0.25):
-            group = by_beat.get(round(nearby, 4))
-            if group and any(z["c"] != note["c"] for z in group):
-                alt = next(z for z in group if z["c"] != note["c"])
-                if abs(nearby - beat_pos) >= profile["gap_floor_beats"] - 1e-6:
-                    return alt
-        return note
+    def emit_window(lo: float, hi: float) -> None:
+        """Elect the window's strongest tick: the best snap rank (on-beat
+        first), the earliest such tick, then its L/R double when the tick
+        holds opposite colors in different lanes."""
+        ticks: dict[float, list[dict]] = {}
+        for n in work:
+            if lo <= n["q"] < hi and snap_rank_of(n) > 0:
+                ticks.setdefault(n["q"], []).append(n)
+        if not ticks:
+            return                     # an empty window — the source rests
+        best_tick = min(ticks, key=lambda q: (-max(snap_rank_of(z) for z in ticks[q]), q))
+        cands = sorted(ticks[best_tick], key=lambda z: z["x"])
+        colors = {z["c"] for z in cands}
+        if len(colors) > 1 and len({z["x"] for z in cands}) > 1:
+            emit(min(cands, key=lambda z: z["x"]))
+            emit(max(cands, key=lambda z: z["x"]))
+        else:
+            emit(cands[0])
 
-    # ── phase 1: the primary tier's stride walk ────────────────────────────
-    next_allowed = float("-inf")
-    if tiers:
-        pool = ranked[tiers[0]]
-        for beat_pos in sorted(pool):
-            if beat_pos < next_allowed - 1e-6:
-                continue
-            cands = pool[beat_pos]
-            if not emit_double(cands):
-                selected.append(pick_alternating(cands[0], beat_pos))
-            next_allowed = beat_pos + ideal_gap
+    for k in range(n_windows):
+        emit_window(k * W, (k + 1) * W)
 
-    # ── phase 2: the fill (all tiers, weakest holes first per tier) ───────
-    for snap in tiers:
+    # the fill: the remaining candidates in snap-priority order, to the
+    # measured target, respecting the gap floor
+    remaining = [n for n in work if n not in selected and snap_rank_of(n) > 0]
+    remaining.sort(key=lambda n: (-snap_rank_of(n), n["q"]))
+    for n in remaining:
         if len(selected) >= target:
             break
-        pool = ranked[snap]
-        occupied = sorted(x["b"] for x in selected)
-        for beat_pos in sorted(pool):
-            if len(selected) >= target:
-                break
-            idx = bisect.bisect_left(occupied, beat_pos)
-            near = float("inf")
-            if idx > 0:
-                near = min(near, beat_pos - occupied[idx - 1])
-            if idx < len(occupied):
-                near = min(near, occupied[idx] - beat_pos)
-            if near < profile["gap_floor_beats"] - 1e-6:
-                continue
-            cands = pool[beat_pos]
-            if not emit_double(cands):
-                selected.append(pick_alternating(cands[0], beat_pos))
-            occupied = sorted(x["b"] for x in selected)
+        idx = bisect.bisect_left(occupied, n["q"])
+        near = float("inf")
+        if idx > 0:
+            near = min(near, n["q"] - occupied[idx - 1])
+        if idx < len(occupied):
+            near = min(near, occupied[idx] - n["q"])
+        if near < profile["gap_floor_beats"] - 1e-6:
+            continue
+        emit(n)
 
-    # ── the final safety: exact duplicates must never survive ──────────────
+    # the final safety: exact duplicates must never survive
     seen: set[tuple] = set()
     deduped: list[dict] = []
-    for n in sorted(selected, key=lambda z: z["b"]):
-        key = (round(n["b"], 4), n["x"], n["y"], n["c"])
+    for n in sorted(selected, key=lambda z: z["q"]):
+        key = (round(n["b_orig"], 4), n["x"], n["y"], n["c"])
         if key in seen:
             continue
         seen.add(key)
         deduped.append(n)
     selected = deduped
-    selected.sort(key=lambda n: n["b"])
+    selected.sort(key=lambda n: n["q"])
 
     # ── 2. THE DOUBLE POLICY ─────────────────────────────────────────────
     # Same-tick L/R pairs are the official emphasis pattern (kept, capped by

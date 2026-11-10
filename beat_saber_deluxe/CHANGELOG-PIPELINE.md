@@ -1,5 +1,28 @@
 # Pipeline Changelog
 
+## v0.5369 (2026-10-25)
+### Changed — M15.4: the GRID-NATIVE selection (the user's Dragon play-test report)
+- **"Chaotic on Hard, notes a bit off the beat, the wrong note chosen from
+  fast clusters"** — the descent's floating stride windows didn't align to
+  the beat grid, so fast clusters elected 16th-position notes instead of the
+  on-beat note. The selection is now GRID-NATIVE: every note quantizes to
+  the inferred 16th grid, the stride windows anchor at the downbeat with
+  musical lengths (0.5/1.0/1.5/2.0 beats), and each window ELECTS its
+  on-beat position.
+- **The phase search was tried and REJECTED**: the note-density prior is
+  flat on rhythmically-uniform sources (the Scale Runner's continuous 16th
+  runs), and a wrong rotation is worse than the honest phase-0 alignment
+  (the map's own downbeat convention — beat 0 = the audio's beat 0).
+- The Dragons [Descent v2] re-deployed to Good As Hell with the new engine
+  (Easy 0.78/Normal 1.14/Hard 1.70 notes/beat — Hard now denser and on-grid
+  vs the chaotic v1) — validation PASSED. The user's re-judgment pending.
+- The BTS pack spread deployed (6 test songs to 6 BTS slots — all PASSED;
+  the poll-race wait_job fix in deploy_bts_spread.py included).
+- The generated deploy-state artifacts (pack_modes_bundles/,
+  catalog_pack_modes.json, redirects.json, mass_bundles/) are now
+  gitignored (regenerable live state, never repo content).
+
+
 ## v0.5368 (2026-10-25)
 ### Fixed (Exp 290 — the user's batch failure: "Post-deploy validation FAILED" stopped the batch at song 1/47)
 - **The session upload ledger now records BYTES (md5), not just names.** The

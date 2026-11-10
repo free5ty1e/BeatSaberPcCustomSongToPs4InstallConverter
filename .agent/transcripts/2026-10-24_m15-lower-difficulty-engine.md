@@ -51,3 +51,9 @@ Experiment numbers continue from the M13 log (last used 284b) → first M15 expe
 ## Cycle 7 — Exp 293: THE EVALUATION PACK
 
 The lizzo pack filled with 9 A/B variants (4 songs × descent/Beat Sage + the theme) — all validated, distinct in-game titles/artists. The automation: build_ab_pack.py (the Beat Sage runs, the variant preps, the deploys — with 3 path bugs fixed along the way). The prefill bug fixed (state.lastAutoTitle/Artist). The user's play-test = the final judgment; the mass re-deploy ready next.
+
+## Cycle 8 — Exp 293b: the Dragon v2 + the BTS spread + THE PROCEDURE RESTORED
+
+- The user's Dragon report → the grid-native selection v3 (the quantize-first lesson) + the rejected phase search (documented). Pipeline 0.5369 + the changelog.
+- The Dragons [Descent v2] → Good As Hell (validation PASSED); the BTS spread → 6 slots (all PASSED); the mass re-deploy validated (47/5).
+- THE PROCEDURE FAILURE: two cycles shipped without staging/logs/commit-message — the user called it out. Restored: the log, the KB, the .gitignore for the deploy-state artifacts, the full staging. The checklist: the experiment log → the transcript → the KB → context → the version/changelog → git add → the commit message, EVERY cycle.
