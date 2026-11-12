@@ -85,3 +85,29 @@ Archived logs: `experiment_log_archive/` (the previous feature ended at Exp
 - **The Dragons [Descent v2] re-deployed to Good As Hell** (Easy 0.78/Normal 1.14/Hard 1.70 npb — validation PASSED) — the user's re-judgment pending. The BTS spread deployed: 6 test songs to 6 BTS slots (Groove/Scale Runner/BeatTour/Expedition/Dragons/Theme, all [Descent], all validation-PASSED; the poll-race wait_job fix in deploy_bts_spread.py).
 - **The mass re-deploy VALIDATED:** 47 songs / 5 packs live on 0.5368→0.5369-era code; 60 AFR files; the catalog consistent.
 - **THE PROCEDURE FAILURE (the user's callout):** the Dragon-v2 and BTS-spread cycles shipped code with NO staging, NO experiment log, NO commit message, NO version bump. Restored in this entry: pipeline 0.5369 + the changelog, the KB lesson, the .gitignore for the generated deploy-state artifacts (pack_modes_bundles/, catalog_pack_modes.json, redirects.json, mass_bundles/), the full staging + the commit message. Every future cycle: the checklist runs BEFORE presenting.
+
+### Experiment 294: THE USER'S VERDICT — PASS; the M15 release cut + validation begun (2026-11-07)
+- **The user's A/B play-test verdict: "Just tested, they played great. I think this is good
+  enough for release."** The Descent Engine's lower difficulties are officially GOOD — M15's
+  engine is judged. The user cut the tag
+  `v0.8055-pipeline-0.5369-webapp-0.6.22-alpha01` and CI built it green (both the tag run and
+  the branch CI: success).
+- **The container-rebuild session** (before the verdict): the rebuild wiped pip packages
+  (fastapi import failure — the webapp deps were only in requirements-test.txt), `gh`, `ssh`,
+  and ALL of $HOME (Pi sessions). Fixed: webapp/requirements.txt + README checkout section +
+  requirements installed in postCreateCommand; .devcontainer/pi_persist_devcontainer.sh
+  migrates ~/.pi into /workspace/.pi_persist (symlinked back — pi launches normally; survives
+  rebuilds; wired into postCreateCommand). Full suite re-verified: 1076 passed / 3 skipped
+  (the webapp tests now RUN with fastapi present); ruff clean (one F841 dead store removed
+  from the staged engine code). context.yml/project_summary version fields de-staled
+  (0.8055/0.5369/0.6.22).
+- **Release validation (in progress):** zip downloaded anonymously via the GitHub API (gh
+  demands auth even for public assets — the validator gained a curl fallback); static audit
+  ALL GREEN (VERSIONs match the tag, 69 examples, both FSELF PRXs, plugin binary v0.8055,
+  fallback+Unicode fixes present, M15 feature doc lower-difficulty-engine.md shipped,
+  validation procedure docs shipped); webapp-from-zip smoke ALL GREEN (ping 0.6.22/0.5369/
+  v0.8055, Get Started, 34 packs / 47 songs). **The live-PS4 validation (Parts 2–6) is BLOCKED
+  on console power** — "No route to host" (PS4 off/rest).
+- **Environment findings (durable):** a rebuild loses apt tools too (gh, openssh-client —
+  both now persisted in postCreateCommand); the repo remote is SSH and ls-remote fails
+  without openssh-client (pushes evidently went through the user's VS Code flow).

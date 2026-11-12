@@ -31,7 +31,7 @@
       }
     }
   },
-  "postCreateCommand": "pip3 install --break-system-packages -r /workspace/requirements.txt -r /workspace/beat_saber_deluxe/requirements-test.txt 2>/dev/null; pip3 install --break-system-packages soundfile pydub 2>/dev/null; apt-get install -y -qq libsndfile1 ripgrep 2>/dev/null || true; mkdir -p ~/.local/bin && cp -n /workspace/vgmstream-bin/vgmstream-cli ~/.local/bin/vgmstream-cli 2>/dev/null; bash /workspace/.devcontainer/pi_persist_devcontainer.sh >/dev/null 2>&1 || true; echo 'pi state ready'",
+  "postCreateCommand": "pip3 install --break-system-packages -r /workspace/requirements.txt -r /workspace/beat_saber_deluxe/requirements-test.txt 2>/dev/null; pip3 install --break-system-packages soundfile pydub 2>/dev/null; apt-get install -y -qq libsndfile1 ripgrep 2>/dev/null || true; mkdir -p ~/.local/bin && cp -n /workspace/vgmstream-bin/vgmstream-cli ~/.local/bin/vgmstream-cli 2>/dev/null; bash /workspace/.devcontainer/pi_persist_devcontainer.sh >/dev/null 2>&1 || true; echo 'pi state ready'; (command -v gh >/dev/null && command -v ssh >/dev/null) || apt-get install -y -qq gh openssh-client 2>/dev/null || true; echo 'gh/ssh ready'",
   "remoteEnv": {
     "OO_PS4_TOOLCHAIN": "/opt/openorbis/OpenOrbis/PS4Toolchain"
   },

@@ -186,8 +186,13 @@ echo "==================================================================="
 
 # ---------------------------------------------------------------------------
 step "[1/9] Download + extract"
-gh release download "$TAG" --repo "$REPO" --dir "$TEMP" --clobber \
-    || { echo "FATAL: download failed"; exit 1; }
+if ! gh release download "$TAG" --repo "$REPO" --dir "$TEMP" --clobber 2>/dev/null; then
+    note "gh unavailable/unauthenticated — anonymous download via the GitHub API"
+    URL=$(curl -s "https://api.github.com/repos/$REPO/releases/tags/$TAG" \
+        | python3 -c "import json,sys; a=json.load(sys.stdin).get('assets',[]); print(a[0]['browser_download_url'] if a else '')")
+    [ -n "$URL" ] || { echo "FATAL: no release asset found for $TAG"; exit 1; }
+    curl -sL -o "$TEMP/$(basename "$URL")" "$URL" || { echo "FATAL: download failed"; exit 1; }
+fi
 ZIP=$(ls "$TEMP"/beat-saber-deluxe-*.zip | sort -V | tail -1)
 rm -rf "$VAL"; mkdir -p "$VAL"
 unzip -q "$ZIP" -d "$VAL" || { echo "FATAL: extract failed"; exit 1; }

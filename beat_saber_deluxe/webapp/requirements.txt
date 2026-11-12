@@ -1,0 +1,9 @@
+# Runtime dependencies for the Beat Saber Deluxe web app (repo checkout).
+#   pip install -r beat_saber_deluxe/webapp/requirements.txt
+# The full development suite (tests, lint, pipeline runtime) lives in
+# beat_saber_deluxe/requirements-test.txt — install both when developing.
+fastapi>=0.110
+uvicorn>=0.29
+# Multipart form parsing — the Pick-a-Song tab's zip/audio uploads
+# (FastAPI's UploadFile needs it at runtime)
+python-multipart>=0.0.9
