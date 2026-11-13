@@ -101,3 +101,13 @@ echo ""
 echo "To resume your session:"
 echo "   Press Ctrl+Shift+P → 'Tasks: Run Task' → 'Opencode: Resume Last Session'"
 echo ""
+
+# M15 (Exp 288): ffmpeg — the web app's MP3 test-song conversion +
+# general audio tooling. Missing = the app degrades gracefully (WAV always
+# works); present = the ⬇ MP3 button works.
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  echo ""
+  echo "🎵 Installing ffmpeg (MP3 conversion for the web app's test songs)..."
+  sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+fi
+echo "   ffmpeg: $(ffmpeg -version 2>/dev/null | head -1 || echo 'not installed — WAV-only mode')"

@@ -153,7 +153,12 @@ class Test90DegreeGenerator(unittest.TestCase):
         ]}
         gen = _generate_90_degree(data, cycle_beats=8)
         events = gen["rotationEvents"]
-        self.assertEqual(events[0]["b"], 2.0)
+        # M15: rotations rest-align — with only 2 notes, the first rotation
+        # lands at the first FULLY CLEAR beat near the start (not under a note)
+        self.assertLess(events[0]["b"], 4.0)
+        for e in events:
+            self.assertNotEqual(e["b"], 2.0)
+            self.assertNotEqual(e["b"], 100.0)
         # Single-lane 15° steps, always late (e=1), all within the 90° arc.
         self.assertTrue(all(abs(e["r"]) == 15 for e in events))
         self.assertTrue(all(e["e"] == 1 for e in events))
@@ -195,7 +200,12 @@ class Test90DegreeGenerator(unittest.TestCase):
         ]}
         gen = _generate_90_degree(data, cycle_beats=4)
         self.assertEqual(len(gen["colorNotes"]), 2)
-        self.assertEqual(gen["rotationEvents"][0], {"b": 1.0, "e": 1, "r": 15})
+        # M15: the rotation avoids the note beats (1.0/5.0) when a clear
+        # beat exists in the window — it still fires, late, with a 15° step
+        r0 = gen["rotationEvents"][0]
+        self.assertEqual(r0["e"], 1)
+        self.assertEqual(r0["r"], 15)
+        self.assertNotIn(r0["b"], (1.0, 5.0))
 
     def test_v3_omitted_fields_in_90_degree(self):
         # Notes/obstacles/events with omitted b must not crash the generator.
@@ -205,9 +215,10 @@ class Test90DegreeGenerator(unittest.TestCase):
         ], "obstacles": [{"b": 6.0}], "basicBeatmapEvents": [{"b": 8.0}]}
         gen = _generate_90_degree(data, cycle_beats=8)
         self.assertEqual(len(gen["colorNotes"]), 2)
-        # Omitted b defaults to beat 0, which becomes the sweep start.
-        self.assertEqual(gen["rotationEvents"][0]["b"], 0.0)
-        self.assertEqual(gen["rotationEvents"][-1]["b"], 8.0)  # spans the map
+        # M15: rest-aligned — with notes at 1.0/6.0/8.0 the first rotation
+        # still fires near the start but not on a note beat
+        self.assertLess(gen["rotationEvents"][0]["b"], 4.0)
+        self.assertNotIn(gen["rotationEvents"][0]["b"], (1.0, 6.0, 8.0))
 
     def test_keeps_existing_rotation_events(self):
         data = {"version": "3.2.0", "colorNotes": [
@@ -216,7 +227,9 @@ class Test90DegreeGenerator(unittest.TestCase):
         ], "rotationEvents": [{"b": 0.5, "e": 0, "r": -15}]}
         gen = _generate_90_degree(data, cycle_beats=8)
         self.assertEqual(gen["rotationEvents"][0], {"b": 0.5, "e": 0, "r": -15})
-        self.assertEqual(gen["rotationEvents"][1]["b"], 1.0)
+        # M15: the first GENERATED rotation rest-aligns (not under a note)
+        self.assertNotEqual(gen["rotationEvents"][1]["b"], 1.0)
+        self.assertLess(gen["rotationEvents"][1]["b"], 4.0)
 
     def test_input_not_mutated(self):
         data = {"_version": "2.0.0", "_notes": [V2_NOTE]}
@@ -521,3 +534,111 @@ if __name__ == '__main__':
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestM15GeneratorUpgrades(unittest.TestCase):
+    """Exp 286 (M15.4): the charting-guideline upgrades — the user's
+    "almost impossible to play in one-saber mode" report → the travel-time
+    rules; NoArrows same-hand cluster blobs → dropped; 90° rotations
+    rest-aligned (never under a stream)."""
+
+    def _v3(self, notes):
+        return {"version": "3.2.0", "colorNotes": notes,
+                "bombNotes": [], "obstacles": []}
+
+    # ── OneSaber: the travel-time rules ────────────────────────────────────
+    def test_onesaber_cross_grid_jump_dropped_when_too_fast(self):
+        # x=0,y=0 → x=3,y=2 in ⅛ beat: a cross-grid teleport — impossible
+        data = self._v3([
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1},
+            {"b": 1.125, "x": 3, "y": 2, "c": 1, "d": 1},
+        ])
+        gen = _generate_one_saber(data, min_gap=0.25)
+        self.assertEqual(len(gen["colorNotes"]), 1)   # the teleporter dropped
+
+    def test_onesaber_cross_grid_jump_kept_with_time(self):
+        # the same jump with a full beat: playable — both kept
+        data = self._v3([
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1},
+            {"b": 2.0, "x": 3, "y": 2, "c": 1, "d": 1},
+        ])
+        gen = _generate_one_saber(data, min_gap=0.25)
+        self.assertEqual(len(gen["colorNotes"]), 2)
+
+    def test_onesaber_head_level_needs_the_long_arc(self):
+        # a head-level (y=2) note 2+ cells away needs 2× min_gap; 0.25 is not enough
+        data = self._v3([
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1},
+            {"b": 1.25, "x": 3, "y": 2, "c": 1, "d": 1},   # dist 5, needs 0.5
+        ])
+        gen = _generate_one_saber(data, min_gap=0.25)
+        self.assertEqual(len(gen["colorNotes"]), 1)
+        # …but with the arc time (0.5 beats), it stays
+        data2 = self._v3([
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1},
+            {"b": 1.5, "x": 3, "y": 2, "c": 1, "d": 1},
+        ])
+        gen2 = _generate_one_saber(data2, min_gap=0.25)
+        self.assertEqual(len(gen2["colorNotes"]), 2)
+
+    def test_onesaber_adjacent_cell_hop_allows_half_gap(self):
+        # dist 1 at ⅛ beat = min_gap/2 — allowed (the proportional ladder)
+        data = self._v3([
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 1},
+            {"b": 1.125, "x": 1, "y": 0, "c": 1, "d": 1},
+        ])
+        gen = _generate_one_saber(data, min_gap=0.25)
+        self.assertEqual(len(gen["colorNotes"]), 2)
+
+    def test_onesaber_dense_stream_gets_breathing_room(self):
+        # a 16th-note stream all in one cell region → the travel rules thin it
+        data = self._v3([
+            {"b": 1.0 + i * 0.125, "x": i % 4, "y": i % 3, "c": i % 2, "d": 1}
+            for i in range(40)])
+        gen = _generate_one_saber(data, min_gap=0.25)
+        kept = sorted(gen["colorNotes"], key=lambda n: n["b"])
+        for a, b in zip(kept, kept[1:]):
+            dist = abs(a["x"] - b["x"]) + abs(a["y"] - b["y"])
+            dt = b["b"] - a["b"]
+            if dist >= 3:
+                self.assertGreaterEqual(dt, 0.5 - 1e-9)
+            elif dist == 2:
+                self.assertGreaterEqual(dt, 0.25 - 1e-9)
+
+    # ── NoArrows: the cluster audit ────────────────────────────────────────
+    def test_noarrows_same_hand_cluster_dropped(self):
+        # two same-color dots ⅛ beat apart, 1 cell away: one hand can't take both
+        data = self._v3([
+            {"b": 1.0, "x": 0, "y": 0, "c": 0, "d": 3},
+            {"b": 1.125, "x": 1, "y": 0, "c": 0, "d": 5},
+            {"b": 1.25, "x": 2, "y": 0, "c": 1, "d": 1},  # other hand — kept
+        ])
+        gen = _generate_no_arrows(data)
+        colors = [n["c"] for n in sorted(gen["colorNotes"], key=lambda n: n["b"])]
+        self.assertEqual(colors, [0, 1])
+        self.assertTrue(all(n["d"] == 8 for n in gen["colorNotes"]))
+
+    def test_noarrows_alternating_colors_all_kept(self):
+        # a clean L/R alternation at ⅛ beat: both hands busy — all kept
+        data = self._v3([
+            {"b": 1.0 + i * 0.125, "x": i % 4, "y": 0, "c": i % 2, "d": 1}
+            for i in range(8)])
+        gen = _generate_no_arrows(data)
+        self.assertEqual(len(gen["colorNotes"]), 8)
+
+    # ── 90°: rotations never fire under a stream when a rest is near ───────
+    def test_90degree_rotations_avoid_streams(self):
+        # a dense EIGHTH stream (every 0.5 beats): rotations must land in the
+        # gaps, not on note beats (the ¼-beat sliver between two notes)
+        data = {"version": "3.2.0",
+                "colorNotes": [{"b": round(i * 0.5, 4), "x": i % 4, "y": i % 2,
+                                "c": i % 2, "d": 1} for i in range(200)]}
+        gen = _generate_90_degree(data, cycle_beats=4)
+        note_beats = {round(n["b"], 4) for n in data["colorNotes"]}
+        rot = gen["rotationEvents"]
+        self.assertGreater(len(rot), 3)
+        # every rotation has ≥ 0.25 beats clearance to the nearest note
+        for e in rot:
+            nearest = min(abs(nb - e["b"]) for nb in note_beats)
+            self.assertGreaterEqual(nearest, 0.25 - 1e-9,
+                                    f"rotation at {e['b']} fires under a stream")

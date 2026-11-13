@@ -90,6 +90,25 @@
       <div id="bs-mapid-result" class="result"></div>
     </div>
 
+    <!-- ============ Test songs (M15) ============ -->
+    <div class="card" id="testsongs-card">
+      <h3>🎛️ Test songs <span class="muted">— rights-clean originals, generated on the spot (pure math: NES-style chiptunes + our synth theme)</span></h3>
+      <p class="muted">Try the whole pipeline (or Beat Sage below) without hunting for audio. Preview here,
+        download WAV/MP3, or attach one straight to the Beat Sage form.</p>
+      <div class="row local-only">
+        <select id="testsongs-select" style="max-width:34em"></select>
+        <button id="btn-testsongs-attach" class="link">attach to the Beat Sage form ↓</button>
+      </div>
+      <audio id="testsongs-player" controls preload="none" class="local-only" style="width:100%; margin-top:.6rem"></audio>
+      <div class="row local-only">
+        <a id="testsongs-wav" class="link">⬇ download WAV</a>
+        <a id="testsongs-mp3" class="link">⬇ download MP3</a>
+        <span class="muted" id="testsongs-mp3-note"></span>
+      </div>
+      <span class="muted pages-only">(preview + downloads need the local web app — this hosted page is the command builder)</span>
+      <div id="testsongs-note" class="result"></div>
+    </div>
+
     <!-- ============ 2 · Beat Sage (M13) ============ -->
     <div class="card">
       <h3>2 · Generate a map with Beat Sage <span class="muted">— any song, AI-mapped (powered by beatsage.com)</span></h3>
@@ -146,7 +165,11 @@
       </div>
       <button id="btn-bsage-generate" class="primary local-only">Generate map with Beat Sage</button>
       <span class="muted local-only">— takes a few minutes; the button turns into a live console</span><br>
-      <button id="btn-bsage-testsong" class="link local-only">🧪 No audio handy? Use our original test song — a 48s rights-clean synth theme, generated on the spot (pure math, no samples)</button>
+      <span class="local-only">
+        🧪 No audio handy? Use a rights-clean test song, generated on the spot (pure math, no samples):
+        <select id="bsage-testsong-select"></select>
+        <button id="btn-bsage-testsong" class="link">generate + attach</button>
+      </span>
       <div id="bsage-result" class="result"></div>
       <pre id="bsage-log" class="log hidden"></pre>
       <details id="bsage-guide-details">

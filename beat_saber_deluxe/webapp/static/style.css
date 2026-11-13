@@ -405,3 +405,6 @@ table.loadout tr:hover td { background: var(--card2); }
 .staged-stats table.stats { border-collapse: collapse; margin: 0.4rem 0; font-size: 0.88em; }
 .staged-stats table.stats td, .staged-stats table.stats th { border: 1px solid var(--border, #333); padding: 2px 8px; }
 .staged-stats .badge.warn { border-color: #c90; color: #fd3; }
+
+/* M15: the pages-mode-only notes (inverse of .local-only) */
+.pages-only { display: none; }

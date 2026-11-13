@@ -186,8 +186,13 @@ echo "==================================================================="
 
 # ---------------------------------------------------------------------------
 step "[1/9] Download + extract"
-gh release download "$TAG" --repo "$REPO" --dir "$TEMP" --clobber \
-    || { echo "FATAL: download failed"; exit 1; }
+if ! gh release download "$TAG" --repo "$REPO" --dir "$TEMP" --clobber 2>/dev/null; then
+    note "gh unavailable/unauthenticated — anonymous download via the GitHub API"
+    URL=$(curl -s "https://api.github.com/repos/$REPO/releases/tags/$TAG" \
+        | python3 -c "import json,sys; a=json.load(sys.stdin).get('assets',[]); print(a[0]['browser_download_url'] if a else '')")
+    [ -n "$URL" ] || { echo "FATAL: no release asset found for $TAG"; exit 1; }
+    curl -sL -o "$TEMP/$(basename "$URL")" "$URL" || { echo "FATAL: download failed"; exit 1; }
+fi
 ZIP=$(ls "$TEMP"/beat-saber-deluxe-*.zip | sort -V | tail -1)
 rm -rf "$VAL"; mkdir -p "$VAL"
 unzip -q "$ZIP" -d "$VAL" || { echo "FATAL: extract failed"; exit 1; }
@@ -310,31 +315,48 @@ std = ['Billie Eilish', 'Britney Spears', 'Camelia', 'Lizzo', 'Rolling Stones']
 total = sum(len(packs[n]['songs']) for n in std if n in packs)
 assert total == 47, f"{total} (expect 47)"
 EOF
-    # Live truth (only meaningful with the PS4 on; dead PS4 is a soft-skip)
-    curl -s -m 240 "http://127.0.0.1:$WA_PORT/api/loadout" -o /tmp/wa_loadout.json
-    if [ -s /tmp/wa_loadout.json ]; then
-        python3 - <<EOF && mark PASS "loadout matches live truth (PS4 on)" || mark FAIL "loadout vs live truth"
-import json
-d = json.load(open('/tmp/wa_loadout.json'))
+    # Live truth (only meaningful with the PS4 on; dead PS4 is a soft-skip).
+    # The "live" count comes from a FRESH PS4 pull — NOT the extraction's
+    # redirects.json: the zip ships an EMPTY PLACEHOLDER (0 entries; real
+    # user state is pulled only at step 5), so comparing SERVED against the
+    # local file compared 53 against 0 and failed a healthy release (Exp 295).
+    # (mktemp -u: lftp get -o REFUSES to clobber an existing file — a mktemp'd
+    # path must not pre-exist, the KB's lftp-ftp-pitfalls lesson)
+    LIVE_R=$(mktemp -u)
+    if timeout 60 lftp -u anonymous:anonymous \
+        -e "set net:timeout 5; set net:max-retries 1; get /data/GoldHEN/AFR/CUSA12878/redirects.json -o $LIVE_R; bye" \
+        "$PS4_IP:2121" >/dev/null 2>&1 && [ -s "$LIVE_R" ]; then
+        curl -s -m 240 "http://127.0.0.1:$WA_PORT/api/loadout" -o /tmp/wa_loadout.json
+        if [ -s /tmp/wa_loadout.json ]; then
+            python3 - "$LIVE_R" <<EOF && mark PASS "loadout matches live truth (PS4 on)" || mark FAIL "loadout vs live truth"
+import json, sys
+raw = open('/tmp/wa_loadout.json').read()
+d = json.loads(raw)
 rs = d.get('readStatus', {})
 errs = [k for k, v in rs.items() if k.endswith('ReadError') and v]
 assert not errs, f"read errors: {errs}"
 served = sum(1 for p in d.get('packs', []) for s in p.get('songs', []) if s.get('customDeployed'))
-r = json.load(open('redirects.json'))['redirects']
+raw_state = open(sys.argv[1]).read()
+r = json.loads(raw_state[raw_state.find('{'):raw_state.rfind('}')+1])['redirects']
 live_songs = len([k for k in r if k.startswith('BeatmapLevelsData/')])
 assert served == live_songs, f"SERVED {served} != live {live_songs}"
 EOF
+        else
+            note "     loadout endpoint unreachable/slow (PS4 off?) — soft-skip"
+        fi
     else
-        note "     loadout endpoint unreachable/slow (PS4 off?) — soft-skip"
+        note "     PS4 state pull failed (PS4 off?) — live-truth check soft-skipped"
     fi
+    rm -f "$LIVE_R"
     kill $WA_PID 2>/dev/null || true
     wait $WA_PID 2>/dev/null || true
 fi
 
 step "[5/9] Pull + back up live state (BOTH state files)"
 # BOTH state files must be pulled and backed up: redirects.json AND
-# song_metadata.json. The release zip ships NEITHER (both are user state) —
-# if song_metadata.json is missing locally, any pipeline step that loads
+# song_metadata.json. The release zip ships an EMPTY redirects.json PLACEHOLDER
+# (0 entries) and NO song_metadata.json (both are user state) — if
+# song_metadata.json is missing locally, any pipeline step that loads
 # 'local' metadata starts from an EMPTY file and, on deploy, WIPES the
 # PS4's metadata (Exp 237: the 33/33 'green' run destroyed all 47 custom
 # song names because nothing pulled or restored this file).

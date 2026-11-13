@@ -97,6 +97,7 @@ Every feature is documented in depth in its **feature doc** (under `beat_saber_d
 | [Song Previews](beat_saber_deluxe/docs/features/song-previews.md)                           | ✅ Working                          | Highlighting a custom song in the menu plays **the custom song's own ~10s audio** (the mapper's chosen moment, or the busiest-bar heuristic), patched into each pack's preview AudioClips. Loudness-matched, fade-smoothed, fully data-driven.                                                                                           |
 | [In-Game Plugin Toggle](beat_saber_deluxe/docs/features/in-game-plugin-toggle.md)           | ✅ **Working — hardware-confirmed** | Hold the **Move button + trigger together for 2 seconds** to flip the global plugin state entirely from the couch — notification confirms, restart applies. No PC needed to switch between all-custom and 100% stock. Move-only (no DS4 needed), accidental-trigger-proof, and works even while toggled OFF so you can always flip back. |
 | [Web App Interface](beat_saber_deluxe/webapp/)                                              | ✅ Complete (12 tabs)               | A local web UI over the pipeline CLI — setup wizard with live dump validation, BeatSaver song picker, batch deploys (all 34 example packs), song management, feature flags, backups, PS4 state, validation — plus a hosted getting-started site on GitHub Pages. Every button is one pipeline subprocess; zero duplicated logic.         |
+| [Lower-Difficulty Engine](beat_saber_deluxe/docs/features/lower-difficulty-engine.md)       | ✅ Working (pipeline 0.5367+)        | **Official-grade Easy/Normal/Hard generated from Expert/Expert+ maps** — following the MEASURED official grammar (304 official songs: the density ladder, the snap ladder, zero vision blocks, the official object policy) instead of cloning. Grid inference recovers the true beat grid from mis-BPM'd sources (Beat Sage labels wrong tempos). The mode generators upgraded to the guidelines: OneSaber travel-time rules, the NoArrows cluster audit, 90° rest-aligned rotations. Round-trip validated 15/15 against the official corpus; NES-authentic chiptune test songs in the web app. |
 | [Beat Sage + Local Songs](beat_saber_deluxe/docs/features/beat-sage-and-local-songs.md)     | ✅ Working (web app 0.6.20+)         | **Generate a map from ANY audio** — the web app drives [beatsage.com](https://beatsage.com) (free AI mapping) end-to-end: upload → live status → download → validate → stage, with an always-works guided fallback. Plus **local song folders/map zips**: live validation (V2/V3/V4), zip drag-drop intake, and a persistent staged-songs list — all deploying via the pipeline's existing `--song-dir`. Tier 1 verified against the live service. |
 | Note Colors                                                                                 | ⏳ Planned                          | Custom left/right saber colors per song.                                                                                                                                                                                                                                                                                                 |
 
@@ -449,7 +450,17 @@ The same pipeline, point-and-click. The web app is a **thin layer**: every
 Deploy button press runs the exact `--deploy-full` command above as a
 subprocess — nothing is re-implemented in the browser.
 
+**From a full repo checkout**, install the Python dependencies first (the
+release zip ships its own `requirements.txt`; the repo splits them by
+purpose):
+
 ```bash
+# web app only:
+pip install -r beat_saber_deluxe/webapp/requirements.txt
+
+# everything (web app + pipeline runtime + the pytest/lint dev suite):
+pip install -r requirements.txt -r beat_saber_deluxe/requirements-test.txt
+
 python3 beat_saber_deluxe/webapp/server.py
 # opens http://127.0.0.1:8765 in your browser (--no-browser to skip)
 ```

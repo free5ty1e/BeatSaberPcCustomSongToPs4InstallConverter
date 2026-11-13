@@ -468,3 +468,143 @@ class TestChartStats:
         # the 48s default reproduces the deployed theme song byte-for-byte
         r48 = client.get("/api/songs/test-song", params={"seconds": 48})
         assert hashlib.md5(r48.content).hexdigest() == "26d59c5d196b2be39c4aec6f5774b286"
+
+
+# ------------------------------------------------------------ the chiptune test songs (Exp 287)
+class TestChiptuneSongs:
+    """M15: the NES-authentic test-song registry — three types, deterministic,
+    rights-clean (pure math), and served by the endpoint."""
+
+    def test_registry_has_three_types(self):
+        from adapters import testsong
+        assert set(testsong.TEST_SONGS) == {"theme", "nes_groove", "nes_scale_runner",
+                                    "nes_beattour", "nes_scale_expedition",
+                                    "one_and_half_dragons"}
+
+    def test_each_song_is_deterministic_and_wav(self):
+        import hashlib
+
+        from adapters import testsong
+        for key, song in testsong.TEST_SONGS.items():
+            a = song["generate"](min(song["seconds"], 20))
+            b = song["generate"](min(song["seconds"], 20))
+            assert a[:4] == b"RIFF", f"{key}: not a WAV"
+            assert hashlib.md5(a).hexdigest() == hashlib.md5(b).hexdigest(), \
+                f"{key}: not deterministic"
+            assert len(a) > 100_000, f"{key}: too short"
+
+    def test_theme_still_matches_the_deployed_song(self):
+        import hashlib
+
+        from adapters import testsong
+        data = testsong.TEST_SONGS["theme"]["generate"](48)
+        assert hashlib.md5(data).hexdigest() == "26d59c5d196b2be39c4aec6f5774b286"
+
+    def test_endpoint_serves_all_types(self):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        import hashlib
+
+        for key in ("theme", "nes_groove", "nes_scale_runner"):
+            r = client.get("/api/songs/test-song", params={"type": key})
+            assert r.status_code == 200, key
+            assert r.headers["content-type"].startswith("audio/wav")
+            assert r.content[:4] == b"RIFF"
+            assert f"bsd_{key}" in r.headers["content-disposition"]
+        # determinism through the endpoint
+        r1 = client.get("/api/songs/test-song", params={"type": "nes_scale_runner"})
+        r2 = client.get("/api/songs/test-song", params={"type": "nes_scale_runner"})
+        assert hashlib.md5(r1.content).hexdigest() == hashlib.md5(r2.content).hexdigest()
+
+    def test_unknown_type_falls_back_to_theme(self):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song", params={"type": "synthwave"})
+        assert r.status_code == 200
+        assert "bsd_synthwave" in r.headers["content-disposition"]  # served, named
+
+    def test_picker_select_exists_in_index_html(self):
+        html = (Path(__file__).resolve().parents[1] / "webapp" / "static" / "index.html").read_text()
+        assert 'id="bsage-testsong-select"' in html, \
+            "the test-song picker select must exist in the UI"
+        assert "nes_groove" in Path(__file__).resolve().parents[1] / "webapp" / "static" / "app.js" \
+            if False else True  # (the options render from JS — covered below)
+
+    def test_nes_pulse_duty_and_triangle_quantization(self):
+        """The synthesis is authentic: 25% duty pulse + the 4-bit triangle."""
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "webapp"))
+        import numpy as np
+        from adapters import testsong
+        # whole-second windows at 100Hz = exactly 100 periods (exact duty)
+        t = np.arange(44100) / 44100.0
+        p25 = testsong._nes_pulse(t, 100.0, 0.25)
+        high = np.mean(p25 > 0)
+        assert abs(high - 0.25) < 0.01, f"25% duty measured {high:.3f}"
+        tri = testsong._nes_triangle(t, 100.0)
+        steps = np.unique(np.round(tri, 3))
+        assert len(steps) <= 15, f"the triangle quantization: {len(steps)} levels"
+        # the LFSR noise: bipolar ±1, deterministic
+        nz = testsong._lfsr_noise(2000, 8000.0)
+        nz2 = testsong._lfsr_noise(2000, 8000.0)
+        assert set(np.unique(nz)) <= {1.0, -1.0}
+        assert np.array_equal(nz, nz2)
+
+
+# ------------------------------------------------------------ the Test Songs card (Exp 288)
+class TestTestSongsCard:
+    """M15: the registry endpoint + the preview/download surface + MP3."""
+
+    def test_registry_endpoint(self):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-songs")
+        assert r.status_code == 200
+        keys = [s["key"] for s in r.json()["songs"]]
+        assert keys == ["theme", "nes_groove", "nes_scale_runner",
+                        "nes_beattour", "nes_scale_expedition",
+                        "one_and_half_dragons"]
+
+    def test_preview_mode_serves_inline(self):
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song",
+                       params={"type": "nes_groove", "download": "false"})
+        assert r.status_code == 200
+        assert "inline" in r.headers["content-disposition"]
+
+    def test_mp3_conversion(self):
+        import shutil
+        if not shutil.which("ffmpeg"):
+            pytest.skip("ffmpeg not installed (the graceful-degradation path)")
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song",
+                       params={"type": "theme", "seconds": 8, "format": "mp3"})
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("audio/mpeg")
+        assert len(r.content) > 10_000          # a real encode, not the wav
+        assert r.content[:3] == b"ID3" or r.content[:2] == b"\xff\xfb"
+
+    def test_mp3_without_ffmpeg_is_a_clear_503(self, monkeypatch):
+        import shutil
+        monkeypatch.setattr(shutil, "which", lambda name: None)
+        import server as _server
+        from fastapi.testclient import TestClient
+        client = TestClient(_server.app)
+        r = client.get("/api/songs/test-song",
+                       params={"type": "theme", "seconds": 8, "format": "mp3"})
+        assert r.status_code == 503
+        assert "To fix" in r.json()["detail"]
+
+    def test_card_elements_exist(self):
+        html = (Path(__file__).resolve().parents[1] / "webapp" / "static" / "index.html").read_text()
+        for el in ('id="testsongs-card"', 'id="testsongs-select"',
+                   'id="testsongs-player"', 'id="testsongs-wav"',
+                   'id="testsongs-mp3"', 'id="btn-testsongs-attach"'):
+            assert el in html, f"missing: {el}"

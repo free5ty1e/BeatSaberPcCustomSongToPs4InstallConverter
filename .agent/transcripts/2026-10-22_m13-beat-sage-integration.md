@@ -52,3 +52,11 @@ Experiment numbers continue from the M12 log (last used: 282/281h) → first M13
 - M15 — Lower-Difficulty Generation Engine written (official-difficulty-grammar research-first; the dump's catalog as the measurement corpus; the album → M16).
 - alpha01: CI green (1038→914+124); the zip audit: FSELF pair, 7 docs, 7-flag template, byte parity (all 5 core files), the M13 files ship, the zip's app boots 0.6.20/0.5366/v0.8055.
 - THE AUDIT FINDING: the changelogs — 4+ silent string-replace no-ops across the milestone left the webapp changelog disordered with 0.6.20 missing + the pipeline changelog missing 0.5366. Both fixed properly (full reorganization; entries written from session records). CI_RELEASE + the feature doc + the KB index brought current. Lesson: changelog inserts must assert their anchors.
+
+## Cycle 8 — PR #10 updated
+
+Title → "M13: Beat Sage + Local Song Folders — any audio → AI map → your PS4 (web app 0.6.20, pipeline 0.5366)". The full M13 release story: the surfaces table (Beat Sage/local songs/staged stats/test song), the live-capture + respect rules, the findings→fixes table (Lights trap, density band, the preview-order bug, the stale-page class, the changelog audit), the validation section (the live Tier-1 proof + the user's own clean-slate run + alpha01), and the M14/M15 roadmap pointers. **The user's screenshot preserved** (github user-attachments/95d319e7…, the Beat Sage section screenshot). Pushed via gh api PATCH (6,646 chars).
+
+## Cycle 9 — Exp 284b: 🎉 THE M13 RELEASE — fully validated + Pages audited
+
+The final tag built green (914+124; 51-route smoke test). The audit's centerpiece check: **THE FIXED CHANGELOGS SHIP** (v0.5366 + 0.6.20 heads, 41 ordered headers) — closing the silent-replace finding. Byte parity: all 8 files MATCH. The zip's app boots + every M13 endpoint works; the shipped client tells the Lights-trap story. Pages: rebuilt on merge; all three versions in the badge; the M13 sections render; the live app.js carries every M13 function + parses; the landing guard + no-dump message intact. **M13 SHIPPED — M0-M13 complete.**

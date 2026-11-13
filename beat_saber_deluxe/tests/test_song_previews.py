@@ -699,7 +699,9 @@ class TestUploadSkipSoundness:
         fp_mod._SESSION_UPLOADED_BUNDLES.clear()
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 500)
-        fp_mod._SESSION_UPLOADED_BUNDLES.add(local.name)      # we uploaded it this session
+        import hashlib
+        fp_mod._SESSION_UPLOADED_BUNDLES[local.name] = \
+            hashlib.md5(b'V' * 500).hexdigest()   # we uploaded THESE bytes this session
         monkeypatch.setattr(fp_mod, '_list_remote_dir', lambda cfg: {local.name: 500})
         uploaded = []
         def fake_run(cmd, **kw):
@@ -720,7 +722,9 @@ class TestUploadSkipSoundness:
         fp_mod._SESSION_UPLOADED_BUNDLES.clear()
         local = tmp_path / 'lizzo_pack_modes_previews_assets_all_x.bundle'
         local.write_bytes(b'V' * 600)
-        fp_mod._SESSION_UPLOADED_BUNDLES.add(local.name)
+        import hashlib
+        fp_mod._SESSION_UPLOADED_BUNDLES[local.name] = \
+            hashlib.md5(b'V' * 600).hexdigest()   # we uploaded THESE bytes
         monkeypatch.setattr(fp_mod, '_list_remote_dir', lambda cfg: {local.name: 500})
         uploaded = []
         def fake_run(cmd, **kw):

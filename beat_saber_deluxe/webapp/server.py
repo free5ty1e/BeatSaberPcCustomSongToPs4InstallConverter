@@ -268,21 +268,55 @@ def beatsage_guide():
     return payload
 
 
-@app.get("/api/songs/test-song")
-def songs_test_song(seconds: float = 48.0):
-    """The original rights-clean test song, synthesized on demand (M13).
-    100% math (adapters/testsong.py) — deterministic, so the 48s default is
-    byte-identical to the already-deployed 'BSD Deluxe Theme (An Original)'.
-    Use it to try Beat Sage without hunting for audio, or as a validation
-    asset (the gated live-contract test uses the 8s variant)."""
-    seconds = max(5.0, min(seconds, 120.0))
+@app.get("/api/songs/test-songs")
+def songs_test_songs():
+    """The test-song registry (M15's picker + the Test Songs card): key,
+    label, default seconds. Served so the UI never hardcodes the list."""
     from adapters import testsong
-    data = testsong.generate_wav(seconds=seconds)
+    return {"songs": [{"key": k, "label": s["label"], "seconds": s["seconds"]}
+                      for k, s in testsong.TEST_SONGS.items()]}
+
+
+@app.get("/api/songs/test-song")
+def songs_test_song(seconds: float | None = None, type: str = "theme",
+                    format: str = "wav", download: bool = True):
+    """The rights-clean test songs, synthesized on demand (M13 + M15's
+    chiptunes). 100% math (adapters/testsong.py) — deterministic, so the
+    theme's 48s default is byte-identical to the deployed 'BSD Deluxe Theme'.
+    type ∈ theme | nes_groove | nes_scale_runner. format: wav (always) or
+    mp3 (transcoded on the fly — needs ffmpeg on this machine).
+    download=False serves for in-browser preview (no attachment header)."""
+    from adapters import testsong
     from fastapi.responses import Response
+    song = testsong.TEST_SONGS.get(type, testsong.TEST_SONGS["theme"])
+    seconds = max(5.0, min(seconds or song["seconds"], 120.0))
+    data = song["generate"](seconds)
+    media = "audio/wav"
+    ext = "wav"
+    if format == "mp3":
+        import shutil
+        import subprocess
+        if not shutil.which("ffmpeg"):
+            raise HTTPException(
+                503, "MP3 conversion needs ffmpeg on this machine. To fix: "
+                     "install it (e.g. 'sudo apt install ffmpeg' on Linux, "
+                     "'winget install ffmpeg' on Windows) — or use the WAV "
+                     "download, which works everywhere.")
+        proc = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "wav",
+             "-i", "pipe:0", "-codec:a", "libmp3lame", "-b:a", "192k",
+             "-f", "mp3", "pipe:1"],
+            input=data, capture_output=True, timeout=120)
+        if proc.returncode != 0 or not proc.stdout:
+            raise HTTPException(500, f"ffmpeg failed: {proc.stderr.decode('utf-8', 'replace')[:200]}")
+        data = proc.stdout
+        media = "audio/mpeg"
+        ext = "mp3"
+    disposition = ("attachment" if download else "inline")
     return Response(
-        content=data, media_type="audio/wav",
+        content=data, media_type=media,
         headers={"Content-Disposition":
-                 f'attachment; filename="bsd_deluxe_theme_{int(seconds)}s.wav"'})
+                 f'{disposition}; filename="bsd_{type}_{int(seconds)}s.{ext}"'})
 
 
 @app.post("/api/songs/validate-dir")
