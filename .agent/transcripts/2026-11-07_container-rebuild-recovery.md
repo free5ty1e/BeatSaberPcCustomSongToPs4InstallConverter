@@ -132,3 +132,23 @@ staged but never committed or summarized).
 - **Live-PS4 validation BLOCKED: PS4 off ("No route to host").** Asked the user to power it
   on; the full automated run (`release-validation-test-procedure.sh --log <TAG>`) fires the
   moment it's up. Exp 294 logged; project_summary refreshed.
+
+## Cycle 3 — THE M15 RELEASE VALIDATION (Exp 295): 45/45 PASS
+
+- User powered the PS4 on → full automated run #1: **44 PASS / 1 FAIL** — the single FAIL was
+  "loadout vs live truth: SERVED 53 != live 0". Root-caused to a VALIDATOR ordering bug: the
+  step-4 check compared SERVED against the extraction's local redirects.json, but the zip
+  ships an EMPTY placeholder (CI_RELEASE.md documents it) and the real pull happens at step 5.
+  The release was never at fault — SERVED 53 matched the true live count (53 songs / 6 packs,
+  confirmed by step 5 minutes later).
+- Fix #1: the check now pulls redirects.json fresh from the PS4 (self-contained, banner-immune
+  parse, soft-skip when unreachable). Run #2: 44 PASS / 0 FAIL — but the loadout row
+  soft-skipped: my pull used `mktemp` (CREATES the file) and lftp `get -o` refuses clobber
+  (the KB's lftp-ftp-pitfalls lesson, re-learned). Fix #2: `mktemp -u` + standalone proof
+  (SERVED 53 == live 53 PASS).
+- Run #3 (definitive): **45 PASS / 0 FAIL, exit 0 — "RELEASE VALIDATED — live state
+  unchanged."** All static/webapp/deploy/flag/kill-switch/surgical/integrity checks green;
+  final state 6 packs / 53 songs / 53 names identical to pre-validation.
+- Pages workflow runs on main pushes (post-merge). CI green for the tag + branch. gh/ssh
+  persisted; validator curl-fallback shipped. Docs: Exp 294 + 295 logged, summary → VALIDATED.
+- Staged for the next commit: validator fixes, Exp 294/295 log entries, transcript, summary.

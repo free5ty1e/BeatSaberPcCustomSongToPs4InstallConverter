@@ -111,3 +111,35 @@ Archived logs: `experiment_log_archive/` (the previous feature ended at Exp
 - **Environment findings (durable):** a rebuild loses apt tools too (gh, openssh-client —
   both now persisted in postCreateCommand); the repo remote is SSH and ls-remote fails
   without openssh-client (pushes evidently went through the user's VS Code flow).
+
+### Experiment 295: THE M15 RELEASE FULLY VALIDATED — 45/45 PASS (2026-11-07)
+- **`v0.8055-pipeline-0.5369-webapp-0.6.22-alpha01` — the full automated procedure (Parts 1-9,
+  live PS4) returned PASS: 45 / FAIL: 0, exit 0.** Static audit (tag-exact versions, FSELF
+  pair, v0.8055 binary, 69 examples, M15 + validation docs shipped), webapp-from-zip smoke
+  (ping versions, Get Started, 34 packs / 47 songs, **loadout matches live truth: SERVED 53 ==
+  live 53**), build quality (NoArrows/OneSaber 5/5), deploy-full with the bundled CI plugin,
+  skip-plugin, debug-swap + canonical-entry restore, feature-flag round-trips, kill switch,
+  metadata-only, surgical clear + restore, sync/enforce, scoped pack deploy, blob overrides,
+  explicit-IP verify — and final integrity: **6 packs / 53 songs / 53 names, state identical
+  to pre-validation, all flags ON.** The user's in-VR A/B verdict (Exp 294) + this = M15 done.
+- **Validator bug #1 (found by validating, the Exp-263 tradition):** the step-4 live-truth
+  check compared the webapp's SERVED count against the extraction's LOCAL redirects.json —
+  but the zip ships an EMPTY PLACEHOLDER (82 B, 0 entries; CI_RELEASE.md line 16 documents it)
+  and the real state pull only happens at step 5 → "SERVED 53 != live 0" failed a healthy
+  release. FIXED: the check now pulls redirects.json FRESH FROM THE PS4 (self-contained,
+  banner-immune first-{-to-last-} parse, soft-skip when unreachable).
+- **Validator bug #2 (the KB lesson re-learned):** the fresh pull used `mktemp` — which
+  CREATES the file — and lftp `get -o` REFUSES TO CLOBBER an existing file (lftp-ftp-pitfalls),
+  so the pull silently failed and the check soft-skipped. FIXED with `mktemp -u`; verified
+  standalone (SERVED 53 == live 53) before the final full run.
+- **Three-run sequence:** 44 PASS/1 FAIL (validator bug) → 44 PASS/0 FAIL (soft-skip) →
+  **45 PASS/0 FAIL (clean)**. Logfiles in /workspace/temp/release-validation-*.log; the
+  extraction kept at /workspace/temp/release-validation.
+- **Environment:** gh + openssh-client installed + persisted in postCreateCommand (rebuild
+  casualties); the validator gained an anonymous curl download fallback (gh 2.45 demands auth
+  even for public assets). The user's commit 5a86d21 accidentally carries the whole agent
+  response as its message (content complete; amend/re-tag is the user's call).
+- Remaining (post-validation): the user's optional in-VR boot check (boot toast, one custom
+  song — the CI plugin re-uploaded during validation); the final (non-alpha) tag → then the
+  validator's default-TAG literal + doc examples get bumped (release-day checklist item 2);
+  PR #11 description update + merge; Pages badge updates post-merge.
