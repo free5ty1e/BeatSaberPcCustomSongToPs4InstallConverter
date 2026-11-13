@@ -152,3 +152,22 @@ staged but never committed or summarized).
 - Pages workflow runs on main pushes (post-merge). CI green for the tag + branch. gh/ssh
   persisted; validator curl-fallback shipped. Docs: Exp 294 + 295 logged, summary → VALIDATED.
 - Staged for the next commit: validator fixes, Exp 294/295 log entries, transcript, summary.
+
+## Cycle 4 — the final tag is missing; the M14 plan written
+
+- The user merged to main and believed they kicked off tagged CI for
+  `v0.8055-pipeline-0.5369-webapp-0.6.22` — but the tag exists NOWHERE (404 on the tag ref,
+  no release, no tag-triggered run; not even locally in this container). The main-branch
+  builds that ran were the merge push (Build/CI/Pages all green on main — the merge landed
+  and the Pages deploy ran). Told the user: create + push the tag (git writes are
+  agent-blocked); CI + the release build fire automatically when it lands.
+- Local repo still on `feature/lower-difficulty-generation-engine` (in sync with origin —
+  e9483cb + 08565c4 pushed and merged). The new feature branch is the user's to cut.
+- M14 PREP: audited .agent/plans — NO environment-control plan existed → wrote
+  `.agent/plans/custom-song-environment-control.md` (research-first: R1 = the roadmap's
+  E1–E4 + the env-idx mapping; R2 = the injection mechanism — the Exp-129 raw-CAB patch vs
+  the UnityPy blocker Options A/B/C, the layer decision; R3 = the four modes defined by
+  evidence; phases M14.1–M14.5; feature-flag enable_environment_control). Key dump finding
+  folded into the plan: TWO env layers — BeatmapLevelSO._environmentName (string, 0x18) AND
+  a pack-side record's _environmentNameIdx (int, 0x14) — the pack/Addressables layer binds
+  envs by INDEX, prime suspect for the blank-vs-working split (roadmap hypothesis b).
