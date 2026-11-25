@@ -1,6 +1,6 @@
 # M14 — Custom Song Environment Control (the four env modes)
 
-**Status:** 🟡 Plan written (2026-11-07); research not yet started
+**Status:** 🟡 Plan written (2026-11-07); R1 offline research DONE (Exp 297 — the three binding layers measured; hypothesis (b) eliminated; KB page `environment-binding-layers`); hardware experiments E1/E2/E4 + the idx audit pending (PS4)
 **Branch:** to be cut from the post-M15-merge `main` (user creates the branch — git writes are agent-blocked)
 **User directive:** deployed custom songs get a controllable in-game ENVIRONMENT with four modes — Default (today's behavior) · Force target-slot environment · Force blank · Force one of the 16 standard environments. Research-first (the roadmap's E1–E4 experiments), no asking-ahead.
 **Companion docs:** roadmap M14 (the full goal + hypotheses + E1–E4) · KB: `pipeline-song-metadata-blob-injection` (the byte-verified BeatmapLevelSO blob + the UnityPy injection blocker + the Exp-129 raw-CAB patch), `song-metadata-storage` (where env could live), `song-metadata-addressables-structure` (the catalog → BeatmapLevel → SO chain), `pack-bundle-patching` (the pack-patch path M14 likely rides on) · M5's metadata work (the TMP text hook — UI strings only, CANNOT change environments: rendering property, not text)

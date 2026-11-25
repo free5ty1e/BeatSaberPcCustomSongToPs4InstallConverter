@@ -26,7 +26,7 @@ blank screen) plus a timestamped logfile for detailed review afterwards.
 ```bash
 bash /workspace/.agent/docs/release-validation-test-procedure.sh \
     --log /workspace/temp/release-validation-$(date +%Y%m%d-%H%M%S).log \
-    v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01
+    v0.8055-pipeline-0.5369-webapp-0.6.22
 echo "exit=$? (0 = all checks PASSED)"
 ```
 
@@ -118,7 +118,7 @@ unzip -q ../beat-saber-deluxe-v0.8047-pipeline-0.5351.zip
 Version expectations come from the tag: `v<plugin>-pipeline-<pipeline>-webapp-<webapp>`.
 
 ```bash
-TAG=v0.8047-pipeline-0.5354-webapp-0.6.0-alpha01
+TAG=v0.8055-pipeline-0.5369-webapp-0.6.22
 cat VERSION          # EXPECT: 0.5354 (the tag's pipeline component)
 cat webapp/VERSION   # EXPECT: 0.6.0 (the tag's webapp component)
 ls docs/example-scripts/ | wc -l # EXPECT: 69

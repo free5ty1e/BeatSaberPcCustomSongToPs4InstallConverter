@@ -143,3 +143,70 @@ Archived logs: `experiment_log_archive/` (the previous feature ended at Exp
   song — the CI plugin re-uploaded during validation); the final (non-alpha) tag → then the
   validator's default-TAG literal + doc examples get bumped (release-day checklist item 2);
   PR #11 description update + merge; Pages badge updates post-merge.
+
+### Experiment 296: the final-tag validation — a transient FTP blip caused real damage; console REPAIRED; validator hardened ×3 (2026-11-12)
+- **The incident:** validating `v0.8055-pipeline-0.5369-webapp-0.6.22` run 1 hit a TRANSIENT
+  FTP outage on the console (first ~5 min): both state pulls failed, and the run CONTINUED on
+  empty local state — its deploys then pushed near-empty song_metadata.json (53 names → 1)
+  and a TRUNCATED catalog (795,783 vs 795,791 B) → billieeilish CRC mismatch = **the live
+  CE-34878-0 crash signature**. The Exp-237 hazard, re-armed by a network blip.
+- **The repair (all verified):** `--deploy-pack-modes --pack-modes-packs billieeilish`
+  (rebuilds the bundle + merged catalog) → the Oxytocin `--deploy-full` re-deploy (bundle +
+  metadata) → explicit metadata push of the repo's known-good 53-name file (the pipeline's
+  own verify does NOT check name counts — the Exp-237 asymmetry) → `--verify-ps4` PASSED.
+  Console state after repair: 60 redirects / 53 songs / 6 packs / 53 names / 8 artists.
+- **The hardening (structurally prevents a repeat):** (1) the validator now ABORTS when a
+  state pull fails (never continue on empty state); (2) the auto-restore refuses to push
+  from missing/empty backups; (3) step 6.7 (the one BeatSaver-dependent build-only check)
+  retries once — the SAME run's only other FAIL was that check flaking on the BeatSaver
+  download, and it PASSES standalone on the same zip minutes later (manual repro: build
+  36,709,011 B, 5/5 beatmaps, override in the blob).
+- **Run 2 (hardened) on the final tag: 44 PASS / 1 FAIL** — the 1 FAIL is the proven-transient
+  6.7 flake; state integrity held at 53 names THROUGHOUT (the hardening works). Run 3 for the
+  clean 45/45 record awaits the PS4 (morning).
+- The final zip carries all earlier validator fixes (curl fallback, mktemp -u, loadout
+  fresh-pull); the default-TAG literal bump + doc examples ride the next commit (post-tag
+  cut — noted in CI_RELEASE checklist terms).
+
+### Experiment 297: M14 offline research — the THREE environment-binding layers measured (2026-11-12, no PS4 needed)
+- **Layer 1 — BeatmapLevelSO strings:** the per-song slot SO blob (pack bundle) carries
+  `_environmentName` + `_allDirectionsEnvironmentName` as LENGTH-PREFIXED ASCII strings
+  BEFORE the preview-sets region. Measured on three packs (billieeilish/lizzo/rollingstones):
+  `BillieEnvironment`@220 / `LizzoEnvironment`@180 / `TheRollingStonesEnvironment`@172 —
+  every DLC pack has its OWN env — and `_allDirectionsEnvironmentName` = 
+  `GlassDesertEnvironment` in ALL THREE (the shared 360° env).
+- **Hypothesis (b) ELIMINATED:** the patched slot SO (484B → 1,072B after mode patches)
+  preserves BOTH env strings at the SAME offsets — the pack-mode patch is innocent at
+  layer 1. The env strings are patchable with the existing raw-CAB machinery.
+- **Layer 2 — the idx:** `BeatmapLevelSO.PreviewDifficultyBeatmap._environmentNameIdx`
+  (int @ 0x14; `_beatmapColorSchemeIdx` @ 0x18) — EACH per-difficulty preview entry binds
+  its env by INDEX into the game's env table. The mode patcher rewrites these structures —
+  THE prime suspect for the blank-env mystery (idx audit stock-vs-patched per mode pending).
+- **Layer 3 — the registry:** `EnvironmentInfoSO` (`_environmentName` @ 0x18,
+  `_serializedName` @ 0x30, tags, type) — the table the idx values resolve against.
+- KB page written: `environment-binding-layers` (the layouts, offsets, consequences).
+- NEXT (needs PS4): E1/E2/E4 in-VR + the idx audit stock-vs-patched per mode; find the
+  env-name→idx table (EnvironmentInfoSO objects in sharedassets/catalog).
+
+### Exp 296 (completion): THE FINAL RELEASE FULLY VALIDATED — 45/45 PASS (2026-11-13)
+- Run 3 (detached, hardened script): **45 PASS / 0 FAIL, exit 0 — "RELEASE VALIDATED — live
+  state unchanged"** for `v0.8055-pipeline-0.5369-webapp-0.6.22`. All checks green including
+  the live-truth loadout and the previously-flaky blob-override check. Final state: 6 packs /
+  53 songs / 53 names == pre-validation. (A mid-morning tool-call hiccup killed run attempt 2
+  after the surgical clear but before its restore — Oxytocin was restored manually via
+  --deploy-full --skip-plugin-deployment + --verify-ps4 PASSED; the repo checkout's `make`
+  plugin build is broken post-rebuild — the bundled-CI fallback path is what works from
+  extractions; a toolchain restore item for the devcontainer.)
+- **M15 IS DONE. The release is validated and shippable.** M14 hardware queue follows.
+
+### Experiment 298: M14 offline research complete — every data layer exonerated; the blank-env cause is runtime-side (2026-11-13)
+- **Layer-2 idx audit:** stock AND patched slot SO blobs carry `envIdx=0` for every
+  difficulty (Standard-only ×5 stock; 4 modes ×5 patched) — the mode patch preserves idx
+  exactly. Two hypotheses eliminated in one audit.
+- **The per-song bundle:** `BeatmapLevelDataSO` (the bundle's single MonoBehaviour) has NO
+  env fields in its schema — our builder cannot have dropped what the class doesn't have.
+  No env-name strings exist anywhere in the deployed bundle.
+- **Verdict:** all shipped bytes are env-correct; the blank-vs-working custom split is a
+  RUNTIME resolution behavior. E1/E2/E4 (in-VR) + bs_log evidence pin it. The `--environment`
+  implementation rides layer 1 (the pack SO string) via the existing raw-CAB patch machinery.
+- KB `environment-binding-layers` updated with the addendum.
