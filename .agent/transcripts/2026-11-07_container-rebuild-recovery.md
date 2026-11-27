@@ -152,3 +152,87 @@ staged but never committed or summarized).
 - Pages workflow runs on main pushes (post-merge). CI green for the tag + branch. gh/ssh
   persisted; validator curl-fallback shipped. Docs: Exp 294 + 295 logged, summary → VALIDATED.
 - Staged for the next commit: validator fixes, Exp 294/295 log entries, transcript, summary.
+
+## Cycle 4 — the final tag is missing; the M14 plan written
+
+- The user merged to main and believed they kicked off tagged CI for
+  `v0.8055-pipeline-0.5369-webapp-0.6.22` — but the tag exists NOWHERE (404 on the tag ref,
+  no release, no tag-triggered run; not even locally in this container). The main-branch
+  builds that ran were the merge push (Build/CI/Pages all green on main — the merge landed
+  and the Pages deploy ran). Told the user: create + push the tag (git writes are
+  agent-blocked); CI + the release build fire automatically when it lands.
+- Local repo still on `feature/lower-difficulty-generation-engine` (in sync with origin —
+  e9483cb + 08565c4 pushed and merged). The new feature branch is the user's to cut.
+- M14 PREP: audited .agent/plans — NO environment-control plan existed → wrote
+  `.agent/plans/custom-song-environment-control.md` (research-first: R1 = the roadmap's
+  E1–E4 + the env-idx mapping; R2 = the injection mechanism — the Exp-129 raw-CAB patch vs
+  the UnityPy blocker Options A/B/C, the layer decision; R3 = the four modes defined by
+  evidence; phases M14.1–M14.5; feature-flag enable_environment_control). Key dump finding
+  folded into the plan: TWO env layers — BeatmapLevelSO._environmentName (string, 0x18) AND
+  a pack-side record's _environmentNameIdx (int, 0x14) — the pack/Addressables layer binds
+  envs by INDEX, prime suspect for the blank-vs-working split (roadmap hypothesis b).
+
+## Cycle 5 — the final tag: an FTP-blip incident, the repair, the hardening, and M14 offline research (Exps 296–297)
+
+- The user pushed the REAL final tag (`v0.8055-pipeline-0.5369-webapp-0.6.22` — the earlier
+  "kicked off" was from the wrong repo) and cut `feature/environment-control-for-custom-songs`
+  (the M14 plan commit rode it). Final-tag build: SUCCESS (run 43358494013).
+- Validation run 1 vs the final tag: a TRANSIENT FTP outage on the console failed both state
+  pulls; the run CONTINUED on empty state and its deploys WIPED live metadata (53→1) and
+  shipped a truncated catalog (8 bytes short) → billieeilish CRC mismatch = the live
+  CE-34878-0 signature. REPAIRED: billieeilish pack re-deploy + Oxytocin --deploy-full +
+  explicit metadata push (the pipeline's verify doesn't check names — Exp-237 asymmetry) +
+  --verify-ps4 PASSED + live metadata re-verified 53/8.
+- Validator hardened: (1) ABORT on failed state pulls; (2) auto-restore refuses empty
+  backups; (3) step 6.7 retries once (its FAIL in run 2 was a BeatSaver flake — the check
+  PASSES standalone on the same zip; manual repro: 5/5 beatmaps, override in blob). Default
+  TAG literal + doc examples bumped to the final tag. Run 2 (hardened): 44 PASS / 1 FAIL —
+  the 1 FAIL = the proven-transient 6.7 flake; state integrity held at 53 names throughout.
+- Run 3 (the clean 45/45 record) AWAITS THE PS4 — the user shut it down for the night.
+- M14 OFFLINE RESEARCH (Exp 297) while waiting — the THREE env-binding layers measured:
+  (1) BeatmapLevelSO length-prefixed ASCII env strings (per-pack custom envs —
+  BillieEnvironment/LizzoEnvironment/TheRollingStonesEnvironment; shared
+  GlassDesertEnvironment for 360°); (2) PreviewDifficultyBeatmap._environmentNameIdx —
+  per-DIFFICULTY env INDEX (the mode patcher rewrites these structures — the blank-env
+  prime suspect); (3) EnvironmentInfoSO (the registry). Hypothesis (b) ELIMINATED (the
+  patched SO preserves env strings at identical offsets). KB page
+  `environment-binding-layers` written; plan status updated. NEXT: E1/E2/E4 in-VR + the
+  stock-vs-patched idx audit + the env-name→idx table hunt.
+
+## Cycle 6 — THE FINAL RELEASE VALIDATED 45/45 + M14 offline research complete (Exps 296-298)
+
+- Morning: the user's staged-changes confusion resolved (they're staged on
+  `feature/environment-control-for-custom-songs`; VS Code hides them in a collapsed section).
+- The clean final-tag run: attempt 1 was killed by a tool-call hiccup AFTER the surgical
+  clear but BEFORE its restore (PS4 left at a consistent 52 songs) → Oxytocin restored via
+  --deploy-full --skip-plugin-deployment (the repo checkout's `make` plugin build FAILS
+  post-rebuild — the bundled-CI fallback is the working path; toolchain restore = a
+  devcontainer item) + --verify-ps4 PASSED. The full run then launched DETACHED (nohup, immune
+  to tool hiccups): **45 PASS / 0 FAIL, exit 0 — "RELEASE VALIDATED — live state unchanged."**
+  `v0.8055-pipeline-0.5369-webapp-0.6.22` is shippable.
+- M14 offline research completed (Exp 298): the layer-2 idx audit (stock AND patched carry
+  envIdx=0 everywhere — patch preserves idx exactly; two hypotheses eliminated) + the
+  per-song bundle audit (its BeatmapLevelDataSO schema has NO env fields at all). Every
+  shipped byte is env-correct → the blank-env cause is RUNTIME-side; E1/E2/E4 in-VR + bs_log
+  pin it. KB updated. The get_cab_raw 0-byte-duplicate lesson: the dump contains 0-byte stub
+  bundles — always resolve via song_ids.json's packBundle, never a hardcoded hash.
+
+## Cycle 7 — Exp 299: the E-series census + six byte-level eliminations
+
+- The user's in-VR census: SHOWS = billieeilish ATTITUDE/Baddie/Cosmic, lizzo The Middle, all
+  5 BTS customs; BLANK = all 11 RS + the other billie/lizzo customs.
+- Mapped titles→slots via song_metadata.json (keys are STOCK display names! 'The Middle' =
+  AboutDamnTime slot etc.) + song_ids.json for packs.
+- Pulled the play-session log (archived: .ai_memory/experiment_logs/
+  bs_log_v0.8055_m14-env-research_user-session_2026-11-13.txt). The game boot-scans ~40 env
+  bundles; per-pack visits load the pack env assets+scenes ONCE; per-song browses open the
+  SAME file set in both camps (slot redirect ×2 + env-scenes ×4 + PlayerData). RS env loads
+  yet renders blank!
+- Six eliminations: pack SO env strings (both variants, all slots); preview idx (0 everywhere);
+  preview PPtrs (all resolve to AudioClips); BeatmapLevelDataSO (identical, template hash
+  994dd216e918de50); beatmap/lightshow schemas+counts; opens. The BeatSaver map env
+  correlation fails too (deployed-version drift unverified).
+- CONCLUSION: the env decision is INSIDE the game's runtime. NEXT: hook
+  BeatmapLevelSO.get_environmentName (RVA 0x962230) — diagnostic AND likely the M14 override
+  mechanism. (walk_blob's layout proven: 28B header + m_Name + version + 5 strings + PPtr +
+  8 floats + cover PPtr + 2 env strings + envNames[] + colorSchemes[] + sets.)

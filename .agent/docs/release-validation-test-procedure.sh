@@ -69,7 +69,7 @@ set -u   # no set -e: we collect failures and report at the end
 # ── Argument parsing: [--log <file>] [TAG] ─────────────────────────────────
 LOGFILE=""
 # Default: the latest release tag. Override by passing a tag argument.
-TAG="v0.8048-pipeline-0.5361-webapp-0.6.3"
+TAG="v0.8055-pipeline-0.5369-webapp-0.6.22"
 ARGS=("$@")
 i=0
 while [ $i -lt ${#ARGS[@]} ]; do
@@ -363,6 +363,18 @@ step "[5/9] Pull + back up live state (BOTH state files)"
 rm -f redirects.json song_metadata.json
 timeout 60 lftp -u anonymous:anonymous -e "get /data/GoldHEN/AFR/CUSA12878/redirects.json -o redirects.json; quit" "$PS4_IP:2121" >/dev/null 2>&1
 timeout 60 lftp -u anonymous:anonymous -e "get /data/GoldHEN/AFR/CUSA12878/song_metadata.json -o song_metadata.json; quit" "$PS4_IP:2121" >/dev/null 2>&1
+# Exp 296: a failed pull MUST abort the run. Continuing with empty local state
+# is the Exp-237 metadata-wipe hazard — the 2026-11-12 final-tag validation hit
+# a transient FTP blip, both pulls failed, the run continued, and its deploys
+# pushed near-empty metadata (53 names → 1) and a truncated catalog over the
+# live state. The console was repaired afterwards; this guard makes it
+# structurally impossible to repeat.
+if [ ! -s redirects.json ] || [ ! -s song_metadata.json ]; then
+    echo "FATAL: PS4 state pull FAILED (redirects.json and/or song_metadata.json missing/empty)."
+    echo "       ABORTING before any deploy — continuing on empty local state would wipe live"
+    echo "       metadata (the Exp-237/Exp-296 hazard). Check the PS4's FTP and re-run."
+    exit 1
+fi
 PRE_SONGS=$(python3 -c "import json; print(len([k for k in json.load(open('redirects.json'))['redirects'] if k.startswith('BeatmapLevelsData/')]))" 2>/dev/null || echo 0)
 PRE_PACKS=$(python3 -c "import json; print(len([k for k in json.load(open('redirects.json'))['redirects'] if '_pack_assets_' in k]))" 2>/dev/null || echo 0)
 PRE_NAMES=$(python3 -c "import json; print(len(json.load(open('song_metadata.json'))['song_names']))" 2>/dev/null || echo 0)
@@ -536,9 +548,19 @@ ps4_counts
 
 note "6.7 --song-name/--artist override (build-only; override must land in the BeatmapLevelSO blob)"
 rm -f "_beatmap_level_so_Test Name Override.blob"
-PIPE --download-beat-saver-song 4dea2 --target Oxytocin --pcm16 --no-pad --convert-to-v3 \
-    --song-name "Test Name Override" --artist "Test Artist" --output /tmp/reltest_named.bundle \
-    2>&1 | grep -E "Pipeline complete" | sed 's/^/     /'
+# Exp 296: this build-only step downloads from BeatSaver (external service) —
+# a transient download failure once failed the check on a healthy release.
+# Retry ONCE before marking FAIL; the final run for the 0.6.22 final tag hit
+# exactly this (the same zip passed the check standalone minutes later).
+BLOB_OUT=$(PIPE --download-beat-saver-song 4dea2 --target Oxytocin --pcm16 --no-pad --convert-to-v3 \
+    --song-name "Test Name Override" --artist "Test Artist" --output /tmp/reltest_named.bundle 2>&1)
+echo "$BLOB_OUT" | grep -E "Pipeline complete" | sed 's/^/     /'
+if ! echo "$BLOB_OUT" | grep -q "Pipeline complete"; then
+    note "     first build attempt failed (transient?) — retrying once"
+    PIPE --download-beat-saver-song 4dea2 --target Oxytocin --pcm16 --no-pad --convert-to-v3 \
+        --song-name "Test Name Override" --artist "Test Artist" --output /tmp/reltest_named.bundle 2>&1 \
+        | grep -E "Pipeline complete" | sed 's/^/     /'
+fi
 python3 -c "
 data = open('_beatmap_level_so_Test Name Override.blob','rb').read()
 assert 'Test Name Override'.encode('utf-16-le') in data" 2>/dev/null \
@@ -572,12 +594,19 @@ if [ "$FINAL_PACKS" = "$PRE_PACKS" ] && [ "$FINAL_SONGS" = "$PRE_SONGS" ] \
     mark PASS "final state == pre-validation ($FINAL_PACKS packs / $FINAL_SONGS songs / $PS4_NAMES PS4 names)"
 else
     mark FAIL "final state diverged (packs $FINAL_PACKS/$PRE_PACKS, songs $FINAL_SONGS/$PRE_SONGS, names $FINAL_NAMES local / PS4=${PS4_NAMES:-UNREADABLE} vs $PRE_NAMES) — AUTO-RESTORING"
-    cp redirects.pre-validation.bak redirects.json
-    cp song_metadata.pre-validation.bak song_metadata.json
-    note "     auto-restoring both state files to the PS4..."
-    PIPE --verify-ps4 --deploy-config 2>&1 | grep -E "Saved|PASSED" | sed 's/^/       /'
-    timeout 60 lftp -u anonymous:anonymous -e "put song_metadata.json -o /data/GoldHEN/AFR/CUSA12878/song_metadata.json; quit" "$PS4_IP:2121" 2>&1 | grep -v GetPass | sed 's/^/       /'
-    note "     restore commands issued — the two checks below verify they took effect"
+    # Exp 296 defense-in-depth: NEVER push from missing/empty backups — a
+    # restore from empty state would itself be the wipe we're guarding against.
+    if [ ! -s redirects.pre-validation.bak ] || [ ! -s song_metadata.pre-validation.bak ]; then
+        note "     backups missing/empty (state pull failed earlier?) — NOT pushing anything;"
+        note "     the PS4 is left as-is; repair manually from a known-good local state"
+    else
+        cp redirects.pre-validation.bak redirects.json
+        cp song_metadata.pre-validation.bak song_metadata.json
+        note "     auto-restoring both state files to the PS4..."
+        PIPE --verify-ps4 --deploy-config 2>&1 | grep -E "Saved|PASSED" | sed 's/^/       /'
+        timeout 60 lftp -u anonymous:anonymous -e "put song_metadata.json -o /data/GoldHEN/AFR/CUSA12878/song_metadata.json; quit" "$PS4_IP:2121" 2>&1 | grep -v GetPass | sed 's/^/       /'
+        note "     restore commands issued — the two checks below verify they took effect"
+    fi
 fi
 if PIPE --verify-ps4 2>&1 | grep -q "PASSED"; then mark PASS "final verify-ps4"; else mark FAIL "final verify-ps4"; fi
 FEATURES_STATE=$(PS4_JSON_COUNT /data/GoldHEN/AFR/CUSA12878/features.json "1 if all(d.values()) else 0" 2>/dev/null) || true
