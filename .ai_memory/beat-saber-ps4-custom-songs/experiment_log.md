@@ -210,3 +210,20 @@ Archived logs: `experiment_log_archive/` (the previous feature ended at Exp
   RUNTIME resolution behavior. E1/E2/E4 (in-VR) + bs_log evidence pin it. The `--environment`
   implementation rides layer 1 (the pack SO string) via the existing raw-CAB patch machinery.
 - KB `environment-binding-layers` updated with the addendum.
+
+### Experiment 299: the E-series field census — every shipped byte exonerated; the env decision is runtime-side (2026-11-13)
+- **The user's census:** env SHOWS = billieeilish ATTITUDE/Baddie/Cosmic + lizzo The Middle +
+  ALL 5 BTS customs; BLANK = ALL 11 RS customs + the other billie/lizzo customs.
+- **Six byte-level comparisons (showing vs blank, deployed previews-variant + PS4-pulled
+  bundles):** pack SO env strings identical; preview-set envIdx=0 everywhere; preview AudioClip
+  PPtrs all resolve; BeatmapLevelDataSO structurally identical (same template hash); beatmap/
+  lightshow schemas + counts identical; bs_log opens identical per browse (both packs' env
+  assets AND scenes bundles load fine — RS env loads yet renders blank).
+- **The map's own Info.dat env does not predict the split** (SHOWS={Nice,ABSENT,ABSENT} vs
+  blank={Panic,Panic,BigMirror,BigMirror,ABSENT×3}) — the user's "we ignore the map's env"
+  hypothesis is directionally right (we DO drop Info.dat entirely) but the shipped-data
+  differences are nil, so the blank/showing decision is inside the game's runtime resolution.
+- **THE NEXT STEP (diagnostic + likely the implementation): hook
+  `BeatmapLevelSO.get_environmentName` (RVA 0x962230) in the plugin** — the M11 IL2CPP
+  machinery — and log the game's env resolution per song while browsing a showing vs a blank
+  song. The same hook doubles as the per-song env OVERRIDE (runtime, no bundle patching).

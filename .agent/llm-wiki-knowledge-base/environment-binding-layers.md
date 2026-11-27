@@ -86,3 +86,34 @@ Cross-references: [[pack-bundle-patching]] (the raw-CAB machinery),
   in-VR E1/E2/E4 experiments + bs_log evidence must pin. The `--environment` implementation
   still rides layer 1 (the pack SO string, patchable with the existing raw-CAB machinery) —
   the open question is whether the runtime honors it for custom slots, which E4 answers.
+
+## Exp 299 addendum — the E-series field data: every SHIPPED byte is exonerated; the cause is runtime-side
+
+The user's in-VR census (2026-11-13): env SHOWS for billieeilish ATTITUDE(Bellyache)/
+Baddie(BuryAFriend)/Cosmic(HappierThanEver), lizzo The Middle(AboutDamnTime), ALL 5 BTS
+customs; BLANK for ALL 11 Rolling Stones customs and the other billie/lizzo customs.
+
+Eliminated by byte-level comparison (showing vs blank slots, deployed previews-variant
+bundles + PS4-pulled per-song bundles):
+1. Pack SO env strings — `BillieEnvironment`+`GlassDesertEnvironment` present at identical
+   offsets for BOTH camps (all slots, both bundle variants).
+2. `_previewDifficultyBeatmapSets` idx — envIdx=0, schemeIdx=0 for every entry, both camps.
+3. Preview AudioClip PPtr — resolves to a real AudioClip object for BOTH camps (no dangles).
+4. Per-song `BeatmapLevelDataSO` — structurally identical (version=1, same 8-byte template
+   hash, 4 mode sets, no env fields in the class schema).
+5. Beatmap/lightshow JSON — same schemas; lightshow-count distribution identical (1-2 both).
+6. The bs_log opens — the game loads the SAME file set per browse in both camps (slot
+   redirect + env-scenes bundle + PlayerData), and loads each pack's env assets+scenes fine
+   (RS env bundle loads too — yet RS renders blank!).
+
+The map's own Info.dat `_environmentName` (BeatSaver API, deployed-map correlation) does NOT
+predict the split either (SHOWS = {Nice, ABSENT, ABSENT}; blank = {Panic, Panic, BigMirror,
+BigMirror, ABSENT, ABSENT, ABSENT}) — though deployed-version drift is unverified.
+
+**Conclusion: the env decision happens INSIDE the game's runtime resolution, on data we
+cannot see via file opens.** The next diagnostic (and likely the M14 implementation itself):
+**hook `BeatmapLevelSO.get_environmentName` (RVA 0x962230, returns `EnvironmentName`) in the
+plugin** (the M11 IL2CPP-hooking machinery) — log what the game asks/receives per song while
+the user browses a showing vs a blank song. If it returns the pack env for both, the failure
+is downstream (scene instantiation); if it differs, the SO lookup is the culprit — and the
+same hook becomes the per-song env OVERRIDE (no bundle patching needed at all).

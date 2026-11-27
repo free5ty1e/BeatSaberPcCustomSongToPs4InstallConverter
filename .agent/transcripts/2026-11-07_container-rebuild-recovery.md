@@ -216,3 +216,23 @@ staged but never committed or summarized).
   shipped byte is env-correct → the blank-env cause is RUNTIME-side; E1/E2/E4 in-VR + bs_log
   pin it. KB updated. The get_cab_raw 0-byte-duplicate lesson: the dump contains 0-byte stub
   bundles — always resolve via song_ids.json's packBundle, never a hardcoded hash.
+
+## Cycle 7 — Exp 299: the E-series census + six byte-level eliminations
+
+- The user's in-VR census: SHOWS = billieeilish ATTITUDE/Baddie/Cosmic, lizzo The Middle, all
+  5 BTS customs; BLANK = all 11 RS + the other billie/lizzo customs.
+- Mapped titles→slots via song_metadata.json (keys are STOCK display names! 'The Middle' =
+  AboutDamnTime slot etc.) + song_ids.json for packs.
+- Pulled the play-session log (archived: .ai_memory/experiment_logs/
+  bs_log_v0.8055_m14-env-research_user-session_2026-11-13.txt). The game boot-scans ~40 env
+  bundles; per-pack visits load the pack env assets+scenes ONCE; per-song browses open the
+  SAME file set in both camps (slot redirect ×2 + env-scenes ×4 + PlayerData). RS env loads
+  yet renders blank!
+- Six eliminations: pack SO env strings (both variants, all slots); preview idx (0 everywhere);
+  preview PPtrs (all resolve to AudioClips); BeatmapLevelDataSO (identical, template hash
+  994dd216e918de50); beatmap/lightshow schemas+counts; opens. The BeatSaver map env
+  correlation fails too (deployed-version drift unverified).
+- CONCLUSION: the env decision is INSIDE the game's runtime. NEXT: hook
+  BeatmapLevelSO.get_environmentName (RVA 0x962230) — diagnostic AND likely the M14 override
+  mechanism. (walk_blob's layout proven: 28B header + m_Name + version + 5 strings + PPtr +
+  8 floats + cover PPtr + 2 env strings + envNames[] + colorSchemes[] + sets.)
